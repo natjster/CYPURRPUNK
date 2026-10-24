@@ -39,7 +39,6 @@ Meow-City/
 │   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
 ├── textures/                  <- tiny placeholder pixel textures
 ├── ui/menu_theme.tres         <- the look of every menu (colours, borders)
-├── ROADMAP.md / PLAN.md       <- the Steam MVP checklist and the plan behind it
 └── shots/                     <- screenshots from the capture tool (Godot ignores this folder)
 ```
 
@@ -286,7 +285,7 @@ fill in those boxes).
 3. On the other PC, click **PLAY**, type that address into the JOIN box and click **JOIN**.
 
 Playing over the internet needs port forwarding (UDP port 7777) or Steam's relay. Steam is planned
-(ROADMAP Phase 2) and will only change `scripts/net.gd`.
+and will only change `scripts/net.gd`.
 
 ### How it works
 ```

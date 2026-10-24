@@ -248,7 +248,7 @@ func _build_props() -> void:
 	_add_box(Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)
 
 	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
-	# players will feed it scrap for server-wide buffs (see DESIGN_DOC.md "Mainframe Overclock").
+	# players will feed it scrap for server-wide buffs.
 	var frame_x := -w + 1.0
 	_add_box(Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
 	var screen := _add_box(Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)

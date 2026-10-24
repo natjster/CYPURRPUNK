@@ -81,10 +81,6 @@ Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from th
 `C:\Users\Nathaniel\Desktop\Game Styling` — fog, glowing light pools in darkness, OSRS flat-shaded
 low-poly, dithering, CRT.
 
-## Roadmap
-`ROADMAP.md` is the Steam MVP checklist the user tracks. Tick its boxes (`[x]`) when you finish
-an item, and add new items there rather than in this file. `PLAN.md` is the plan behind it (scope,
-Fish Heist design, architecture, networking/determinism rules, milestone gates, calendar): follow
-it, and update it when a decision or milestone changes. `DESIGN_DOC.md` is the owner's long-term
-vision (F2P PvPvE extraction, hub, proximity voice...); it conflicts with PLAN.md in places, and
-PLAN.md wins until the owner decides otherwise.
+## Direction
+The game is now an extraction game: spawn in the underground hub, go up to the city for loot,
+extract back down, with VAC-COP Roombas as the threat.
