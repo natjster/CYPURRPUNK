@@ -65,7 +65,7 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	var cat := ItemManager.instance.local_cat()
-	if event.is_action_pressed("inventory") and cat != null and not PauseMenu.is_open:
+	if event.is_action_pressed("inventory") and cat != null and not PauseMenu.is_open and not NpcDialog.is_open:
 		_set_open(not visible)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):

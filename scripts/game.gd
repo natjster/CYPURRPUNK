@@ -17,13 +17,15 @@ extends Node3D
 ##   - Each cat is moved by its owner and synced to the others (see cat_player.gd).
 ##   - The city is generated from a seed number (see city_generator.gd). The host
 ##     sends just that number to each player, and everyone builds the same city.
+##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
+##     Don Catleone sends them up; the EXTRACTION beam brings them back (fish_heist.gd).
 ##
 ## Testing shortcuts: launch the game with "--host" or "--join" to skip the menu
 ## (plus "--name=Whiskers" / "--seed=42" to fill in those boxes).
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
-## Where cats appear (the crossroads at the centre of every generated city).
-## Each new cat lines up a little further down the street.
+## The crossroads at the centre of every generated city (where dropped items of a player
+## who quits end up if their cat is already gone). Cats themselves start in the hub.
 const SPAWN_POINT: Vector3 = Vector3(0, 0, 4)
 ## The city shown behind the start menu before a game starts.
 const PREVIEW_SEED: int = 1999
@@ -44,10 +46,13 @@ static var local_player_name: String = ""
 @onready var settings_menu: SettingsMenu = $PS1Overlay/SettingsMenu
 @onready var hud: Control = $PS1Overlay/HUD
 @onready var controls_label: Label = $PS1Overlay/HUD/Controls
+@onready var message_label: Label = $PS1Overlay/HUD/Message
+@onready var hub: UndergroundHub = $Hub
 @onready var crt_material: ShaderMaterial = $PS1Overlay/ColorDepthDither.material
 
 ## The CRT slider values at full strength (read from the shader), scaled by Settings.crt_strength.
 var _crt_full: Dictionary = {}
+var _message_time: float = 0.0
 
 
 func _enter_tree() -> void:
@@ -76,7 +81,7 @@ func _ready() -> void:
 
 	hud.hide()
 	city.generate(PREVIEW_SEED)
-	_park_car()
+	park_car()
 	_handle_test_shortcuts()
 
 
@@ -101,7 +106,7 @@ func host_game(city_seed: int) -> void:
 		main_menu.show_status("Can't host - is another game already hosting?")
 		return
 	city.generate(city_seed)
-	_park_car()
+	park_car()
 	_start_playing()
 	_spawn_cat(1)  # the host's own cat
 
@@ -156,11 +161,25 @@ func _receive_city_seed(city_seed: int) -> void:
 
 
 func _show_city_number() -> void:
-	controls_label.text = "WASD move  SHIFT zoomies  E grab/car  G drop  TAB bag  ESC menu   CITY #%d" % city.city_seed
+	controls_label.text = "WASD move  SHIFT zoomies  E grab/car/talk  G drop  TAB bag  ESC menu   CITY #%d" % city.city_seed
+
+
+## A line of text in the middle of the screen for a few seconds (e.g. what Don says).
+func show_message(text: String, seconds: float = 4.0) -> void:
+	message_label.text = text
+	message_label.show()
+	_message_time = seconds
+
+
+func _process(delta: float) -> void:
+	if _message_time > 0.0:
+		_message_time -= delta
+		message_label.visible = _message_time > 0.0
 
 
 ## Host (and start menu): put the car back at its parking spot, stopped.
-func _park_car() -> void:
+## Also used when the driver extracts, so the car is waiting for the next trip up.
+func park_car() -> void:
 	car.global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
 	car.linear_velocity = Vector3.ZERO
 	car.angular_velocity = Vector3.ZERO
@@ -193,8 +212,7 @@ func my_cat() -> CatPlayer:
 func _spawn_cat(peer_id: int) -> void:
 	var cat := PLAYER_SCENE.instantiate()
 	cat.name = str(peer_id)  # the name IS the owner — see cat_player.gd _enter_tree()
-	var n := players.get_child_count()
-	cat.position = SPAWN_POINT + Vector3((n % 2) * 3.0 - 1.5, 0, 1.5 * n)  # two-by-two down the street
+	cat.position = hub.spawn_position(players.get_child_count())  # everyone starts in the sewers
 	players.add_child(cat, true)
 
 

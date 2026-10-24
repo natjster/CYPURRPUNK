@@ -15,7 +15,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,
-  then `ColorDepthDither` LAST. Each menu handles its own Esc in `_input`; tree order decides who
+  `NpcDialog` (`NpcDialog.is_open` -> cat ignores keys), then `ColorDepthDither` LAST. Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. HUD labels all live under `PS1Overlay/HUD`.
 - `scripts/city_generator.gd` (`CityGenerator`, the `City` node): the whole level is generated from a
   seed with one seeded RNG — keep all randomness on `_rng` and in a fixed order, or players' cities
@@ -27,6 +27,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   triangles makes textures shear and swim. DevCapture `--no_affine` / `--no_snap` help diagnose.
   Never stack visible surfaces a few cm apart (e.g. sidewalk over street): they z-fight and
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
+- Extraction loop: cats spawn in the hub `Hub` (`scripts/hub.gd`, `UndergroundHub.instance`), a fixed
+  code-built sewer at y=-200 (anything below y=-100 is "in the hub" = safe zone, guns don't fire).
+  `HubNpc` Don Catleone (`scenes/props/don_catleone.tscn`) opens `NpcDialog`; "SEND ME UP TOP" calls
+  `hub.deploy(cat)`. Host detects cats/driver at the beam in `fish_heist.gd` -> `_extracted` RPC ->
+  owner calls `hub.return_cat`. Owners move their own cat with `CatPlayer.teleport_to`. The hub swaps
+  the local mood (moon/rain off, green fog) when the camera is below the line.
 - `scenes/player.tscn` + `scripts/cat_player.gd` (`CatPlayer`): owner-authoritative cat. Owner writes
   `sync_position` / `sync_model_rotation` / `player_name`; remote copies glide toward them in `_process`.
   Only `CatModel` rotates; body never does (camera is a child).

@@ -1,18 +1,22 @@
 class_name FishHeist
 extends Node3D
-## FISH HEIST — grab fish, bring them to the drop-off, get paid.
+## FISH HEIST — the extraction loop: go up, grab fish, reach the beam, get paid, back down.
 ## Attach to the "Heist" node in main.tscn.
 ##
 ## How it plays:
+##   - Cats start in the underground hub (hub.gd). Don Catleone sends them up to the city.
 ##   - Glowing fish lie outside Meow-Mart and on sidewalks around the city.
 ##   - Walk into a fish to pick it up automatically. Fish are LOOT items (items/fish.tres),
 ##     so the item system handles picking up, the loot bag and showing them on your cat.
-##   - Bring them to THE DROP-OFF (the tall green light beam), on foot or by car.
-##     Every piece of loot pays its card's cash_value into YOUR cash. Cash is per player.
+##   - Reach the EXTRACTION point (the tall green light beam), on foot or by car.
+##     Every piece of loot pays its card's cash_value into YOUR cash (cash is per player),
+##     and you're sent back down to the hub — with or without loot.
+##     If you were driving, the getaway car goes back to its parking spot for the next trip.
 ##   - Taken fish grow back at their spot after respawn_seconds. No timer: play forever.
 ##
 ## Multiplayer: the HOST is the referee. It checks every frame who is standing in the
-## drop-off, empties their loot bag and tells everyone the new cash with an RPC.
+## beam, empties their loot bag and tells everyone with an RPC. The extracted player's own
+## computer then moves their cat down to the hub (owners always move their own cat).
 ## Fish spots and the drop-off are picked from the city seed with their OWN random
 ## generator, so every computer places them identically and buildings never move.
 
@@ -52,6 +56,9 @@ var cash := {}
 
 var _built: Array[Node] = []  # the drop-off pieces, so a new city can clear them
 var _popup_time: float = 0.0
+var _clock: float = 0.0
+## Host: network ID -> time until we ignore that cat at the beam (it's on its way down).
+var _extract_wait := {}
 
 
 func _ready() -> void:
@@ -137,7 +144,7 @@ func _build_dropoff(at: Vector3) -> void:
 	_add_built(light)
 
 	var sign_label := Label3D.new()
-	sign_label.text = "DROP-OFF\n$ FISH $"
+	sign_label.text = "EXTRACTION\n$ FISH $"
 	sign_label.font_size = 48
 	sign_label.pixel_size = 0.02
 	sign_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -158,31 +165,42 @@ func _process(delta: float) -> void:
 	_update_hud(delta)
 
 
-## Host only: the referee. Who reached the drop-off with loot?
-func _physics_process(_delta: float) -> void:
+## Host only: the referee. Who reached the extraction beam?
+func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
 		return
+	_clock += delta
 	var items := ItemManager.instance
 	for node in players.get_children():
 		var peer_id := node.name.to_int()
-		var where: Vector3 = car.global_position if car.driver_id == peer_id else (node as Node3D).global_position
-		if items.bag_used(peer_id) > 0 and Vector2(where.x - dropoff_position.x, where.z - dropoff_position.z).length() < dropoff_radius:
-			var loot := items.take_bag(peer_id)
-			var earned := 0
-			for item_id in loot:
-				earned += (items.catalog[item_id] as ItemData).cash_value
-			_cash_added.rpc(peer_id, earned, loot.size())
+		var driving := car.driver_id == peer_id
+		var where: Vector3 = car.global_position if driving else (node as Node3D).global_position
+		if UndergroundHub.is_in_hub(where) or _clock < _extract_wait.get(peer_id, 0.0):
+			continue
+		if Vector2(where.x - dropoff_position.x, where.z - dropoff_position.z).length() >= dropoff_radius:
+			continue
+		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
+		_extract_wait[peer_id] = _clock + 3.0
+		var loot := items.take_bag(peer_id) if items.bag_used(peer_id) > 0 else []
+		var earned := 0
+		for item_id in loot:
+			earned += (items.catalog[item_id] as ItemData).cash_value
+		if driving:
+			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
+			Game.instance.park_car()  # ...and it waits at its parking spot for the next trip up
+		_extracted.rpc(peer_id, earned, loot.size())
 
 
 # --- What the host tells everyone (runs on every computer) ---
 
 @rpc("authority", "call_local", "reliable")
-func _cash_added(peer_id: int, earned: int, count: int) -> void:
+func _extracted(peer_id: int, earned: int, count: int) -> void:
 	cash[peer_id] = cash.get(peer_id, 0) + earned
-	print("[Heist] Player %d delivered %d loot for $%d (total $%d)" % [peer_id, count, earned, cash[peer_id]])
+	print("[Heist] Player %d extracted with %d loot for $%d (total $%d)" % [peer_id, count, earned, cash[peer_id]])
 	if peer_id == multiplayer.get_unique_id():
-		popup_label.text = "+$%d" % earned
-		_popup_time = 1.5
+		popup_label.text = ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
+		_popup_time = 2.5
+		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
 
 
 ## Host -> a player who just joined: everyone's cash.
@@ -217,21 +235,13 @@ func _update_hud(delta: float) -> void:
 	var used := items.bag_used(me)
 	carry_label.text = "LOOT %d/%d%s" % [used, items.bag_size, "  FULL!" if used >= items.bag_size else ""]
 
-	# Distance and rough direction to the drop-off, relative to where the camera looks.
+	# Distance and rough direction to the extraction beam, relative to where the camera looks.
+	# Down in the hub there's no beam to point at.
 	var where := car.global_position if car.driver_id == me else my_cat.global_position
-	var to_dropoff := dropoff_position - where
-	var arrow := "^"
-	var camera := get_viewport().get_camera_3d()
-	if camera != null:
-		var look := -camera.global_transform.basis.z
-		var angle := rad_to_deg(Vector2(look.x, look.z).angle_to(Vector2(to_dropoff.x, to_dropoff.z)))
-		if absf(angle) > 135.0:
-			arrow = "v"
-		elif angle > 30.0:
-			arrow = ">"
-		elif angle < -30.0:
-			arrow = "<"
-	dropoff_label.text = "DROP-OFF %s %dm" % [arrow, int(Vector2(to_dropoff.x, to_dropoff.z).length())]
+	if UndergroundHub.is_in_hub(where):
+		dropoff_label.text = "THE SEWERS - SAFE ZONE"
+	else:
+		dropoff_label.text = _direction_text(where)
 
 	# Everyone's cash, richest first.
 	var rows: Array = []
@@ -248,3 +258,20 @@ func _update_hud(delta: float) -> void:
 		_popup_time -= delta
 		popup_label.visible = _popup_time > 0.0
 		popup_label.modulate.a = clampf(_popup_time, 0.0, 1.0)
+
+
+## "EXTRACT > 120m": distance and rough direction to the beam from where the camera looks.
+func _direction_text(where: Vector3) -> String:
+	var to_dropoff := dropoff_position - where
+	var arrow := "^"
+	var camera := get_viewport().get_camera_3d()
+	if camera != null:
+		var look := -camera.global_transform.basis.z
+		var angle := rad_to_deg(Vector2(look.x, look.z).angle_to(Vector2(to_dropoff.x, to_dropoff.z)))
+		if absf(angle) > 135.0:
+			arrow = "v"
+		elif angle > 30.0:
+			arrow = ">"
+		elif angle < -30.0:
+			arrow = "<"
+	return "EXTRACT %s %dm" % [arrow, int(Vector2(to_dropoff.x, to_dropoff.z).length())]

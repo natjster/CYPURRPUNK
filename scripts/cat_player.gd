@@ -190,7 +190,7 @@ func _apply_fur_color() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# Esc opens the pause menu (see game.gd), which frees the mouse.
 	# If the mouse got freed some other way (e.g. alt-tab), clicking the game grabs it again.
-	if PauseMenu.is_open:
+	if _menu_open():
 		return
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -215,6 +215,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("drop"):
 		ItemManager.instance.drop_from(self)
+	elif event.is_action_pressed("interact") and UndergroundHub.instance.try_talk(self):
+		# Standing next to Don Catleone in the hub: the talk box opens.
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
 		nearby_car.request_enter.rpc_id(1)
@@ -238,7 +241,7 @@ func _physics_process(delta: float) -> void:
 		_air_jumps_left = air_jumps
 
 	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
-	if Input.is_action_just_pressed("jump") and not PauseMenu.is_open:
+	if Input.is_action_just_pressed("jump") and not _menu_open():
 		if is_on_floor():
 			velocity.y = jump_velocity
 		elif _air_jumps_left > 0:
@@ -247,7 +250,7 @@ func _physics_process(delta: float) -> void:
 
 	# Read WASD as a 2D direction (x = left/right, y = forward/back).
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if PauseMenu.is_open:
+	if _menu_open():
 		input_dir = Vector2.ZERO
 
 	# Convert it so "forward" means "where the camera is looking", flattened onto the ground.
@@ -285,6 +288,22 @@ func _physics_process(delta: float) -> void:
 	_update_zoomies_juice(is_zooming, input_dir.x, delta)
 
 	# Publish where we are for the other players.
+	sync_position = position
+	sync_model_rotation = cat_model.rotation
+
+
+## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
+func _menu_open() -> bool:
+	return PauseMenu.is_open or NpcDialog.is_open
+
+
+## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".
+## Other players' copies see a big jump in sync_position and snap there (teleport_distance).
+func teleport_to(where: Vector3, yaw: float) -> void:
+	global_position = where
+	velocity = Vector3.ZERO
+	camera_pivot.rotation.y = yaw
+	cat_model.rotation.y = yaw
 	sync_position = position
 	sync_model_rotation = cat_model.rotation
 

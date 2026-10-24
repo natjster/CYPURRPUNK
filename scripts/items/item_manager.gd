@@ -237,11 +237,12 @@ func _use_held_items(delta: float) -> void:
 	var cat := local_cat()
 	if cat == null or not cat.is_controlled:
 		return
+	var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	for hand in 2:
 		var held := held_item(cat, hand)
-		if held == null:
-			continue
+		if held == null or (safe_zone and held is Weapon):
+			continue  # the hub is a safe zone: guns don't fire down there (catnip still works)
 		var action := "shoot" if hand == 0 else "use_left"
 		held.use_tick(captured and Input.is_action_pressed(action), captured and Input.is_action_just_pressed(action), delta)
 

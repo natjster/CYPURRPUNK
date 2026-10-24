@@ -12,7 +12,8 @@ Meow-City/
 │   ├── player.tscn            <- the cat
 │   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
-│   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
+│   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera),
+│   │                             don_catleone (the hub's boss cat)
 │   └── ui/settings_menu.tscn  <- the Settings screen
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
 ├── scripts/
@@ -24,10 +25,12 @@ Meow-City/
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
 │   ├── city_generator.gd      <- builds the whole city from one number
-│   ├── fish_heist.gd          <- fish spots, the drop-off, cash, the heist HUD
+│   ├── fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
+│   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
+│   ├── hub_npc.gd             <- a hub cat you can talk to (Don Catleone)
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
-│   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui
+│   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
 │   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
@@ -184,7 +187,8 @@ The E press is marked "handled" so the same key press can't enter and exit in on
 
 **Quick check after any change** (press F5):
 1. **Start menu** — the neon title over the rainy city; PLAY / SETTINGS / QUIT work.
-2. **PLAY > HOST** — your cat appears at the centre crossroads; the HUD shows cash and the drop-off.
+2. **PLAY > HOST** — your cat appears down in **THE SEWERS** (the hub). Walk to Don Catleone
+   (north end, under the pink sign), press E, pick **SEND ME UP TOP** — you're in the city.
 3. **Walk, jump, zoomies** (WASD, Space, Shift) — W always goes where the camera faces.
 4. **Car** — walk to the car, E to get in, drive, hold Space while turning to drift, E to get out.
 5. **Items** — E next to the floating tommy gun, hold Left Mouse to fire, G to drop, Tab for the inventory.
@@ -211,8 +215,10 @@ screenshot, then quit. Run from inside the `Meow-City` folder:
 C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shots/test.png --pos=0,0,6 --yaw=0 --pitch=-12
 ```
 
-- Useful extras: `--drive` (car view), `--grab=tommy_gun`, `--hold=shoot`, `--menu=settings`,
-  `--scale=2` (smaller image). The full list is at the top of `dev_capture.gd`.
+- Useful extras: `--deploy` (go up to the city first — without it you're in the hub),
+  `--talk` (open Don's talk box), `--drive` (car view), `--grab=tommy_gun`, `--hold=shoot`,
+  `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image).
+  The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
   cat name. The tool switches itself off in release (exported) builds.
 
@@ -358,15 +364,57 @@ Tested at a steady 60 fps on an RTX 4060.
 
 ---
 
-## 8. Fish Heist (no timer)
+## 8. The extraction loop: the Sewers hub + Fish Heist
+
+```
+THE SEWERS (hub, safe)  --talk to Don Catleone-->  THE CITY (grab fish)
+        ^                                               |
+        +------ step into the green EXTRACTION beam ----+
+```
+
+### The underground hub ("THE SEWERS")
+Every cat starts here when you HOST or JOIN. It's a sewer tunnel with a murky channel down the
+middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
+west wall; decoration for now — later it's where scrap buys server-wide buffs) and a ladder up
+to the surface. It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
+
+**Don Catleone** — the boss cat in the fedora with the cigar, at the north end under the pink
+sign. Walk up to him and press **E**. The talk box (bottom of the screen) gives four choices:
+**SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **HOW DOES
+THIS WORK?** and **NEVER MIND** (or Esc).
+
+**Where it lives:**
+- The tunnel: `scripts/hub.gd` on the **Hub** node in `main.tscn`. It's built from code when the
+  game starts (like the city), but it's always the same — no seed, no randomness. The Hub node sits
+  at **position (0, -200, 0)**: 200 m *under* the city. Everything below -100 m counts as "in the
+  hub". Going up or down is just moving your cat between the two.
+- Don: `scenes/props/don_catleone.tscn` (script `scripts/hub_npc.gd`), placed under **Hub** in
+  `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
+- The talk box: **NpcDialog** under PS1Overlay (`scripts/ui/npc_dialog.gd`).
+
+**Change what Don says:** open `main.tscn`, select **Hub > DonCatleone**, and in the Inspector
+under **What He Says** edit **Greetings** (one is picked at random), **About Text**, **Howto
+Text** and **Deploy Text**. **Npc Name** and **Talk Radius** are there too.
+
+**Tuning the hub** (select **Hub**): **Size** (Half Width, Half Length, Height, Channel Width),
+**Spawning** (Spawn Spot = where cats appear, Surface Spot = where Don sends you in the city),
+**Mood** (the sewer fog colour, fog glow and ambient light).
+
+**The mood switch:** while *your* camera is in the hub, the moon and rain switch off and the fog
+turns green — on your screen only. Go back up and the rainy night city returns.
+
+### Fish Heist (no timer)
 
 **How to play:** glowing fish lie outside **Meow-Mart** and on sidewalks around the city. Walk
 into a fish to pick it up automatically (up to 3: one in your mouth, two stacked on your head).
-Bring them to the **DROP-OFF** — the tall green light beam you can see through the fog — on foot
-or by car. Each fish pays **$50** into **your own** cash. Taken fish grow back after 20 seconds.
+Reach the **EXTRACTION** point — the tall green light beam you can see through the fog — on foot
+or by car. Each fish pays **$50** into **your own** cash, and you're sent **back down to the
+hub** (with or without fish). If you drove in, the getaway car goes back to its parking spot,
+ready for the next trip up. Taken fish grow back after 20 seconds.
 
 **HUD:** top-left = your cash and loot carried; top-middle = distance and direction to the
-drop-off (`^` ahead, `<` `>` turn, `v` behind); top-right = everyone's cash, richest first.
+extraction beam (`^` ahead, `<` `>` turn, `v` behind), or `THE SEWERS - SAFE ZONE` in the hub;
+top-right = everyone's cash, richest first.
 
 **Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Fish are a
 normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
@@ -377,9 +425,10 @@ normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
 - How much a fish pays: **Cash Value** on `items/fish.tres`.
 - How many you can carry: **Bag Size** on the **Items** node.
 
-**Multiplayer:** the host referees every pickup and delivery. Fish spots and the drop-off come from
-the city number, so the same city always has the same heist. A player who leaves takes their cash
-with them (their carried fish drop where they stood).
+**Multiplayer:** the host referees every pickup and extraction. Fish spots and the beam come from
+the city number, so the same city always has the same heist. The hub and Don aren't networked at
+all — everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
+player who leaves takes their cash with them (their carried fish drop where they stood).
 
 ---
 
@@ -512,7 +561,8 @@ fresh start.
 ### Node tree (in `main.tscn`, under PS1Overlay)
 ```
 HUD (Control)                     <- shown during a game: Cash, Carrying, DropOff, Scoreboard,
-                                     Popup, Crosshair, GunHud, Controls
+                                     Popup, Crosshair, GunHud, Message (what Don says),
+                                     Prompt ("[E] TALK TO..."), Controls
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
 ├── Title / Subtitle / Tagline (Label)
@@ -528,6 +578,8 @@ PauseMenu (Control)               script: ui/pause_menu.gd
 └── Dim, Panel > VBox > Title, ResumeButton, SettingsButton, LeaveButton, QuitButton, Note
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
 Inventory (Control)               script: ui/inventory_ui.gd
+NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
+└── Panel > VBox > Speaker, Line, Choices   <- choice buttons are made by the script
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,

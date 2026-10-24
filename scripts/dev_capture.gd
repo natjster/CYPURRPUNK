@@ -11,6 +11,8 @@ extends Node
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
 ##   --drive           put the cat in the car (car view)
+##   --talk            walk up to Don Catleone in the hub and press E (talk box open)
+##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --grab=ITEM       walk to the nearest ITEM (e.g. tommy_gun, catnip) and press E on it.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
@@ -19,7 +21,7 @@ extends Node
 ##   --hold=ACTION     hold a control for --hold_frames (default 60), e.g. move_forward,
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
-##   --goto_dropoff_after=N   jump into the fish drop-off after N more frames
+##   --goto_dropoff_after=N   jump into the extraction beam after N more frames (in the car if driving)
 ##   --track=N        measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
@@ -72,6 +74,15 @@ func _ready() -> void:
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
 			player.spring_arm.rotation.x = deg_to_rad(float(args["pitch"]))
+		if args.has("talk"):
+			var don := (scene as Game).hub.npc
+			player.teleport_to(don.global_position + Vector3(0, 0, 2.2), 0.0)
+			await get_tree().physics_frame
+			print("DevCapture talk: started=%s" % (scene as Game).hub.try_talk(player))
+		if args.has("deploy"):
+			(scene as Game).hub.deploy(player)
+			for i in 20:
+				await get_tree().process_frame  # let the host see our new position first
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -146,7 +157,12 @@ func _ready() -> void:
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
-			player.global_position = (scene.get_node("Heist") as FishHeist).dropoff_position + Vector3(1, 0, 1)
+			var beam := (scene.get_node("Heist") as FishHeist).dropoff_position + Vector3(1, 0, 1)
+			var car := scene.get_node("GetawayCar") as GetawayCar
+			if car.driver_id == multiplayer.get_unique_id():
+				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
+			else:
+				player.global_position = beam
 
 	if args.has("inventory"):
 		scene.get_node("PS1Overlay/Inventory")._set_open(true)  # same as pressing Tab
@@ -198,7 +214,7 @@ func _ready() -> void:
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():
-			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s speed_boost=%.1f" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), cat.speed_boost])
+			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost])
 
 	var image := get_viewport().get_texture().get_image()
 	var scale := int(args.get("scale", "4"))
