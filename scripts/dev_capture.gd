@@ -12,6 +12,8 @@ extends Node
 ##   --pitch=DEG       tilt the camera up/down
 ##   --drive           put the cat in the car (car view)
 ##   --talk            walk up to Don Catleone in the hub and press E (talk box open)
+##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
+##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --grab=ITEM       walk to the nearest ITEM (e.g. tommy_gun, catnip) and press E on it.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
@@ -67,6 +69,11 @@ func _ready() -> void:
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
+		if args.has("deploy"):
+			# Before --pos, so --pos can still pick an exact spot in the city.
+			(scene as Game).hub.deploy(player)
+			for i in 20:
+				await get_tree().process_frame  # let the host see our new position first
 		if args.has("pos"):
 			var p: PackedFloat64Array = args["pos"].split_floats(",")
 			player.global_position = Vector3(p[0], p[1], p[2])
@@ -79,10 +86,6 @@ func _ready() -> void:
 			player.teleport_to(don.global_position + Vector3(0, 0, 2.2), 0.0)
 			await get_tree().physics_frame
 			print("DevCapture talk: started=%s" % (scene as Game).hub.try_talk(player))
-		if args.has("deploy"):
-			(scene as Game).hub.deploy(player)
-			for i in 20:
-				await get_tree().process_frame  # let the host see our new position first
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -120,6 +123,30 @@ func _ready() -> void:
 			ItemManager.instance.request_drop_item.rpc_id(1, parts[0], int(parts[1]), ItemManager.instance.ground_in_front_of(player))
 			for i in 10:
 				await get_tree().process_frame
+		if args.has("bait_roomba"):
+			# --bait_roomba=4: 4 m in front of the cat.  --bait_roomba=aim: right under the crosshair
+			# (where the camera's centre line meets the ground), stunned so it stays put a moment.
+			for i in 20:
+				await get_tree().process_frame  # let the camera settle (over-the-shoulder slide)
+			var roomba := _nearest_roomba(scene, player.global_position)
+			if not multiplayer.is_server():
+				# A client can't move the host's Roombas, so walk our cat up to one instead.
+				player.teleport_to(roomba.global_position + Vector3(float(args["bait_roomba"]), 0, 0), 0.0)
+			elif args["bait_roomba"] == "aim":
+				var camera := player.camera
+				var aim := -camera.global_basis.z
+				var t := (camera.global_position.y - 0.15) / maxf(-aim.y, 0.01)
+				roomba.global_position = camera.global_position + aim * t - Vector3(0, 0.05, 0)
+				roomba.state = Roomba.State.STUNNED
+				roomba._stun_left = 3.0
+			else:
+				var ahead := -player.camera_pivot.global_basis.z
+				roomba.global_position = player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * float(args["bait_roomba"]) + Vector3(0, 0.1, 0)
+			print("DevCapture bait: %s placed at %s" % [roomba.name, roomba.global_position.snapped(Vector3.ONE * 0.1)])
+		if args.has("zap_roomba"):
+			var roomba := _nearest_roomba(scene, player.global_position)
+			for i in int(args["zap_roomba"]):
+				roomba.take_hit()
 		if args.has("hold"):
 			# Pretend a key is held down, e.g. --hold=move_forward --hold_frames=60
 			for i in int(args.get("hold_delay", "30")):
@@ -208,6 +235,13 @@ func _ready() -> void:
 				var weapon := items.held_item(cat, hand) as Weapon
 				if weapon != null:
 					print("DevCapture weapon: cat %s hand %d shots_seen=%d heat=%.2f overheated=%s" % [cat.name, hand, weapon.shots_seen, weapon.heat, weapon.is_overheated])
+	var roombas := scene.get_node_or_null("Roombas")
+	if roombas != null:
+		var lines := PackedStringArray()
+		for roomba in roombas.get_children():
+			if roomba is Roomba and not roomba.is_queued_for_deletion():
+				lines.append("%s %s %s hp=%d stomach=%s" % [roomba.name, Roomba.State.keys()[roomba.state], roomba.global_position.snapped(Vector3.ONE * 0.1), roomba.health, roomba.stomach])
+		print("DevCapture roombas (%d): %s" % [lines.size(), " | ".join(lines)])
 	var car := scene.get_node_or_null("GetawayCar") as GetawayCar
 	if car != null:
 		print("DevCapture car: position=%s driver=%d frozen=%s" % [car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.freeze])
@@ -264,6 +298,14 @@ func _describe(steps: Array) -> String:
 		biggest = maxf(biggest, step)
 		total += step
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
+
+
+func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
+	var best: Roomba = null
+	for roomba in scene.get_node("Roombas").get_children():
+		if best == null or from.distance_to(roomba.global_position) < from.distance_to(best.global_position):
+			best = roomba
+	return best
 
 
 ## Turns ["--capture=a.png", "--drive"] into {"capture": "a.png", "drive": "true"}.

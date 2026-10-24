@@ -11,6 +11,7 @@ Meow-City/
 │   ├── main.tscn              <- THE game scene (press F5 to run this)
 │   ├── player.tscn            <- the cat
 │   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
+│   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
 │   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera),
 │   │                             don_catleone (the hub's boss cat)
@@ -28,6 +29,8 @@ Meow-City/
 │   ├── fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
 │   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
 │   ├── hub_npc.gd             <- a hub cat you can talk to (Don Catleone)
+│   ├── roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
+│   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
 │   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog
@@ -424,6 +427,42 @@ normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
   Dropoff Radius, Min Dropoff Distance, Beam Color.
 - How much a fish pays: **Cash Value** on `items/fish.tres`.
 - How many you can carry: **Bag Size** on the **Items** node.
+
+### VAC-COPs (police Roombas — the enemy)
+Eight police Roombas patrol the city's sidewalks. When one spots a cat **on foot** within 14 m,
+its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
+slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying and
+**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!"). Then it backs off
+for a couple of seconds.
+
+**Getting your fish back:** destroy it. **3 shots** from any gun, or **run it over** with the
+car at speed. It explodes and spits out everything it vacuumed — walk over the fish to grab them.
+A new Roomba rolls out somewhere else 25 seconds later. Cats in the car and cats in the hub are
+safe. Shoot a Roomba and it gets angry and chases *you*.
+
+**Where it lives:** `scenes/roomba.tscn` (script `scripts/roomba.gd`). The **Roombas** node in
+`main.tscn` (script `scripts/roomba_patrol.gd`) puts them out when a game is hosted, and its
+sibling **RoombaSpawner** (a MultiplayerSpawner) copies them to every player.
+
+```
+Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
+├── CollisionShape3D
+├── Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
+├── SirenLight (OmniLight3D)       <- red/blue on the street while chasing
+└── MultiplayerSynchronizer        <- sync_position, sync_yaw, state
+```
+
+**Tuning:**
+- Select **Roombas** in `main.tscn`: **Roomba Count**, **Respawn Seconds**, **Min Spawn Distance**
+  (never appears this close to a cat or the centre crossroads).
+- Open `scenes/roomba.tscn`, select the root **Roomba**: **Driving** (Patrol Speed, Chase Speed,
+  Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
+  Steals Loot), **Toughness** (Max Health, Car Smash Speed).
+- Roombas are on collision **Layer 2**, so cats and the car pass over them instead of getting
+  stuck (Inspector > Collision > Layer). Guns still hit them.
+
+**Multiplayer:** the host runs every Roomba's brain; everyone else's copy glides to where the
+host says it is. Bonks, stolen fish and explosions are all decided by the host.
 
 **Multiplayer:** the host referees every pickup and extraction. Fish spots and the beam come from
 the city number, so the same city always has the same heist. The hub and Don aren't networked at

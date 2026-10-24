@@ -33,6 +33,11 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `hub.deploy(cat)`. Host detects cats/driver at the beam in `fish_heist.gd` -> `_extracted` RPC ->
   owner calls `hub.return_cat`. Owners move their own cat with `CatPlayer.teleport_to`. The hub swaps
   the local mood (moon/rain off, green fog) when the camera is below the line.
+- Enemy: VAC-COP `Roomba` (`scenes/roomba.tscn`, `scripts/roomba.gd`), host-simulated CharacterBody on
+  collision layer 2 (mask 1), others glide to `sync_position`/`sync_yaw`/`state`. `RoombaPatrol`
+  (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
+  Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;
+  explode drops stomach via `ItemManager.drop_on_street`. Test: `--bait_roomba=D|aim`, `--zap_roomba=N`.
 - `scenes/player.tscn` + `scripts/cat_player.gd` (`CatPlayer`): owner-authoritative cat. Owner writes
   `sync_position` / `sync_model_rotation` / `player_name`; remote copies glide toward them in `_process`.
   Only `CatModel` rotates; body never does (camera is a child).

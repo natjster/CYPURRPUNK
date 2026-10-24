@@ -32,7 +32,8 @@ extends HeldItem
 @export var overheated_cool_rate: float = 0.35
 
 @export_group("Hits")
-## How hard a bolt shoves another cat (metres per second).
+## How hard a bolt shoves another cat (metres per second). Every bolt that hits a Roomba
+## takes 1 of its health (see roomba.gd).
 @export var cat_knockback: float = 7.0
 ## Little hop a zapped cat does.
 @export var cat_hop: float = 3.0
@@ -125,7 +126,10 @@ func _fire() -> void:
 	if hit:
 		var cat := hit.collider as CatPlayer
 		var car := hit.collider as GetawayCar
-		if cat != null:
+		var roomba := hit.collider as Roomba
+		if roomba != null:
+			roomba.take_hit.rpc_id(1)  # the host keeps score of Roomba health
+		elif cat != null:
 			# The zapped cat's OWN computer moves it, so ask that computer to do the shove.
 			cat.get_zapped.rpc_id(cat.get_multiplayer_authority(), aim * cat_knockback + Vector3.UP * cat_hop)
 		elif car != null:

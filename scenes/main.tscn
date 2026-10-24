@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://scripts/hub.gd" id="17_hub"]
 [ext_resource type="PackedScene" path="res://scenes/props/don_catleone.tscn" id="18_don"]
 [ext_resource type="Script" path="res://scripts/ui/npc_dialog.gd" id="19_npc_dialog"]
+[ext_resource type="Script" path="res://scripts/roomba_patrol.gd" id="20_roombas"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -129,6 +130,13 @@ script = ExtResource("11_items")
 
 [node name="Heist" type="Node3D" parent="."]
 script = ExtResource("10_heist")
+
+[node name="Roombas" type="Node3D" parent="."]
+script = ExtResource("20_roombas")
+
+[node name="RoombaSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn")
+spawn_path = NodePath("../Roombas")
 
 [node name="Hub" type="Node3D" parent="."]
 position = Vector3(0, -200, 0)

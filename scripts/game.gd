@@ -109,6 +109,7 @@ func host_game(city_seed: int) -> void:
 	park_car()
 	_start_playing()
 	_spawn_cat(1)  # the host's own cat
+	$Roombas.start_patrol()  # the VAC-COPs come out (the spawner copies them to everyone)
 
 
 func join_game(address: String) -> void:

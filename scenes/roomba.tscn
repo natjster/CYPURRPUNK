@@ -1,0 +1,137 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/roomba.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="SceneReplicationConfig" id="Sync_roomba"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 0
+properties/1/path = NodePath(".:sync_position")
+properties/1/spawn = true
+properties/1/replication_mode = 1
+properties/2/path = NodePath(".:sync_yaw")
+properties/2/spawn = true
+properties/2/replication_mode = 1
+properties/3/path = NodePath(".:state")
+properties/3/spawn = true
+properties/3/replication_mode = 2
+
+[sub_resource type="CylinderShape3D" id="Shape_roomba"]
+height = 0.3
+radius = 0.5
+
+[sub_resource type="ShaderMaterial" id="Mat_shell"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.85, 0.86, 0.9, 1)
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.07, 0.07, 0.1, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 5.0
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.5
+bottom_radius = 0.48
+height = 0.16
+radial_segments = 10
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_cap"]
+top_radius = 0.34
+bottom_radius = 0.36
+height = 0.08
+radial_segments = 10
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_bumper"]
+size = Vector3(0.7, 0.1, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_eye"]
+size = Vector3(0.22, 0.04, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_siren"]
+size = Vector3(0.14, 0.08, 0.1)
+
+[sub_resource type="BoxMesh" id="Mesh_bristle"]
+size = Vector3(0.28, 0.01, 0.03)
+
+[node name="Roomba" type="CharacterBody3D"]
+collision_layer = 2
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.15, 0)
+shape = SubResource("Shape_roomba")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.11, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_shell")
+
+[node name="Cap" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.21, 0.04)
+mesh = SubResource("Mesh_cap")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Bumper" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.09, -0.46)
+mesh = SubResource("Mesh_bumper")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Eye" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.15, -0.53)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenRed" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.09, 0.29, 0.02)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenBlue" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.09, 0.29, 0.02)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Brush" type="Node3D" parent="Model"]
+position = Vector3(-0.36, 0.03, -0.36)
+
+[node name="Bristle1" type="MeshInstance3D" parent="Model/Brush"]
+mesh = SubResource("Mesh_bristle")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Bristle2" type="MeshInstance3D" parent="Model/Brush"]
+rotation = Vector3(0, 2.094, 0)
+mesh = SubResource("Mesh_bristle")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Bristle3" type="MeshInstance3D" parent="Model/Brush"]
+rotation = Vector3(0, 4.189, 0)
+mesh = SubResource("Mesh_bristle")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="SirenLight" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0.6, 0)
+light_color = Color(1, 0.1, 0.15, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 1.5
+omni_range = 5.0
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("Sync_roomba")

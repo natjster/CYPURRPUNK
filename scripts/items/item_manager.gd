@@ -425,6 +425,23 @@ func take_bag(peer_id: int) -> Array:
 	return bag
 
 
+## Host: take ONE piece of loot (the last one picked up) out of a player's bag.
+## Returns its item id, or "" if the bag was empty. (A Roomba bonk calls this.)
+func take_one_loot(peer_id: int) -> String:
+	var inventory := get_inventory(peer_id).duplicate(true)
+	var bag: Array = inventory.bag
+	if bag.is_empty():
+		return ""
+	var item_id: String = bag.pop_back()
+	_set_inventory.rpc(peer_id, inventory)
+	return item_id
+
+
+## Host: put an item on the street for anyone to grab (e.g. what a smashed Roomba spits out).
+func drop_on_street(item_id: String, at: Vector3) -> void:
+	_spawn_dropped(item_id, at)
+
+
 ## Host: a player quit. Everything they carried drops where they stood.
 func player_left(peer_id: int, at: Vector3) -> void:
 	var inventory := get_inventory(peer_id)
