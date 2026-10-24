@@ -80,7 +80,7 @@ tommy gun, pistols, catnip, catdip) · start menu, pause menu, settings · found
 | Cat | Static model that leans; carries fish and items | Procedural walk/idle animation, meows |
 | Network safety | No version check. Host quitting reloads the menu with no message. | Version check on join, clear disconnect messages |
 | Build | Runs from the editor; test tool already off in release builds | Windows export, Steam depot |
-| Safety net | **Not in version control.** One zip backup (`Meow-City-backup-2026-10-24.zip`) | Git + private online backup |
+| Safety net | Git history on this PC (since 2026-10-24); no online copy yet | + private GitHub repo |
 | Store / legal | Nothing yet | Steamworks account, store page, credits and licences |
 
 **Possible change of direction:** the owner's `DESIGN_DOC.md` (free-to-play PvPvE extraction,
@@ -359,9 +359,9 @@ Keep the pattern that already works for the car.
 
 ### 5.4 Fix first (foundations, before new features)
 
-1. **Version control.** Git with a private GitHub repo. GitHub Desktop is the click-friendly way and
-   installs git for you. A `.gitignore` leaves out `.godot/` and `shots/`. Claude sets up the local
-   part; you create the GitHub account/repo.
+1. ✅ (local part) **Version control.** Git for Windows + GitHub Desktop installed; repository
+   started on branch `main` with a `.gitignore` (leaves out `.godot/`, `shots/`, builds) and
+   `.gitattributes` (LF line endings). Still to do (owner): GitHub account + publish as a private repo.
 2. ✅ **Split up `game.gd`.** Networking → the `Net` autoload (`scripts/net.gd`, so switching to
    Steam later touches one file), start menu → `MainMenu` (`scripts/ui/main_menu.gd`), pause menu →
    `PauseMenu` (`scripts/ui/pause_menu.gd`). `game.gd` keeps starting games, spawning, late-joiner

@@ -27,7 +27,8 @@ is in **[PLAN.md](PLAN.md)**.
 | [ ] | Fill in identity, bank and tax info | You |
 | [ ] | Pay the $100 Steam Direct fee (**starts the 30-day wait before you can release**) | You |
 | [ ] | Note the App ID Steam gives you (needed for Phase 2) | You |
-| [ ] | Back up the project: git + a private GitHub repo (GitHub Desktop) | Both |
+| [x] | Back up the project, part 1: git installed, local history started (`.gitignore`, first commit) | Claude |
+| [ ] | Back up the project, part 2: make a GitHub account, then **Publish repository** (private) in GitHub Desktop — steps in SETUP_GUIDE.md §11 | You |
 | [ ] | Answer the decisions in PLAN.md §1 (players, lobbies, screen shape, music) | You |
 | [ ] | Early check: the GodotSteam add-on works with Godot 4.7.2 (Valve's free test app 480) | Claude |
 

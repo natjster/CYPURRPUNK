@@ -49,6 +49,12 @@ World item IDs: city-placed items 0..N in placement order (deterministic), drops
 Other systems place items by joining group `item_placers` and implementing `place_items()`.
 Don't add per-item pickup/sync code elsewhere. User-facing how-to: SETUP_GUIDE.md section 9.
 
+## Git
+Git for Windows is NOT on PATH in Claude's shell: use `& "$env:ProgramFiles\Git\cmd\git.exe"`.
+Branch `main`. Commit after each finished, tested piece of work (commit messages via a no-BOM
+message file — PowerShell here-strings piped to git break). The owner pushes to GitHub with
+GitHub Desktop; don't push or change remotes unless asked.
+
 ## Testing without the user (dev_capture.gd autoload)
 Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from the project folder:
 - Script check: `--headless --path . --import`
