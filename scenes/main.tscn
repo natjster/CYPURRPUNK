@@ -1,0 +1,474 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="PackedScene" path="res://scenes/getaway_car.tscn" id="2_car"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="3_psx"]
+[ext_resource type="Shader" path="res://shaders/psx_post.gdshader" id="4_post"]
+[ext_resource type="Texture2D" path="res://textures/neon_grid.png" id="5_grid"]
+[ext_resource type="Texture2D" path="res://textures/building_windows.png" id="6_windows"]
+[ext_resource type="Texture2D" path="res://textures/asphalt.png" id="7_asphalt"]
+[ext_resource type="Script" path="res://scripts/city_generator.gd" id="8_city"]
+[ext_resource type="PackedScene" path="res://scenes/props/rain.tscn" id="9_rain"]
+[ext_resource type="Script" path="res://scripts/fish_heist.gd" id="10_heist"]
+[ext_resource type="Script" path="res://scripts/items/item_manager.gd" id="11_items"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="12_settings"]
+[ext_resource type="Theme" path="res://ui/menu_theme.tres" id="13_theme"]
+[ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="14_inventory"]
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="15_main_menu"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="16_pause_menu"]
+
+[sub_resource type="Environment" id="Env_night"]
+background_mode = 1
+background_color = Color(0.07, 0.04, 0.11, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.35, 0.6, 1)
+ambient_light_energy = 0.55
+glow_enabled = true
+glow_intensity = 1.1
+glow_bloom = 0.08
+glow_blend_mode = 1
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_light_color = Color(0.09, 0.05, 0.14, 1)
+fog_density = 0.03
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.025
+volumetric_fog_albedo = Color(0.7, 0.65, 0.85, 1)
+volumetric_fog_length = 48.0
+
+[sub_resource type="ShaderMaterial" id="Mat_street"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_texture = ExtResource("7_asphalt")
+shader_parameter/world_uv = true
+shader_parameter/world_uv_scale = 0.5
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_sidewalk"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_color = Color(0.55, 0.5, 0.6, 1)
+shader_parameter/albedo_texture = ExtResource("7_asphalt")
+shader_parameter/world_uv = true
+shader_parameter/world_uv_scale = 0.35
+shader_parameter/specular = 0.3
+shader_parameter/roughness = 0.5
+
+[sub_resource type="ShaderMaterial" id="Mat_building"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_texture = ExtResource("6_windows")
+shader_parameter/world_uv = true
+shader_parameter/world_uv_scale = 0.25
+shader_parameter/texture_glow = 1.6
+
+[sub_resource type="ShaderMaterial" id="Mat_neon"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/emission_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 5.0
+
+[sub_resource type="ShaderMaterial" id="Mat_crate"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_color = Color(0.3, 0.9, 0.8, 1)
+shader_parameter/albedo_texture = ExtResource("5_grid")
+
+[sub_resource type="ShaderMaterial" id="Mat_trash"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_color = Color(0.12, 0.16, 0.13, 1)
+shader_parameter/specular = 0.4
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_post"]
+shader = ExtResource("4_post")
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_game")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_night")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.9, 0.6, 0)
+light_color = Color(0.6, 0.65, 1, 1)
+light_energy = 0.3
+light_volumetric_fog_energy = 0.2
+
+[node name="City" type="Node3D" parent="."]
+script = ExtResource("8_city")
+street_material = SubResource("Mat_street")
+sidewalk_material = SubResource("Mat_sidewalk")
+building_material = SubResource("Mat_building")
+neon_material = SubResource("Mat_neon")
+crate_material = SubResource("Mat_crate")
+trash_material = SubResource("Mat_trash")
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://scenes/player.tscn")
+spawn_path = NodePath("../Players")
+
+[node name="LobbyCamera" type="Camera3D" parent="."]
+position = Vector3(3, 5, 16)
+rotation = Vector3(-0.2, 0.1, 0)
+current = true
+fov = 70.0
+
+[node name="GetawayCar" parent="." instance=ExtResource("2_car")]
+position = Vector3(5, 0.5, -4)
+
+[node name="Items" type="Node3D" parent="."]
+script = ExtResource("11_items")
+
+[node name="Heist" type="Node3D" parent="."]
+script = ExtResource("10_heist")
+
+[node name="Rain" parent="." instance=ExtResource("9_rain")]
+
+[node name="PS1Overlay" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="PS1Overlay"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Cash" type="Label" parent="PS1Overlay/HUD"]
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 120.0
+offset_bottom = 22.0
+theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "$0"
+
+[node name="Carrying" type="Label" parent="PS1Overlay/HUD"]
+offset_left = 8.0
+offset_top = 22.0
+offset_right = 120.0
+offset_bottom = 34.0
+theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 8
+text = "FISH 0/3"
+
+[node name="DropOff" type="Label" parent="PS1Overlay/HUD"]
+offset_left = 100.0
+offset_top = 6.0
+offset_right = 220.0
+offset_bottom = 18.0
+theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 8
+text = "DROP-OFF ^ 0m"
+horizontal_alignment = 1
+
+[node name="Scoreboard" type="Label" parent="PS1Overlay/HUD"]
+offset_left = 200.0
+offset_top = 6.0
+offset_right = 312.0
+offset_bottom = 60.0
+modulate = Color(1, 1, 1, 0.8)
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 2
+
+[node name="Popup" type="Label" parent="PS1Overlay/HUD"]
+offset_top = 90.0
+offset_right = 320.0
+offset_bottom = 116.0
+theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 22
+text = "+$0"
+horizontal_alignment = 1
+
+[node name="Crosshair" type="Label" parent="PS1Overlay/HUD"]
+visible = false
+modulate = Color(0.4, 1, 1, 0.8)
+offset_left = 150.0
+offset_top = 110.0
+offset_right = 170.0
+offset_bottom = 130.0
+theme_override_font_sizes/font_size = 12
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GunHud" type="Label" parent="PS1Overlay/HUD"]
+visible = false
+modulate = Color(0.4, 1, 1, 0.85)
+offset_left = 10.0
+offset_top = 210.0
+theme_override_font_sizes/font_size = 8
+text = "HEAT [----------]  LMB fire  G drop"
+
+[node name="Controls" type="Label" parent="PS1Overlay/HUD"]
+modulate = Color(1, 1, 1, 0.55)
+offset_left = 10.0
+offset_top = 222.0
+theme_override_font_sizes/font_size = 8
+text = "WASD move  SHIFT zoomies  E grab/car  G drop  TAB bag  ESC menu"
+
+[node name="Lobby" type="Control" parent="PS1Overlay" node_paths=PackedStringArray("menu_camera")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("13_theme")
+script = ExtResource("15_main_menu")
+menu_camera = NodePath("../../LobbyCamera")
+
+[node name="Shade" type="ColorRect" parent="PS1Overlay/Lobby"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0, 0.05, 0.4)
+
+[node name="Title" type="Label" parent="PS1Overlay/Lobby"]
+offset_top = 14.0
+offset_right = 320.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0.25, 0.02, 0.2, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 32
+text = "MEOW-CITY"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="PS1Overlay/Lobby"]
+offset_top = 48.0
+offset_right = 320.0
+offset_bottom = 64.0
+theme_override_colors/font_color = Color(0.4, 1, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "1  9  9  9"
+horizontal_alignment = 1
+
+[node name="Tagline" type="Label" parent="PS1Overlay/Lobby"]
+offset_top = 64.0
+offset_right = 320.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.75, 0.65, 0.9, 0.8)
+text = "fish heists on the rainy neon streets"
+horizontal_alignment = 1
+
+[node name="MainScreen" type="VBoxContainer" parent="PS1Overlay/Lobby"]
+offset_left = 115.0
+offset_top = 98.0
+offset_right = 205.0
+offset_bottom = 160.0
+theme_override_constants/separation = 5
+
+[node name="PlayButton" type="Button" parent="PS1Overlay/Lobby/MainScreen"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "PLAY"
+
+[node name="SettingsButton" type="Button" parent="PS1Overlay/Lobby/MainScreen"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "SETTINGS"
+
+[node name="QuitButton" type="Button" parent="PS1Overlay/Lobby/MainScreen"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "QUIT"
+
+[node name="PlayScreen" type="PanelContainer" parent="PS1Overlay/Lobby"]
+visible = false
+offset_left = 40.0
+offset_top = 84.0
+offset_right = 280.0
+offset_bottom = 196.0
+
+[node name="VBox" type="VBoxContainer" parent="PS1Overlay/Lobby/PlayScreen"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="NameRow" type="HBoxContainer" parent="PS1Overlay/Lobby/PlayScreen/VBox"]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="PS1Overlay/Lobby/PlayScreen/VBox/NameRow"]
+custom_minimum_size = Vector2(56, 0)
+layout_mode = 2
+text = "CAT NAME"
+
+[node name="NameInput" type="LineEdit" parent="PS1Overlay/Lobby/PlayScreen/VBox/NameRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "type your cat name"
+alignment = 1
+max_length = 12
+
+[node name="Columns" type="HBoxContainer" parent="PS1Overlay/Lobby/PlayScreen/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HostColumn" type="VBoxContainer" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="HostLabel" type="Label" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/HostColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+text = "HOST A GAME"
+horizontal_alignment = 1
+
+[node name="SeedInput" type="LineEdit" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/HostColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.9, 1, 1)
+placeholder_text = "city # (blank=random)"
+alignment = 1
+max_length = 9
+
+[node name="HostButton" type="Button" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/HostColumn"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "HOST"
+
+[node name="JoinColumn" type="VBoxContainer" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="JoinLabel" type="Label" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+text = "JOIN A FRIEND"
+horizontal_alignment = 1
+
+[node name="AddressInput" type="LineEdit" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
+layout_mode = 2
+text = "127.0.0.1"
+placeholder_text = "host IP address"
+alignment = 1
+
+[node name="JoinButton" type="Button" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "JOIN"
+
+[node name="BackButton" type="Button" parent="PS1Overlay/Lobby/PlayScreen/VBox"]
+custom_minimum_size = Vector2(70, 14)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "BACK"
+
+[node name="Status" type="Label" parent="PS1Overlay/Lobby"]
+offset_top = 202.0
+offset_right = 320.0
+offset_bottom = 214.0
+theme_override_colors/font_color = Color(1, 0.8, 0.45, 1)
+horizontal_alignment = 1
+
+[node name="Version" type="Label" parent="PS1Overlay/Lobby"]
+modulate = Color(1, 1, 1, 0.45)
+offset_left = 8.0
+offset_top = 222.0
+offset_right = 312.0
+offset_bottom = 234.0
+text = "v0.1  LAN"
+
+[node name="PauseMenu" type="Control" parent="PS1Overlay"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("13_theme")
+script = ExtResource("16_pause_menu")
+
+[node name="Dim" type="ColorRect" parent="PS1Overlay/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0, 0.05, 0.55)
+
+[node name="Panel" type="PanelContainer" parent="PS1Overlay/PauseMenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -70.0
+offset_top = -66.0
+offset_right = 70.0
+offset_bottom = 66.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PS1Overlay/PauseMenu/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+theme_override_font_sizes/font_size = 16
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+text = "RESUME"
+
+[node name="SettingsButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+text = "SETTINGS"
+
+[node name="LeaveButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+text = "LEAVE GAME"
+
+[node name="QuitButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+text = "QUIT TO DESKTOP"
+
+[node name="Note" type="Label" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.55, 0.7, 1)
+text = "the city keeps going - it's online!"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="SettingsMenu" parent="PS1Overlay" instance=ExtResource("12_settings")]
+
+[node name="Inventory" type="Control" parent="PS1Overlay"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("14_inventory")
+
+[node name="ColorDepthDither" type="ColorRect" parent="PS1Overlay"]
+material = SubResource("Mat_post")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

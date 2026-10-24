@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/rain_follow.gd" id="1_script"]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_rain"]
+particle_flag_align_y = true
+emission_shape = 3
+emission_box_extents = Vector3(16, 0.5, 16)
+direction = Vector3(0.12, -1, 0)
+spread = 2.0
+initial_velocity_min = 20.0
+initial_velocity_max = 26.0
+gravity = Vector3(0, -9.8, 0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_drop"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.7, 0.78, 1, 0.3)
+
+[sub_resource type="BoxMesh" id="Mesh_drop"]
+material = SubResource("Mat_drop")
+size = Vector3(0.02, 0.5, 0.02)
+
+[node name="Rain" type="GPUParticles3D"]
+amount = 1400
+lifetime = 0.75
+preprocess = 1.0
+visibility_aabb = AABB(-18, -22, -18, 36, 26, 36)
+process_material = SubResource("Process_rain")
+draw_pass_1 = SubResource("Mesh_drop")
+script = ExtResource("1_script")

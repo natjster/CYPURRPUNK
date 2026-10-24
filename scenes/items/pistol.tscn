@@ -1,0 +1,96 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_metal"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.2, 0.19, 0.26, 1)
+shader_parameter/specular = 0.7
+shader_parameter/roughness = 0.25
+
+[sub_resource type="ShaderMaterial" id="Mat_grip"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.55, 0.15, 1)
+shader_parameter/specular = 0.3
+shader_parameter/roughness = 0.5
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.4, 0.75, 1)
+shader_parameter/emission_color = Color(1, 0.35, 0.7, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_slide"]
+size = Vector3(0.07, 0.08, 0.26)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.022
+bottom_radius = 0.022
+height = 0.1
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_grip"]
+size = Vector3(0.06, 0.14, 0.07)
+
+[sub_resource type="BoxMesh" id="Mesh_strip"]
+size = Vector3(0.075, 0.02, 0.18)
+
+[sub_resource type="BoxMesh" id="Mesh_guard"]
+size = Vector3(0.02, 0.05, 0.08)
+
+[node name="Pistol" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 5.0
+automatic = false
+max_range = 45.0
+spread_degrees = 0.6
+heat_per_shot = 0.0
+cat_knockback = 9.0
+cat_hop = 3.5
+car_impulse = 120.0
+bolt_color = Color(1, 0.35, 0.7, 1)
+hot_color = Color(1, 0.35, 0.7, 1)
+bolt_width = 0.1
+hud_name = "PAW-PISTOL"
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Slide" type="MeshInstance3D" parent="Model"]
+mesh = SubResource("Mesh_slide")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="GlowStrip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.045, -0.02)
+mesh = SubResource("Mesh_strip")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Barrel" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.005, -0.17)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_barrel")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Grip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.1, 0.08)
+rotation = Vector3(0.3, 0, 0)
+mesh = SubResource("Mesh_grip")
+surface_material_override/0 = SubResource("Mat_grip")
+
+[node name="TriggerGuard" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.06, -0.01)
+mesh = SubResource("Mesh_guard")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Muzzle" type="Marker3D" parent="Model"]
+position = Vector3(0, 0.005, -0.23)
+
+[node name="MuzzleFlash" type="OmniLight3D" parent="Model/Muzzle"]
+light_color = Color(1, 0.35, 0.7, 1)
+light_energy = 0.0
+light_volumetric_fog_energy = 2.0
+omni_range = 2.5

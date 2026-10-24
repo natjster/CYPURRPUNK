@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/pistol.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "pistol"
+display_name = "PAW-PISTOL"
+description = "One shot per click, hits hard. 1 paw: hold two!"
+kind = 1
+hands = 1
+hold_offset = Vector3(0.34, 0.47, -0.28)
+hold_scale = 2.4
+shoulder_camera = true
+scene = ExtResource("2_scene")
+auto_pickup = false
+world_scale = 2.0
+glow_color = Color(1, 0.35, 0.7, 1)

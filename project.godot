@@ -1,0 +1,45 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="MEOW-CITY 1999"
+config/version="0.1"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="MeowCity1999"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7")
+
+[autoload]
+
+InputSetup="*res://scripts/input_setup.gd"
+Settings="*res://scripts/settings.gd"
+Net="*res://scripts/net.gd"
+DevCapture="*res://scripts/dev_capture.gd"
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=240
+window/size/window_width_override=1280
+window/size/window_height_override=960
+window/stretch/mode="viewport"
+window/stretch/scale_mode="integer"
+
+[shader_globals]
+
+psx_wobble={
+"type": "float",
+"value": 1.0
+}
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0

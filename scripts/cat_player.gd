@@ -1,0 +1,349 @@
+class_name CatPlayer
+extends CharacterBody3D
+## MEOW-CITY 1999 — third-person cat controller.
+## Attach to the root "Player" (CharacterBody3D). Expected node tree:
+##   Player (CharacterBody3D)  <- this script
+##   ├── CollisionShape3D
+##   ├── CatModel (Node3D)     <- all the cat's meshes live under here
+##   └── CameraPivot (Node3D)  <- turns left/right with the mouse
+##       └── SpringArm3D       <- tilts up/down, pulls the camera in if a wall is in the way
+##           └── Camera3D
+##
+## Only CatModel rotates to face where the cat runs. The Player body itself never
+## spins, so the camera (also a child) isn't dragged around with it.
+
+# --- Tuning knobs: all of these show up in the Inspector, no code needed ---
+@export_group("Movement")
+@export var walk_speed: float = 4.5
+@export var zoomies_speed: float = 9.0
+## How quickly the cat reaches full speed / stops. Higher = snappier.
+@export var acceleration: float = 10.0
+## How quickly the cat model turns to face its running direction.
+@export var turn_speed: float = 12.0
+@export var jump_velocity: float = 6.0
+
+@export_group("Camera")
+@export var mouse_sensitivity: float = 0.0025
+@export var min_pitch_degrees: float = -70.0
+@export var max_pitch_degrees: float = 20.0
+## While holding the tommy gun, the camera slides this far to the right (over the shoulder)
+## so the cat isn't blocking the crosshair.
+@export var gun_shoulder_offset: float = 0.7
+
+@export_group("Zoomies Juice")
+## Cat leans its nose forward while sprinting.
+@export var zoomies_lean_degrees: float = 15.0
+## Camera rolls slightly when you strafe during zoomies.
+@export var zoomies_camera_tilt_degrees: float = 6.0
+## Field-of-view widens while sprinting for a sense of speed.
+@export var zoomies_fov_boost: float = 12.0
+
+@onready var camera_pivot: Node3D = $CameraPivot
+@onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
+@onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
+@onready var cat_model: Node3D = $CatModel
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
+
+var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+## False while driving — the cat ignores input and stays hidden.
+var is_controlled: bool = true
+## Set by a car's DoorZone when the cat is standing close enough to hop in.
+var nearby_car: GetawayCar = null
+## Items (see scripts/items/): weapons set this while firing, so the cat turns to face the shot.
+var aim_until: float = 0.0
+## Set by the item system while a held item wants the over-the-shoulder camera.
+var shoulder_view: bool = false
+## Catnip etc.: speed multiplier and how long it lasts (see start_boost).
+var speed_boost: float = 1.0
+var _boost_time_left: float = 0.0
+## Catdip: extra jumps allowed in mid-air while it lasts (see start_double_jump).
+var air_jumps: int = 0
+var _air_jumps_left: int = 0
+var _air_jump_time_left: float = 0.0
+
+var _base_fov: float
+
+## Fur colours handed out to each player so cats are easy to tell apart.
+const FUR_COLORS: Array[Color] = [
+	Color(0.95, 0.55, 0.2),   # ginger (always the host)
+	Color(0.55, 0.56, 0.62),  # grey
+	Color(0.95, 0.9, 0.8),    # cream
+	Color(0.22, 0.2, 0.26),   # black
+	Color(0.85, 0.72, 0.4),   # tabby gold
+]
+
+
+# --- MULTIPLAYER ---
+# Every computer has a copy of every cat. Each cat node is named after the
+# player's network ID (host = "1"), and only that player's computer is its
+# "authority": it reads the keyboard and moves the cat. It writes where the cat
+# is into sync_position / sync_model_rotation, which the MultiplayerSynchronizer
+# sends to everyone else. Their copies then GLIDE toward those values every frame
+# instead of jumping, so other players' cats move smoothly.
+
+## The name floating above this cat. Chosen by its owner in the lobby, sent to everyone.
+var player_name: String = "":
+	set(value):
+		player_name = value.strip_edges().left(12)
+		if is_node_ready():
+			_update_name_tag()
+
+## Where the owner says this cat is. Sent over the network.
+var sync_position: Vector3
+## How the owner's cat model is turned/leaning. Sent over the network.
+var sync_model_rotation: Vector3
+
+@export_group("Network Smoothing")
+## How quickly other players' cats catch up to their real position.
+## Higher = snappier but choppier, lower = smoother but slightly behind.
+@export var network_smoothing: float = 15.0
+## If a cat is further than this from where it should be, jump there instantly
+## (e.g. after getting out of a car) instead of sliding across the map.
+@export var teleport_distance: float = 4.0
+
+
+func _enter_tree() -> void:
+	if name.is_valid_int():
+		set_multiplayer_authority(name.to_int())
+
+
+func _ready() -> void:
+	# FIELD OF VIEW comes from the Settings menu (the Camera3D's own fov is ignored).
+	_base_fov = Settings.field_of_view
+	camera.fov = _base_fov
+	Settings.changed.connect(_on_settings_changed)
+	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
+	spring_arm.add_excluded_object(get_rid())
+	_apply_fur_color()
+
+	if is_multiplayer_authority():
+		# This is MY cat: use its camera and grab the mouse.
+		camera.make_current()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		$NameTag.hide()  # no need to see your own name
+		player_name = Game.local_player_name  # the synchronizer shares it with everyone
+		sync_position = position
+		set_process(false)  # _process is only for smoothing other players' cats
+	else:
+		# Someone else's cat: no input, no physics — _process glides it to the synced spot.
+		set_physics_process(false)
+		set_process_unhandled_input(false)
+		_update_name_tag()
+		# Joined while this cat was already in a car? Hide it now.
+		for node in get_tree().get_nodes_in_group("cars"):
+			var car := node as GetawayCar
+			if car.driver_id == name.to_int():
+				enter_car(car)
+
+
+## Other players' cats only: ease toward the latest position from the network.
+func _process(delta: float) -> void:
+	var weight := 1.0 - exp(-network_smoothing * delta)
+	if position.distance_to(sync_position) > teleport_distance:
+		position = sync_position
+	else:
+		position = position.lerp(sync_position, weight)
+	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
+	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
+
+
+## Owner only: go faster for a while (catnip). Counts as zoomies for the camera effects.
+func start_boost(multiplier: float, seconds: float) -> void:
+	speed_boost = multiplier
+	_boost_time_left = seconds
+
+
+## Owner only: allow extra jumps in mid-air for a while (catdip). extra = 1 is a double jump.
+func start_double_jump(extra: int, seconds: float) -> void:
+	air_jumps = extra
+	_air_jumps_left = extra
+	_air_jump_time_left = seconds
+
+
+## The player changed a setting: pick up the new field of view.
+## (While walking, _update_zoomies_juice eases the camera to it; in the car, set it directly.)
+func _on_settings_changed() -> void:
+	_base_fov = Settings.field_of_view
+	if not is_controlled:
+		camera.fov = _base_fov
+
+
+## Show the chosen name, or a stand-in if the player left the name box empty.
+func _update_name_tag() -> void:
+	if not player_name.is_empty():
+		$NameTag.text = player_name
+	else:
+		$NameTag.text = "HOST" if name == "1" else "CAT " + name.right(3)
+
+
+func _apply_fur_color() -> void:
+	var peer_id := name.to_int() if name.is_valid_int() else 1
+	var index := 0 if peer_id == 1 else 1 + peer_id % (FUR_COLORS.size() - 1)
+	var fur := ($CatModel/Body as MeshInstance3D).get_surface_override_material(0)
+	var my_fur := fur.duplicate() as ShaderMaterial  # own copy so other cats don't change
+	my_fur.set_shader_parameter("albedo_color", FUR_COLORS[index])
+	for part in cat_model.get_children():
+		if part is MeshInstance3D and part.get_surface_override_material(0) == fur:
+			part.set_surface_override_material(0, my_fur)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Esc opens the pause menu (see game.gd), which frees the mouse.
+	# If the mouse got freed some other way (e.g. alt-tab), clicking the game grabs it again.
+	if PauseMenu.is_open:
+		return
+	if event is InputEventMouseButton and event.pressed:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	if not is_controlled:
+		return
+
+	# Mouse look: left/right turns the pivot, up/down tilts the spring arm.
+	# MOUSE SPEED and INVERT MOUSE Y come from the Settings menu.
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var sensitivity := mouse_sensitivity * Settings.mouse_speed
+		var pitch_sign := -1.0 if Settings.invert_y else 1.0
+		camera_pivot.rotate_y(-event.relative.x * sensitivity)
+		spring_arm.rotation.x = clamp(
+			spring_arm.rotation.x - event.relative.y * sensitivity * pitch_sign,
+			deg_to_rad(min_pitch_degrees),
+			deg_to_rad(max_pitch_degrees)
+		)
+	elif event.is_action_pressed("interact") and ItemManager.instance.try_interact(self):
+		# Grabbed an item lying here (the host decides). Items come before the car,
+		# so E near both picks up the item first.
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("drop"):
+		ItemManager.instance.drop_from(self)
+	elif event.is_action_pressed("interact") and nearby_car != null:
+		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
+		nearby_car.request_enter.rpc_id(1)
+		# Mark the E press as used so the car doesn't instantly treat it as "exit".
+		get_viewport().set_input_as_handled()
+
+
+func _physics_process(delta: float) -> void:
+	if not is_controlled:
+		return
+
+	# Gravity: fall when not standing on something.
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+
+	# Catdip wears off over time; landing refills the mid-air jumps.
+	_air_jump_time_left = maxf(_air_jump_time_left - delta, 0.0)
+	if _air_jump_time_left <= 0.0:
+		air_jumps = 0
+	if is_on_floor():
+		_air_jumps_left = air_jumps
+
+	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
+	if Input.is_action_just_pressed("jump") and not PauseMenu.is_open:
+		if is_on_floor():
+			velocity.y = jump_velocity
+		elif _air_jumps_left > 0:
+			velocity.y = jump_velocity
+			_air_jumps_left -= 1
+
+	# Read WASD as a 2D direction (x = left/right, y = forward/back).
+	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if PauseMenu.is_open:
+		input_dir = Vector2.ZERO
+
+	# Convert it so "forward" means "where the camera is looking", flattened onto the ground.
+	var cam_basis := camera_pivot.global_transform.basis
+	var direction := cam_basis.x * input_dir.x + cam_basis.z * input_dir.y
+	direction.y = 0.0
+	direction = direction.normalized()
+
+	# Catnip (or any boost) wears off over time.
+	_boost_time_left = maxf(_boost_time_left - delta, 0.0)
+	if _boost_time_left <= 0.0:
+		speed_boost = 1.0
+
+	# Zoomies = holding Shift while actually moving (or being boosted).
+	var is_zooming := (Input.is_action_pressed("sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
+	var target_speed := zoomies_speed if is_zooming else walk_speed
+	var target_velocity := direction * target_speed * speed_boost
+
+	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
+	var weight := 1.0 - exp(-acceleration * delta)
+	velocity.x = lerp(velocity.x, target_velocity.x, weight)
+	velocity.z = lerp(velocity.z, target_velocity.z, weight)
+
+	move_and_slide()
+
+	# Smoothly turn the cat model to face where it's going. (Godot's "forward" is -Z.)
+	# While firing a weapon, face where the camera looks instead, so the gun points at the target.
+	var is_aiming := Time.get_ticks_msec() / 1000.0 < aim_until
+	if is_aiming:
+		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, camera_pivot.rotation.y, 1.0 - exp(-turn_speed * 2.0 * delta))
+	elif direction != Vector3.ZERO:
+		var target_yaw := atan2(-direction.x, -direction.z)
+		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
+
+	_update_zoomies_juice(is_zooming, input_dir.x, delta)
+
+	# Publish where we are for the other players.
+	sync_position = position
+	sync_model_rotation = cat_model.rotation
+
+
+## Lean the cat, roll the camera and widen the FOV while sprinting; ease back otherwise.
+func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> void:
+	var weight := 1.0 - exp(-8.0 * delta)
+	var lean := deg_to_rad(zoomies_lean_degrees) if is_zooming else 0.0
+	var tilt := -strafe * deg_to_rad(zoomies_camera_tilt_degrees) if is_zooming else 0.0
+	var fov := _base_fov + zoomies_fov_boost if is_zooming else _base_fov
+
+	cat_model.rotation.x = lerp(cat_model.rotation.x, -lean, weight)
+	camera.rotation.z = lerp(camera.rotation.z, tilt, weight)
+	camera.fov = lerp(camera.fov, fov, weight)
+	# Over-the-shoulder view while holding a weapon that asks for it. (We slide the whole
+	# spring arm, because a SpringArm3D always puts its camera back on its own centre line.)
+	spring_arm.position.x = lerp(spring_arm.position.x, gun_shoulder_offset if shoulder_view else 0.0, weight)
+
+
+## Someone's weapon hit this cat. Sent to the cat's OWNER, who shoves it (owner moves its cat).
+@rpc("any_peer", "call_local", "unreliable")
+func get_zapped(push: Vector3) -> void:
+	if not is_multiplayer_authority() or not is_controlled:
+		return
+	velocity.x += push.x
+	velocity.z += push.z
+	velocity.y = maxf(velocity.y, push.y)  # a little hop, but never cancel a jump
+
+
+## Called by the car on EVERY computer when this cat gets in.
+## Everyone hides the cat; only the owner's computer hands its camera to the car.
+func enter_car(car: GetawayCar) -> void:
+	visible = false
+	collision_shape.set_deferred("disabled", true)
+	if not is_multiplayer_authority():
+		return
+
+	is_controlled = false
+	velocity = Vector3.ZERO
+	cat_model.rotation.x = 0.0
+	camera.fov = _base_fov
+
+	# Move the camera node under the car's camera arm.
+	camera.reparent(car.camera_arm, false)
+	camera.transform = Transform3D.IDENTITY
+	camera.make_current()
+
+
+## Called by the car on EVERY computer when this cat gets out.
+func exit_car(exit_position: Vector3) -> void:
+	visible = true
+	collision_shape.set_deferred("disabled", false)
+	if not is_multiplayer_authority():
+		return  # the owner moves it; the new position arrives via the synchronizer
+
+	global_position = exit_position
+	sync_position = position
+	# Take the camera back.
+	camera.reparent(spring_arm, false)
+	camera.transform = Transform3D.IDENTITY
+	camera.make_current()
+	is_controlled = true

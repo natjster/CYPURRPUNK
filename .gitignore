@@ -1,0 +1,20 @@
+# MEOW-CITY 1999 — files git should NOT back up.
+
+# Godot's cache: rebuilt automatically when the project opens.
+.godot/
+
+# Screenshots from the test tool (scripts/dev_capture.gd).
+shots/
+
+# Finished game builds (exports) and Steam upload files.
+build/
+export/
+*.exe
+*.pck
+steam_appid.txt
+
+# Personal editor / tool settings.
+.claude/settings.local.json
+*.tmp
+Thumbs.db
+desktop.ini

@@ -1,0 +1,103 @@
+[gd_resource type="Theme" format=3]
+
+; MEOW-CITY 1999 menu look: dark purple boxes, neon pink edges, cyan when the mouse is over it.
+; Used by the start menu, pause menu and settings menu. Double-click this file in Godot's
+; FileSystem dock to edit the colours in the Theme editor.
+
+[sub_resource type="StyleBoxFlat" id="Btn_normal"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.1, 0.04, 0.16, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.35, 0.8, 0.7)
+
+[sub_resource type="StyleBoxFlat" id="Btn_hover"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(0.2, 0.06, 0.3, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="Btn_pressed"]
+content_margin_left = 4.0
+content_margin_top = 1.0
+content_margin_right = 4.0
+content_margin_bottom = 1.0
+bg_color = Color(1, 0.35, 0.8, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.8, 0.95, 1)
+
+[sub_resource type="StyleBoxFlat" id="Btn_focus"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 1, 1, 0.8)
+
+[sub_resource type="StyleBoxFlat" id="Edit_normal"]
+content_margin_left = 3.0
+content_margin_top = 1.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0.02, 0.01, 0.05, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 1, 1, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="Edit_focus"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 1, 1, 1)
+
+[sub_resource type="StyleBoxFlat" id="Panel"]
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+bg_color = Color(0.05, 0.02, 0.09, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.35, 0.8, 0.8)
+shadow_color = Color(1, 0.35, 0.8, 0.15)
+shadow_size = 4
+
+[resource]
+default_font_size = 8
+Button/colors/font_color = Color(1, 0.85, 0.95, 1)
+Button/colors/font_hover_color = Color(0.4, 1, 1, 1)
+Button/colors/font_focus_color = Color(0.4, 1, 1, 1)
+Button/colors/font_pressed_color = Color(0.05, 0.02, 0.09, 1)
+Button/colors/font_disabled_color = Color(0.5, 0.4, 0.55, 1)
+Button/styles/normal = SubResource("Btn_normal")
+Button/styles/hover = SubResource("Btn_hover")
+Button/styles/pressed = SubResource("Btn_pressed")
+Button/styles/focus = SubResource("Btn_focus")
+Button/styles/disabled = SubResource("Btn_normal")
+Label/colors/font_color = Color(0.85, 0.8, 0.95, 1)
+LineEdit/colors/font_color = Color(1, 0.8, 0.45, 1)
+LineEdit/colors/font_placeholder_color = Color(0.55, 0.5, 0.65, 1)
+LineEdit/colors/caret_color = Color(0.4, 1, 1, 1)
+LineEdit/styles/normal = SubResource("Edit_normal")
+LineEdit/styles/focus = SubResource("Edit_focus")
+PanelContainer/styles/panel = SubResource("Panel")

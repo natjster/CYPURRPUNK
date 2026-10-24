@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/fish.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "fish"
+display_name = "FISH"
+description = "Fresh from Meow-Mart. Worth $50 at the drop-off."
+kind = 0
+cash_value = 50
+bag_space = 1
+scene = ExtResource("2_scene")
+auto_pickup = true

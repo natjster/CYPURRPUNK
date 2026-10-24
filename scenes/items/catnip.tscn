@@ -1,0 +1,49 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/catnip.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_pouch"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.85, 0.75, 0.55, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_leaf"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.35, 0.95, 0.4, 1)
+shader_parameter/emission_color = Color(0.3, 1, 0.35, 1)
+shader_parameter/emission_energy = 1.5
+
+[sub_resource type="SphereMesh" id="Mesh_pouch"]
+radius = 0.1
+height = 0.16
+radial_segments = 6
+rings = 3
+
+[sub_resource type="PrismMesh" id="Mesh_leaf"]
+size = Vector3(0.09, 0.14, 0.02)
+
+[node name="Catnip" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="Pouch" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_pouch")
+surface_material_override/0 = SubResource("Mat_pouch")
+
+[node name="Leaf1" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.12, 0)
+mesh = SubResource("Mesh_leaf")
+surface_material_override/0 = SubResource("Mat_leaf")
+
+[node name="Leaf2" type="MeshInstance3D" parent="."]
+position = Vector3(0.04, 0.1, 0.02)
+rotation = Vector3(0, 1.2, -0.5)
+mesh = SubResource("Mesh_leaf")
+surface_material_override/0 = SubResource("Mat_leaf")
+
+[node name="Leaf3" type="MeshInstance3D" parent="."]
+position = Vector3(-0.04, 0.1, -0.02)
+rotation = Vector3(0, -1.0, 0.5)
+mesh = SubResource("Mesh_leaf")
+surface_material_override/0 = SubResource("Mat_leaf")

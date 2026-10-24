@@ -1,0 +1,160 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_metal"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.17, 0.16, 0.22, 1)
+shader_parameter/specular = 0.7
+shader_parameter/roughness = 0.25
+
+[sub_resource type="ShaderMaterial" id="Mat_polymer"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.85, 0.15, 0.5, 1)
+shader_parameter/specular = 0.4
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_fin"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.3, 0.75, 1)
+shader_parameter/emission_color = Color(1, 0.15, 0.65, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="ShaderMaterial" id="Mat_coil"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.2, 0.9, 1, 1)
+shader_parameter/emission_color = Color(0.2, 0.95, 1, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_receiver"]
+size = Vector3(0.11, 0.13, 0.4)
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.03
+bottom_radius = 0.03
+height = 0.4
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_fin"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 0.03
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_drum"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.08
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_coil"]
+top_radius = 0.065
+bottom_radius = 0.065
+height = 0.09
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_grip"]
+size = Vector3(0.06, 0.15, 0.07)
+
+[sub_resource type="BoxMesh" id="Mesh_stock"]
+size = Vector3(0.06, 0.1, 0.26)
+
+[sub_resource type="BoxMesh" id="Mesh_rail"]
+size = Vector3(0.035, 0.035, 0.24)
+
+[node name="TommyGun" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 12.0
+automatic = true
+max_range = 60.0
+spread_degrees = 1.2
+heat_per_shot = 0.03
+cool_rate = 0.45
+overheated_cool_rate = 0.35
+cat_knockback = 7.0
+cat_hop = 3.0
+car_impulse = 90.0
+bolt_color = Color(0.2, 0.95, 1, 1)
+hot_color = Color(1, 0.15, 0.1, 1)
+hud_name = "PURR-TOMMY"
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Receiver" type="MeshInstance3D" parent="Model"]
+mesh = SubResource("Mesh_receiver")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Barrel" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.01, -0.39)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_barrel")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Fin1" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.01, -0.28)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_fin")
+surface_material_override/0 = SubResource("Mat_fin")
+
+[node name="Fin2" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.01, -0.39)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_fin")
+surface_material_override/0 = SubResource("Mat_fin")
+
+[node name="Fin3" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.01, -0.5)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_fin")
+surface_material_override/0 = SubResource("Mat_fin")
+
+[node name="Drum" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.13, -0.06)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_drum")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="HeatCoil" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.13, -0.06)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_coil")
+surface_material_override/0 = SubResource("Mat_coil")
+
+[node name="Grip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.12, 0.13)
+rotation = Vector3(0.3, 0, 0)
+mesh = SubResource("Mesh_grip")
+surface_material_override/0 = SubResource("Mat_polymer")
+
+[node name="ForeGrip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.1, -0.24)
+mesh = SubResource("Mesh_grip")
+surface_material_override/0 = SubResource("Mat_polymer")
+
+[node name="Stock" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.02, 0.32)
+mesh = SubResource("Mesh_stock")
+surface_material_override/0 = SubResource("Mat_polymer")
+
+[node name="SightRail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.08, -0.02)
+mesh = SubResource("Mesh_rail")
+surface_material_override/0 = SubResource("Mat_coil")
+
+[node name="Muzzle" type="Marker3D" parent="Model"]
+position = Vector3(0, 0.01, -0.6)
+
+[node name="MuzzleFlash" type="OmniLight3D" parent="Model/Muzzle"]
+light_color = Color(0.2, 0.95, 1, 1)
+light_energy = 0.0
+light_volumetric_fog_energy = 2.0
+omni_range = 3.0

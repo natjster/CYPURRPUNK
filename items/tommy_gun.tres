@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/tommy_gun.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "tommy_gun"
+display_name = "PURR-TOMMY"
+description = "Plasma tommy gun. Hold LMB to spray. 2 paws. Overheats."
+kind = 1
+hands = 2
+hold_offset = Vector3(0.32, 0.45, -0.25)
+hold_scale = 1.5
+shoulder_camera = true
+scene = ExtResource("2_scene")
+auto_pickup = false
+world_scale = 1.5
+glow_color = Color(0.2, 0.95, 1, 1)
