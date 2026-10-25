@@ -11,6 +11,8 @@ extends Node3D
 ##   - Reach the EXTRACTION point (the tall green light beam), on foot or by car.
 ##     Every piece of loot pays its card's cash_value into YOUR cash (cash is per player),
 ##     and you're sent back down to the hub — with or without loot.
+##     Quests done at that moment (quest_manager.gd, e.g. Lil' Mittens' 3 fish) pay their
+##     bonus on top.
 ##     If you were driving, the getaway car goes back to its parking spot for the next trip.
 ##   - Taken fish grow back at their spot after respawn_seconds. No timer: play forever.
 ##
@@ -181,6 +183,8 @@ func _physics_process(delta: float) -> void:
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
 		_extract_wait[peer_id] = _clock + 3.0
+		# Quests first, while the loot is still in the bag (e.g. Mittens wants 3 fish IN it).
+		var quest_bonus: int = QuestManager.instance.complete_on_extract(peer_id)[0]
 		var loot := items.take_bag(peer_id) if items.bag_used(peer_id) > 0 else []
 		var earned := 0
 		for item_id in loot:
@@ -188,17 +192,20 @@ func _physics_process(delta: float) -> void:
 		if driving:
 			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
 			Game.instance.park_car()  # ...and it waits at its parking spot for the next trip up
-		_extracted.rpc(peer_id, earned, loot.size())
+		_extracted.rpc(peer_id, earned, loot.size(), quest_bonus)
 
 
 # --- What the host tells everyone (runs on every computer) ---
 
+## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now.
 @rpc("authority", "call_local", "reliable")
-func _extracted(peer_id: int, earned: int, count: int) -> void:
-	cash[peer_id] = cash.get(peer_id, 0) + earned
-	print("[Heist] Player %d extracted with %d loot for $%d (total $%d)" % [peer_id, count, earned, cash[peer_id]])
+func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> void:
+	cash[peer_id] = cash.get(peer_id, 0) + earned + quest_bonus
+	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [peer_id, count, earned, quest_bonus, cash[peer_id]])
 	if peer_id == multiplayer.get_unique_id():
 		popup_label.text = ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
+		if quest_bonus > 0:
+			popup_label.text += "\nQUEST DONE +$%d" % quest_bonus
 		_popup_time = 2.5
 		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
 
@@ -232,8 +239,14 @@ func _update_hud(delta: float) -> void:
 		return
 	var items := ItemManager.instance
 	cash_label.text = "$%d" % cash.get(me, 0)
-	var used := items.bag_used(me)
-	carry_label.text = "LOOT %d/%d%s" % [used, items.bag_size, "  FULL!" if used >= items.bag_size else ""]
+	# Under the cash: your quest's progress (e.g. "QUEST: MITTENS' FISH 2/3") if you have one,
+	# otherwise how full your loot bag is.
+	var quest_line := QuestManager.instance.hud_text(me)
+	if quest_line != "":
+		carry_label.text = "QUEST: " + quest_line
+	else:
+		var used := items.bag_used(me)
+		carry_label.text = "LOOT %d/%d%s" % [used, items.bag_size, "  FULL!" if used >= items.bag_size else ""]
 
 	# Distance and rough direction to the extraction beam, relative to where the camera looks.
 	# Down in the hub there's no beam to point at.

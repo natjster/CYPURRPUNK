@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="QuestData" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = "mittens_fish"
+title = "MITTENS' FISH"
+description = "Bring 3 fish down through the extraction beam for Lil' Mittens."
+item = "fish"
+count = 3
+reward_cash = 100
+repeatable = true

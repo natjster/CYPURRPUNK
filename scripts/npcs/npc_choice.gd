@@ -11,6 +11,8 @@ extends Resource
 ## Built-in actions (type the word into Action):
 ##   send_up_top   send the cat from the hub up to the city (what Don Catleone does)
 ##   return_to_hub send the cat back down to the hub
+##   quest:<id>    give the player the quest with that id, e.g. quest:mittens_fish
+##                 (quest cards are .tres files in res://quests/)
 ## Any other word is passed to the NPC's own script (Npc._on_action) and its
 ## "action_chosen" signal, so a special NPC can do special things. See npc.gd.
 

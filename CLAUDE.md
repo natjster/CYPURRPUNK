@@ -66,7 +66,17 @@ Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), c
 message, action, go_to). Built-in actions in `Npc._run_action`; custom ones via subclass
 `_on_action` or the `action_chosen` signal. `Npc.try_talk(cat)` is called by cat_player on E;
 `NpcDialog._process` drives the "[E] TALK TO" prompt. New NPCs start from
-`scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk --choose=N,M`.
+`scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk[=NodeName] --choose=N,M`.
+Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); action `quest:<id>` starts one.
+
+## Quest framework
+`scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in
+`res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
+progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
+`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. HUD line `HUD/Carrying` shows
+`hud_text()` when a quest is active. Lil' Mittens (`scenes/npcs/lil_mittens.tscn`, in the Hub) gives
+`mittens_fish` (3 fish, +$100, repeatable). Test: `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
+--goto_dropoff_after=20 --talk_again_after=40`.
 
 ## Git
 Git for Windows is NOT on PATH in Claude's shell: use `& "$env:ProgramFiles\Git\cmd\git.exe"`.

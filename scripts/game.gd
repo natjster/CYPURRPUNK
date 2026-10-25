@@ -223,6 +223,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # build the same city first
 		$Items.send_state_to(peer_id)  # then which items are taken, who holds/carries what
 		$Heist.send_state_to(peer_id)  # then everyone's cash
+		$Quests.send_state_to(peer_id)  # and everyone's quests
 		_spawn_cat(peer_id)
 		# Late joiner: tell them who's already driving, so that driver's cat is hidden
 		# and their copy of the car follows the right player.
@@ -237,6 +238,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 	if car.driver_id == peer_id:
 		car.set_driver.rpc(0)  # empty the car before their cat disappears
 	$Heist.player_left(peer_id)
+	$Quests.player_left(peer_id)
 	var cat := cat_for(peer_id)
 	# Everything they carried drops where they stood, so nothing is lost.
 	$Items.player_left(peer_id, cat.global_position if cat != null else SPAWN_POINT)

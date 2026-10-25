@@ -1,0 +1,309 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/npc.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_need"]
+script = ExtResource("4_choice")
+text = "WHAT DO YOU NEED?"
+go_to = "ask"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_leave"]
+script = ExtResource("4_choice")
+text = "GOTTA GO"
+message = "...oh. Okay. I'll just be here. In the box. Alone. It's fine."
+
+[sub_resource type="Resource" id="Choice_accept"]
+script = ExtResource("4_choice")
+text = "FINE. THREE FISH."
+message = "YOU'RE THE BEST. I'll be right here. Starving. No pressure."
+action = "quest:mittens_fish"
+
+[sub_resource type="Resource" id="Choice_alot"]
+script = ExtResource("4_choice")
+text = "THAT'S A LOT OF FISH"
+go_to = "guilt"
+
+[sub_resource type="Resource" id="Choice_no"]
+script = ExtResource("4_choice")
+text = "NO"
+message = "Wow. Okay. I'll just eat this cardboard then. Again."
+
+[sub_resource type="Resource" id="Choice_onit"]
+script = ExtResource("4_choice")
+text = "ON IT"
+message = "Hurry! I can feel my ribs! (I could always feel my ribs.)"
+
+[sub_resource type="Resource" id="Choice_remind"]
+script = ExtResource("4_choice")
+text = "REMIND ME?"
+go_to = "remind"
+
+[sub_resource type="Resource" id="Choice_onmyway"]
+script = ExtResource("4_choice")
+text = "ON MY WAY"
+message = "GO GO GO. Mind the vacuums!"
+
+[sub_resource type="Resource" id="Choice_again"]
+script = ExtResource("4_choice")
+text = "FINE. THREE MORE."
+message = "I KNEW you loved me. Three fish. Same beam. Same hundred bucks."
+action = "quest:mittens_fish"
+
+[sub_resource type="Resource" id="Choice_notnow"]
+script = ExtResource("4_choice")
+text = "NOT RIGHT NOW"
+message = "I'll count the seconds. One... two... (please hurry)"
+
+[sub_resource type="Resource" id="Page_ready"]
+script = ExtResource("3_page")
+id = "ready"
+lines = PackedStringArray("I can SMELL them. Three fish! Why are they still in YOUR bag?! Jump in the green extraction beam so they get to me! That's how the pipes work! Probably!", "You HAVE them?! Don't look at me, look at the BEAM. Go! Extract! Before I eat your tail!")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onmyway")])
+only_if_quest = "mittens_fish"
+only_if_state = "ready"
+
+[sub_resource type="Resource" id="Page_waiting"]
+script = ExtResource("3_page")
+id = "waiting"
+lines = PackedStringArray("Are those fish? No? Then why are you HERE? ...Sorry. I get hangry. I love you. Go.", "My stomach just made a noise like a Roomba. That can't be good.", "Is it fish o'clock? It feels like fish o'clock. It's been fish o'clock for an hour.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onit"), SubResource("Choice_remind")])
+only_if_quest = "mittens_fish"
+only_if_state = "active"
+
+[sub_resource type="Resource" id="Page_thanks"]
+script = ExtResource("3_page")
+id = "thanks"
+lines = PackedStringArray("You came back! I ate all three fish in four seconds. New record. I'm hungry again. Same deal? A hundred bucks. I found more money. Still don't ask.", "MY HERO. My big strong hero. Who is about to bring me three more fish. Right? RIGHT?")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_again"), SubResource("Choice_who"), SubResource("Choice_notnow")])
+only_if_quest = "mittens_fish"
+only_if_state = "done"
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("Oh thank goodness, a FACE. Do you know how long it's been since anyone talked to me? Eleven minutes. ELEVEN.", "Hi. Hello. Are you busy? You look busy. I'll be quick. I'm STARVING. Also lonely. Mostly starving.", "Nobody ever visits the box. It's a very nice box. Please don't leave. Please.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_need"), SubResource("Choice_who"), SubResource("Choice_leave")])
+only_if_quest = "mittens_fish"
+
+[sub_resource type="Resource" id="Page_ask"]
+script = ExtResource("3_page")
+id = "ask"
+lines = PackedStringArray("THREE fish. Up top they just leave 'em lying outside Meow-Mart. Three, not two. Two is a snack. Three is a MEAL. Bring all three down through the extraction beam and I'll give you a hundred bucks. I found it. Don't ask where.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_alot"), SubResource("Choice_no")])
+
+[sub_resource type="Resource" id="Page_guilt"]
+script = ExtResource("3_page")
+id = "guilt"
+lines = PackedStringArray("It's three. I counted them on my toes. I have eighteen toes, so I'm basically a math professor. Look at my eyes. LOOK AT THEM. Please?")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_no")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("I'm Lil' Mittens. I live in the box. Don Catleone says I'm \"a lot\". I think it's a compliment. Is it a compliment? Tell me it's a compliment.")
+
+[sub_resource type="Resource" id="Page_remind"]
+script = ExtResource("3_page")
+id = "remind"
+lines = PackedStringArray("Three fish. In your bag. ALL three at once. Then step in the green extraction beam. It's not complicated! ...Sorry. Love you. Go.")
+
+[sub_resource type="CapsuleShape3D" id="Shape_cat"]
+radius = 0.3
+height = 0.9
+
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.55, 0.56, 0.6, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.35, 0.75, 1, 1)
+shader_parameter/emission_color = Color(0.35, 0.75, 1, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.5, 0.6, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_cardboard"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.6, 0.45, 0.28, 1)
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.3
+height = 0.55
+radial_segments = 8
+rings = 5
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.13
+bottom_radius = 0.2
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.06
+bottom_radius = 0.07
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.2, 0.26, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.085
+height = 0.12
+radial_segments = 6
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.025
+bottom_radius = 0.045
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_sign"]
+size = Vector3(0.9, 0.55, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_stick"]
+size = Vector3(0.05, 0.6, 0.05)
+
+[node name="LilMittens" type="StaticBody3D"]
+script = ExtResource("1_script")
+npc_name = "LIL' MITTENS"
+pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_guilt"), SubResource("Page_about"), SubResource("Page_remind")])
+turn_speed = 6.0
+tail_swish = 0.6
+tail_speed = 4.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.45, 0)
+shape = SubResource("Shape_cat")
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(0, 3.14159, 0)
+scale = Vector3(0.85, 0.85, 0.85)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.39, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.82, 0)
+rotation = Vector3(0, 0, 0.18)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, 0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, -0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.09, -0.25)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.03, -0.36)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0.28)
+rotation = Vector3(0.65, 0, 0)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Sign" type="MeshInstance3D" parent="."]
+position = Vector3(0.75, 0.75, 0.3)
+mesh = SubResource("Mesh_sign")
+surface_material_override/0 = SubResource("Mat_cardboard")
+
+[node name="Stick" type="MeshInstance3D" parent="."]
+position = Vector3(0.75, 0.3, 0.3)
+mesh = SubResource("Mesh_stick")
+surface_material_override/0 = SubResource("Mat_cardboard")
+
+[node name="SignText" type="Label3D" parent="."]
+position = Vector3(0.75, 0.75, 0.33)
+texture_filter = 0
+modulate = Color(0.12, 0.08, 0.05, 1)
+text = "WILL PURR
+FOR FISH"
+font_size = 28
+pixel_size = 0.006
+outline_size = 0
+
+[node name="Candle" type="OmniLight3D" parent="."]
+position = Vector3(-0.6, 1.2, 0.5)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 1.8
+omni_range = 4.0
+
+[node name="NameTag" type="Label3D" parent="."]
+position = Vector3(0, 1.35, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(0.5, 0.85, 1, 1)
+outline_size = 6
+text = "LIL' MITTENS"
+font_size = 32
+pixel_size = 0.009

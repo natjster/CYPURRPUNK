@@ -13,10 +13,11 @@ Meow-City/
 │   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
 │   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
-│   ├── npcs/                  <- characters you talk to: don_catleone, npc_template (§8)
+│   ├── npcs/                  <- characters you talk to: don_catleone, lil_mittens, npc_template (§8)
 │   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
 │   └── ui/settings_menu.tscn  <- the Settings screen
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
+├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── scripts/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
@@ -29,6 +30,7 @@ Meow-City/
 │   ├── fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
 │   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
 │   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
+│   ├── quests/                <- the quest system: quest_data.gd, quest_manager.gd (§8)
 │   ├── roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
@@ -385,6 +387,10 @@ sign. Walk up to him and press **E**. The talk box (bottom of the screen) gives 
 **SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **HOW DOES
 THIS WORK?** and **NEVER MIND** (or Esc).
 
+**Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
+by the cardboard shanties on the east wall. Extremely needy. She gives you the **MITTENS' FISH**
+quest (see **Quests** below): bring 3 fish down at once for a **$100 bonus**.
+
 **Where it lives:**
 - The tunnel: `scripts/hub.gd` on the **Hub** node in `main.tscn`. It's built from code when the
   game starts (like the city), but it's always the same — no seed, no randomness. The Hub node sits
@@ -405,13 +411,15 @@ data in the Inspector — no code needed:
 ```
 Npc Name        "DON CATLEONE"  (also used for the floating name tag and the [E] prompt)
 Talk Radius     how close you must be to press E
-Pages           the conversation. Page 1 is what they say when you walk up.
+Pages           the conversation. The first page (that fits) is what they say when you walk up.
   Page          Id      short name, e.g. "about"
                 Lines   what they say (put several: one is picked at random)
-                Choices the answer buttons. EMPTY = reuse page 1's buttons
+                Choices the answer buttons. EMPTY = reuse the greeting page's buttons
+                Only If Quest / Only If State  (optional) only GREET with this page when that
+                        quest is not_started / active / ready (active + objective done) / done
     Choice      Text    button text, e.g. "WHO ARE YOU?"
                 Message pops up on the HUD when clicked (optional)
-                Action  "send_up_top" or "return_to_hub" (optional, see below)
+                Action  "send_up_top", "return_to_hub" or "quest:<id>" (optional, see below)
                 Go To   Id of the page to show next. EMPTY = close the talk box
 Idle Animation  Look At Players, Look Range, Turn Speed, Tail Swish, Tail Speed
 ```
@@ -439,7 +447,43 @@ NPCs aren't networked: every player has their own copy, so an action that change
 game (giving items, spending cash) must ask the host, like the item system does.
 
 **Test it without playing:** `--talk --choose=1,0` walks up to Don, then clicks button 2 and
-then button 1 (0 = top) and prints what happens.
+then button 1 (0 = top) and prints what happens. `--talk=LilMittens` picks another NPC (its node
+name).
+
+### Quests
+A quest is a job an NPC gives you, with a cash reward. The first one is **MITTENS' FISH**:
+1. Talk to **Lil' Mittens** > **WHAT DO YOU NEED?** > **FINE. THREE FISH.**
+2. The top-left HUD line (under your cash) turns into the quest tracker:
+   `QUEST: MITTENS' FISH 1/3`, then `3/3 - EXTRACT!` when you have them all. (With no quest it
+   shows your loot bag, `LOOT 1/3`, as before.)
+3. Step into the extraction beam with **all 3 fish in your bag at once**: you get the fish's
+   normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
+   and you just get the fish money — the quest stays active for your next trip.
+4. Talk to her again afterwards: she thanks you and offers it again (it's repeatable).
+Her lines change with the quest (offer / waiting / "you HAVE them, go extract!" / thank you) using
+each page's **Only If Quest** settings — open `scenes/npcs/lil_mittens.tscn` to see how.
+
+**Where it lives:** quest cards are `.tres` files in the `quests/` folder (like item cards, loaded
+automatically). `scripts/quests/quest_data.gd` is the card; `scripts/quests/quest_manager.gd` on
+the **Quests** node in `main.tscn` keeps track of who has which quest. In multiplayer the host
+decides (like cash), and every player has their own quests.
+
+**Change the Mittens quest:** double-click `quests/mittens_fish.tres`: **Title** (HUD name),
+**Item** + **Count** (what to bring — any item card's id), **Reward Cash**, **Repeatable**.
+
+**Add a new quest:**
+1. In the FileSystem, right-click `quests/mittens_fish.tres` > **Duplicate...**, name it
+   (e.g. `don_guns.tres`), and give it a new **Id** (no spaces), Title, Item, Count and Reward.
+2. In an NPC's Pages, add a choice whose **Action** is `quest:` + that id, e.g. `quest:don_guns`.
+3. Optional: give that NPC pages with **Only If Quest** = your id, so they say different things
+   while you're on the quest and after you've done it.
+
+For now every quest is "carry Count of Item when you extract". Other kinds of objectives (kill
+Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
+
+**Test it without playing:** `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
+--goto_dropoff_after=20 --talk_again_after=40` takes the quest, grabs 3 fish, extracts (prints
+`quest bonus $100`) and talks to her again.
 
 **Tuning the hub** (select **Hub**): **Size** (Half Width, Half Length, Height, Channel Width),
 **Spawning** (Spawn Spot = where cats appear, Surface Spot = where Don sends you in the city),
@@ -457,7 +501,7 @@ or by car. Each fish pays **$50** into **your own** cash, and you're sent **back
 hub** (with or without fish). If you drove in, the getaway car goes back to its parking spot,
 ready for the next trip up. Taken fish grow back after 20 seconds.
 
-**HUD:** top-left = your cash and loot carried; top-middle = distance and direction to the
+**HUD:** top-left = your cash and loot carried (or your quest's progress, see **Quests**); top-middle = distance and direction to the
 extraction beam (`^` ahead, `<` `>` turn, `v` behind), or `THE SEWERS - SAFE ZONE` in the hub;
 top-right = everyone's cash, richest first.
 

@@ -11,8 +11,10 @@ extends Node
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
 ##   --drive           put the cat in the car (car view)
-##   --talk            walk up to Don Catleone in the hub and press E (talk box open)
+##   --talk[=NAME]     walk up to an NPC (node name, e.g. LilMittens; default Don Catleone)
+##                     and press E (talk box open)
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
+##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
@@ -83,22 +85,7 @@ func _ready() -> void:
 		if args.has("pitch"):
 			player.spring_arm.rotation.x = deg_to_rad(float(args["pitch"]))
 		if args.has("talk"):
-			var don := (scene as Game).hub.npc
-			player.teleport_to(don.global_position + Vector3(0, 0, 2.2), 0.0)
-			await get_tree().physics_frame
-			print("DevCapture talk: started=%s" % Npc.try_talk(player))
-			if args.has("choose"):
-				# Click talk-box buttons in order (0 = top button), as if the player did.
-				for n in args["choose"].split(","):
-					var buttons := NpcDialog.instance.choices_box.get_children()
-					if not NpcDialog.is_open or int(n) >= buttons.size():
-						print("DevCapture choose: no button %s" % n)
-						break
-					(buttons[int(n)] as Button).pressed.emit()
-					for i in 5:
-						await get_tree().process_frame
-					print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open,
-						NpcDialog.instance.line_label.text.left(40), NpcDialog.instance.choices_box.get_child_count()])
+			await _talk(player, args)
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -203,6 +190,12 @@ func _ready() -> void:
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
 			else:
 				player.global_position = beam
+		if args.has("talk_again_after"):
+			# After extracting: walk back up to the same NPC and press E again.
+			for i in int(args["talk_again_after"]):
+				await get_tree().process_frame
+			args.erase("choose")
+			await _talk(player, args)
 
 	if args.has("inventory"):
 		scene.get_node("PS1Overlay/Inventory")._set_open(true)  # same as pressing Tab
@@ -322,6 +315,29 @@ func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
 
 
 ## Turns ["--capture=a.png", "--drive"] into {"capture": "a.png", "drive": "true"}.
+## --talk[=NODE_NAME]: stand in front of that NPC (default Don) and press E,
+## then click the --choose buttons in order (0 = top button), as if the player did.
+func _talk(player: CatPlayer, args: Dictionary) -> void:
+	var npc: Npc = Game.instance.hub.npc
+	for node in get_tree().get_nodes_in_group(Npc.GROUP):
+		if node.name == args["talk"]:
+			npc = node
+	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
+	await get_tree().physics_frame
+	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Npc.try_talk(player), NpcDialog.instance.line_label.text.left(50)])
+	if args.has("choose"):
+		for n in args["choose"].split(","):
+			var buttons := NpcDialog.instance.choices_box.get_children()
+			if not NpcDialog.is_open or int(n) >= buttons.size():
+				print("DevCapture choose: no button %s" % n)
+				break
+			(buttons[int(n)] as Button).pressed.emit()
+			for i in 5:
+				await get_tree().process_frame
+			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open,
+				NpcDialog.instance.line_label.text.left(40), NpcDialog.instance.choices_box.get_child_count()])
+
+
 func _parse_args(raw: PackedStringArray) -> Dictionary:
 	var result := {}
 	for arg in raw:

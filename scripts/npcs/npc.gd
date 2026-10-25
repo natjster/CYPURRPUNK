@@ -15,8 +15,10 @@ extends StaticBody3D
 ## opens the talk box (NpcDialog) at its FIRST page. The whole conversation is data in the
 ## Inspector: Pages (NpcPage) -> Choices (NpcChoice). No code needed for a normal chatty NPC.
 ##
-## Special behaviour: a choice's Action word runs here. "send_up_top" and "return_to_hub"
-## are built in. For anything else, either
+## Special behaviour: a choice's Action word runs here. Built in:
+##   send_up_top, return_to_hub, and quest:<id> (gives the player that quest, e.g.
+##   quest:mittens_fish — quest cards live in res://quests/, see quest_manager.gd).
+## Pages can also depend on a quest's state (NpcPage "Only If Quest"). For anything else, either
 ##   - make a script that starts with  extends Npc  and write  func _on_action(action, cat):
 ##   - or connect the action_chosen signal from another node (Node tab > Signals).
 ##
@@ -52,6 +54,7 @@ const GROUP := "npcs"
 var _model: Node3D
 var _tail: Node3D
 var _clock: float = 0.0
+var _greeting: NpcPage  # the page this conversation started on (its buttons are the "menu")
 
 
 func _ready() -> void:
@@ -115,10 +118,15 @@ func in_reach(cat: CatPlayer) -> bool:
 
 # --- The conversation ---
 
-## Start talking: show the first page.
+## Start talking: greet with the first page whose quest condition fits (see npc_page.gd).
 func talk(cat: CatPlayer) -> void:
-	if not pages.is_empty():
-		show_page(cat, pages[0].id)
+	var peer_id := cat.name.to_int()
+	for page in pages:
+		if page.fits(peer_id):
+			_greeting = page
+			show_page(cat, page.id)
+			return
+	push_warning("NPC %s has no page that fits right now (check Only If Quest)." % npc_name)
 
 
 ## Open the talk box on the page with this id. Scripts can call this to jump around too.
@@ -129,7 +137,8 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 		NpcDialog.instance.close()
 		return
 	var line := "..." if page.lines.is_empty() else page.lines[randi() % page.lines.size()]
-	var choices := page.choices if not page.choices.is_empty() else pages[0].choices
+	var fallback := _greeting if _greeting != null else pages[0]
+	var choices := page.choices if not page.choices.is_empty() else fallback.choices
 	var buttons := []
 	for choice in choices:
 		buttons.append([choice.text, _choose.bind(cat, choice)])
@@ -158,13 +167,17 @@ func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 
 
 func _run_action(action: String, cat: CatPlayer) -> void:
-	match action:
-		"send_up_top":
-			UndergroundHub.instance.deploy(cat)
-		"return_to_hub":
-			UndergroundHub.instance.return_cat(cat)
-		_:
-			_on_action(action, cat)
+	if action.begins_with("quest:"):
+		# "quest:mittens_fish" = give the player that quest (quest_manager.gd asks the host).
+		QuestManager.instance.start_quest(action.trim_prefix("quest:"))
+	else:
+		match action:
+			"send_up_top":
+				UndergroundHub.instance.deploy(cat)
+			"return_to_hub":
+				UndergroundHub.instance.return_cat(cat)
+			_:
+				_on_action(action, cat)
 	action_chosen.emit(action, cat)
 
 
