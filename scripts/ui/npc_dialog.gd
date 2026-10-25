@@ -46,7 +46,7 @@ func _process(_delta: float) -> void:
 		npc = Npc.nearest_in_reach(cat)
 	prompt_label.visible = npc != null
 	if npc != null:
-		prompt_label.text = "[E] TALK TO %s" % npc.npc_name
+		prompt_label.text = "[%s] TALK TO %s" % [Controls.key_text("interact"), npc.npc_name]
 
 
 func _input(event: InputEvent) -> void:

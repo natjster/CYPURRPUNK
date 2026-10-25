@@ -11,7 +11,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
   the transport; Steam swaps in here), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999`; test runs with `--capture` use
-  defaults and never save), `InputSetup`, `DevCapture` (debug builds only).
+  defaults and never save), `Controls`, `DevCapture` (debug builds only).
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,
@@ -47,7 +47,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Drive input (`throttle`/`steer`/`handbrake`) is filled by `_read_driver_keys()`; physics only reads it.
 - `shaders/psx_lit.gdshader` (all 3D: jitter, affine UVs, flat shading, emission, specular) and
   `shaders/psx_post.gdshader` (CRT + 15-bit dither, on a ColorRect). Renders at 320x240.
-- `scripts/input_setup.gd` autoload registers all input actions in code (not in project.godot).
+- `scripts/controls.gd` autoload `Controls` = the controls framework: `ACTIONS` list (action, menu label,
+  context foot/car/any, default keys) registers every input action in code (not in project.godot);
+  players rebind in SETTINGS > KEYS (saved to `user://controls.cfg`). Prompts must show
+  `Controls.key_text("action")`, never a hard-coded key; no key-hint bar on the HUD. Test: `--rebind=A,S,KEY`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 ## Items framework

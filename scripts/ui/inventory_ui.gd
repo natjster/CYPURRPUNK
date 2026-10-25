@@ -79,7 +79,7 @@ func _set_open(open: bool) -> void:
 	var cat := ItemManager.instance.local_cat()
 	if open:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		_info.text = "Click: equip / put away   Right-click: drop   TAB: close"
+		_info.text = "Click: equip / put away   Right-click: drop   %s: close" % Controls.key_text("inventory")
 	elif cat != null and cat.is_controlled:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 

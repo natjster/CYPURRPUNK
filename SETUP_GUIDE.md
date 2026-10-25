@@ -22,7 +22,7 @@ Meow-City/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
 │   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
-│   ├── input_setup.gd         <- autoload "InputSetup": registers all key bindings
+│   ├── controls.gd            <- autoload "Controls": every key, rebinding, saved to controls.cfg
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -138,8 +138,8 @@ camera (its child) would whip around every time the cat turned.
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
 (groups: Movement / Camera / Zoomies Juice / Network Smoothing) — no code editing needed.
 
-Key bindings live in `scripts/input_setup.gd` (an Autoload: **Project Settings > Globals > Autoload**).
-Change a key there, e.g. `KEY_E` → `KEY_F`.
+Keys are handled by the **Controls** framework (`scripts/controls.gd`) — players rebind them in
+**SETTINGS > KEYS**. See section 10, "Controls & key binding".
 
 ---
 
@@ -203,7 +203,7 @@ The E press is marked "handled" so the same key press can't enter and exit in on
 2. Note the **file name and line number** (e.g. `cat_player.gd:84`). Double-click the error to jump there.
 3. The most common causes in this project:
    - `Node not found: "CameraPivot/SpringArm3D"` → a node was renamed or moved. Names are case-sensitive and must match the trees in this guide exactly.
-   - `Invalid action name "sprint"` → the `InputSetup` autoload is missing; re-add `scripts/input_setup.gd` in Project Settings > Globals > Autoload with the name `InputSetup`.
+   - `Invalid action name "sprint"` → the `Controls` autoload is missing; re-add `scripts/controls.gd` in Project Settings > Globals > Autoload with the name `Controls` (keep it at the top of the list).
    - `Identifier "Settings"` / `"Net"` `not declared` → that autoload is missing; re-add it the same way (`scripts/settings.gd` as `Settings`, `scripts/net.gd` as `Net`).
    - `Parse Error` / `Mixed use of tabs and spaces` → copy-paste damage. Godot scripts must indent with **tabs**. Use **Edit > Convert Indent to Tabs** in the script editor.
    - Shader errors (red text in the shader editor, objects turn pink/missing) → the error names the line; send it to me.
@@ -669,25 +669,48 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 - **Pause menu (Esc in a game):** RESUME / SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
   **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
   open. LEAVE GAME goes back to the start menu; if the host leaves, everyone does.
-- **Settings:** four tabs. Click **<** / **>** to change a value; hover a row for a one-line
+- **Settings:** five tabs. Click **<** / **>** to change a value; hover a row for a one-line
   explanation at the bottom. Changes apply instantly and are saved. **RESET** = defaults.
   **Esc** = back.
+- **No key list on screen during play** — the keys live in **SETTINGS > KEYS**, and prompts
+  ("[E] TALK TO...", "E PURR-TOMMY" over items, "TAB: close" in the inventory) always show the
+  player's *current* key. The city number is shown in the pause menu.
 
 | Tab | Settings |
 |---|---|
 | DISPLAY | Screen (window/fullscreen), window size (1x-6x of 320x240), VSync, field of view |
 | SOUND | Master, music, sound FX volume |
 | CONTROLS | Mouse speed, invert mouse Y |
+| KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |
 | EFFECTS | CRT TV look (0-100%), PS1 wobble on/off, volumetric fog on/off |
 
-Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cat name). Delete that file to get a
-fresh start.
+Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cat name) and `controls.cfg` (keys).
+Delete those files to get a fresh start.
+
+### Controls & key binding (`scripts/controls.gd`, Autoload **Controls**)
+- **Rebinding (player):** SETTINGS > KEYS, click a box (it shows `...`), press the new key or
+  mouse button (Left/Right/Middle click, wheel, side buttons all work). **Esc** cancels,
+  **Delete/Backspace** empties the box. Each control has two boxes (e.g. W *and* Up).
+- **Clashes:** if the key was already used by a control needed at the same time, that control
+  loses it and the hint says "SPACE was taken from JUMP - give it a new key!". Controls only
+  clash when their **context** overlaps: `foot` (walking), `car` (driving), `any` (both) — so
+  JUMP (foot) and HANDBRAKE (car) can both be Space.
+- **Esc can't be rebound** — it always opens/closes menus.
+- **Adding a control:** add one line to **ACTIONS** in `scripts/controls.gd`, e.g.
+  `{"action": "meow", "label": "MEOW", "context": "foot", "keys": ["M"]},`
+  It appears in the KEYS menu by itself. In your script use `Input.is_action_pressed("meow")`
+  (or `event.is_action_pressed("meow")` in `_unhandled_input`).
+- **Changing a default key:** edit `"keys"` on that line (names like `"F"`, `"Space"`, `"Shift"`,
+  `"Up"`, `"Mouse Left"`, `"Wheel Up"`, `"Mouse 4"`). Players who already rebound keep theirs
+  until they press RESET KEYS.
+- **Showing a key on a prompt:** `Controls.key_text("interact")` gives `"E"` (or whatever the
+  player picked). Connect `Controls.changed` if the text is made once and needs updating.
 
 ### Node tree (in `main.tscn`, under PS1Overlay)
 ```
 HUD (Control)                     <- shown during a game: Cash, Carrying, DropOff, Scoreboard,
                                      Popup, Crosshair, GunHud, Message (what Don says),
-                                     Prompt ("[E] TALK TO..."), Controls
+                                     Prompt ("[E] TALK TO...")
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
 ├── Title / Subtitle / Tagline (Label)
@@ -708,8 +731,10 @@ NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,
-Panel > VBox > Title, Tabs, Rows, Hint, Buttons (ResetButton, BackButton). The tab buttons and
-the setting rows are made by the script from its **TABS** list.
+Panel > VBox > Title, Tabs, Scroll (ScrollContainer) > Rows, Hint, Buttons (ResetButton,
+BackButton). The tab buttons and the setting rows are made by the script from its **TABS** list;
+the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter with
+**Scroll > Inspector > Layout > Custom Minimum Size > y** (now 104).
 
 ### The pieces
 - **`scripts/ui/main_menu.gd`** (on **Lobby**) — the start menu screens. It doesn't connect
@@ -739,8 +764,9 @@ the setting rows are made by the script from its **TABS** list.
    `{"setting": "my_setting", "label": "MY THING", "choices": [[true, "ON"], [false, "OFF"]], "hint": "What it does."}`
 
 ### Testing shortcut
-`--menu=play`, `--menu=settings` (plus `--settings_tab=0..3`) or `--menu=pause` (with `--host`)
-open that menu before a DevCapture screenshot.
+`--menu=play`, `--menu=settings` (plus `--settings_tab=0..4`, 3 = KEYS) or `--menu=pause` (with
+`--host`) open that menu before a DevCapture screenshot. `--rebind=drop,0,Space` (with
+`--menu=settings`) rebinds a key like a player would and prints every key.
 
 ---
 

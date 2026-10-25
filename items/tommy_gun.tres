@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "tommy_gun"
 display_name = "PURR-TOMMY"
-description = "Plasma tommy gun. Hold LMB to spray. 2 paws. Overheats."
+description = "Plasma tommy gun. Hold to spray. 2 paws. Overheats."
 kind = 1
 hands = 2
 hold_offset = Vector3(0.32, 0.45, -0.25)

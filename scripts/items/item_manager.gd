@@ -74,6 +74,7 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	_load_catalog()
 	city.generated.connect(_on_city_generated)
+	Controls.changed.connect(_refresh_pickup_prompts)
 
 
 func _load_catalog() -> void:
@@ -84,6 +85,12 @@ func _load_catalog() -> void:
 			if data != null and not data.id.is_empty():
 				catalog[data.id] = data
 	print("[Items] Loaded %d item cards: %s" % [catalog.size(), ", ".join(catalog.keys())])
+
+
+## The player changed their keys: rewrite the "E  PURR-TOMMY" labels above street items.
+func _refresh_pickup_prompts() -> void:
+	for prompt in get_tree().get_nodes_in_group("pickup_prompts"):
+		prompt.text = "%s  %s" % [Controls.key_text("interact"), prompt.get_meta("item_name")]
 
 
 # --- Placing items when a city is built (same result on every computer) ---
@@ -154,7 +161,9 @@ func _add_world_local(id: int, item_id: String, at: Vector3) -> void:
 		spot.add_child(glow)
 	if not data.auto_pickup:
 		var prompt := Label3D.new()
-		prompt.text = "E  " + data.display_name
+		prompt.text = "%s  %s" % [Controls.key_text("interact"), data.display_name]
+		prompt.set_meta("item_name", data.display_name)
+		prompt.add_to_group("pickup_prompts")  # re-labelled when the player rebinds GRAB
 		prompt.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		prompt.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		prompt.modulate = Color(1, 1, 1, 0.9)
@@ -567,7 +576,7 @@ func _update_hud() -> void:
 	var lines := PackedStringArray()
 	var wants_crosshair := false
 	if cat != null and cat.is_controlled:
-		var labels := ["LMB", "RMB"]
+		var labels := ["R:", "L:"]  # right paw, left paw (keys: SETTINGS > KEYS)
 		for hand in 2:
 			var held := held_item(cat, hand)
 			if held != null:
@@ -575,7 +584,7 @@ func _update_hud() -> void:
 				lines.append(("%s %s" % [labels[hand], text]) if text != "" else labels[hand])
 				wants_crosshair = wants_crosshair or held.wants_crosshair()
 	item_hud.visible = not lines.is_empty()
-	item_hud.text = "  |  ".join(lines) + "   G drop"
+	item_hud.text = "  |  ".join(lines)
 	crosshair.visible = wants_crosshair
 
 

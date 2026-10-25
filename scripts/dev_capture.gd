@@ -32,6 +32,8 @@ extends Node
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --scale=N         upscale factor for the saved image (default 4)
 ##   --menu=NAME       open a menu first: play, settings or pause (--settings_tab=N picks the tab)
+##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
+##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 
 
 func _ready() -> void:
@@ -208,6 +210,20 @@ func _ready() -> void:
 			"pause": scene.pause_menu.open()
 		if args.has("settings_tab"):
 			scene.settings_menu._show_tab(int(args["settings_tab"]))
+		# --rebind=ACTION,SLOT,KEY   click a box on the KEYS tab and press KEY (e.g. jump,1,J)
+		if args.has("rebind"):
+			var parts: PackedStringArray = args["rebind"].split(",")
+			scene.settings_menu._start_listening(parts[0], int(parts[1]))
+			await get_tree().process_frame
+			var press := InputEventKey.new()
+			press.physical_keycode = OS.find_keycode_from_string(parts[2])
+			press.keycode = press.physical_keycode
+			press.pressed = true
+			Input.parse_input_event(press)
+			await get_tree().process_frame
+			print("DevCapture rebind %s -> %s | hint: %s" % [parts[0], Controls.bindings[parts[0]], scene.settings_menu.hint_label.text])
+			for entry in Controls.ACTIONS:
+				print("DevCapture key %s = %s" % [entry.action, Controls.bindings[entry.action]])
 
 	for i in int(args.get("frames", "90")):
 		await get_tree().process_frame

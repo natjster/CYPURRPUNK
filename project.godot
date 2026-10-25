@@ -19,7 +19,7 @@ config/features=PackedStringArray("4.7")
 
 [autoload]
 
-InputSetup="*res://scripts/input_setup.gd"
+Controls="*res://scripts/controls.gd"
 Settings="*res://scripts/settings.gd"
 Net="*res://scripts/net.gd"
 DevCapture="*res://scripts/dev_capture.gd"

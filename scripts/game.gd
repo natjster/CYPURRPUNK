@@ -45,7 +45,6 @@ static var local_player_name: String = ""
 @onready var pause_menu: PauseMenu = $PS1Overlay/PauseMenu
 @onready var settings_menu: SettingsMenu = $PS1Overlay/SettingsMenu
 @onready var hud: Control = $PS1Overlay/HUD
-@onready var controls_label: Label = $PS1Overlay/HUD/Controls
 @onready var message_label: Label = $PS1Overlay/HUD/Message
 @onready var hub: UndergroundHub = $Hub
 @onready var crt_material: ShaderMaterial = $PS1Overlay/ColorDepthDither.material
@@ -162,7 +161,8 @@ func _receive_city_seed(city_seed: int) -> void:
 
 
 func _show_city_number() -> void:
-	controls_label.text = "WASD move  SHIFT zoomies  E grab/car/talk  G drop  TAB bag  ESC menu   CITY #%d" % city.city_seed
+	# Shown in the pause menu, so the bottom of the screen stays clear (keys: SETTINGS > KEYS).
+	pause_menu.get_node("Panel/VBox/Note").text = "CITY #%d\nthe city keeps going - it's online!" % city.city_seed
 
 
 ## A line of text in the middle of the screen for a few seconds (e.g. what Don says).

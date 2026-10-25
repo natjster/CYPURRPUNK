@@ -232,7 +232,7 @@ modulate = Color(0.4, 1, 1, 0.85)
 offset_left = 10.0
 offset_top = 210.0
 theme_override_font_sizes/font_size = 8
-text = "HEAT [----------]  LMB fire  G drop"
+text = "R: HEAT [----------]"
 
 [node name="Message" type="Label" parent="PS1Overlay/HUD"]
 visible = false
@@ -258,13 +258,6 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 8
 text = "[E] TALK"
 horizontal_alignment = 1
-
-[node name="Controls" type="Label" parent="PS1Overlay/HUD"]
-modulate = Color(1, 1, 1, 0.55)
-offset_left = 10.0
-offset_top = 222.0
-theme_override_font_sizes/font_size = 8
-text = "WASD move  SHIFT zoomies  E grab/car  G drop  TAB bag  ESC menu"
 
 [node name="Lobby" type="Control" parent="PS1Overlay" node_paths=PackedStringArray("menu_camera")]
 layout_mode = 3
