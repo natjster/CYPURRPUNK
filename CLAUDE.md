@@ -29,7 +29,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
 - Extraction loop: cats spawn in the hub `Hub` (`scripts/hub.gd`, `UndergroundHub.instance`), a fixed
   code-built sewer at y=-200 (anything below y=-100 is "in the hub" = safe zone, guns don't fire).
-  `HubNpc` Don Catleone (`scenes/props/don_catleone.tscn`) opens `NpcDialog`; "SEND ME UP TOP" calls
+  Don Catleone (`scenes/npcs/don_catleone.tscn`) is an `Npc`; his "send_up_top" action calls
   `hub.deploy(cat)`. Host detects cats/driver at the beam in `fish_heist.gd` -> `_extracted` RPC ->
   owner calls `hub.return_cat`. Owners move their own cat with `CatPlayer.teleport_to`. The hub swaps
   the local mood (moon/rain off, green fog) when the camera is below the line.
@@ -59,6 +59,14 @@ Held scenes are named `HeldR`/`HeldL` under each cat's `CatModel` so their RPCs 
 World item IDs: city-placed items 0..N in placement order (deterministic), drops from 100000.
 Other systems place items by joining group `item_placers` and implementing `place_items()`.
 Don't add per-item pickup/sync code elsewhere. User-facing how-to: SETUP_GUIDE.md section 9.
+
+## NPC framework
+Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), conversation data =
+`pages: Array[NpcPage]` (first = greeting; empty choices reuse page 1's) of `NpcChoice` (text,
+message, action, go_to). Built-in actions in `Npc._run_action`; custom ones via subclass
+`_on_action` or the `action_chosen` signal. `Npc.try_talk(cat)` is called by cat_player on E;
+`NpcDialog._process` drives the "[E] TALK TO" prompt. New NPCs start from
+`scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk --choose=N,M`.
 
 ## Git
 Git for Windows is NOT on PATH in Claude's shell: use `& "$env:ProgramFiles\Git\cmd\git.exe"`.

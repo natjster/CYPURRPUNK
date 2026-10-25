@@ -17,7 +17,7 @@
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="15_main_menu"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="16_pause_menu"]
 [ext_resource type="Script" path="res://scripts/hub.gd" id="17_hub"]
-[ext_resource type="PackedScene" path="res://scenes/props/don_catleone.tscn" id="18_don"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/don_catleone.tscn" id="18_don"]
 [ext_resource type="Script" path="res://scripts/ui/npc_dialog.gd" id="19_npc_dialog"]
 [ext_resource type="Script" path="res://scripts/roomba_patrol.gd" id="20_roombas"]
 

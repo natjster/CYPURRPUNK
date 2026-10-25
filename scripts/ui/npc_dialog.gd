@@ -1,6 +1,6 @@
 class_name NpcDialog
 extends Control
-## MEOW-CITY 1999 — the TALK BOX at the bottom of the screen when you talk to a hub cat.
+## MEOW-CITY 1999 — the TALK BOX at the bottom of the screen when you talk to an NPC.
 ## Attach to the "NpcDialog" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   NpcDialog (Control)        <- this script
 ##   └── Panel (PanelContainer)
@@ -10,7 +10,9 @@ extends Control
 ##           └── Choices (VBoxContainer)  <- one button per answer, made by code
 ##
 ## Whoever wants to talk calls NpcDialog.instance.open(name, line, choices), where each
-## choice is [button text, function to run when clicked] (see hub_npc.gd).
+## choice is [button text, function to run when clicked]. NPCs (scripts/npcs/npc.gd) do this
+## for you from their Pages, so you normally never call it yourself.
+## It also shows the "[E] TALK TO ..." prompt (PS1Overlay/HUD/Prompt) when your cat is near an NPC.
 ## While it's open your cat ignores the keyboard (cat_player.gd checks NpcDialog.is_open),
 ## and Esc closes it. It sits after the other menus in the scene, so it sees Esc first.
 
@@ -22,6 +24,7 @@ static var is_open: bool = false
 @onready var speaker_label: Label = $Panel/VBox/Speaker
 @onready var line_label: Label = $Panel/VBox/Line
 @onready var choices_box: VBoxContainer = $Panel/VBox/Choices
+@onready var prompt_label: Label = $"../HUD/Prompt"
 
 
 func _enter_tree() -> void:
@@ -31,6 +34,19 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	is_open = false  # (it's static, so reset it when the scene reloads)
 	hide()
+	prompt_label.hide()
+
+
+## Every frame: "[E] TALK TO <name>" while our cat stands next to an NPC (this computer only).
+## (Still runs while the talk box is hidden: hiding a Control doesn't stop _process.)
+func _process(_delta: float) -> void:
+	var cat := Game.instance.my_cat()
+	var npc: Npc = null
+	if cat != null and cat.is_controlled and not is_open:
+		npc = Npc.nearest_in_reach(cat)
+	prompt_label.visible = npc != null
+	if npc != null:
+		prompt_label.text = "[E] TALK TO %s" % npc.npc_name
 
 
 func _input(event: InputEvent) -> void:

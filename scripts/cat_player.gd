@@ -218,8 +218,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("drop"):
 		ItemManager.instance.drop_from(self)
-	elif event.is_action_pressed("interact") and UndergroundHub.instance.try_talk(self):
-		# Standing next to Don Catleone in the hub: the talk box opens.
+	elif event.is_action_pressed("interact") and Npc.try_talk(self):
+		# Standing next to an NPC (e.g. Don Catleone in the hub): the talk box opens.
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.

@@ -13,8 +13,8 @@ Meow-City/
 │   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
 │   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
-│   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera),
-│   │                             don_catleone (the hub's boss cat)
+│   ├── npcs/                  <- characters you talk to: don_catleone, npc_template (§8)
+│   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
 │   └── ui/settings_menu.tscn  <- the Settings screen
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
 ├── scripts/
@@ -28,7 +28,7 @@ Meow-City/
 │   ├── city_generator.gd      <- builds the whole city from one number
 │   ├── fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
 │   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
-│   ├── hub_npc.gd             <- a hub cat you can talk to (Don Catleone)
+│   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
 │   ├── roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
@@ -390,13 +390,56 @@ THIS WORK?** and **NEVER MIND** (or Esc).
   game starts (like the city), but it's always the same — no seed, no randomness. The Hub node sits
   at **position (0, -200, 0)**: 200 m *under* the city. Everything below -100 m counts as "in the
   hub". Going up or down is just moving your cat between the two.
-- Don: `scenes/props/don_catleone.tscn` (script `scripts/hub_npc.gd`), placed under **Hub** in
+- Don: `scenes/npcs/don_catleone.tscn`, an NPC (see **NPCs** below), placed under **Hub** in
   `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
-- The talk box: **NpcDialog** under PS1Overlay (`scripts/ui/npc_dialog.gd`).
+- The talk box: **NpcDialog** under PS1Overlay (`scripts/ui/npc_dialog.gd`). It also shows the
+  "[E] TALK TO ..." prompt whenever your cat is near any NPC.
 
-**Change what Don says:** open `main.tscn`, select **Hub > DonCatleone**, and in the Inspector
-under **What He Says** edit **Greetings** (one is picked at random), **About Text**, **Howto
-Text** and **Deploy Text**. **Npc Name** and **Talk Radius** are there too.
+**Change what Don says:** open `scenes/npcs/don_catleone.tscn`, click the root **DonCatleone**,
+and in the Inspector open **Pages** (how pages work is just below).
+
+### NPCs: characters you can talk to
+Every talking character uses one script, `scripts/npcs/npc.gd`. Their whole conversation is
+data in the Inspector — no code needed:
+
+```
+Npc Name        "DON CATLEONE"  (also used for the floating name tag and the [E] prompt)
+Talk Radius     how close you must be to press E
+Pages           the conversation. Page 1 is what they say when you walk up.
+  Page          Id      short name, e.g. "about"
+                Lines   what they say (put several: one is picked at random)
+                Choices the answer buttons. EMPTY = reuse page 1's buttons
+    Choice      Text    button text, e.g. "WHO ARE YOU?"
+                Message pops up on the HUD when clicked (optional)
+                Action  "send_up_top" or "return_to_hub" (optional, see below)
+                Go To   Id of the page to show next. EMPTY = close the talk box
+Idle Animation  Look At Players, Look Range, Turn Speed, Tail Swish, Tail Speed
+```
+
+**Add a new NPC:**
+1. In the FileSystem dock, right-click `scenes/npcs/npc_template.tscn` > **Duplicate...** and
+   name it (e.g. `fishmonger.tscn`). It's a plain orange alley cat with a 2-page conversation.
+2. Double-click it. Click the root node, rename it, and set **Npc Name**.
+3. Edit **Pages**: click a page to open it; click **Lines** / **Choices** to edit them. To add a
+   page or a choice: click the list's **+ Add Element**, then on the new `<empty>` slot pick
+   **New NpcPage** / **New NpcChoice**. (Tip: right-click an existing page > **Duplicate** —
+   or **Make Unique** after copying — so edits don't change the original.)
+4. Change the look: recolour the meshes under **Model** (select a mesh > Surface Material
+   Override > albedo_color), or swap in your own meshes. Keep anything that should face the
+   player under **Model**; a node called **Tail** under Model swishes by itself.
+5. Place it: open `main.tscn`, drag your .tscn from the FileSystem onto **Hub** (in the sewers)
+   or onto the root **Main** node (in the city, then move it to a fixed spot — the city is
+   generated, so pick a spot on a pavement near the centre or Meow-Mart). Save and press F5.
+
+**Special actions (needs a little code):** type your own word into a choice's **Action**, e.g.
+`give_fish`. Then either attach a script to your NPC that starts with `extends Npc` and add
+`func _on_action(action, cat):` (there's an example in the comments at the bottom of `npc.gd`),
+or connect the NPC's **action_chosen** signal (Node tab > Signals) to another node.
+NPCs aren't networked: every player has their own copy, so an action that changes the shared
+game (giving items, spending cash) must ask the host, like the item system does.
+
+**Test it without playing:** `--talk --choose=1,0` walks up to Don, then clicks button 2 and
+then button 1 (0 = top) and prints what happens.
 
 **Tuning the hub** (select **Hub**): **Size** (Half Width, Half Length, Height, Channel Width),
 **Spawning** (Spawn Spot = where cats appear, Surface Spot = where Don sends you in the city),

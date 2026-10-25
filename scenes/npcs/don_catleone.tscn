@@ -1,7 +1,45 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/hub_npc.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/npcs/npc.gd" id="1_script"]
 [ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_up"]
+script = ExtResource("4_choice")
+text = "SEND ME UP TOP"
+message = "Go. And if the vacuums get you... I never met you."
+action = "send_up_top"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_how"]
+script = ExtResource("4_choice")
+text = "HOW DOES THIS WORK?"
+go_to = "howto"
+
+[sub_resource type="Resource" id="Choice_bye"]
+script = ExtResource("4_choice")
+text = "NEVER MIND"
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("Ayyy, look what crawled outta the litter box. You want work? I got work.", "Welcome to the Sewers, kid. Nobody shoots down here. Nobody. Capisce?", "The city up there is crawlin' with fish, and nobody's guardin' 'em. Well. Almost nobody.", "You come to me, on the day of my nap, and you ask for a JOB?")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_up"), SubResource("Choice_who"), SubResource("Choice_how"), SubResource("Choice_bye")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("Don Catleone. I run these pipes. Nine lives, kid - I spent eight of 'em gettin' here. Don't make me spend the ninth on you.")
+
+[sub_resource type="Resource" id="Page_howto"]
+script = ExtResource("3_page")
+id = "howto"
+lines = PackedStringArray("You go up the drain. You grab every fish that ain't nailed down. Then you find the green beam - EXTRACTION - and the pipes bring you back here with the cash. Watch out for them Roombas. They don't forgive. They vacuum.")
 
 [sub_resource type="CapsuleShape3D" id="Shape_don"]
 radius = 0.45
@@ -145,6 +183,8 @@ size = Vector3(0.05, 0.05, 0.03)
 
 [node name="DonCatleone" type="StaticBody3D"]
 script = ExtResource("1_script")
+npc_name = "DON CATLEONE"
+pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_howto")])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 position = Vector3(0, 0.75, 0)

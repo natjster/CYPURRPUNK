@@ -15,8 +15,9 @@ extends Node3D
 ##
 ## The tunnel is built from code in _ready() (like the city), but it is always the SAME:
 ## it doesn't use the city seed or any randomness, so every computer builds it identically.
-## Don Catleone himself is a normal scene placed under this node in main.tscn
-## (scenes/props/don_catleone.tscn), so you can move him in the editor.
+## Don Catleone himself is a normal NPC scene placed under this node in main.tscn
+## (scenes/npcs/don_catleone.tscn, built on the NPC framework in scripts/npcs/npc.gd),
+## so you can move him in the editor. Talking and the "[E] TALK" prompt are handled there.
 ##
 ## Mood: while YOUR camera is down here, the moon and rain switch off and the fog turns
 ## sewer-green on your screen only (_update_mood). Back up top, the night city returns.
@@ -50,11 +51,11 @@ const DEPTH_LINE: float = -100.0
 @export var sewer_ambient_color: Color = Color(0.35, 0.55, 0.45)
 @export var sewer_ambient_energy: float = 0.6
 
-@onready var npc: HubNpc = $DonCatleone
+## Don Catleone: only used here to decorate his corner (sign, lights, crates).
+@onready var npc: Npc = $DonCatleone
 @onready var _environment: Environment = $"../WorldEnvironment".environment
 @onready var _moonlight: Light3D = $"../Moonlight"
 @onready var _rain: GPUParticles3D = $"../Rain"
-@onready var _prompt_label: Label = $"../PS1Overlay/HUD/Prompt"
 
 # Same trick as the city: big surfaces are cut into ~2.5 m pieces, or the PS1 texture warp
 # makes them shear and swim. Boxes needing the same cuts share one mesh.
@@ -86,7 +87,6 @@ func _ready() -> void:
 		"ambient_light_color": _environment.ambient_light_color,
 		"ambient_light_energy": _environment.ambient_light_energy,
 	}
-	_prompt_label.hide()
 
 
 ## True if this spot is down in the hub (the safe zone).
@@ -114,15 +114,7 @@ func return_cat(cat: CatPlayer) -> void:
 	print("[Hub] %s extracted back to the hub" % cat.name)
 
 
-## E pressed: if the cat is close enough to Don, start talking. Returns true if it did.
-func try_talk(cat: CatPlayer) -> bool:
-	if npc.in_reach(cat):
-		npc.talk(cat)
-		return true
-	return false
-
-
-# --- Every frame: the mood and the "[E] TALK" prompt (this computer only) ---
+# --- Every frame: the mood (this computer only) ---
 
 func _process(_delta: float) -> void:
 	var camera := get_viewport().get_camera_3d()
@@ -130,12 +122,6 @@ func _process(_delta: float) -> void:
 	if in_hub != _in_hub_view:
 		_in_hub_view = in_hub
 		_update_mood(in_hub)
-
-	var cat := Game.instance.my_cat()
-	var show_prompt := cat != null and cat.is_controlled and npc.in_reach(cat) and not NpcDialog.is_open
-	_prompt_label.visible = show_prompt
-	if show_prompt:
-		_prompt_label.text = "[E] TALK TO %s" % npc.npc_name
 
 
 ## Underground: no moon, no rain, green fog. Up top: the night city as it was.
