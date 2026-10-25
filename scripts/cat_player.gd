@@ -122,7 +122,10 @@ func _ready() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		$NameTag.hide()  # no need to see your own name
 		player_name = Game.local_player_name  # the synchronizer shares it with everyone
-		sync_position = position
+		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
+		# doesn't reach a joining player (the network only sends a new cat's starting
+		# values when the host owns it), so without this a joiner would start up top.
+		teleport_to(UndergroundHub.instance.spawn_position(get_index()), 0.0)
 		set_process(false)  # _process is only for smoothing other players' cats
 	else:
 		# Someone else's cat: no input, no physics — _process glides it to the synced spot.
