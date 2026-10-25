@@ -39,6 +39,9 @@ extends Node3D
 @export var min_dropoff_distance: float = 70.0
 @export var beam_color: Color = Color(0.2, 1, 0.45)
 
+## The one heist node, so the shop can reach everyone's cash (FishHeist.instance).
+static var instance: FishHeist
+
 ## Mixed into the city seed so heist placement has its own random numbers.
 const HEIST_SEED_SALT: int = 7331
 
@@ -61,6 +64,10 @@ var _popup_time: float = 0.0
 var _clock: float = 0.0
 ## Host: network ID -> time until we ignore that cat at the beam (it's on its way down).
 var _extract_wait := {}
+
+
+func _enter_tree() -> void:
+	instance = self
 
 
 func _ready() -> void:
@@ -208,6 +215,21 @@ func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> 
 			popup_label.text += "\nQUEST DONE +$%d" % quest_bonus
 		_popup_time = 2.5
 		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
+
+
+## Host only: take "amount" from a player's cash (the sewer shop calls this).
+## Returns false (and takes nothing) if they can't afford it.
+func spend(peer_id: int, amount: int) -> bool:
+	if cash.get(peer_id, 0) < amount:
+		return false
+	_set_cash.rpc(peer_id, cash.get(peer_id, 0) - amount)
+	return true
+
+
+## Host -> everyone: this player's cash is now "amount".
+@rpc("authority", "call_local", "reliable")
+func _set_cash(peer_id: int, amount: int) -> void:
+	cash[peer_id] = amount
 
 
 ## Host -> a player who just joined: everyone's cash.

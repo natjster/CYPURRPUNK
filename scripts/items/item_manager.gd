@@ -4,6 +4,8 @@ extends Node3D
 ## It handles every item in the game the same way, so new items need no new plumbing:
 ##   - loads every item card (ItemData .tres) from res://items/
 ##   - places items in each city, lying on the street, and makes them grow back
+##     (today only the heist's fish: gear is BOUGHT in the sewers, see request_buy)
+##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
 ##   - pickups (walk-into for auto_pickup items, E for the rest), drops (G), using up (catnip)
 ##   - each cat's PAWS (right + left; a 2-paw item takes both) and LOOT BAG
 ##   - shows held items in paws and loot stacked on the cat, on every computer
@@ -38,9 +40,12 @@ const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0)
 
 @export_group("Placed in every city")
 ## Items at fixed spots in every city (they don't grow back): item id -> position.
-@export var fixed_items: Dictionary = {"tommy_gun": Vector3(-3, 0, 1)}
-## Items scattered on random sidewalks: item id -> how many.
-@export var scattered_items: Dictionary = {"catnip": 4, "pistol": 4, "catdip": 3}
+## Empty on purpose: gear is bought at the Black Markitten in the sewers now.
+## Example if you want one back: "tommy_gun" -> Vector3(-3, 0, 1).
+@export var fixed_items: Dictionary = {}
+## Items scattered on random sidewalks: item id -> how many. Empty on purpose (see above).
+## Example: "catnip" -> 4. (The heist's fish are placed by fish_heist.gd, not here.)
+@export var scattered_items: Dictionary = {}
 ## Seconds before a scattered item grows back after it's taken.
 @export var scatter_respawn_seconds: float = 30.0
 
@@ -266,11 +271,20 @@ func _can_take(peer_id: int, data: ItemData) -> bool:
 
 ## Host: give the item lying at world ID to a player.
 func _give(peer_id: int, world_id: int) -> void:
-	var item_id: String = world[world_id].item
+	_put_in_inventory(peer_id, world[world_id].item, world[world_id].pos)
+	_remove_world.rpc(world_id)
+	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
+		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn
+
+
+## Host: put an item into a player's paws (or backpack, or loot bag) and tell everyone.
+## If every paw and backpack slot is full, whatever is in the way is dropped at the cat's
+## feet (or at "fallback_spot" if the cat can't be found).
+func _put_in_inventory(peer_id: int, item_id: String, fallback_spot: Vector3) -> void:
 	var data: ItemData = catalog[item_id]
 	var inventory := get_inventory(peer_id).duplicate(true)
 	var cat := _cat(peer_id)
-	var drop_at: Vector3 = cat.global_position if cat != null else world[world_id].pos
+	var drop_at: Vector3 = cat.global_position if cat != null else fallback_spot
 
 	if data.kind == ItemData.Kind.LOOT:
 		inventory.bag.append(item_id)
@@ -296,10 +310,6 @@ func _give(peer_id: int, world_id: int) -> void:
 			hands[0] = item_id
 		inventory.hands = hands
 		inventory.pack = pack
-
-	_remove_world.rpc(world_id)
-	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
-		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn
 	_set_inventory.rpc(peer_id, inventory)
 
 
@@ -323,6 +333,38 @@ func request_pickup(world_id: int) -> void:
 		return
 	if _flat(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(peer_id, catalog[world[world_id].item]):
 		_give(peer_id, world_id)
+
+
+## A player clicked "BUY" at a shop (scripts/npcs/shopkeeper.gd). Runs on the host only,
+## which checks the price on the item card (never trusts the buyer), takes the cash
+## (FishHeist.spend) and puts the item in their paws/backpack, like picking it up.
+## The buyer gets a "_buy_result" message back either way.
+@rpc("any_peer", "call_local", "reliable")
+func request_buy(item_id: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	var data: ItemData = catalog.get(item_id)
+	var cat := _cat(peer_id)
+	if data == null or data.price <= 0 or cat == null:
+		return
+	if not UndergroundHub.is_in_hub(cat.global_position):
+		return  # the shop is down in the sewers: no buying from up top
+	if not _can_take(peer_id, data):
+		_buy_result.rpc_id(peer_id, false, "No room for that, comrade.")
+	elif not FishHeist.instance.spend(peer_id, data.price):
+		_buy_result.rpc_id(peer_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
+	else:
+		_put_in_inventory(peer_id, item_id, cat.global_position)
+		print("[Items] Player %d bought %s for $%d" % [peer_id, item_id, data.price])
+		_buy_result.rpc_id(peer_id, true, "Bought %s for $%d." % [data.display_name, data.price])
+
+
+## Host -> the buyer: how the purchase went (shown in the middle of the screen).
+@rpc("authority", "call_local", "reliable")
+func _buy_result(ok: bool, text: String) -> void:
+	print("[Items] Shop says: %s" % text)
+	Game.instance.show_message(("SOLD! " if ok else "") + text, 3.0)
 
 
 ## The holder used up the item in this paw (catnip). Host only.

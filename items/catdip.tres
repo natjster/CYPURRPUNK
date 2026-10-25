@@ -9,6 +9,7 @@ id = "catdip"
 display_name = "CATDIP"
 description = "Click to dip: 20 seconds of double jump."
 kind = 1
+price = 35
 hands = 1
 hold_offset = Vector3(0.24, 0.42, -0.22)
 hold_scale = 1.6

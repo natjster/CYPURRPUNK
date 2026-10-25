@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://scripts/roomba_patrol.gd" id="20_roombas"]
 [ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="21_quests"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/lil_mittens.tscn" id="22_mittens"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/comrade_whiskers.tscn" id="23_whiskers"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -153,6 +154,10 @@ position = Vector3(8, 0, -16)
 [node name="LilMittens" parent="Hub" instance=ExtResource("22_mittens")]
 position = Vector3(10.3, 0, 9)
 rotation = Vector3(0, -1.5708, 0)
+
+[node name="ComradeWhiskers" parent="Hub" instance=ExtResource("23_whiskers")]
+position = Vector3(-12, 0, -10)
+rotation = Vector3(0, 1.5708, 0)
 
 [node name="Rain" parent="." instance=ExtResource("9_rain")]
 

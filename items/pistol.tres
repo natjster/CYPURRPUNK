@@ -9,6 +9,7 @@ id = "pistol"
 display_name = "PAW-PISTOL"
 description = "One shot per click, hits hard. 1 paw: hold two!"
 kind = 1
+price = 60
 hands = 1
 hold_offset = Vector3(0.34, 0.47, -0.28)
 hold_scale = 2.4

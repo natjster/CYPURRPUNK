@@ -1,0 +1,300 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/shopkeeper.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_shop"]
+script = ExtResource("4_choice")
+text = "SHOW ME THE GOODS"
+action = "shop"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_place"]
+script = ExtResource("4_choice")
+text = "WHAT IS THIS PLACE?"
+go_to = "place"
+
+[sub_resource type="Resource" id="Choice_bye"]
+script = ExtResource("4_choice")
+text = "LATER, COMRADE"
+message = "The revolution will not be vacuumed! ...Close the curtain on your way out."
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("Psst. Over here. Quick, before the Roombas hear. Welcome to the Black Markitten. Everything here \"fell off a truck\".", "Comrade! You made it down. Up top they suck up everything a cat holds dear. Down here we FIGHT BACK. For a reasonable price.", "Keep your voice down. The walls have ears. Also the pipes. Mostly the pipes. What do you need?")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_shop"), SubResource("Choice_who"), SubResource("Choice_place"), SubResource("Choice_bye")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("Comrade Whiskers. Founder, treasurer and only member of the Purr-oletariat Liberation Front. A VAC-COP took my eye, my favourite ball and my good collar. Now I sell the paws that bite back.")
+
+[sub_resource type="Resource" id="Page_place"]
+script = ExtResource("3_page")
+id = "place"
+lines = PackedStringArray("The Black Markitten. Rebel supply depot. Catnip, catdip, pistols, the big Purr-Tommy. Bring fish money from up top and arm the uprising. No refunds. Revolutions don't do refunds.")
+
+[sub_resource type="CapsuleShape3D" id="Shape_cat"]
+radius = 0.32
+height = 1.0
+
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.85, 0.45, 0.15, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_stripe"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.55, 0.25, 0.08, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.9, 0.82, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.85, 0.2, 1)
+shader_parameter/emission_color = Color(1, 0.85, 0.2, 1)
+shader_parameter/emission_energy = 2.5
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.05, 0.05, 0.06, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.9, 0.45, 0.5, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_beret"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.75, 0.08, 0.1, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_star"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.85, 0.2, 1)
+shader_parameter/emission_color = Color(1, 0.85, 0.2, 1)
+shader_parameter/emission_energy = 1.5
+
+[sub_resource type="ShaderMaterial" id="Mat_brass"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.8, 0.65, 0.25, 1)
+shader_parameter/specular = 0.6
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.31
+height = 0.56
+radial_segments = 8
+rings = 5
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.16
+bottom_radius = 0.24
+height = 0.5
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.07
+bottom_radius = 0.08
+height = 0.22
+radial_segments = 6
+rings = 1
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.2, 0.26, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.08
+height = 0.11
+radial_segments = 6
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_patch"]
+size = Vector3(0.17, 0.14, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_strap"]
+size = Vector3(0.64, 0.03, 0.03)
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="CylinderMesh" id="Mesh_beret"]
+top_radius = 0.26
+bottom_radius = 0.3
+height = 0.09
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_star"]
+size = Vector3(0.08, 0.08, 0.02)
+
+[sub_resource type="BoxMesh" id="Mesh_bandolier"]
+size = Vector3(0.07, 0.62, 0.36)
+
+[sub_resource type="CylinderMesh" id="Mesh_bullet"]
+top_radius = 0.018
+bottom_radius = 0.024
+height = 0.1
+radial_segments = 5
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.03
+bottom_radius = 0.05
+height = 0.55
+radial_segments = 6
+rings = 1
+
+[node name="ComradeWhiskers" type="StaticBody3D"]
+script = ExtResource("1_script")
+shop_lines = PackedStringArray("Take your pick. You've got $%d. Spend it on freedom.", "All genuine. Mostly. You've got $%d.", "Prices set by the people. The people is me. You've got $%d.")
+npc_name = "COMRADE WHISKERS"
+talk_radius = 3.5
+pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_place")])
+turn_speed = 4.0
+tail_swish = 0.25
+tail_speed = 1.2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.5, 0)
+shape = SubResource("Shape_cat")
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.45, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Bandolier" type="MeshInstance3D" parent="Model/Body"]
+position = Vector3(0, 0.02, -0.03)
+rotation = Vector3(0, 1.5708, 0.6)
+mesh = SubResource("Mesh_bandolier")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Bullet1" type="MeshInstance3D" parent="Model/Body/Bandolier"]
+position = Vector3(0.05, 0.15, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet2" type="MeshInstance3D" parent="Model/Body/Bandolier"]
+position = Vector3(0.05, 0, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet3" type="MeshInstance3D" parent="Model/Body/Bandolier"]
+position = Vector3(0.05, -0.15, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.12, 0.11, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.12, 0.11, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.93, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Stripe" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.17, 0.02)
+scale = Vector3(0.35, 0.5, 0.95)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_stripe")
+
+[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, 0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.22, 0.19, 0.02)
+rotation = Vector3(0.3, 0, -1.2)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Beret" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.06, 0.26, 0.02)
+rotation = Vector3(0, 0, 0.3)
+mesh = SubResource("Mesh_beret")
+surface_material_override/0 = SubResource("Mat_beret")
+
+[node name="Star" type="MeshInstance3D" parent="Model/Head/Beret"]
+position = Vector3(0, 0, -0.29)
+rotation = Vector3(0, 0, 0.785)
+mesh = SubResource("Mesh_star")
+surface_material_override/0 = SubResource("Mat_star")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.09, -0.26)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.03, -0.37)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.24)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyePatch" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.12, 0.06, -0.27)
+mesh = SubResource("Mesh_patch")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Strap" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.1, -0.2)
+rotation = Vector3(0, 0, -0.35)
+mesh = SubResource("Mesh_strap")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.45, 0.3)
+rotation = Vector3(0.9, 0, 0)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="NameTag" type="Label3D" parent="."]
+position = Vector3(0, 1.55, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(1, 0.35, 0.3, 1)
+outline_size = 6
+text = "COMRADE WHISKERS"
+font_size = 32
+pixel_size = 0.009

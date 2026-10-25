@@ -1,5 +1,5 @@
 extends Node
-## DEV TOOL — takes a screenshot of the running game, saves it, then quits.
+## DEV TOOL â€” takes a screenshot of the running game, saves it, then quits.
 ## Does nothing during normal play (it only wakes up when given --capture).
 ##
 ## Run from a terminal in the project folder, e.g.:
@@ -7,6 +7,7 @@ extends Node
 ## Options (everything after the lone "--"):
 ##   --capture=PATH    where to save the PNG (relative to the project folder)
 ##   --host / --join   start a game (otherwise you get the lobby menu)
+##   --wait=N          wait N frames after our cat appears before doing anything else
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
@@ -18,7 +19,9 @@ extends Node
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
-##   --grab=ITEM       walk to the nearest ITEM (e.g. tommy_gun, catnip) and press E on it.
+##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
+##                     --cash=500 --talk=ComradeWhiskers --choose=0,3 buys the 4th item)
+##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
 ##   --equip=N         take backpack slot N into the paws (what clicking it in the inventory does)
@@ -47,7 +50,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var scene := get_tree().current_scene
 
-	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
+	# Wait (up to ~10 s) for OUR cat to exist â€” a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
 	var player: CatPlayer = null
 	if args.has("host") or args.has("join"):
@@ -71,9 +74,16 @@ func _ready() -> void:
 				shader_material.set_shader_parameter("snap_resolution", Vector2(100000, 100000))
 
 	if player != null:
+		for i in int(args.get("wait", 0)):
+			await get_tree().process_frame
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
+		if args.has("cash") and multiplayer.is_server():
+			FishHeist.instance._set_cash.rpc(multiplayer.get_unique_id(), int(args["cash"]))
+			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
+				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
+				FishHeist.instance._set_cash.rpc(peer_id, int(args["cash"])))
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			(scene as Game).hub.deploy(player)

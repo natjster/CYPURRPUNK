@@ -1,6 +1,6 @@
 class_name UndergroundHub
 extends Node3D
-## MEOW-CITY 1999 — THE SEWERS: the underground hub where every cat starts.
+## MEOW-CITY 1999 â€” THE SEWERS: the underground hub where every cat starts.
 ## Attach to the "Hub" node in main.tscn. That node sits 200 m BELOW the city
 ## (position 0, -200, 0), so the hub and the city are one world and one multiplayer game:
 ## going "up top" or "back down" is just moving your cat between the two.
@@ -10,6 +10,9 @@ extends Node3D
 ##   - It's a SAFE ZONE: guns don't fire down here (see ItemManager._use_held_items).
 ##   - Walk up to DON CATLEONE (the boss cat at the north end) and press E to talk.
 ##     Pick "SEND ME UP TOP" and he sends you into the city (deploy()).
+##   - COMRADE WHISKERS runs THE BLACK MARKITTEN on the west wall: the only place to get
+##     gear (guns, catnip, catdip). Pay with the cash you earn extracting fish.
+##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
 ##   - In the city, reach the green EXTRACTION beam (fish_heist.gd): your loot is cashed in
 ##     and you're brought back down here (return_cat()).
 ##
@@ -53,6 +56,8 @@ const DEPTH_LINE: float = -100.0
 
 ## Don Catleone: only used here to decorate his corner (sign, lights, crates).
 @onready var npc: Npc = $DonCatleone
+## Comrade Whiskers: only used here to build his shop, the Black Markitten, around him.
+@onready var shopkeeper: Npc = $ComradeWhiskers
 @onready var _environment: Environment = $"../WorldEnvironment".environment
 @onready var _moonlight: Light3D = $"../Moonlight"
 @onready var _rain: GPUParticles3D = $"../Rain"
@@ -60,6 +65,8 @@ const DEPTH_LINE: float = -100.0
 # Same trick as the city: big surfaces are cut into ~2.5 m pieces, or the PS1 texture warp
 # makes them shear and swim. Boxes needing the same cuts share one mesh.
 const PIECE_SIZE: float = 2.5
+## Glow colours of the boxes on the Black Markitten's shelves.
+const SHOP_GOODS_COLORS: Array[Color] = [Color(1, 0.35, 0.7), Color(0.3, 1, 0.35), Color(0.3, 0.8, 1), Color(1, 0.8, 0.2)]
 var _box_meshes := {}
 var _in_hub_view: bool = false
 var _city_mood := {}  # the night-city fog/ambient values, to put back when you go up
@@ -166,7 +173,7 @@ func _build_tunnel() -> void:
 	# Walkways either side of the channel: 1 m thick slabs with their top at floor level (0).
 	_add_box(Vector3(-(c + walkway * 0.5), -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
 	_add_box(Vector3(c + walkway * 0.5, -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
-	# Channel bottom (1 m lower) and the murky water in it (looks only — you can wade in it).
+	# Channel bottom (1 m lower) and the murky water in it (looks only â€” you can wade in it).
 	_add_box(Vector3(0, -1.5, 0), Vector3(channel_width, 1, l * 2), _wall, true)
 	var water := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
@@ -233,7 +240,9 @@ func _build_props() -> void:
 	_add_box(Vector3(don.x + 2.2, 0.45, don.z + 0.3), Vector3(1.4, 0.9, 0.9), _crate, true)
 	_add_box(Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)
 
-	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
+	_build_shop()
+
+	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now â€” later,
 	# players will feed it scrap for server-wide buffs.
 	var frame_x := -w + 1.0
 	_add_box(Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
@@ -249,6 +258,39 @@ func _build_props() -> void:
 	# Crates, trash and junk.
 	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -4), Vector3(-4, 0.5, -17)]:
 		_add_box(spot, Vector3.ONE, _crate, true)
+
+
+## THE BLACK MARKITTEN: Comrade Whiskers' rebel shop on the west wall. Everything is placed
+## around wherever he stands (move ComradeWhiskers under Hub in main.tscn and it follows).
+## He faces east (+X); the counter is in front of him, the shelves behind him on the wall.
+func _build_shop() -> void:
+	var at := shopkeeper.position
+	var wall_x := -half_width  # inside face of the west wall
+	# The counter: a slab of metal on crates, between him and the customers.
+	_add_box(Vector3(at.x + 1.3, 0.45, at.z), Vector3(0.7, 0.9, 3.2), _crate, true)
+	_add_box(Vector3(at.x + 1.3, 0.95, at.z), Vector3(0.9, 0.1, 3.4), _metal, false)
+	var strip := _add_box(Vector3(at.x + 1.76, 0.86, at.z), Vector3(0.04, 0.06, 3.4), _neon, false)  # glowing edge
+	strip.set_instance_shader_parameter("instance_tint", Color(1, 0.15, 0.1))
+	# Shelves on the wall behind him, stocked with glowing "goods".
+	for shelf_y in [1.2, 2.0, 2.8]:
+		_add_box(Vector3(wall_x + 0.35, shelf_y, at.z), Vector3(0.6, 0.08, 4.0), _metal, false)
+		for i in 5:
+			var goods := _add_box(Vector3(wall_x + 0.35, shelf_y + 0.17, at.z - 1.6 + i * 0.8), Vector3(0.3, 0.26, 0.3), _neon, false)
+			goods.set_instance_shader_parameter("instance_tint", SHOP_GOODS_COLORS[(i + int(shelf_y * 10)) % SHOP_GOODS_COLORS.size()] * 0.5)
+	# Crates of "merchandise that fell off a truck" stacked either side.
+	for spot in [Vector3(at.x, 0.5, at.z - 2.6), Vector3(at.x, 0.5, at.z + 2.6), Vector3(at.x, 1.5, at.z + 2.6)]:
+		_add_box(spot, Vector3.ONE, _crate, true)
+	# A red rebel banner hanging over the shelves, and the neon shop signs above it.
+	var banner := _add_box(Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
+	banner.set_instance_shader_parameter("instance_tint", Color(0.35, 0.02, 0.03))
+	_add_sign("THE BLACK MARKITTEN", Vector3(wall_x + 0.15, 5.4, at.z), Color(1, 0.25, 0.2), 48, PI / 2)
+	_add_sign("PURR-OLETARIAT
+LIBERATION FRONT", Vector3(wall_x + 0.15, 4.0, at.z), Color(1, 0.8, 0.3), 24, PI / 2)
+	_add_sign("NO VACUUMS
+NO REFUNDS", Vector3(at.x + 1.7, 0.5, at.z), Color(1, 0.8, 0.3), 16, PI / 2)
+	# Red light over the shop, and a warm one so you can see his face.
+	_add_light(Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
+	_add_light(Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
 
 
 ## A glowing text sign. "facing" turns it (0 = readable from the south / +Z side).

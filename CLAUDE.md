@@ -71,6 +71,11 @@ message, action, go_to). Built-in actions in `Npc._run_action`; custom ones via 
 `NpcDialog._process` drives the "[E] TALK TO" prompt. New NPCs start from
 `scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk[=NodeName] --choose=N,M`.
 Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); action `quest:<id>` starts one.
+Shops: `Shopkeeper` (`scripts/npcs/shopkeeper.gd`, extends Npc) — choice action `shop` opens BUY buttons for
+its `stock`; prices = `ItemData.price` (0 = not for sale); host `ItemManager.request_buy` -> `FishHeist.spend`.
+Comrade Whiskers (`scenes/npcs/comrade_whiskers.tscn`) runs THE BLACK MARKITTEN on the hub's west wall
+(decor in `hub._build_shop`). The city places NO gear (`fixed_items`/`scattered_items` empty): only fish.
+Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).
 
 ## Quest framework
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in

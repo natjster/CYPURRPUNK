@@ -39,6 +39,11 @@ enum Kind { LOOT, HELD }
 ## Room it takes in the loot bag.
 @export var bag_space: int = 1
 
+@export_group("Shop")
+## Price at the Black Markitten, the shop down in the sewers (scenes/npcs/comrade_whiskers.tscn).
+## 0 = not for sale. The shopkeeper only sells items in his Stock list that have a price.
+@export var price: int = 0
+
 @export_group("In the world")
 ## The item's model. For held items with behaviour, the scene's root has a script that
 ## extends HeldItem (or Weapon). The same scene is shown lying on the street.

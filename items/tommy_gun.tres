@@ -9,6 +9,7 @@ id = "tommy_gun"
 display_name = "PURR-TOMMY"
 description = "Plasma tommy gun. Hold to spray. 2 paws. Overheats."
 kind = 1
+price = 200
 hands = 2
 hold_offset = Vector3(0.32, 0.45, -0.25)
 hold_scale = 1.5

@@ -9,6 +9,7 @@ id = "catnip"
 display_name = "CATNIP"
 description = "Click to sniff: 8 seconds of super zoomies."
 kind = 1
+price = 25
 hands = 1
 hold_offset = Vector3(0.22, 0.4, -0.22)
 hold_scale = 1.2

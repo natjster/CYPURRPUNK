@@ -195,7 +195,8 @@ The E press is marked "handled" so the same key press can't enter and exit in on
    (north end, under the pink sign), press E, pick **SEND ME UP TOP** — you're in the city.
 3. **Walk, jump, zoomies** (WASD, Space, Shift) — W always goes where the camera faces.
 4. **Car** — walk to the car, E to get in, drive, hold Space while turning to drift, E to get out.
-5. **Items** — E next to the floating tommy gun, hold Left Mouse to fire, G to drop, Tab for the inventory.
+5. **Items** — extract some fish for cash, then buy gear from Comrade Whiskers at the **Black Markitten**
+   (west wall of the sewers). Hold Left Mouse to fire, G to drop, Tab for the inventory.
 6. **Esc** — pause menu; SETTINGS changes apply immediately; RESUME grabs the mouse again.
 
 **When you see red errors** (bottom panel, **Debugger > Errors** tab, or red text in **Output**):
@@ -220,7 +221,8 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
 ```
 
 - Useful extras: `--deploy` (go up to the city first — without it you're in the hub),
-  `--talk` (open Don's talk box), `--drive` (car view), `--grab=tommy_gun`, `--hold=shoot`,
+  `--talk` (open Don's talk box), `--drive` (car view), `--grab=fish`, `--hold=shoot`,
+  `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image).
   The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
@@ -390,6 +392,32 @@ THIS WORK?** and **NEVER MIND** (or Esc).
 **Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
 by the cardboard shanties on the east wall. Extremely needy. She gives you the **MITTENS' FISH**
 quest (see **Quests** below): bring 3 fish down at once for a **$100 bonus**.
+
+**Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
+counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
+the ladder. It's **the only place to get gear**: nothing but fish lies around the city any more.
+Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** button per item, and
+**BACK**. You pay with the cash you earn extracting fish; the shop stays open so you can keep buying.
+
+| Item | Price |
+|---|---|
+| Catnip | $25 |
+| Catdip | $35 |
+| Paw-Pistol | $60 |
+| Purr-Tommy 2099 | $200 |
+
+- **Change a price:** double-click the item card (e.g. `items/pistol.tres`) > **Shop > Price**.
+  Price 0 = not for sale.
+- **Change what he sells / the order:** select **Hub > ComradeWhiskers** in `main.tscn` (or open
+  `scenes/npcs/comrade_whiskers.tscn`) > Inspector > **Stock** (item ids, top to bottom).
+  **Shop Lines** is what he says on the shop page (`%d` = your cash).
+- **Move the shop:** drag ComradeWhiskers under **Hub**. The counter, shelves, banner, signs and
+  lights are built around him by `_build_shop()` in `scripts/hub.gd`, so they follow (he faces
+  his root's blue Z arrow; the counter goes on that side).
+- **How buying works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC with a shop). Any NPC choice
+  whose **Action** is `shop` opens the shop page. Clicking BUY asks the host, which checks the
+  price on the item card and your cash, takes the money and puts the item in your paws (or the
+  backpack). Make another shopkeeper the same way: set an NPC's script to `shopkeeper.gd`.
 
 **Where it lives:**
 - The tunnel: `scripts/hub.gd` on the **Hub** node in `main.tscn`. It's built from code when the
@@ -572,13 +600,16 @@ system, so new items need no new networking or pickup code.
 - **E** grabs the nearest item that says "E  NAME" above it. Items marked auto-pickup (fish) are
   grabbed just by walking into them. **G** drops what's in your paws (right paw first).
 
-### What's in every city
+### The items
+Only **fish** lie around the city. All gear is **bought** from Comrade Whiskers at the Black
+Markitten in the sewers (§8).
+
 | Item | Paws | Where | What it does |
 |---|---|---|---|
-| **Purr-Tommy 2099** | 2 | 1, floating at the centre crossroads | Hold Left Mouse: plasma bolts; overheats (below) |
-| **Paw-Pistol** | 1 | 4, scattered | One shot per click; grab two to dual wield |
-| **Catnip** | 1 | 4, scattered | Click: 8 s of super zoomies (used up) |
-| **Catdip** | 1 | 3, scattered | Click: 20 s of double jump (used up) |
+| **Purr-Tommy 2099** | 2 | shop, $200 | Hold Left Mouse: plasma bolts; overheats (below) |
+| **Paw-Pistol** | 1 | shop, $60 | One shot per click; buy two to dual wield |
+| **Catnip** | 1 | shop, $25 | Click: 8 s of super zoomies (used up) |
+| **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
@@ -601,9 +632,9 @@ items/                       <- ITEM CARDS (one .tres per item). Loaded automati
   fish.tres  tommy_gun.tres  pistol.tres  catnip.tres  catdip.tres
 scenes/items/                <- the item models (the same scene lies on the street and sits in a paw)
 scripts/items/
-  item_data.gd               <- what an item card can say (name, paws, loot value, model...)
+  item_data.gd               <- what an item card can say (name, paws, loot value, shop price, model...)
   item_manager.gd            <- the system ("Items" node in main.tscn): pickup, drop, paws,
-                                backpack, bag, placing items in the city, multiplayer, late joiners
+                                backpack, bag, placing items in the city, buying, multiplayer, late joiners
   held_item.gd               <- base for held items that DO something (use_tick, hud_text)
   weapon.gd                  <- base for every gun: fire rate, spread, range, knockback,
                                 overheat, bolt colours — all Inspector numbers
@@ -624,8 +655,10 @@ Steps for your next one (e.g. a shotgun):
 3. Right-click the `items` folder > **Create New > Resource...** > **ItemData** > save as
    `shotgun.tres`. Set **Id** `shotgun`, **Display Name** `SHOTGUN`, **Kind** Held, **Hands** 1 or 2,
    **Scene** = `shotgun.tscn`, **Glow Color** (alpha above 0 to glow on the street).
-4. Make it appear: select **Items** in `main.tscn` and add `shotgun` to **Scattered Items**
-   (how many) or **Fixed Items** (an exact spot). Done.
+4. Sell it: on `shotgun.tres` set **Shop > Price** (e.g. 120), then select **Hub >
+   ComradeWhiskers** in `main.tscn` and add `shotgun` to his **Stock**. Done.
+   (Or make it lie in the city instead: select **Items** and add it to **Scattered Items** or
+   **Fixed Items** — both are empty on purpose right now.)
 
 ### Adding new loot (example: a golden fish worth $250)
 Duplicate `items/fish.tres` as `golden_fish.tres`, change **Id**, **Cash Value** 250 and the
@@ -640,7 +673,7 @@ use it up. Anything other players must see goes through an `@rpc` function on th
 
 ### Tuning the system (select **Items** in `main.tscn`)
 Bag Size, Pack Size (backpack), Pickup Radius (walk-into), Interact Radius (E), Fixed Items,
-Scattered Items, Scatter Respawn Seconds. Fish placement stays on the **Heist** node (§8).
+Scattered Items (both empty: gear comes from the shop), Scatter Respawn Seconds. Fish placement stays on the **Heist** node (§8).
 
 ### Inventory screen (Tab or I)
 Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is freed while open).
