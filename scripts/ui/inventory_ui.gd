@@ -177,7 +177,7 @@ func _process(_delta: float) -> void:
 		_set_open(false)
 		return
 	var at_stash := UndergroundHub.instance.near_stash(cat)
-	var inventory := items.get_inventory(cat.name.to_int())
+	var inventory := items.get_inventory(cat.player_id)
 	var key := str(inventory) + str(at_stash)
 	if key == _last_key:
 		return
@@ -195,11 +195,11 @@ func _process(_delta: float) -> void:
 		_fill(_pack_buttons[i], inventory.pack[i] if i < inventory.pack.size() else "")
 	for i in _bag_buttons.size():
 		_fill(_bag_buttons[i], inventory.bag[i] if i < inventory.bag.size() else "")
-	var stash := items.get_stash(cat.name.to_int())
+	var stash := items.get_stash(cat.player_id)
 	for i in _stash_buttons.size():
 		_fill(_stash_buttons[i], stash[i] if i < stash.size() else "")
 	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size]
-	_bag_title.text = "LOOT BAG  %d/%d  (deliver at the drop-off)" % [items.bag_used(cat.name.to_int()), items.bag_size]
+	_bag_title.text = "LOOT BAG  %d/%d  (deliver at the drop-off)" % [items.bag_used(cat.player_id), items.bag_size]
 	_stash_title.text = "STASH  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
 
 
@@ -305,9 +305,9 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 	if cat == null or not cat.is_controlled:
 		_info.text = "Can't do that from inside the car."
 		return
-	var inventory := items.get_inventory(cat.name.to_int())
+	var inventory := items.get_inventory(cat.player_id)
 	if drop and where != "stash":
-		items.request_drop_item.rpc_id(1, where, index, items.ground_in_front_of(cat))
+		items.request_drop_item.rpc_id(1, cat.player_id, where, index, items.ground_in_front_of(cat))
 	elif drop:
 		pass  # (stash items can't be dropped)
 	elif _at_stash:
@@ -315,19 +315,19 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 			if inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."
 			else:
-				items.request_from_stash.rpc_id(1, index)
-		elif items.get_stash(cat.name.to_int()).size() >= items.stash_size:
+				items.request_from_stash.rpc_id(1, cat.player_id, index)
+		elif items.get_stash(cat.player_id).size() >= items.stash_size:
 			_info.text = "Stash is full."
 		else:
-			items.request_to_stash.rpc_id(1, where, index)
+			items.request_to_stash.rpc_id(1, cat.player_id, where, index)
 	else:
 		if where == "pack":
-			items.request_equip.rpc_id(1, index)
+			items.request_equip.rpc_id(1, cat.player_id, index)
 		elif where == "hand":
 			if inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."
 			else:
-				items.request_put_away.rpc_id(1, index)
+				items.request_put_away.rpc_id(1, cat.player_id, index)
 		else:
 			_info.text = "Loot pays out at the drop-off (the green beam)."
 

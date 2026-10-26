@@ -106,7 +106,7 @@ func _physics_process(delta: float) -> void:
 	var anyone_up := false
 	for cat in Game.instance.players.get_children():
 		var where := (cat as Node3D).global_position
-		if Game.instance.car.driver_id == cat.name.to_int():
+		if Game.instance.car.driver_id == (cat as CatPlayer).player_id:
 			where = Game.instance.car.global_position
 		if not UndergroundHub.is_in_hub(where):
 			anyone_up = true

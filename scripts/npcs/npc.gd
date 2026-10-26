@@ -122,9 +122,8 @@ func in_reach(cat: CatPlayer) -> bool:
 
 ## Start talking: greet with the first page whose quest condition fits (see npc_page.gd).
 func talk(cat: CatPlayer) -> void:
-	var peer_id := cat.name.to_int()
 	for page in pages:
-		if page.fits(peer_id):
+		if page.fits(cat.player_id):
 			_greeting = page
 			show_page(cat, page.id)
 			return
@@ -171,7 +170,7 @@ func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 func _run_action(action: String, cat: CatPlayer) -> void:
 	if action.begins_with("quest:"):
 		# "quest:mittens_fish" = give the player that quest (quest_manager.gd asks the host).
-		QuestManager.instance.start_quest(action.trim_prefix("quest:"))
+		QuestManager.instance.start_quest(cat.player_id, action.trim_prefix("quest:"))
 	else:
 		match action:
 			"send_up_top":

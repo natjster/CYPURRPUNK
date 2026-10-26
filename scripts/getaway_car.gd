@@ -88,7 +88,7 @@ const MAX_ENTER_DISTANCE: float = 5.0
 @onready var camera_arm: SpringArm3D = $CameraRig/SpringArm3D
 @onready var door_zone: Area3D = $DoorZone
 
-## Network ID of the player driving, or 0 when the car is empty.
+## Player ID of the cat driving (scripts/player_id.gd), or 0 when the car is empty.
 var driver_id: int = 0
 ## True while sliding sideways with the handbrake (handy later for tyre smoke / sounds).
 var is_drifting: bool = false
@@ -173,7 +173,7 @@ func _physics_process(delta: float) -> void:
 ## Fill in the drive input from the keyboard — only when OUR cat is behind the wheel,
 ## and not while the pause menu is open (then the car just rolls to a stop).
 func _read_driver_keys() -> void:
-	if driver_id == multiplayer.get_unique_id() and not PauseMenu.is_open:
+	if _driver_reads_input() and not PauseMenu.is_open:
 		# W = +1, S = -1. On a controller the triggers work too (RT = GAS, LT = BRAKE), and
 		# they're analog: squeeze RT halfway for half gas.
 		throttle = clampf(Input.get_axis("move_back", "move_forward") + Input.get_axis("brake", "gas"), -1.0, 1.0)
@@ -186,7 +186,7 @@ func _read_driver_keys() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if driver_id != multiplayer.get_unique_id() or PauseMenu.is_open:
+	if not _driver_reads_input() or PauseMenu.is_open:
 		return
 	if event.is_action_pressed("interact"):
 		request_exit.rpc_id(1)
@@ -198,41 +198,47 @@ func _unhandled_input(event: InputEvent) -> void:
 		_turn_camera(-event.relative.x * sensitivity, -event.relative.y * sensitivity * pitch_sign)
 
 
-## A cat asks to get in. Runs on the host only, which decides.
+## True if the driver is a cat THIS computer's keyboard / controller steers (cat_player.gd reads_input).
+func _driver_reads_input() -> bool:
+	var driver := Game.instance.cat_for(driver_id) if driver_id != 0 and Game.instance != null else null
+	return driver != null and driver.reads_input()
+
+
+## A cat (player ID) asks to get in. Runs on the host only, which decides.
 @rpc("any_peer", "call_local", "reliable")
-func request_enter() -> void:
-	if not multiplayer.is_server() or driver_id != 0:
+func request_enter(player_id: int) -> void:
+	if not multiplayer.is_server() or driver_id != 0 or not PlayerId.sender_owns(player_id):
 		return
-	var sender := multiplayer.get_remote_sender_id()
-	var cat := Game.instance.cat_for(sender)
+	var cat := Game.instance.cat_for(player_id)
 	if cat != null and cat.global_position.distance_to(global_position) <= MAX_ENTER_DISTANCE:
-		set_driver.rpc(sender)
+		set_driver.rpc(player_id)
 
 
 ## The driver asks to get out. Runs on the host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_exit() -> void:
-	if multiplayer.is_server() and multiplayer.get_remote_sender_id() == driver_id:
+	if multiplayer.is_server() and PlayerId.sender_owns(driver_id):
 		set_driver.rpc(0)
 
 
 ## The host tells EVERY computer who is driving now (0 = nobody).
 @rpc("any_peer", "call_local", "reliable")
-func set_driver(peer_id: int) -> void:
+func set_driver(player_id: int) -> void:
 	if multiplayer.get_remote_sender_id() != 1:
 		return  # only the host may decide this
 	var previous_driver := Game.instance.cat_for(driver_id)
-	driver_id = peer_id
+	driver_id = player_id
 	look_yaw = 0.0  # every ride starts with the normal chase view
 	look_pitch = 0.0
-	set_multiplayer_authority(peer_id if peer_id != 0 else 1)
+	# The driver's computer simulates the car (the host when it's empty).
+	set_multiplayer_authority(PlayerId.peer_of(player_id) if player_id != 0 else 1)
 	_update_freeze()
 
-	if peer_id != 0 or previous_driver != null:
+	if player_id != 0 or previous_driver != null:
 		Sound.play_at("car_door", global_position)
-	if peer_id == 0 and previous_driver != null:
+	if player_id == 0 and previous_driver != null:
 		previous_driver.exit_car(to_global(exit_offset))
-	var new_driver := Game.instance.cat_for(peer_id)
+	var new_driver := Game.instance.cat_for(player_id)
 	if new_driver != null:
 		new_driver.enter_car(self)
 
@@ -249,7 +255,7 @@ func _process(delta: float) -> void:
 	# We drag it along ourselves and let its turning lag a little behind — a nice chase cam.
 	camera_rig.global_position = global_position
 	_chase_yaw = lerp_angle(_chase_yaw, global_rotation.y, 1.0 - exp(-camera_follow_speed * delta))
-	if driver_id == multiplayer.get_unique_id():
+	if _driver_reads_input():
 		_update_look_around(delta)
 	# The chase view plus however far the driver has turned the camera.
 	camera_rig.rotation.y = _chase_yaw + look_yaw

@@ -15,6 +15,9 @@ extends Node3D
 ##   - The host creates a cat for every player under the "Players" node.
 ##     The MultiplayerSpawner node copies those cats to everyone's game.
 ##   - Each cat is moved by its owner and synced to the others (see cat_player.gd).
+##   - A cat is named after its PLAYER ID (scripts/player_id.gd). One computer can have up to
+##     4 players (split screen): the first one joins with the computer, more join in with
+##     add_local_player() and can drop out again with remove_local_player().
 ##   - The city is generated from a seed number (see city_generator.gd). The host
 ##     sends just that number to each player, and everyone builds the same city.
 ##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
@@ -37,6 +40,9 @@ static var instance: Game
 ## The name typed in the lobby. Your own cat reads this when it appears
 ## and shares it with everyone (see player_name in cat_player.gd).
 static var local_player_name: String = ""
+## Split screen: the EXTRA players on this computer (slot 1, 2, 3 -> {"name", "look", "cat_id"}).
+## Slot 0, the first player, is always the cat picked in CHOOSE YOUR CAT (Settings.current_cat()).
+var extra_local_players := {}
 
 @onready var players: Node3D = $Players
 @onready var car: GetawayCar = $GetawayCar
@@ -126,7 +132,7 @@ func _begin_game(city_seed: int) -> void:
 	city.generate(city_seed)
 	park_car()
 	_start_playing()
-	_spawn_cat(1)  # the host's own cat
+	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player
 	$Heat.reset()  # the city starts calm (scripts/heat_meter.gd)
 	$Roombas.start_patrol()  # the VAC-COPs come out (the spawner copies them to everyone)
 
@@ -154,7 +160,8 @@ func _start_playing() -> void:
 	Hud.set_in_game(true)
 	pause_menu.enabled = true
 	_show_city_number()
-	$Profile.restore()  # bring back our saved cash + stash (player_profile.gd)
+	# Bring back our first player's saved cash + stash (player_profile.gd).
+	$Profile.restore(PlayerId.first_local(), str(Settings.current_cat().get("id", "")), local_player_name)
 
 
 ## Back to a fresh start menu: we chose LEAVE GAME, or the host closed the game.
@@ -210,28 +217,91 @@ func _apply_scene_settings() -> void:
 
 # --- Players ---
 
-## A player's cat (cats are named after their network ID), or null.
-func cat_for(peer_id: int) -> CatPlayer:
-	if peer_id == 0:
+## A player's cat (cats are named after their PLAYER ID, scripts/player_id.gd), or null.
+func cat_for(player_id: int) -> CatPlayer:
+	if player_id == 0:
 		return null
-	return players.get_node_or_null(str(peer_id)) as CatPlayer
+	return players.get_node_or_null(str(player_id)) as CatPlayer
 
 
-## The cat this computer controls, or null (e.g. still in the start menu).
+## The cat of this computer's FIRST player, or null (e.g. still in the start menu).
 func my_cat() -> CatPlayer:
-	return cat_for(multiplayer.get_unique_id())
+	return cat_for(PlayerId.first_local())
 
 
-## Host only: create a cat for a network ID. The spawner copies it to everyone.
-func _spawn_cat(peer_id: int) -> void:
+## Every cat played on this computer (split screen: more than one), first player first.
+func local_cats() -> Array[CatPlayer]:
+	var list: Array[CatPlayer] = []
+	for slot in PlayerId.MAX_LOCAL:
+		var cat := cat_for(PlayerId.make(multiplayer.get_unique_id(), slot))
+		if cat != null:
+			list.append(cat)
+	return list
+
+
+## Name, look and saved-cat id of the player sitting at this slot on THIS computer.
+## (Our cats read it when they appear: cat_player.gd.)
+func local_player_info(slot: int) -> Dictionary:
+	if slot == 0:
+		var cat := Settings.current_cat()
+		return {"name": local_player_name, "look": cat.get("look", {}), "cat_id": str(cat.get("id", ""))}
+	return extra_local_players.get(slot, {"name": "PLAYER %d" % (slot + 1), "look": {}, "cat_id": ""})
+
+
+## Split screen: one more player on this computer joins the game in "slot" (1, 2 or 3), playing
+## the cat described by info ({"name", "look", "cat_id"} - cat_id picks their saved cash + stash).
+## The host makes the cat; then we send that cat's save, like the first player's.
+func add_local_player(slot: int, info: Dictionary) -> void:
+	if slot < 1 or slot >= PlayerId.MAX_LOCAL or extra_local_players.has(slot):
+		return
+	extra_local_players[slot] = info
+	_request_add_player.rpc_id(1, slot)
+	$Profile.restore(PlayerId.make(multiplayer.get_unique_id(), slot), str(info.get("cat_id", "")), str(info.get("name", "")))
+
+
+## Split screen: the player in "slot" (1, 2 or 3) on this computer drops out. Like quitting:
+## what they carry drops where they stand; their stash is safe in their save.
+func remove_local_player(slot: int) -> void:
+	if not extra_local_players.has(slot):
+		return
+	var player_id := PlayerId.make(multiplayer.get_unique_id(), slot)
+	extra_local_players.erase(slot)
+	$Profile.forget(player_id)
+	_request_remove_player.rpc_id(1, player_id)
+
+
+## Host: a computer wants one more player (split screen). Fine if the game isn't full.
+@rpc("any_peer", "call_local", "reliable")
+func _request_add_player(slot: int) -> void:
+	if not multiplayer.is_server() or slot < 1 or slot >= PlayerId.MAX_LOCAL:
+		return
+	var player_id := PlayerId.make(multiplayer.get_remote_sender_id(), slot)
+	if cat_for(player_id) != null:
+		return  # already playing
+	if players.get_child_count() >= Net.MAX_PLAYERS:
+		print("[Network] Game is full (%d players): no room for player %d" % [Net.MAX_PLAYERS, player_id])
+		return
+	print("[Network] Player %d joined in (split screen, slot %d)" % [player_id, slot])
+	_spawn_cat(player_id)
+
+
+## Host: a computer says one of its players dropped out.
+@rpc("any_peer", "call_local", "reliable")
+func _request_remove_player(player_id: int) -> void:
+	if multiplayer.is_server() and PlayerId.sender_owns(player_id) and PlayerId.slot_of(player_id) > 0:
+		_remove_player(player_id)
+
+
+## Host only: create a cat for a player ID. The spawner copies it to everyone.
+func _spawn_cat(player_id: int) -> void:
 	var cat := PLAYER_SCENE.instantiate()
-	cat.name = str(peer_id)  # the name IS the owner — see cat_player.gd _enter_tree()
+	cat.name = str(player_id)  # the name IS the owner — see cat_player.gd _enter_tree()
 	cat.position = hub.spawn_position(players.get_child_count())  # everyone starts in the sewers
 	players.add_child(cat, true)
 
 
 func _on_peer_connected(peer_id: int) -> void:
-	print("[Network] Player %d connected" % peer_id)
+	print("[Network] Computer %d connected" % peer_id)
 	if multiplayer.is_server():
 		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # build the same city first
 		$Items.send_state_to(peer_id)  # then which items are taken, who holds/carries what
@@ -239,24 +309,34 @@ func _on_peer_connected(peer_id: int) -> void:
 		$Quests.send_state_to(peer_id)  # and everyone's quests
 		$Health.send_state_to(peer_id)  # and everyone's HP
 		$Heat.send_state_to(peer_id)  # and how angry the city is
-		_spawn_cat(peer_id)
+		_spawn_cat(PlayerId.make(peer_id, 0))  # their first player (more can join in later)
 		# Late joiner: tell them who's already driving, so that driver's cat is hidden
 		# and their copy of the car follows the right player.
 		if car.driver_id != 0:
 			car.set_driver.rpc_id(peer_id, car.driver_id)
 
 
+## A computer left: every player on it leaves.
 func _on_peer_disconnected(peer_id: int) -> void:
-	print("[Network] Player %d left" % peer_id)
+	print("[Network] Computer %d left" % peer_id)
 	if not multiplayer.is_server():
 		return
-	if car.driver_id == peer_id:
+	for slot in PlayerId.MAX_LOCAL:
+		_remove_player(PlayerId.make(peer_id, slot))
+
+
+## Host only: a player is gone (their computer left, or a split-screen player dropped out).
+func _remove_player(player_id: int) -> void:
+	var cat := cat_for(player_id)
+	if cat == null and not $Heist.cash.has(player_id):
+		return  # never played (e.g. an empty split-screen slot)
+	print("[Network] Player %d left" % player_id)
+	if car.driver_id == player_id:
 		car.set_driver.rpc(0)  # empty the car before their cat disappears
-	$Heist.player_left(peer_id)
-	$Quests.player_left(peer_id)
-	$Health.player_left(peer_id)
-	var cat := cat_for(peer_id)
+	$Heist.player_left(player_id)
+	$Quests.player_left(player_id)
+	$Health.player_left(player_id)
 	# Everything they carried drops where they stood, so nothing is lost.
-	$Items.player_left(peer_id, cat.global_position if cat != null else SPAWN_POINT)
+	$Items.player_left(player_id, cat.global_position if cat != null else SPAWN_POINT)
 	if cat != null:
 		cat.queue_free()  # the spawner removes it on everyone's screen too

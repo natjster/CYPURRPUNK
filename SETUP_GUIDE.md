@@ -44,6 +44,7 @@ Meow-City/
 │   ├── cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (§11)
 │   ├── cat_health.gd          <- HP and knockouts (§8)
 │   ├── player_profile.gd      <- saves your cash + stash between games (§8)
+│   ├── player_id.gd           <- PlayerId: player numbers vs computer numbers, for split screen (§6)
 │   └── ui/                    <- game_screen + hud (§13), main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
@@ -354,7 +355,7 @@ and will only change `scripts/net.gd`.
 ```
 Net (autoload, scripts/net.gd)    <- host(), join(address), leave(); signals joined / join_failed / host_left
 Main (Node3D)                     script: game.gd  <- starts games, spawns cats, catches up late joiners
-├── Players (Node3D)               <- every cat lives here, named by network ID ("1" = host)
+├── Players (Node3D)               <- every cat lives here, named by PLAYER ID ("1" = host's first player)
 ├── PlayerSpawner (MultiplayerSpawner)   Spawn Path: ../Players, spawnable: player.tscn
 ├── LobbyCamera (Camera3D)         <- shows the city behind the start menu
 └── PS1Overlay > Lobby (Control)   <- the start menu (§10)
@@ -367,8 +368,36 @@ Main (Node3D)                     script: game.gd  <- starts games, spawns cats,
   can't grab the same thing and nobody can give themselves cash.
 - **If a player quits,** the host empties the car (if they were driving) and drops everything they
   carried where they stood. If the host quits, everyone returns to the start menu.
-- **Finding a player's cat in code:** `Game.instance.cat_for(peer_id)`, or `Game.instance.my_cat()`
-  for your own.
+- **Finding a player's cat in code:** `Game.instance.cat_for(player_id)`, or `Game.instance.my_cat()`
+  for your own (first) player, or `Game.instance.local_cats()` for every player on this computer.
+
+### Player IDs (getting ready for split screen)
+Split screen means one computer can have up to **4 players** (8 in a whole game). So the game
+keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
+
+| | What it means | Example |
+|---|---|---|
+| **Network ID** | which COMPUTER (Godot hands it out; host = 1) | `771171244` |
+| **Player ID** | which PLAYER / CAT: network ID + seat on that computer | `771171244` (first player), `5066138540` (second player on that computer) |
+
+- The **first** player on a computer has a player ID equal to the computer's network ID, so with
+  one player per computer nothing looks different from before.
+- **Everything per-player uses player IDs:** the cat nodes under Players, cash, HP, quests,
+  inventories, stashes, who's driving. Each `request_...` sent to the host says which player it's
+  for, and the host checks that player belongs to the computer that asked
+  (`PlayerId.sender_owns(id)`), so nobody can move someone else's stuff.
+- **Each couch player plays their own saved cat**, with its own cash and stash file (§8, "The stash
+  & saved progress"). A couch player can drop out on their own; the computer stays in the game
+  until it quits, which removes all of its players.
+- **In code:** `PlayerId.make(network_id, seat)`, `PlayerId.peer_of(id)` (which computer),
+  `PlayerId.slot_of(id)` (which seat, 0-3), `PlayerId.is_local(id)` (on this computer?),
+  `PlayerId.first_local()`. A cat knows its own: `cat.player_id`, `cat.slot`.
+  `Game.instance.add_local_player(seat, {"name", "look", "cat_id"})` /
+  `remove_local_player(seat)` add or drop a couch player.
+- **Not yet:** extra couch players have no screen or controller of their own yet (their cats stand
+  still in the sewers); that comes with the next split-screen steps. Test them with DevCapture:
+  `--add_local=1` (one more player joins in), `--as_local=1` (the test actions use that cat:
+  `--grab`, `--goto_dropoff_after`, `--bait_roomba`...), `--remove_local=1` (they drop out).
 - **Network log:** lines starting with `[Network]` appear in Godot's **Output** panel (joins/leaves).
 
 ### Smooth movement (interpolation)
@@ -768,7 +797,7 @@ is the **Health** label in `scenes/ui/hud.tscn` (§13). The fall-over is `knocke
 you lie there), **Hud Color**. How much a bonk hurts: **Bonk Damage** on the Roomba (above).
 
 **Something new that hurts cats** (a trap, a guard dog...): on the host, call
-`CatHealth.instance.damage(peer_id, 1, "A GUARD DOG")`. The last part is shown on the
+`CatHealth.instance.damage(player_id, 1, "A GUARD DOG")`. The last part is shown on the
 knocked-out screen. Guns don't hurt cats (no player-vs-player damage yet).
 
 **Multiplayer:** the host decides all damage and knockouts and tells everyone, like cash.

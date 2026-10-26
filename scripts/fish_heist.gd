@@ -81,13 +81,13 @@ var beam_positions: Array[Vector3] = []
 ## For each beam spot: seconds until it closes, or -1 if it's closed. (The host's copy is the
 ## real one; everyone else counts their copy down between the host's updates.)
 var beam_time_left: Array[float] = []
-## Network ID -> cash. Everyone keeps a copy; only the host changes it (via RPC).
+## Player ID -> cash. Everyone keeps a copy; only the host changes it (via RPC).
 var cash := {}
 
 var _built: Array[Node] = []  # the beam pieces, so a new city can clear them
 var _beams: Array[Dictionary] = []  # per beam spot: {"shine", "posts", "sign"} (see _build_beam)
 var _clock: float = 0.0
-## Host: network ID -> time until we ignore that cat at the beam (it's on its way down).
+## Host: player ID -> time until we ignore that cat at the beam (it's on its way down).
 var _extract_wait := {}
 var _beam_rng := RandomNumberGenerator.new()  # host: which beam opens next (NOT the city seed)
 
@@ -315,21 +315,21 @@ func _physics_process(delta: float) -> void:
 
 	var items := ItemManager.instance
 	for node in players.get_children():
-		var peer_id := node.name.to_int()
-		var driving := car.driver_id == peer_id
+		var player_id := (node as CatPlayer).player_id
+		var driving := car.driver_id == player_id
 		var where: Vector3 = car.global_position if driving else (node as Node3D).global_position
-		if UndergroundHub.is_in_hub(where) or _clock < _extract_wait.get(peer_id, 0.0):
+		if UndergroundHub.is_in_hub(where) or _clock < _extract_wait.get(player_id, 0.0):
 			continue
-		if CatHealth.instance.is_down(peer_id):
+		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: no flopping into the beam to save your stuff
 		var beam := nearest_open_beam(where)
 		if beam == -1 or _flat_distance(where, beam_positions[beam]) >= dropoff_radius:
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
-		_extract_wait[peer_id] = _clock + 3.0
+		_extract_wait[player_id] = _clock + 3.0
 		# Quests first, while the loot is still in the bag (e.g. Mittens wants 3 fish IN it).
-		var quest_bonus: int = QuestManager.instance.complete_on_extract(peer_id)[0]
-		var loot := items.take_bag(peer_id) if items.bag_used(peer_id) > 0 else []
+		var quest_bonus: int = QuestManager.instance.complete_on_extract(player_id)[0]
+		var loot := items.take_bag(player_id) if items.bag_used(player_id) > 0 else []
 		var earned := 0
 		for item_id in loot:
 			earned += (items.catalog[item_id] as ItemData).cash_value
@@ -337,7 +337,7 @@ func _physics_process(delta: float) -> void:
 			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
 			Game.instance.park_car()  # ...and it waits at its parking spot for the next trip up
 		HeatMeter.instance.add_heat(-HeatMeter.instance.cool_per_extraction)  # the cops lose your trail
-		_extracted.rpc(peer_id, earned, loot.size(), quest_bonus)
+		_extracted.rpc(player_id, earned, loot.size(), quest_bonus)
 
 
 ## Host -> everyone: how long each beam stays open (-1 = closed).
@@ -351,38 +351,43 @@ func _set_beams(times: Array) -> void:
 
 ## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now.
 @rpc("authority", "call_local", "reliable")
-func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> void:
-	cash[peer_id] = cash.get(peer_id, 0) + earned + quest_bonus
-	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [peer_id, count, earned, quest_bonus, cash[peer_id]])
-	if peer_id == multiplayer.get_unique_id():
+func _extracted(player_id: int, earned: int, count: int, quest_bonus: int = 0) -> void:
+	cash[player_id] = cash.get(player_id, 0) + earned + quest_bonus
+	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [player_id, count, earned, quest_bonus, cash[player_id]])
+	if not PlayerId.is_local(player_id):
+		return  # someone else's cat: their computer moves it
+	if player_id == PlayerId.first_local():  # (the one HUD shows our first player)
 		var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
 		if quest_bonus > 0:
 			popup_text += "\nQUEST DONE +$%d" % quest_bonus
 		Hud.popup(popup_text, 2.5)  # the big text that fades out (scripts/ui/hud.gd)
 		Sound.play("extract")
 		Controls.rumble(0.5, 0.2, 0.3)  # a happy buzz on the controller
-		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
+	var cat := Game.instance.cat_for(player_id)
+	if cat != null:
+		UndergroundHub.instance.return_cat(cat)  # down the drain we go
 
 
 ## Host only: take "amount" from a player's cash (the sewer shop calls this).
 ## Returns false (and takes nothing) if they can't afford it.
-func spend(peer_id: int, amount: int) -> bool:
-	if cash.get(peer_id, 0) < amount:
+func spend(player_id: int, amount: int) -> bool:
+	if cash.get(player_id, 0) < amount:
 		return false
-	_set_cash.rpc(peer_id, cash.get(peer_id, 0) - amount)
+	_set_cash.rpc(player_id, cash.get(player_id, 0) - amount)
 	return true
 
 
 ## Host -> everyone: this player's cash is now "amount".
 @rpc("authority", "call_local", "reliable")
-func _set_cash(peer_id: int, amount: int) -> void:
-	cash[peer_id] = amount
+func _set_cash(player_id: int, amount: int) -> void:
+	cash[player_id] = amount
 
 
-## Host -> a player who just joined: everyone's cash, and which extraction beams are open.
-func send_state_to(peer_id: int) -> void:
-	_receive_state.rpc_id(peer_id, cash)
-	_set_beams.rpc_id(peer_id, beam_time_left)
+## Host -> a computer that just joined (network ID "peer"): everyone's cash, and which
+## extraction beams are open.
+func send_state_to(peer: int) -> void:
+	_receive_state.rpc_id(peer, cash)
+	_set_beams.rpc_id(peer, beam_time_left)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -391,20 +396,20 @@ func _receive_state(cash_now: Dictionary) -> void:
 
 
 ## Host: a player quit. Their cash goes with them.
-func player_left(peer_id: int) -> void:
-	_forget_player.rpc(peer_id)
+func player_left(player_id: int) -> void:
+	_forget_player.rpc(player_id)
 
 
 @rpc("authority", "call_local", "reliable")
-func _forget_player(peer_id: int) -> void:
-	cash.erase(peer_id)
+func _forget_player(player_id: int) -> void:
+	cash.erase(player_id)
 
 
 # --- HUD (your cash, your loot, where to go, everyone's cash: scenes/ui/hud.tscn) ---
 
 func _update_hud() -> void:
-	var me := multiplayer.get_unique_id()
-	var my_cat := players.get_node_or_null(str(me)) as CatPlayer
+	var me := PlayerId.first_local()
+	var my_cat := Game.instance.cat_for(me)
 	if my_cat == null:
 		return
 	var items := ItemManager.instance
@@ -438,7 +443,7 @@ func _update_hud() -> void:
 	var rows: Array = []
 	for node in players.get_children():
 		var cat := node as CatPlayer
-		rows.append([cash.get(cat.name.to_int(), 0), cat.get_node("NameTag").text if cat.name.to_int() != me else "YOU"])
+		rows.append([cash.get(cat.player_id, 0), cat.get_node("NameTag").text if cat.player_id != me else "YOU"])
 	rows.sort_custom(func(a, b): return a[0] > b[0])
 	var lines := PackedStringArray()
 	for row in rows:

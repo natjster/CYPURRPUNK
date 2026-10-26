@@ -131,7 +131,7 @@ func _fire() -> void:
 		var car := hit.collider as GetawayCar
 		var roomba := hit.collider as Roomba
 		if roomba != null:
-			roomba.take_hit.rpc_id(1)  # the host keeps score of Roomba health
+			roomba.take_hit.rpc_id(1, holder.player_id)  # the host keeps score of Roomba health
 		elif cat != null:
 			# The zapped cat's OWN computer moves it, so ask that computer to do the shove.
 			cat.get_zapped.rpc_id(cat.get_multiplayer_authority(), aim * cat_knockback + Vector3.UP * cat_hop)
@@ -148,7 +148,7 @@ func _fire() -> void:
 ## Everyone (including the shooter): draw a bolt from this gun's muzzle to "end".
 @rpc("any_peer", "call_local", "unreliable_ordered")
 func show_shot(end: Vector3, shot_heat: float) -> void:
-	if holder == null or multiplayer.get_remote_sender_id() != holder.name.to_int():
+	if holder == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(holder.player_id):
 		return  # only the holder may fire
 	shots_seen += 1
 	var start := _muzzle.global_position if _muzzle != null else global_position

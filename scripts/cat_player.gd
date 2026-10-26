@@ -82,12 +82,18 @@ const FUR_COLORS: Array[Color] = [
 
 
 # --- MULTIPLAYER ---
-# Every computer has a copy of every cat. Each cat node is named after the
-# player's network ID (host = "1"), and only that player's computer is its
-# "authority": it reads the keyboard and moves the cat. It writes where the cat
-# is into sync_position / sync_model_rotation, which the MultiplayerSynchronizer
-# sends to everyone else. Their copies then GLIDE toward those values every frame
-# instead of jumping, so other players' cats move smoothly.
+# Every computer has a copy of every cat. Each cat node is named after its
+# PLAYER ID (scripts/player_id.gd; the host's first player = "1"), and only the
+# computer that player sits at is its "authority": it reads the keyboard and moves
+# the cat. It writes where the cat is into sync_position / sync_model_rotation,
+# which the MultiplayerSynchronizer sends to everyone else. Their copies then GLIDE
+# toward those values every frame instead of jumping, so other players' cats move smoothly.
+# One computer can own several cats (split screen): each has its own SLOT (0 = first player).
+
+## This cat's player ID (= its node name). See scripts/player_id.gd.
+var player_id: int = 0
+## Which player on its computer: 0 = the first one, 1 = the second (split screen)...
+var slot: int = 0
 
 ## The name floating above this cat. Chosen by its owner in the lobby, sent to everyone.
 var player_name: String = "":
@@ -134,7 +140,16 @@ var _next_meow_at: float = 0.0
 
 func _enter_tree() -> void:
 	if name.is_valid_int():
-		set_multiplayer_authority(name.to_int())
+		player_id = name.to_int()
+		slot = PlayerId.slot_of(player_id)
+		set_multiplayer_authority(PlayerId.peer_of(player_id))  # the computer this player sits at
+
+
+## True if the keyboard / mouse / controller of THIS computer drives this cat.
+## For now that's this computer's first player only; extra split-screen players sit still
+## until each gets their own controller (roadmap phase 3).
+func reads_input() -> bool:
+	return is_multiplayer_authority() and slot == 0
 
 
 func _ready() -> void:
@@ -147,12 +162,16 @@ func _ready() -> void:
 	_apply_look()
 
 	if is_multiplayer_authority():
-		# This is MY cat: use its camera and grab the mouse.
-		camera.make_current()
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		$NameTag.hide()  # no need to see your own name
-		player_name = Game.local_player_name  # the synchronizer shares it with everyone
-		look = Settings.current_cat().get("look", {})  # ...and so is our cat's look
+		# One of OUR cats: its name and look come from the player sitting at this slot
+		# (game.gd local_player_info); the synchronizer shares them with everyone.
+		var info := Game.instance.local_player_info(slot)
+		player_name = info.get("name", "")
+		look = info.get("look", {})
+		if reads_input():
+			# The cat we steer: use its camera and grab the mouse.
+			camera.make_current()
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			$NameTag.hide()  # no need to see your own name
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
@@ -166,7 +185,7 @@ func _ready() -> void:
 		# Joined while this cat was already in a car? Hide it now.
 		for node in get_tree().get_nodes_in_group("cars"):
 			var car := node as GetawayCar
-			if car.driver_id == name.to_int():
+			if car.driver_id == player_id:
 				enter_car(car)
 
 
@@ -207,7 +226,7 @@ func _on_settings_changed() -> void:
 	if not is_controlled:
 		camera.fov = _base_fov
 	# Changed our cat in the MY CAT screen (from the pause menu): wear it, and share it.
-	if is_multiplayer_authority():
+	if is_multiplayer_authority() and slot == 0:
 		var my_cat := Settings.current_cat()
 		if look != CatLook.clean(my_cat.get("look", {})):
 			look = my_cat.get("look", {})
@@ -227,15 +246,14 @@ func _update_name_tag() -> void:
 ## Dress the model in our look. A player who never used the MY CAT screen gets a fur colour
 ## from FUR_COLORS picked by their network ID, so cats are still easy to tell apart.
 func _apply_look() -> void:
-	var peer_id := name.to_int() if name.is_valid_int() else 1
-	var index := 0 if peer_id == 1 else 1 + peer_id % (FUR_COLORS.size() - 1)
+	var index := 0 if player_id <= 1 else 1 + player_id % (FUR_COLORS.size() - 1)
 	CatLook.apply(cat_model, {"fur": FUR_COLORS[index]}.merged(look, true))
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Esc opens the pause menu (see game.gd), which frees the mouse.
 	# If the mouse got freed some other way (e.g. alt-tab), clicking the game grabs it again.
-	if _menu_open():
+	if _menu_open() or not reads_input():
 		return
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -275,7 +293,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
-		nearby_car.request_enter.rpc_id(1)
+		nearby_car.request_enter.rpc_id(1, player_id)
 		# Mark the E press as used so the car doesn't instantly treat it as "exit".
 		get_viewport().set_input_as_handled()
 
@@ -284,7 +302,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## the camera like the mouse does. Gentle near the middle (for aiming), fast at full tilt.
 ## STICK SPEED and INVERT STICK Y come from SETTINGS > CONTROLS.
 func _stick_look(delta: float) -> void:
-	if not is_controlled or _menu_open() or _pad_in_inventory():
+	if not is_controlled or not reads_input() or _menu_open() or _pad_in_inventory():
 		return
 	var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
 	if stick == Vector2.ZERO:
@@ -346,7 +364,7 @@ func _physics_process(delta: float) -> void:
 	var is_zooming := (Input.is_action_pressed("sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
 	var target_speed := zoomies_speed if is_zooming else walk_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
-	var heavy := ItemManager.instance.carry_speed(name.to_int()) if ItemManager.instance != null else 1.0
+	var heavy := ItemManager.instance.carry_speed(player_id) if ItemManager.instance != null else 1.0
 	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy
 
 	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
@@ -401,9 +419,10 @@ func _menu_open() -> bool:
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
 ## (Also while a controller player has the inventory open: their stick and A button are
-## moving around the inventory then, not the cat.)
+## moving around the inventory then, not the cat. And for a split-screen cat with no
+## controller yet: see reads_input.)
 func _input_blocked() -> bool:
-	return _menu_open() or knocked_out or _pad_in_inventory()
+	return _menu_open() or knocked_out or _pad_in_inventory() or not reads_input()
 
 
 func _pad_in_inventory() -> bool:
@@ -462,7 +481,8 @@ func enter_car(car: GetawayCar) -> void:
 	# Move the camera node under the car's camera arm.
 	camera.reparent(car.camera_arm, false)
 	camera.transform = Transform3D.IDENTITY
-	camera.make_current()
+	if reads_input():
+		camera.make_current()
 
 
 ## Called by the car on EVERY computer when this cat gets out.
@@ -477,5 +497,6 @@ func exit_car(exit_position: Vector3) -> void:
 	# Take the camera back.
 	camera.reparent(spring_arm, false)
 	camera.transform = Transform3D.IDENTITY
-	camera.make_current()
+	if reads_input():
+		camera.make_current()
 	is_controlled = true

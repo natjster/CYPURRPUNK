@@ -29,5 +29,5 @@ extends Resource
 
 
 ## True if this page may be the greeting for this player (see Only If Quest above).
-func fits(peer_id: int) -> bool:
-	return only_if_quest.is_empty() or QuestManager.instance.is_in_state(peer_id, only_if_quest, only_if_state)
+func fits(player_id: int) -> bool:
+	return only_if_quest.is_empty() or QuestManager.instance.is_in_state(player_id, only_if_quest, only_if_state)

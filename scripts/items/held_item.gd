@@ -42,4 +42,4 @@ func wants_crosshair() -> bool:
 
 ## Owner only: use the item up (catnip). The host removes it from the paw.
 func consume() -> void:
-	ItemManager.instance.request_consume.rpc_id(1, hand)
+	ItemManager.instance.request_consume.rpc_id(1, holder.player_id, hand)

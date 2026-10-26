@@ -34,7 +34,7 @@ func _on_action(action: String, cat: CatPlayer) -> void:
 
 ## Show the shop page: what he says + a BUY button per item in stock + BACK.
 func open_shop(cat: CatPlayer) -> void:
-	var my_cash: int = FishHeist.instance.cash.get(multiplayer.get_unique_id(), 0)
+	var my_cash: int = FishHeist.instance.cash.get(cat.player_id, 0)
 	var line: String = shop_lines[randi() % shop_lines.size()] if not shop_lines.is_empty() else "Take your pick."
 	if line.contains("%d"):
 		line = line % my_cash
@@ -50,7 +50,7 @@ func open_shop(cat: CatPlayer) -> void:
 
 ## A BUY button: ask the host, then re-open the shop page (so the cash line is fresh).
 func _buy(cat: CatPlayer, item_id: String) -> void:
-	ItemManager.instance.request_buy.rpc_id(1, item_id)
+	ItemManager.instance.request_buy.rpc_id(1, cat.player_id, item_id)
 	# Give the host's answer (new cash) a moment to arrive before redrawing the page.
 	await get_tree().create_timer(0.2).timeout
 	if NpcDialog.is_open:

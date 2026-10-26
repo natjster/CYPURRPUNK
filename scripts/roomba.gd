@@ -147,7 +147,7 @@ func _physics_process(delta: float) -> void:
 		State.PATROL:
 			var cat := _find_cat_to_chase()
 			if cat != null:
-				_chase_id = cat.name.to_int()
+				_chase_id = cat.player_id
 				state = State.CHASE
 			else:
 				move = _flat(_target - global_position)
@@ -243,9 +243,9 @@ func _clear_line_to(cat: CatPlayer) -> bool:
 ## Noisy loot (the jingling golden koi) and a hot city make "reach" longer.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
 	if cat == null or not cat.visible or UndergroundHub.is_in_hub(cat.global_position) \
-			or CatHealth.instance.is_down(cat.name.to_int()):
+			or CatHealth.instance.is_down(cat.player_id):
 		return false
-	reach *= ItemManager.instance.loot_noise(cat.name.to_int())
+	reach *= ItemManager.instance.loot_noise(cat.player_id)
 	if heat_scaling:
 		reach *= HeatMeter.instance.sight_multiplier()
 	return _flat(cat.global_position - global_position).length() < reach
@@ -253,18 +253,18 @@ func _can_chase(cat: CatPlayer, reach: float) -> bool:
 
 ## Knock the cat flying and vacuum one piece of loot out of its bag.
 func _bonk(cat: CatPlayer) -> void:
-	var peer_id := cat.name.to_int()
+	var player_id := cat.player_id
 	var push := _flat(cat.global_position - global_position).normalized() * bump_push + Vector3.UP * bump_hop
-	cat.get_zapped.rpc_id(peer_id, push)  # the cat's owner moves it
+	cat.get_zapped.rpc_id(PlayerId.peer_of(player_id), push)  # the cat's owner moves it
 	Sound.play_everywhere("bonk", cat.global_position)
 	if steals_loot:
-		var item_id := ItemManager.instance.take_one_loot(peer_id)
+		var item_id := ItemManager.instance.take_one_loot(player_id)
 		if item_id != "":
 			stomach.append(item_id)
-			_vacuumed.rpc_id(peer_id, (ItemManager.instance.catalog[item_id] as ItemData).display_name)
+			_vacuumed.rpc_id(PlayerId.peer_of(player_id), player_id, (ItemManager.instance.catalog[item_id] as ItemData).display_name)
 	# After the vacuuming, so a knockout drops whatever is left (the stolen one stays inside us).
-	CatHealth.instance.damage(peer_id, bonk_damage, "A VAC-COP")
-	print("[Roomba] %s bonked player %d (stomach: %s)" % [name, peer_id, stomach])
+	CatHealth.instance.damage(player_id, bonk_damage, "A VAC-COP")
+	print("[Roomba] %s bonked player %d (stomach: %s)" % [name, player_id, stomach])
 	state = State.STUNNED
 	_stun_left = stun_seconds
 	velocity = -push.normalized() * 3.0  # bounce back a little
@@ -304,9 +304,10 @@ func _is_stuck(delta: float) -> bool:
 
 # --- Getting hurt ---
 
-## A bolt hit us. Sent to the host by the shooter's gun (weapon.gd).
+## A bolt hit us. Sent to the host by the shooter's gun (weapon.gd), with the shooter's player ID
+## (0 = nobody in particular, e.g. a test).
 @rpc("any_peer", "call_local", "reliable")
-func take_hit() -> void:
+func take_hit(shooter_id: int = 0) -> void:
 	if not multiplayer.is_server() or health <= 0:
 		return
 	health -= 1
@@ -316,9 +317,9 @@ func take_hit() -> void:
 		explode()
 		return
 	# Angry now: chase whoever shot us (if they're on foot).
-	var shooter := Game.instance.cat_for(multiplayer.get_remote_sender_id())
+	var shooter := Game.instance.cat_for(shooter_id) if PlayerId.sender_owns(shooter_id) else null
 	if _can_chase(shooter, lose_range):
-		_chase_id = shooter.name.to_int()
+		_chase_id = shooter.player_id
 		state = State.CHASE
 
 
@@ -353,7 +354,9 @@ func _hit_flash() -> void:
 
 ## Host -> the bonked cat's owner: tell them what got vacuumed.
 @rpc("authority", "call_local", "reliable")
-func _vacuumed(display_name: String) -> void:
+func _vacuumed(player_id: int, display_name: String) -> void:
+	if player_id != PlayerId.first_local():
+		return  # (the one HUD shows our first player; split screen gives each their own later)
 	Game.instance.show_message("A VAC-COP VACUUMED YOUR %s!  Smash it to get it back." % display_name, 3.0)
 
 

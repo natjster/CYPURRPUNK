@@ -12,7 +12,7 @@ extends Node
 ##   - Back down in the sewers (the hub) you're healed to full straight away.
 ##   - Cats in the car or in the hub can't be hurt.
 ##
-## Other things can hurt cats too: call  CatHealth.instance.damage(peer_id, amount, "WHO")
+## Other things can hurt cats too: call  CatHealth.instance.damage(player_id, amount, "WHO")
 ## ON THE HOST (e.g. a future trap or a dog). "WHO" shows on the knocked-out screen.
 ##
 ## Multiplayer: the HOST is the referee, same as cash and quests. Damage is only ever done on
@@ -28,7 +28,7 @@ extends Node
 ## The one health node (CatHealth.instance).
 static var instance: CatHealth
 
-## Network ID -> hit points. Everyone keeps a copy; only the host changes it (via RPC).
+## Player ID -> hit points. Everyone keeps a copy; only the host changes it (via RPC).
 ## A player who isn't in the list has full health.
 var health := {}
 
@@ -42,32 +42,32 @@ func _enter_tree() -> void:
 
 # --- Questions anyone can ask (every computer has the answers) ---
 
-func get_health(peer_id: int) -> int:
-	return health.get(peer_id, max_health)
+func get_health(player_id: int) -> int:
+	return health.get(player_id, max_health)
 
 
 ## True while a cat is knocked out (0 HP). Roombas leave knocked-out cats alone.
-func is_down(peer_id: int) -> bool:
-	return get_health(peer_id) <= 0
+func is_down(player_id: int) -> bool:
+	return get_health(player_id) <= 0
 
 
 # --- Getting hurt (host only) ---
 
 ## Host only: take "amount" HP from a player. "cause" = who did it, e.g. "A VAC-COP".
 ## Does nothing to cats in the hub, or ones already knocked out.
-func damage(peer_id: int, amount: int, cause: String) -> void:
-	if not multiplayer.is_server() or amount <= 0 or is_down(peer_id):
+func damage(player_id: int, amount: int, cause: String) -> void:
+	if not multiplayer.is_server() or amount <= 0 or is_down(player_id):
 		return
-	var cat := Game.instance.cat_for(peer_id)
+	var cat := Game.instance.cat_for(player_id)
 	if cat == null or UndergroundHub.is_in_hub(cat.global_position):
 		return
-	var left := maxi(get_health(peer_id) - amount, 0)
-	_set_health.rpc(peer_id, left)
+	var left := maxi(get_health(player_id) - amount, 0)
+	_set_health.rpc(player_id, left)
 	if left == 0:
 		# Knocked out: everything they carry spills onto the street where they fell.
-		ItemManager.instance.drop_everything(peer_id, cat.global_position)
-		print("[Health] Player %d was knocked out by %s" % [peer_id, cause])
-		_knocked_out.rpc_id(peer_id, cause)
+		ItemManager.instance.drop_everything(player_id, cat.global_position)
+		print("[Health] Player %d was knocked out by %s" % [player_id, cause])
+		_knocked_out.rpc_id(PlayerId.peer_of(player_id), player_id, cause)  # to that player's computer
 
 
 ## Host only, every physics frame: cats down in the sewers heal to full.
@@ -76,43 +76,45 @@ func _physics_process(_delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	for node in Game.instance.players.get_children():
-		var peer_id := node.name.to_int()
-		if get_health(peer_id) < max_health and UndergroundHub.is_in_hub((node as Node3D).global_position):
-			_set_health.rpc(peer_id, max_health)
+		var player_id := (node as CatPlayer).player_id
+		if get_health(player_id) < max_health and UndergroundHub.is_in_hub((node as Node3D).global_position):
+			_set_health.rpc(player_id, max_health)
 
 
 # --- What the host tells everyone ---
 
 ## Host -> everyone: this player's HP is now "hp".
 @rpc("authority", "call_local", "reliable")
-func _set_health(peer_id: int, hp: int) -> void:
-	if peer_id == multiplayer.get_unique_id() and hp < get_health(peer_id):
+func _set_health(player_id: int, hp: int) -> void:
+	# Our own first player got hurt? (The one HUD shows them; split screen gives each player their own later.)
+	if player_id == PlayerId.first_local() and hp < get_health(player_id):
 		_flash_time = 0.6  # we got hurt: flash the HP line
 		if hp > 0:
 			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
 			Controls.rumble(0.3, 0.7, 0.25)  # thump on the controller
-	health[peer_id] = hp
+	health[player_id] = hp
 
 
-## Host -> the knocked-out player: fall over, wait, wake up in the sewers.
+## Host -> the knocked-out player's computer: fall over, wait, wake up in the sewers.
 @rpc("authority", "call_local", "reliable")
-func _knocked_out(cause: String) -> void:
-	var cat := Game.instance.my_cat()
-	if cat == null:
+func _knocked_out(player_id: int, cause: String) -> void:
+	var cat := Game.instance.cat_for(player_id)
+	if cat == null or not cat.is_multiplayer_authority():
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
-	Sound.play("knockout")
-	Controls.rumble(0.8, 1.0, 0.7)  # big shake on the controller
-	Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
+	if player_id == PlayerId.first_local():
+		Sound.play("knockout")
+		Controls.rumble(0.8, 1.0, 0.7)  # big shake on the controller
+		Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):
 		cat.knocked_out = false
 		UndergroundHub.instance.return_cat(cat)  # wake up down the drain (and get healed there)
 
 
-## Host -> a player who just joined: everyone's HP.
-func send_state_to(peer_id: int) -> void:
-	_receive_state.rpc_id(peer_id, health)
+## Host -> a computer that just joined (network ID "peer"): everyone's HP.
+func send_state_to(peer: int) -> void:
+	_receive_state.rpc_id(peer, health)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -121,19 +123,19 @@ func _receive_state(health_now: Dictionary) -> void:
 
 
 ## Host: a player quit.
-func player_left(peer_id: int) -> void:
-	_forget_player.rpc(peer_id)
+func player_left(player_id: int) -> void:
+	_forget_player.rpc(player_id)
 
 
 @rpc("authority", "call_local", "reliable")
-func _forget_player(peer_id: int) -> void:
-	health.erase(peer_id)
+func _forget_player(player_id: int) -> void:
+	health.erase(player_id)
 
 
 # --- HUD: "HP ##-" under your cash ---
 
 func _process(delta: float) -> void:
-	var me := multiplayer.get_unique_id()
+	var me := PlayerId.first_local()
 	if Game.instance.my_cat() == null:
 		return
 	var hp := get_health(me)

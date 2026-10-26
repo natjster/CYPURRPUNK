@@ -15,6 +15,9 @@ extends Node3D
 ## MULTIPLAYER: the HOST is the referee. Clients ask (request_pickup / request_drop_item /
 ## request_consume / ...); the host checks and then tells everyone the result. Everyone keeps
 ## a copy of "world" (items on the street) and "inventories" (paws + bag per player).
+## Players are PLAYER IDs (scripts/player_id.gd): every request_* says which player it's for
+## (one computer can have several in split screen), and the host checks that player really
+## belongs to the computer that asked (PlayerId.sender_owns).
 ##
 ## World item IDs: items placed when the city is built get IDs 0, 1, 2... in the same order
 ## on every computer. Items dropped later get IDs from 100000 up, chosen by the host.
@@ -63,7 +66,7 @@ const MAX_REACH_HEIGHT: float = 3.0
 var catalog := {}
 ## World item ID -> {"item": item id, "pos": Vector3}. Items lying on the street.
 var world := {}
-## Network ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids],
+## Player ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids],
 ##                "stash": [held item ids]}.
 ## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is the backpack.
 ## "stash" is the safe locker in the sewers (see request_to_stash / player_profile.gd).
@@ -73,7 +76,7 @@ var _world_nodes := {}   # world item ID -> Node3D on the street
 var _spawns: Array = []  # host: [{"item", "pos", "respawn", "back_at"}], index = world item ID
 var _next_id: int = FIRST_DROPPED_ID
 var _clock: float = 0.0
-## Host: world item ID -> network ID of the cat that dropped it. That cat can't auto-grab it
+## Host: world item ID -> player ID of the cat that dropped it. That cat can't auto-grab it
 ## again until it steps away (otherwise dropping a fish would instantly pick it back up).
 var _dropped_by := {}
 
@@ -206,8 +209,8 @@ func _remove_world(id: int) -> void:
 
 
 @rpc("authority", "call_local", "reliable")
-func _set_inventory(peer_id: int, inventory: Dictionary) -> void:
-	inventories[peer_id] = inventory
+func _set_inventory(player_id: int, inventory: Dictionary) -> void:
+	inventories[player_id] = inventory
 
 
 # --- Every frame ---
@@ -239,20 +242,20 @@ func _host_tick() -> void:
 			_add_world.rpc(i, spawn.item, spawn.pos)
 	for node in players.get_children():
 		var cat := node as CatPlayer
-		var peer_id := cat.name.to_int()
-		if car.driver_id == peer_id:
+		var player_id := cat.player_id
+		if car.driver_id == player_id:
 			continue  # no grabbing things from inside the car
-		if CatHealth.instance.is_down(peer_id):
+		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: it's lying on the loot it just spilled, don't suck it back up
 		for id in world.keys():
 			var data: ItemData = catalog[world[id].item]
 			var distance := _reach_distance(cat.global_position, world[id].pos)
-			if _dropped_by.get(id, 0) == peer_id:
+			if _dropped_by.get(id, 0) == player_id:
 				if distance > pickup_radius + 0.5:
 					_dropped_by.erase(id)  # walked away: it can be grabbed again
 				continue
-			if data.auto_pickup and distance < pickup_radius and _can_take(peer_id, data):
-				_give(peer_id, id)
+			if data.auto_pickup and distance < pickup_radius and _can_take(player_id, data):
+				_give(player_id, id)
 				break  # one item per cat per frame
 
 
@@ -264,7 +267,8 @@ func _use_held_items(delta: float) -> void:
 	var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
 	# Mouse players: only while the mouse is grabbed by the game (not while clicking a menu).
 	# Controller players: whenever no menu / HUD window is open.
-	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED 		or (Controls.using_pad and not PauseMenu.is_open and not NpcDialog.is_open and not Hud.wants_input())
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED \
+		or (Controls.using_pad and not PauseMenu.is_open and not NpcDialog.is_open and not Hud.wants_input())
 	for hand in 2:
 		var held := held_item(cat, hand)
 		if held == null or (safe_zone and held is Weapon):
@@ -275,24 +279,24 @@ func _use_held_items(delta: float) -> void:
 
 # --- Host decisions ---
 
-func _can_take(peer_id: int, data: ItemData) -> bool:
+func _can_take(player_id: int, data: ItemData) -> bool:
 	if data.kind == ItemData.Kind.LOOT:
-		return bag_used(peer_id) + data.bag_space <= bag_size
+		return bag_used(player_id) + data.bag_space <= bag_size
 	return true  # held items always fit: whatever is in the way gets dropped
 
 
 ## Host: give the item lying at world ID to a player.
-func _give(peer_id: int, world_id: int) -> void:
+func _give(player_id: int, world_id: int) -> void:
 	Sound.play_everywhere("pickup", world[world_id].pos, -4.0)
 	# Big prizes (the golden koi) make the city angrier and tell everyone who took it.
 	var data: ItemData = catalog[world[world_id].item]
 	if data.heat_on_pickup > 0.0 and not UndergroundHub.is_in_hub(world[world_id].pos):
 		HeatMeter.instance.add_heat(data.heat_on_pickup)
 	if data.pickup_announcement != "":
-		var cat := _cat(peer_id)
+		var cat := _cat(player_id)
 		var who: String = cat.player_name if cat != null and cat.player_name != "" else "SOMEONE"
 		_announce.rpc(data.pickup_announcement % who)
-	_put_in_inventory(peer_id, world[world_id].item, world[world_id].pos)
+	_put_in_inventory(player_id, world[world_id].item, world[world_id].pos)
 	_remove_world.rpc(world_id)
 	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
 		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn
@@ -301,10 +305,10 @@ func _give(peer_id: int, world_id: int) -> void:
 ## Host: put an item into a player's paws (or backpack, or loot bag) and tell everyone.
 ## If every paw and backpack slot is full, whatever is in the way is dropped at the cat's
 ## feet (or at "fallback_spot" if the cat can't be found).
-func _put_in_inventory(peer_id: int, item_id: String, fallback_spot: Vector3) -> void:
+func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) -> void:
 	var data: ItemData = catalog[item_id]
-	var inventory := get_inventory(peer_id).duplicate(true)
-	var cat := _cat(peer_id)
+	var inventory := get_inventory(player_id).duplicate(true)
+	var cat := _cat(player_id)
 	var drop_at: Vector3 = cat.global_position if cat != null else fallback_spot
 
 	if data.kind == ItemData.Kind.LOOT:
@@ -331,7 +335,7 @@ func _put_in_inventory(peer_id: int, item_id: String, fallback_spot: Vector3) ->
 			hands[0] = item_id
 		inventory.hands = hands
 		inventory.pack = pack
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Host: put an item on the street with a brand-new world ID.
@@ -349,15 +353,14 @@ func _spawn_dropped(item_id: String, at: Vector3, dropper: int = 0) -> void:
 
 ## A player pressed E next to an item. Runs on the host only, which decides.
 @rpc("any_peer", "call_local", "reliable")
-func request_pickup(world_id: int) -> void:
-	if not multiplayer.is_server() or not world.has(world_id):
+func request_pickup(player_id: int, world_id: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or not world.has(world_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var cat := _cat(peer_id)
-	if cat == null or car.driver_id == peer_id or CatHealth.instance.is_down(peer_id):
+	var cat := _cat(player_id)
+	if cat == null or car.driver_id == player_id or CatHealth.instance.is_down(player_id):
 		return
-	if _reach_distance(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(peer_id, catalog[world[world_id].item]):
-		_give(peer_id, world_id)
+	if _reach_distance(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(player_id, catalog[world[world_id].item]):
+		_give(player_id, world_id)
 
 
 ## A player clicked "BUY" at a shop (scripts/npcs/shopkeeper.gd). Runs on the host only,
@@ -365,24 +368,23 @@ func request_pickup(world_id: int) -> void:
 ## (FishHeist.spend) and puts the item in their paws/backpack, like picking it up.
 ## The buyer gets a "_buy_result" message back either way.
 @rpc("any_peer", "call_local", "reliable")
-func request_buy(item_id: String) -> void:
-	if not multiplayer.is_server():
+func request_buy(player_id: int, item_id: String) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
 	var data: ItemData = catalog.get(item_id)
-	var cat := _cat(peer_id)
+	var cat := _cat(player_id)
 	if data == null or data.price <= 0 or cat == null:
 		return
 	if not UndergroundHub.is_in_hub(cat.global_position):
 		return  # the shop is down in the sewers: no buying from up top
-	if not _can_take(peer_id, data):
-		_buy_result.rpc_id(peer_id, false, "No room for that, comrade.")
-	elif not FishHeist.instance.spend(peer_id, data.price):
-		_buy_result.rpc_id(peer_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
+	if not _can_take(player_id, data):
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), false, "No room for that, comrade.")
+	elif not FishHeist.instance.spend(player_id, data.price):
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
 	else:
-		_put_in_inventory(peer_id, item_id, cat.global_position)
-		print("[Items] Player %d bought %s for $%d" % [peer_id, item_id, data.price])
-		_buy_result.rpc_id(peer_id, true, "Bought %s for $%d." % [data.display_name, data.price])
+		_put_in_inventory(player_id, item_id, cat.global_position)
+		print("[Items] Player %d bought %s for $%d" % [player_id, item_id, data.price])
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), true, "Bought %s for $%d." % [data.display_name, data.price])
 
 
 ## Host -> the buyer: how the purchase went (shown in the middle of the screen).
@@ -395,27 +397,25 @@ func _buy_result(ok: bool, text: String) -> void:
 
 ## The holder used up the item in this paw (catnip). Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_consume(hand: int) -> void:
-	if not multiplayer.is_server():
+func request_consume(player_id: int, hand: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var inventory := get_inventory(player_id).duplicate(true)
 	if _is_two_handed(inventory.hands):
 		inventory.hands = ["", ""]
 	else:
 		inventory.hands[clampi(hand, 0, 1)] = ""
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Inventory screen: take a backpack item into the paws. Whatever was in the way goes into
 ## the backpack (or drops if the backpack is full). Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_equip(pack_index: int) -> void:
-	if not multiplayer.is_server():
+func request_equip(player_id: int, pack_index: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var cat := _cat(peer_id)
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var cat := _cat(player_id)
+	var inventory := get_inventory(player_id).duplicate(true)
 	var pack: Array = inventory.pack
 	if cat == null or pack_index < 0 or pack_index >= pack.size():
 		return
@@ -440,16 +440,15 @@ func request_equip(pack_index: int) -> void:
 			_spawn_dropped(old, cat.global_position)
 	inventory.hands = hands
 	inventory.pack = pack
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Inventory screen: put the item in this paw (0 = right, 1 = left) into the backpack. Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_put_away(hand: int) -> void:
-	if not multiplayer.is_server():
+func request_put_away(player_id: int, hand: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var inventory := get_inventory(player_id).duplicate(true)
 	var hands: Array = inventory.hands
 	var item_id: String = hands[clampi(hand, 0, 1)]
 	if item_id == "" or inventory.pack.size() >= pack_size:
@@ -460,22 +459,21 @@ func request_put_away(hand: int) -> void:
 		hands[clampi(hand, 0, 1)] = ""
 	inventory.hands = hands
 	inventory.pack.append(item_id)
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Drop one item on the ground in front of the cat (G key, or right-click in the inventory).
 ## where = "hand" (index 0 right / 1 left), "pack" or "bag" (index = slot). Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_drop_item(where: String, index: int, ground: Vector3) -> void:
-	if not multiplayer.is_server():
+func request_drop_item(player_id: int, where: String, index: int, ground: Vector3) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var cat := _cat(peer_id)
-	if cat == null or car.driver_id == peer_id:
+	var cat := _cat(player_id)
+	if cat == null or car.driver_id == player_id:
 		return
 	if ground.distance_to(cat.global_position) > 3.0:
 		ground = cat.global_position  # no dropping things across the map
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var inventory := get_inventory(player_id).duplicate(true)
 	var item_id := ""
 	if where == "hand":
 		item_id = inventory.hands[clampi(index, 0, 1)]
@@ -487,30 +485,30 @@ func request_drop_item(where: String, index: int, ground: Vector3) -> void:
 		item_id = inventory[where].pop_at(index)
 	if item_id == "":
 		return
-	_spawn_dropped(item_id, ground, peer_id)
-	_set_inventory.rpc(peer_id, inventory)
+	_spawn_dropped(item_id, ground, player_id)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Host: empty a player's loot bag (the heist calls this at the drop-off). Returns what was in it.
-func take_bag(peer_id: int) -> Array:
-	var inventory := get_inventory(peer_id).duplicate(true)
+func take_bag(player_id: int) -> Array:
+	var inventory := get_inventory(player_id).duplicate(true)
 	var bag: Array = inventory.bag
 	if bag.is_empty():
 		return []
 	inventory.bag = []
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 	return bag
 
 
 ## Host: take ONE piece of loot (the last one picked up) out of a player's bag.
 ## Returns its item id, or "" if the bag was empty. (A Roomba bonk calls this.)
-func take_one_loot(peer_id: int) -> String:
-	var inventory := get_inventory(peer_id).duplicate(true)
+func take_one_loot(player_id: int) -> String:
+	var inventory := get_inventory(player_id).duplicate(true)
 	var bag: Array = inventory.bag
 	if bag.is_empty():
 		return ""
 	var item_id: String = bag.pop_back()
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 	return item_id
 
 
@@ -521,8 +519,8 @@ func drop_on_street(item_id: String, at: Vector3) -> void:
 
 ## Host: empty a player's paws, backpack and loot bag onto the ground around "at"
 ## (a knocked-out cat, see cat_health.gd, or a player who quit). The STASH is safe: it stays.
-func drop_everything(peer_id: int, at: Vector3) -> void:
-	var inventory := get_inventory(peer_id).duplicate(true)
+func drop_everything(player_id: int, at: Vector3) -> void:
+	var inventory := get_inventory(player_id).duplicate(true)
 	var dropped := _held_ids(inventory.hands) + Array(inventory.bag) + Array(inventory.pack)
 	var ground := _ground_below(at)  # a bonked cat may still be flying through the air
 	for i in dropped.size():
@@ -531,7 +529,7 @@ func drop_everything(peer_id: int, at: Vector3) -> void:
 		inventory.hands = ["", ""]
 		inventory.bag = []
 		inventory.pack = []
-		_set_inventory.rpc(peer_id, inventory)
+		_set_inventory.rpc(player_id, inventory)
 
 
 # --- The stash: safe lockers in the sewers (host decides, like everything else) ---
@@ -539,12 +537,11 @@ func drop_everything(peer_id: int, at: Vector3) -> void:
 ## Inventory screen at the stash: put the item in this paw ("hand", 0 right / 1 left) or
 ## backpack slot ("pack") into the stash. Only while standing at the lockers. Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_to_stash(where: String, index: int) -> void:
-	if not multiplayer.is_server():
+func request_to_stash(player_id: int, where: String, index: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var cat := _cat(peer_id)
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var cat := _cat(player_id)
+	var inventory := get_inventory(player_id).duplicate(true)
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.instance.near_stash(cat) or stash.size() >= stash_size:
 		return
@@ -561,17 +558,16 @@ func request_to_stash(where: String, index: int) -> void:
 		return
 	stash.append(item_id)
 	inventory.stash = stash
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Inventory screen at the stash: take stash slot "index" out, into the backpack. Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_from_stash(index: int) -> void:
-	if not multiplayer.is_server():
+func request_from_stash(player_id: int, index: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	var peer_id := multiplayer.get_remote_sender_id()
-	var cat := _cat(peer_id)
-	var inventory := get_inventory(peer_id).duplicate(true)
+	var cat := _cat(player_id)
+	var inventory := get_inventory(player_id).duplicate(true)
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.instance.near_stash(cat) or index < 0 or index >= stash.size():
 		return
@@ -579,32 +575,32 @@ func request_from_stash(index: int) -> void:
 		return  # backpack full (the screen tells the player)
 	inventory.pack.append(stash.pop_at(index))
 	inventory.stash = stash
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Host: replace a player's whole stash (their saved one, when they start a game —
 ## see player_profile.gd). The caller has already checked the item ids.
-func set_stash(peer_id: int, stash: Array) -> void:
-	var inventory := get_inventory(peer_id).duplicate(true)
+func set_stash(player_id: int, stash: Array) -> void:
+	var inventory := get_inventory(player_id).duplicate(true)
 	inventory.stash = stash
-	_set_inventory.rpc(peer_id, inventory)
+	_set_inventory.rpc(player_id, inventory)
 
 
 ## Host: a player quit. Everything they carried drops where they stood.
-func player_left(peer_id: int, at: Vector3) -> void:
-	drop_everything(peer_id, at)
-	_forget_player.rpc(peer_id)
+func player_left(player_id: int, at: Vector3) -> void:
+	drop_everything(player_id, at)
+	_forget_player.rpc(player_id)
 
 
 @rpc("authority", "call_local", "reliable")
-func _forget_player(peer_id: int) -> void:
-	inventories.erase(peer_id)
+func _forget_player(player_id: int) -> void:
+	inventories.erase(player_id)
 
 
-## Host -> a player who just joined: every item on the street and in everyone's paws/bags.
-## (Called by game.gd right after the city seed, so the city's items already exist.)
-func send_state_to(peer_id: int) -> void:
-	_receive_state.rpc_id(peer_id, world, inventories)
+## Host -> a computer that just joined (network ID "peer"): every item on the street and in
+## everyone's paws/bags. (Called by game.gd right after the city seed, so the city's items already exist.)
+func send_state_to(peer: int) -> void:
+	_receive_state.rpc_id(peer, world, inventories)
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -631,7 +627,7 @@ func try_interact(cat: CatPlayer) -> bool:
 			best_id = id
 			best_distance = distance
 	if best_id >= 0:
-		request_pickup.rpc_id(1, best_id)
+		request_pickup.rpc_id(1, cat.player_id, best_id)
 		return true
 	return false
 
@@ -639,16 +635,16 @@ func try_interact(cat: CatPlayer) -> bool:
 ## G pressed: drop what's in the paws (right paw first, or the 2-paw item) a step in front
 ## of the cat, on the ground.
 func drop_from(cat: CatPlayer) -> void:
-	var hands: Array = get_inventory(cat.name.to_int()).hands
+	var hands: Array = get_inventory(cat.player_id).hands
 	if _held_ids(hands).is_empty():
 		return
-	request_drop_item.rpc_id(1, "hand", 0 if hands[0] != "" else 1, ground_in_front_of(cat))
+	request_drop_item.rpc_id(1, cat.player_id, "hand", 0 if hands[0] != "" else 1, ground_in_front_of(cat))
 
 
 # --- Showing items on cats (every computer) ---
 
 func _sync_cat_visuals(cat: CatPlayer) -> void:
-	var inventory := get_inventory(cat.name.to_int())
+	var inventory := get_inventory(cat.player_id)
 	var hands_key := str(inventory.hands)
 	if cat.get_meta("hands_key", "") != hands_key:
 		cat.set_meta("hands_key", hands_key)
@@ -726,13 +722,13 @@ func _update_hud() -> void:
 
 # --- Helpers anyone can use ---
 
-func get_inventory(peer_id: int) -> Dictionary:
-	return inventories.get(peer_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": []})
+func get_inventory(player_id: int) -> Dictionary:
+	return inventories.get(player_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": []})
 
 
 ## What's in a player's stash (the safe lockers in the sewers).
-func get_stash(peer_id: int) -> Array:
-	return get_inventory(peer_id).get("stash", [])
+func get_stash(player_id: int) -> Array:
+	return get_inventory(player_id).get("stash", [])
 
 
 ## A spot on the ground a step in front of the cat (where dropped things land).
@@ -758,18 +754,18 @@ func _ground_below(at: Vector3) -> Vector3:
 
 ## Speed multiplier from HEAVY loot in a player's bag (ItemData.carry_speed): 1.0 = not slowed.
 ## cat_player.gd multiplies its walking and zoomies speed by this.
-func carry_speed(peer_id: int) -> float:
+func carry_speed(player_id: int) -> float:
 	var slowest := 1.0
-	for item_id in get_inventory(peer_id).bag:
+	for item_id in get_inventory(player_id).bag:
 		slowest = minf(slowest, (catalog[item_id] as ItemData).carry_speed)
 	return slowest
 
 
 ## How NOISY a player's loot is (ItemData.noise): 1.0 = normal. Roombas multiply how far
 ## they can spot that cat by this (roomba.gd).
-func loot_noise(peer_id: int) -> float:
+func loot_noise(player_id: int) -> float:
 	var loudest := 1.0
-	for item_id in get_inventory(peer_id).bag:
+	for item_id in get_inventory(player_id).bag:
 		loudest = maxf(loudest, (catalog[item_id] as ItemData).noise)
 	return loudest
 
@@ -782,9 +778,9 @@ func _announce(text: String) -> void:
 
 
 ## How much loot-bag room a player is using.
-func bag_used(peer_id: int) -> int:
+func bag_used(player_id: int) -> int:
 	var used := 0
-	for item_id in get_inventory(peer_id).bag:
+	for item_id in get_inventory(player_id).bag:
 		used += (catalog[item_id] as ItemData).bag_space
 	return used
 
@@ -794,9 +790,10 @@ func held_item(cat: CatPlayer, hand: int) -> HeldItem:
 	return cat.cat_model.get_node_or_null("HeldR" if hand == 0 else "HeldL") as HeldItem
 
 
-## The cat this computer controls, or null.
+## The cat of this computer's FIRST player, or null. (Its paws are the ones the mouse /
+## controller uses, and the HUD shows. Split screen gives each player their own later.)
 func local_cat() -> CatPlayer:
-	return players.get_node_or_null(str(multiplayer.get_unique_id())) as CatPlayer
+	return Game.instance.my_cat() if Game.instance != null else null
 
 
 func _held_ids(hands: Array) -> Array:
@@ -809,8 +806,8 @@ func _is_two_handed(hands: Array) -> bool:
 	return hands[0] != "" and catalog.has(hands[0]) and (catalog[hands[0]] as ItemData).hands == 2
 
 
-func _cat(peer_id: int) -> CatPlayer:
-	return players.get_node_or_null(str(peer_id)) as CatPlayer
+func _cat(player_id: int) -> CatPlayer:
+	return players.get_node_or_null(str(player_id)) as CatPlayer
 
 
 ## How far apart a cat and an item are, for grabbing: measured along the ground, but

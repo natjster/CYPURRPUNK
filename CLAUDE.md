@@ -20,8 +20,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
   via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
 - `scenes/main.tscn` (script `scripts/game.gd`, class `Game`, `Game.instance`): starts games, spawns
-  cats via `MultiplayerSpawner` → `Players/` (cats named by peer id; look up with
-  `Game.instance.cat_for(id)` / `my_cat()`), late-joiner catch-up, CRT/fog settings.
+  cats via `MultiplayerSpawner` → `Players/` (cats named by PLAYER id; look up with
+  `Game.instance.cat_for(id)` / `my_cat()` (first local player) / `local_cats()`), late-joiner catch-up, CRT/fog settings.
+- PLAYER IDs (`scripts/player_id.gd`, static `PlayerId`): a player id = network peer + slot*2^32 (slot 0..3,
+  max 4 per PC, 8 total = `Net.MAX_PLAYERS`); slot 0's id == the peer id. Every per-player dict (cash, HP,
+  quests, inventories, stash, `car.driver_id`, profiles) is keyed by player id, never peer id. Client->host
+  `request_*` RPCs take the player id as their FIRST arg and the host checks `PlayerId.sender_owns(id)`;
+  host->owner RPCs go to `rpc_id(PlayerId.peer_of(id), ...)`; `send_state_to(peer)` really is per computer.
+  Cat: `player_id`, `slot`, `reads_input()` (authority AND slot 0 until seats exist; extra couch cats stand
+  still). Couch players: `Game.add_local_player(slot, {name, look, cat_id})` / `remove_local_player(slot)`;
+  `PlayerProfile.restore(player_id, cat_id, name)` per local player. Per-player HUD feedback currently only
+  for `PlayerId.first_local()`. Test: `--add_local=N --as_local=S`, `--remove_local=S`.
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
   the transport; Steam swaps in here), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999`; test runs with `--capture` use

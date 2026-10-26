@@ -8,6 +8,11 @@ extends Node
 ##   --capture=PATH    where to save the PNG (relative to the project folder)
 ##   --solo / --host / --join   start a game (otherwise you get the start menu)
 ##   --wait=N          wait N frames after our cat appears before doing anything else
+##   --add_local=N     split screen: N more players join in on this computer (slots 1..N,
+##                     named COUCH 2, COUCH 3... with random looks; their cats stand still)
+##   --as_local=S      (with --add_local) every action below (--pos, --give, --grab, --drive,
+##                     --goto_dropoff_after, --bait_roomba, --talk...) uses the cat in slot S instead
+##   --remove_local=S  (at the very end, before the snap) the player in slot S drops out
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
@@ -87,6 +92,19 @@ func _ready() -> void:
 			if player != null:
 				break
 			await get_tree().process_frame
+		if player != null and args.has("add_local"):
+			# Split screen test: more players on this computer (scripts/player_id.gd, game.gd).
+			var look_rng := RandomNumberGenerator.new()
+			look_rng.seed = 7
+			for slot in range(1, int(args["add_local"]) + 1):
+				scene.add_local_player(slot, {"name": "COUCH %d" % (slot + 1), "look": CatLook.random_look(look_rng), "cat_id": ""})
+			for i in 120:  # wait for the host to make their cats
+				if scene.local_cats().size() > int(args["add_local"]):
+					break
+				await get_tree().process_frame
+			print("DevCapture add_local: our cats = %s" % [scene.local_cats().map(func(c): return "%s (slot %d)" % [c.name, c.slot])])
+			if args.has("as_local"):
+				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
 
 	# Diagnostics: switch PS1 effects off on the city's materials for this run only.
 	#   --no_affine        perspective-correct textures
@@ -107,7 +125,7 @@ func _ready() -> void:
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
 		if args.has("cash") and multiplayer.is_server():
-			FishHeist.instance._set_cash.rpc(multiplayer.get_unique_id(), int(args["cash"]))
+			FishHeist.instance._set_cash.rpc(player.player_id, int(args["cash"]))
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				FishHeist.instance._set_cash.rpc(peer_id, int(args["cash"])))
@@ -123,7 +141,7 @@ func _ready() -> void:
 		if args.has("give") and multiplayer.is_server():
 			# (host) put items straight into our paws/backpack, e.g. --give=pistol,catnip
 			for item_id in args["give"].split(","):
-				ItemManager.instance._put_in_inventory(multiplayer.get_unique_id(), item_id, player.global_position)
+				ItemManager.instance._put_in_inventory(player.player_id, item_id, player.global_position)
 		if args.has("to_stash") or args.has("from_stash"):
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
@@ -135,11 +153,11 @@ func _ready() -> void:
 			if args.has("to_stash"):
 				for slot in args["to_stash"].split(","):
 					var parts: PackedStringArray = slot.split(":")
-					ItemManager.instance.request_to_stash.rpc_id(1, parts[0], int(parts[1]))
+					ItemManager.instance.request_to_stash.rpc_id(1, player.player_id, parts[0], int(parts[1]))
 					for i in 10:
 						await get_tree().process_frame
 			if args.has("from_stash"):
-				ItemManager.instance.request_from_stash.rpc_id(1, int(args["from_stash"]))
+				ItemManager.instance.request_from_stash.rpc_id(1, player.player_id, int(args["from_stash"]))
 				for i in 10:
 					await get_tree().process_frame
 		if args.has("deploy"):
@@ -172,7 +190,7 @@ func _ready() -> void:
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
-			(scene.get_node("GetawayCar") as GetawayCar).request_enter.rpc_id(1)
+			(scene.get_node("GetawayCar") as GetawayCar).request_enter.rpc_id(1, player.player_id)
 			if args.has("car_mouse"):
 				for i in 20:
 					await get_tree().process_frame  # wait until we're behind the wheel
@@ -206,18 +224,18 @@ func _ready() -> void:
 					await get_tree().process_frame
 		if args.has("equip"):
 			# Click backpack slot N in the inventory screen (take it into the paws).
-			ItemManager.instance.request_equip.rpc_id(1, int(args["equip"]))
+			ItemManager.instance.request_equip.rpc_id(1, player.player_id, int(args["equip"]))
 			for i in 10:
 				await get_tree().process_frame
 		if args.has("put_away"):
 			# Click paw N in the inventory screen (0 = right, 1 = left): put it in the backpack.
-			ItemManager.instance.request_put_away.rpc_id(1, int(args["put_away"]))
+			ItemManager.instance.request_put_away.rpc_id(1, player.player_id, int(args["put_away"]))
 			for i in 10:
 				await get_tree().process_frame
 		if args.has("drop_slot"):
 			# Right-click a slot in the inventory screen, e.g. --drop_slot=pack:0 or bag:0 or hand:1
 			var parts: PackedStringArray = args["drop_slot"].split(":")
-			ItemManager.instance.request_drop_item.rpc_id(1, parts[0], int(parts[1]), ItemManager.instance.ground_in_front_of(player))
+			ItemManager.instance.request_drop_item.rpc_id(1, player.player_id, parts[0], int(parts[1]), ItemManager.instance.ground_in_front_of(player))
 			for i in 10:
 				await get_tree().process_frame
 		if args.has("bait_roomba"):
@@ -308,7 +326,7 @@ func _ready() -> void:
 			var heist_node := scene.get_node("Heist") as FishHeist
 			var beam := heist_node.beam_positions[heist_node.nearest_open_beam(player.global_position)] + Vector3(1, 0, 1)
 			var car := scene.get_node("GetawayCar") as GetawayCar
-			if car.driver_id == multiplayer.get_unique_id():
+			if car.driver_id == player.player_id:
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
 			else:
 				player.global_position = beam
@@ -381,6 +399,10 @@ func _ready() -> void:
 				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.instance.visible,
 				NpcDialog.is_open, Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus)])
 
+	if args.has("remove_local") and Game.instance != null:
+		Game.instance.remove_local_player(int(args["remove_local"]))
+		print("DevCapture remove_local: slot %s dropped out" % args["remove_local"])
+
 	for i in int(args.get("frames", "90")):
 		await get_tree().process_frame
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -436,7 +458,7 @@ func _ready() -> void:
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():
-			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.name.to_int()), cat.knocked_out])
+			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.player_id), cat.knocked_out])
 			# What it's wearing, as seen on THIS computer (fur colour as hex + accessories).
 			var model: Node3D = cat.cat_model
 			var worn := PackedStringArray()
