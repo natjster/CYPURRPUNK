@@ -589,14 +589,23 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.8, 0.3, 1)
 text = "DON CATLEONE"
 
-[node name="Line" type="Label" parent="PS1Overlay/NpcDialog/Panel/VBox"]
-custom_minimum_size = Vector2(280, 0)
+[node name="Scroll" type="ScrollContainer" parent="PS1Overlay/NpcDialog/Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Line" type="Label" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll/Body"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.88, 1, 1)
 text = "..."
 autowrap_mode = 3
 
-[node name="Choices" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel/VBox"]
+[node name="Choices" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll/Body"]
 layout_mode = 2
 theme_override_constants/separation = 1
 

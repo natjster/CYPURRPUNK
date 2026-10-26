@@ -3,11 +3,15 @@ extends Control
 ## MEOW-CITY 1999 — the TALK BOX at the bottom of the screen when you talk to an NPC.
 ## Attach to the "NpcDialog" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   NpcDialog (Control)        <- this script
-##   └── Panel (PanelContainer)
+##   └── Panel (PanelContainer)   <- FIXED size (set by its offsets): it never grows off-screen
 ##       └── VBox
 ##           ├── Speaker (Label)  <- who's talking
-##           ├── Line (Label)     <- what they say
-##           └── Choices (VBoxContainer)  <- one button per answer, made by code
+##           └── Scroll (ScrollContainer)  <- fills the rest of the box; scrolls when a page is long
+##               └── Body (VBoxContainer)
+##                   ├── Line (Label)     <- what they say
+##                   └── Choices (VBoxContainer)  <- one button per answer, made by code
+## To make the box bigger/smaller: select Panel > Inspector > Layout > Transform and change
+## Position / Size (now x=16, y=116, 288 x 116 — the screen is 320 x 240).
 ##
 ## Whoever wants to talk calls NpcDialog.instance.open(name, line, choices), where each
 ## choice is [button text, function to run when clicked]. NPCs (scripts/npcs/npc.gd) do this
@@ -23,8 +27,9 @@ static var instance: NpcDialog
 static var is_open: bool = false
 
 @onready var speaker_label: Label = $Panel/VBox/Speaker
-@onready var line_label: Label = $Panel/VBox/Line
-@onready var choices_box: VBoxContainer = $Panel/VBox/Choices
+@onready var scroll: ScrollContainer = $Panel/VBox/Scroll
+@onready var line_label: Label = $Panel/VBox/Scroll/Body/Line
+@onready var choices_box: VBoxContainer = $Panel/VBox/Scroll/Body/Choices
 @onready var prompt_label: Label = $"../HUD/Prompt"
 
 
@@ -78,7 +83,11 @@ func open(speaker: String, line: String, choices: Array) -> void:
 	is_open = true
 	show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	scroll.follow_focus = true  # arrow keys scroll the list along with the highlighted button
 	(choices_box.get_child(0) as Button).grab_focus()
+	# Every new page starts at the top (with the NPC's line). Deferred = after the
+	# focus-scroll above has happened, so this one wins.
+	scroll.set_deferred("scroll_vertical", 0)
 
 
 ## Back to the game: grab the mouse again.

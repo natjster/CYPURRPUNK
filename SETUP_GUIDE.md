@@ -863,7 +863,8 @@ SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
 CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, §11)
 Inventory (Control)               script: ui/inventory_ui.gd
 NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
-└── Panel > VBox > Speaker, Line, Choices   <- choice buttons are made by the script
+└── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons are made by the script
+    (Panel is a fixed size; long pages scroll inside it. Resize it in Panel > Inspector > Layout > Transform)
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,
