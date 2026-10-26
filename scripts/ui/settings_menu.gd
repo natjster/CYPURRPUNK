@@ -33,9 +33,12 @@ signal closed
 const TABS: Array = [
 	["DISPLAY", [
 		{"setting": "fullscreen", "label": "SCREEN", "choices": [[false, "WINDOW"], [true, "FULLSCREEN"]],
-			"hint": "Play in a window or fill the whole screen."},
-		{"setting": "window_scale", "label": "WINDOW SIZE", "min": 1, "max": 0, "step": 1, "format": "times",
-			"hint": "How big the window is (the game is 320x240, made bigger)."},
+			"hint": "FULLSCREEN fills your monitor at its max resolution."},
+		# "choices": "resolutions" = the list comes from Settings.resolution_choices() (it depends on your monitor).
+		{"setting": "resolution", "label": "RESOLUTION", "choices": "resolutions",
+			"hint": "Window size. The biggest one is your monitor's max."},
+		{"setting": "pixel_perfect", "label": "SCALING", "choices": [[true, "SHARP"], [false, "FILL"]],
+			"hint": "SHARP = even pixels (may leave a border). FILL = as big as fits."},
 		{"setting": "vsync", "label": "VSYNC", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "ON stops screen tearing. OFF can feel a tiny bit snappier."},
 		{"setting": "field_of_view", "label": "FIELD OF VIEW", "min": 50.0, "max": 100.0, "step": 5.0, "format": "number",
@@ -191,14 +194,19 @@ func _make_row(row: Dictionary) -> HBoxContainer:
 ## "<" (direction -1) or ">" (direction +1) was pressed on a row.
 func _step(row: Dictionary, direction: int) -> void:
 	var current: Variant = Settings.get(row.setting)
+	if row.setting == "resolution" and Settings.fullscreen:
+		# Fullscreen always runs at the monitor's own resolution.
+		hint_label.text = "Fullscreen uses your monitor's max. Set SCREEN to WINDOW to pick."
+		return
 	if row.has("choices"):
 		# Cycle through the choices, wrapping around.
+		var choices := _row_choices(row)
 		var index := 0
-		for i in row.choices.size():
-			if row.choices[i][0] == current:
+		for i in choices.size():
+			if choices[i][0] == current:
 				index = i
-		index = posmod(index + direction, row.choices.size())
-		Settings.set_value(row.setting, row.choices[index][0])
+		index = posmod(index + direction, choices.size())
+		Settings.set_value(row.setting, choices[index][0])
 	else:
 		var top: Variant = _row_max(row)
 		var next: Variant = clamp(current + row.step * direction, row.min, top)
@@ -207,11 +215,24 @@ func _step(row: Dictionary, direction: int) -> void:
 		Settings.set_value(row.setting, next)
 
 
-## Number rows can have a max that depends on the PC (window size depends on the monitor).
+## Number rows could have a max that depends on the PC; add special cases here.
 func _row_max(row: Dictionary) -> Variant:
-	if row.setting == "window_scale":
-		return Settings.max_window_scale()
 	return row.max
+
+
+## A row's [[value, "TEXT"], ...] list. Rows whose "choices" is a word get it from the PC
+## ("resolutions" = the window sizes that fit your monitor).
+func _row_choices(row: Dictionary) -> Array:
+	if row.choices is String and row.choices == "resolutions":
+		var list: Array = []
+		for size in Settings.resolution_choices():
+			list.append([size, _size_text(size)])
+		return list
+	return row.choices
+
+
+func _size_text(size: Vector2i) -> String:
+	return "%dx%d" % [size.x, size.y]
 
 
 ## Rewrite every value label from the current settings.
@@ -225,8 +246,10 @@ func _refresh_values() -> void:
 
 
 func _value_text(row: Dictionary, value: Variant) -> String:
+	if row.setting == "resolution":
+		return _size_text(Settings.monitor_resolution() if Settings.fullscreen else value)
 	if row.has("choices"):
-		for choice in row.choices:
+		for choice in _row_choices(row):
 			if choice[0] == value:
 				return choice[1]
 		return str(value)

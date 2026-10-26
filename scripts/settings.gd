@@ -27,9 +27,15 @@ var cats: Array = []
 ## The id of the cat you play as.
 var current_cat_id: String = ""
 # Display
+## Fullscreen always uses your monitor's own (biggest) resolution.
 var fullscreen: bool = false
-## Window size as a multiple of the 320x240 game picture (4 = 1280x960).
-var window_scale: int = 4
+## Window size in pixels when NOT fullscreen (pick from resolution_choices()).
+## The game itself is always drawn at 320x240 and then blown up to fill this.
+var resolution: Vector2i = Vector2i(1280, 960)
+## How the 320x240 picture is blown up to fill the screen:
+## true  = SHARP: whole-number zoom only (every game pixel is the same size), may leave a black border.
+## false = FILL:  zooms as big as fits (fills the screen height), some pixel rows a hair bigger.
+var pixel_perfect: bool = true
 var vsync: bool = true
 # Audio (0.0 = silent, 1.0 = full)
 var master_volume: float = 0.8
@@ -50,7 +56,7 @@ var volumetric_fog: bool = true
 ## Which variables get saved: [section in the file, variable name].
 const SAVED: Array = [
 	["player", "cats"], ["player", "current_cat_id"],
-	["display", "fullscreen"], ["display", "window_scale"], ["display", "vsync"],
+	["display", "fullscreen"], ["display", "resolution"], ["display", "pixel_perfect"], ["display", "vsync"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
 	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "ps1_wobble"],
@@ -60,6 +66,15 @@ const SAVED: Array = [
 ## Sound buses. Future sounds should pick "Music" or "SFX" on their AudioStreamPlayer
 ## (Inspector > Bus) so the volume sliders work for them.
 const BUSES: Array[String] = ["Music", "SFX"]
+
+## Window sizes offered in SETTINGS > DISPLAY > RESOLUTION (only the ones that fit your monitor
+## are shown, plus the monitor's own size). Add more here if you like: Vector2i(width, height).
+const COMMON_RESOLUTIONS: Array[Vector2i] = [
+	Vector2i(640, 480), Vector2i(800, 600), Vector2i(960, 720), Vector2i(1024, 768),
+	Vector2i(1280, 720), Vector2i(1280, 960), Vector2i(1366, 768), Vector2i(1600, 900),
+	Vector2i(1600, 1200), Vector2i(1920, 1080), Vector2i(1920, 1440), Vector2i(2560, 1080),
+	Vector2i(2560, 1440), Vector2i(2880, 2160), Vector2i(3440, 1440), Vector2i(3840, 2160),
+]
 
 ## A fresh copy of the defaults, used by "RESET".
 var _defaults: Dictionary = {}
@@ -167,6 +182,9 @@ func load_settings() -> void:
 		var value: Variant = config.get_value(entry[0], entry[1], get(entry[1]))
 		if typeof(value) == typeof(get(entry[1])):  # ignore broken / old values
 			set(entry[1], value)
+	# Older versions saved the window size as "4x" ([display] window_scale) instead of a resolution.
+	if not config.has_section_key("display", "resolution") and config.has_section_key("display", "window_scale"):
+		resolution = Vector2i(320, 240) * clampi(int(config.get_value("display", "window_scale", 4)), 1, 12)
 	# Older versions had ONE cat: a name ([player] player_name, or even older [player] name)
 	# and a look ([player] cat_look). Turn it into your first cat. Its id is the name its saved
 	# cash + stash file already has (profiles/<name>.cfg), so that progress comes along too.
@@ -186,20 +204,26 @@ func apply() -> void:
 	# which can't be resized or made fullscreen.
 	# Only touches the window when the screen settings actually changed, so changing
 	# e.g. the volume doesn't undo a window you resized by hand.
-	var screen_key := "%s/%d" % [fullscreen, window_scale]
+	var screen_key := "%s/%s" % [fullscreen, resolution]
 	if screen_key != _applied_screen and DisplayServer.get_name() != "headless" and not Engine.is_embedded_in_editor():
 		_applied_screen = screen_key
 		if fullscreen:
+			# Godot's fullscreen fills the monitor at its own native resolution.
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-			var wanted := Vector2i(320, 240) * window_scale
+			# Never bigger than the monitor (e.g. a saved size from a bigger screen).
+			var wanted := resolution.min(DisplayServer.screen_get_size(DisplayServer.window_get_current_screen()))
 			if DisplayServer.window_get_size() != wanted:
 				DisplayServer.window_set_size(wanted)
 				# Keep the window centred on the screen it's on.
 				var screen := DisplayServer.window_get_current_screen()
 				var area := DisplayServer.screen_get_usable_rect(screen)
-				DisplayServer.window_set_position(area.position + (area.size - wanted) / 2)
+				# Keeps the title bar on screen if the window is as big as the monitor.
+				DisplayServer.window_set_position(area.position + ((area.size - wanted) / 2).max(Vector2i.ZERO))
+	# How the 320x240 picture is zoomed up to the window / screen (see pixel_perfect above).
+	get_tree().root.content_scale_stretch = (Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect
+		else Window.CONTENT_SCALE_STRETCH_FRACTIONAL)
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 
@@ -215,12 +239,23 @@ func apply() -> void:
 	changed.emit()
 
 
-## The biggest window size that still fits this screen (used by the settings menu).
-func max_window_scale() -> int:
+## Your monitor's own (biggest) resolution, e.g. 2560x1440.
+func monitor_resolution() -> Vector2i:
 	if DisplayServer.get_name() == "headless":
-		return 6
-	var area := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen())
-	return clampi(mini(area.size.x / 320, area.size.y / 240), 1, 8)
+		return Vector2i(1920, 1080)
+	return DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
+
+
+## The window sizes the RESOLUTION row offers, smallest first: every COMMON_RESOLUTIONS size that
+## fits on this monitor, plus the monitor's own size (the biggest). Used by the settings menu.
+func resolution_choices() -> Array[Vector2i]:
+	var monitor := monitor_resolution()
+	var list: Array[Vector2i] = []
+	for size in COMMON_RESOLUTIONS:
+		if size.x <= monitor.x and size.y <= monitor.y and size != monitor:
+			list.append(size)
+	list.append(monitor)
+	return list
 
 
 func _make_audio_buses() -> void:

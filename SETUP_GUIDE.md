@@ -74,7 +74,11 @@ Already set in `project.godot`. To see/change by hand: **Project > Project Setti
 | Display > Window > Stretch > Scale Mode | `integer` | Whole-number scaling = square pixels |
 | Rendering > Textures > Canvas Textures > Default Texture Filter | `Nearest` | No blur |
 
-(Players can change the window size and fullscreen in the in-game Settings, §10.)
+(Players can change the resolution, fullscreen and scaling in the in-game Settings, §10. The game
+is still *drawn* at 320x240 whatever the resolution; a bigger resolution just shows it bigger.
+In-game **SCALING > FILL** switches Scale Mode to fractional so fullscreen fills the full screen
+height instead of leaving a black border. The resolution list lives in `scripts/settings.gd`
+→ `COMMON_RESOLUTIONS`; your monitor's own size is always added as the biggest option.)
 
 ### Vertex jitter + affine textures — `shaders/psx_lit.gdshader`
 This replaces the normal material on 3D objects. Every mesh in the game already uses it.
@@ -812,7 +816,7 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 
 | Tab | Settings |
 |---|---|
-| DISPLAY | Screen (window/fullscreen), window size (1x-6x of 320x240), VSync, field of view |
+| DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), VSync, field of view |
 | SOUND | Master, music, sound FX volume |
 | CONTROLS | Mouse speed, invert mouse Y |
 | KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |
