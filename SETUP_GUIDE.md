@@ -396,10 +396,11 @@ THE SEWERS (hub, safe)  --talk to Don Catleone-->  THE CITY (grab fish)
 Every cat starts here when you HOST or JOIN. It's a sewer tunnel with a murky channel down the
 middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
 west wall; decoration for now — later it's where scrap buys server-wide buffs) and a ladder up
-to the surface. It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
+to the surface. The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
+sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
 
-**Don Catleone** — the boss cat in the fedora with the cigar, at the north end under the pink
-sign. Walk up to him and press **E**. The talk box (bottom of the screen) gives four choices:
+**Don Catleone** — the boss cat in the fedora with the cigar, at the north end under a pink
+glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives four choices:
 **SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **HOW DOES
 THIS WORK?** and **NEVER MIND** (or Esc).
 
@@ -425,7 +426,7 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
 - **Change what he sells / the order:** select **Hub > ComradeWhiskers** in `main.tscn` (or open
   `scenes/npcs/comrade_whiskers.tscn`) > Inspector > **Stock** (item ids, top to bottom).
   **Shop Lines** is what he says on the shop page (`%d` = your cash).
-- **Move the shop:** drag ComradeWhiskers under **Hub**. The counter, shelves, banner, signs and
+- **Move the shop:** drag ComradeWhiskers under **Hub**. The counter, shelves, banner and
   lights are built around him by `_build_shop()` in `scripts/hub.gd`, so they follow (he faces
   his root's blue Z arrow; the counter goes on that side).
 - **How buying works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC with a shop). Any NPC choice
@@ -434,7 +435,7 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
   backpack). Make another shopkeeper the same way: set an NPC's script to `shopkeeper.gd`.
 
 ### The stash & saved progress
-**THE STASH** is a row of lockers with a blue sign on the **east wall**, across from the Black
+**THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black
 Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STASH**. Press E
 (or open the inventory with Tab while standing there) and the inventory shows your **STASH**
 (9 slots) where the loot bag usually is:

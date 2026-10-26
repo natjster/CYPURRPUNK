@@ -61,7 +61,7 @@ const DEPTH_LINE: float = -100.0
 @export var sewer_ambient_color: Color = Color(0.35, 0.55, 0.45)
 @export var sewer_ambient_energy: float = 0.6
 
-## Don Catleone: only used here to decorate his corner (sign, lights, crates).
+## Don Catleone: only used here to decorate his corner (lights, crates).
 @onready var npc: Npc = $DonCatleone
 ## Comrade Whiskers: only used here to build his shop, the Black Markitten, around him.
 @onready var shopkeeper: Npc = $ComradeWhiskers
@@ -232,21 +232,14 @@ func _build_props() -> void:
 	for z in [-14.0, 0.0, 14.0]:
 		_add_light(Vector3(0, -0.2, z), Color(0.2, 1, 0.7), 1.2, 6.0)
 
-	# Signs.
-	_add_sign("THE SEWERS", Vector3(0, height - 1.6, l - 0.2), Color(0.4, 1, 0.6), 64, PI)
-	_add_sign("SAFE ZONE - NO SHOOTING", Vector3(0, height - 2.6, l - 0.2), Color(1, 0.8, 0.3), 32, PI)
-	_add_sign("^ TO THE SURFACE ^", Vector3(-w + 6, 3.5, -l + 0.2), Color(0.4, 1, 1), 40, 0.0)
-
 	# A ladder up the north wall to a drain grate (where Don "sends you up").
 	for side in [-0.5, 0.5]:
 		_add_box(Vector3(-w + 6 + side, height * 0.5, -l + 0.15), Vector3(0.08, height, 0.08), _metal, false)
 	for y in range(1, int(height)):
 		_add_box(Vector3(-w + 6, y, -l + 0.15), Vector3(1.0, 0.06, 0.06), _metal, false)
 
-	# Don Catleone's corner: a sign over his spot and crates for a desk.
+	# Don Catleone's corner: a pink glow over his spot and crates for a desk.
 	var don := npc.position
-	_add_sign("DON CATLEONE", Vector3(don.x, 4.2, -l + 0.2), Color(1, 0.35, 0.8), 48, 0.0)
-	_add_sign("fixer - fish - favours", Vector3(don.x, 3.5, -l + 0.2), Color(1, 0.8, 0.3), 24, 0.0)
 	_add_light(Vector3(don.x, 3.0, don.z + 1.0), Color(1, 0.4, 0.8), 3.0, 8.0)
 	_add_light(Vector3(don.x - 1.0, 1.6, don.z + 2.0), Color(1, 0.85, 0.6), 2.0, 5.0)  # lights his face
 	_add_box(Vector3(don.x + 2.2, 0.45, don.z + 0.3), Vector3(1.4, 0.9, 0.9), _crate, true)
@@ -293,14 +286,9 @@ func _build_shop() -> void:
 	# Crates of "merchandise that fell off a truck" stacked either side.
 	for spot in [Vector3(at.x, 0.5, at.z - 2.6), Vector3(at.x, 0.5, at.z + 2.6), Vector3(at.x, 1.5, at.z + 2.6)]:
 		_add_box(spot, Vector3.ONE, _crate, true)
-	# A red rebel banner hanging over the shelves, and the neon shop signs above it.
+	# A red rebel banner hanging over the shelves.
 	var banner := _add_box(Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
 	banner.set_instance_shader_parameter("instance_tint", Color(0.35, 0.02, 0.03))
-	_add_sign("THE BLACK MARKITTEN", Vector3(wall_x + 0.15, 5.4, at.z), Color(1, 0.25, 0.2), 48, PI / 2)
-	_add_sign("PURR-OLETARIAT
-LIBERATION FRONT", Vector3(wall_x + 0.15, 4.0, at.z), Color(1, 0.8, 0.3), 24, PI / 2)
-	_add_sign("NO VACUUMS
-NO REFUNDS", Vector3(at.x + 1.7, 0.5, at.z), Color(1, 0.8, 0.3), 16, PI / 2)
 	# Red light over the shop, and a warm one so you can see his face.
 	_add_light(Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
 	_add_light(Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
@@ -317,12 +305,11 @@ func _build_stash() -> void:
 		_add_box(Vector3(wall_x - 0.4, 1.1, z), Vector3(0.8, 2.2, 0.9), _metal, true)
 		var lock := _add_box(Vector3(wall_x - 0.82, 1.2, z + 0.25), Vector3(0.04, 0.1, 0.1), _neon, false)
 		lock.set_instance_shader_parameter("instance_tint", Color(0.3, 1, 0.4))
-	_add_sign("THE STASH", Vector3(wall_x - 0.15, 3.0, at.z), Color(0.4, 0.9, 1), 48, -PI / 2)
-	_add_sign("safe from vacuums", Vector3(wall_x - 0.15, 2.5, at.z), Color(1, 0.8, 0.3), 20, -PI / 2)
 	_add_light(Vector3(wall_x - 1.6, 2.6, at.z), Color(0.4, 0.9, 1), 2.5, 6.0)
 
 
 ## A glowing text sign. "facing" turns it (0 = readable from the south / +Z side).
+## The hub keeps its walls clean on purpose: only THE MAINFRAME uses this now.
 func _add_sign(text: String, at: Vector3, color: Color, size: int, facing: float) -> void:
 	var label := Label3D.new()
 	label.text = text
