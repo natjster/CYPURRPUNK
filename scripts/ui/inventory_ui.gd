@@ -1,3 +1,4 @@
+class_name InventoryScreen
 extends Control
 ## INVENTORY SCREEN — press Tab or I to open/close (Esc closes too).
 ## Attach to the "Inventory" Control under PS1Overlay in main.tscn. It builds its own
@@ -8,18 +9,35 @@ extends Control
 ##   LOOT BAG  fish etc. Delivered at the drop-off.
 ##   Right-click any item = drop it on the ground in front of you.
 ##
+## AT THE STASH (standing at the lockers in the sewers, or pressing E there) the loot bag is
+## swapped for your STASH, and clicks move things between you and the stash instead:
+##   click a paw / backpack item = put it in the stash; click a stash item = into the backpack.
+##
 ## The screen only ASKS the item system (ItemManager) to move things; the host decides,
 ## and the screen redraws itself from the result. So it's always in sync in multiplayer.
+
+## The one inventory screen (the cat opens it when E is pressed at the stash).
+static var instance: InventoryScreen
 
 const SLOT_SIZE := Vector2(70, 16)
 
 var _paw_buttons: Array[Button] = []    # [left paw, right paw] as shown on screen
 var _pack_buttons: Array[Button] = []
 var _bag_buttons: Array[Button] = []
+var _stash_buttons: Array[Button] = []
+var _panel: Panel
 var _pack_title: Label
 var _bag_title: Label
+var _stash_title: Label
 var _info: Label
 var _last_key := ""
+var _at_stash := false
+var _bag_bottom := 0.0    # where the info line goes when the loot bag is shown
+var _stash_bottom := 0.0  # ...and when the stash is shown
+
+
+func _enter_tree() -> void:
+	instance = self
 
 
 func _ready() -> void:
@@ -33,11 +51,11 @@ func _ready() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
-	var panel := Panel.new()
-	panel.position = Vector2(36, 24)
-	panel.size = Vector2(248, 186)
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(panel)
+	_panel = Panel.new()
+	_panel.position = Vector2(36, 24)
+	_panel.size = Vector2(248, 186)
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_panel)
 
 	_label("INVENTORY", Vector2(36, 27), 248, 12, Color(1, 0.4, 0.8))
 
@@ -52,11 +70,17 @@ func _ready() -> void:
 		var row := i / 3
 		_pack_buttons.append(_slot(Vector2(47 + column * (SLOT_SIZE.x + 6), 88 + row * (SLOT_SIZE.y + 3)), "pack", i))
 
+	# The loot bag and the stash share the same spot: only one is shown at a time.
 	var pack_rows := ceili(ItemManager.instance.pack_size / 3.0)
 	var bag_top := 88 + pack_rows * (SLOT_SIZE.y + 3) + 6
 	_bag_title = _label("LOOT BAG", Vector2(36, bag_top), 248, 8, Color(0.45, 1, 0.55))
 	for i in ItemManager.instance.bag_size:
 		_bag_buttons.append(_slot(Vector2(47 + (i % 3) * (SLOT_SIZE.x + 6), bag_top + 10 + (i / 3) * (SLOT_SIZE.y + 3)), "bag", i))
+	_bag_bottom = bag_top + 10 + ceili(ItemManager.instance.bag_size / 3.0) * (SLOT_SIZE.y + 3)
+	_stash_title = _label("STASH", Vector2(36, bag_top), 248, 8, Color(0.4, 0.9, 1))
+	for i in ItemManager.instance.stash_size:
+		_stash_buttons.append(_slot(Vector2(47 + (i % 3) * (SLOT_SIZE.x + 6), bag_top + 10 + (i / 3) * (SLOT_SIZE.y + 3)), "stash", i))
+	_stash_bottom = bag_top + 10 + ceili(ItemManager.instance.stash_size / 3.0) * (SLOT_SIZE.y + 3)
 
 	_info = _label("", Vector2(40, 186), 240, 8, Color(1, 1, 1, 0.85))
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -73,13 +97,19 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-func _set_open(open: bool) -> void:
-	visible = open
+## Open the screen (the cat calls this when E is pressed at the stash lockers).
+func open() -> void:
+	if not visible:
+		_set_open(true)
+
+
+func _set_open(open_it: bool) -> void:
+	visible = open_it
 	_last_key = ""
 	var cat := ItemManager.instance.local_cat()
-	if open:
+	if open_it:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		_info.text = "Click: equip / put away   Right-click: drop   %s: close" % Controls.key_text("inventory")
+		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
 	elif cat != null and cat.is_controlled:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -92,11 +122,15 @@ func _process(_delta: float) -> void:
 	if cat == null:
 		_set_open(false)
 		return
+	var at_stash := UndergroundHub.instance.near_stash(cat)
 	var inventory := items.get_inventory(cat.name.to_int())
-	var key := str(inventory)
+	var key := str(inventory) + str(at_stash)
 	if key == _last_key:
 		return
 	_last_key = key  # only redraw when something changed
+	if at_stash != _at_stash or _info.text == "":
+		_at_stash = at_stash
+		_show_stash_section(at_stash)
 
 	var hands: Array = inventory.hands
 	_fill(_paw_buttons[0], hands[1])
@@ -107,8 +141,29 @@ func _process(_delta: float) -> void:
 		_fill(_pack_buttons[i], inventory.pack[i] if i < inventory.pack.size() else "")
 	for i in _bag_buttons.size():
 		_fill(_bag_buttons[i], inventory.bag[i] if i < inventory.bag.size() else "")
+	var stash := items.get_stash(cat.name.to_int())
+	for i in _stash_buttons.size():
+		_fill(_stash_buttons[i], stash[i] if i < stash.size() else "")
 	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size]
 	_bag_title.text = "LOOT BAG  %d/%d  (deliver at the drop-off)" % [items.bag_used(cat.name.to_int()), items.bag_size]
+	_stash_title.text = "STASH  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
+
+
+## At the lockers: show the stash instead of the loot bag (and size the panel to fit).
+func _show_stash_section(at_stash: bool) -> void:
+	_bag_title.visible = not at_stash
+	for button in _bag_buttons:
+		button.visible = not at_stash
+	_stash_title.visible = at_stash
+	for button in _stash_buttons:
+		button.visible = at_stash
+	var bottom := _stash_bottom if at_stash else _bag_bottom
+	_info.position.y = maxf(bottom + 2, 186)
+	_panel.size.y = _info.position.y + 24 - _panel.position.y
+	if at_stash:
+		_info.text = "Click: move between you and the stash   Right-click: drop   %s: close" % Controls.key_text("inventory")
+	else:
+		_info.text = "Click: equip / put away   Right-click: drop   %s: close" % Controls.key_text("inventory")
 
 
 ## Show an item in a slot (or "-" when empty), coloured like the item's glow.
@@ -163,7 +218,7 @@ func _label(text: String, at: Vector2, width: float, font_size: int, color: Colo
 	return label
 
 
-## Left-click = equip / put away; right-click = drop.
+## Left-click = equip / put away (or, at the stash, move to/from the stash); right-click = drop.
 func _on_slot_input(event: InputEvent, button: Button, where: String, index: int) -> void:
 	var click := event as InputEventMouseButton
 	if click == null or not click.pressed or button.get_meta("item") == "":
@@ -173,16 +228,27 @@ func _on_slot_input(event: InputEvent, button: Button, where: String, index: int
 	if cat == null or not cat.is_controlled:
 		_info.text = "Can't do that from inside the car."
 		return
-	if click.button_index == MOUSE_BUTTON_RIGHT:
+	var inventory := items.get_inventory(cat.name.to_int())
+	if click.button_index == MOUSE_BUTTON_RIGHT and where != "stash":
 		items.request_drop_item.rpc_id(1, where, index, items.ground_in_front_of(cat))
+	elif click.button_index == MOUSE_BUTTON_LEFT and _at_stash:
+		if where == "stash":
+			if inventory.pack.size() >= items.pack_size:
+				_info.text = "Backpack is full."
+			else:
+				items.request_from_stash.rpc_id(1, index)
+		elif items.get_stash(cat.name.to_int()).size() >= items.stash_size:
+			_info.text = "Stash is full."
+		else:
+			items.request_to_stash.rpc_id(1, where, index)
 	elif click.button_index == MOUSE_BUTTON_LEFT:
 		if where == "pack":
 			items.request_equip.rpc_id(1, index)
 		elif where == "hand":
-			if items.get_inventory(cat.name.to_int()).pack.size() >= items.pack_size:
+			if inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."
 			else:
-				items.request_stash.rpc_id(1, index)
+				items.request_put_away.rpc_id(1, index)
 		else:
 			_info.text = "Loot pays out at the drop-off (the green beam)."
 	accept_event()

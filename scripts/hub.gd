@@ -47,6 +47,13 @@ const DEPTH_LINE: float = -100.0
 ## Where Don Catleone sends you in the city (the centre crossroads).
 @export var surface_spot: Vector3 = Vector3(0, 0, 4)
 
+@export_group("Stash")
+## Where you stand to use THE STASH (the lockers on the east wall), relative to the Hub node.
+## The lockers are built just east of this spot, against the wall.
+@export var stash_spot: Vector3 = Vector3(11.0, 0, -9.0)
+## How close (metres) you must be to the stash spot to open it.
+@export var stash_radius: float = 2.5
+
 @export_group("Mood")
 ## Fog and ambient colours while you're down here.
 @export var sewer_fog_color: Color = Color(0.03, 0.07, 0.05)
@@ -102,6 +109,11 @@ static func is_in_hub(where: Vector3) -> bool:
 
 
 # --- Moving cats between the hub and the city (called on the cat OWNER's computer) ---
+
+## True if this cat is standing at THE STASH lockers (where the inventory shows your stash).
+func near_stash(cat: CatPlayer) -> bool:
+	return cat != null and cat.global_position.distance_to(to_global(stash_spot)) < stash_radius
+
 
 ## Where cat number n appears when it joins: rows of three on the walkway, facing Don.
 func spawn_position(n: int) -> Vector3:
@@ -241,6 +253,7 @@ func _build_props() -> void:
 	_add_box(Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)
 
 	_build_shop()
+	_build_stash()
 
 	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
 	# players will feed it scrap for server-wide buffs.
@@ -291,6 +304,22 @@ NO REFUNDS", Vector3(at.x + 1.7, 0.5, at.z), Color(1, 0.8, 0.3), 16, PI / 2)
 	# Red light over the shop, and a warm one so you can see his face.
 	_add_light(Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
 	_add_light(Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
+
+
+## THE STASH: a row of battered lockers on the east wall where cats keep gear safe.
+## Built around stash_spot (change it in the Inspector: Hub > Stash and they follow).
+func _build_stash() -> void:
+	var at := stash_spot
+	var wall_x := half_width  # inside face of the east wall
+	# Four tall lockers against the wall, each with a glowing lock light.
+	for i in 4:
+		var z := at.z - 1.5 + i
+		_add_box(Vector3(wall_x - 0.4, 1.1, z), Vector3(0.8, 2.2, 0.9), _metal, true)
+		var lock := _add_box(Vector3(wall_x - 0.82, 1.2, z + 0.25), Vector3(0.04, 0.1, 0.1), _neon, false)
+		lock.set_instance_shader_parameter("instance_tint", Color(0.3, 1, 0.4))
+	_add_sign("THE STASH", Vector3(wall_x - 0.15, 3.0, at.z), Color(0.4, 0.9, 1), 48, -PI / 2)
+	_add_sign("safe from vacuums", Vector3(wall_x - 0.15, 2.5, at.z), Color(1, 0.8, 0.3), 20, -PI / 2)
+	_add_light(Vector3(wall_x - 1.6, 2.6, at.z), Color(0.4, 0.9, 1), 2.5, 6.0)
 
 
 ## A glowing text sign. "facing" turns it (0 = readable from the south / +Z side).

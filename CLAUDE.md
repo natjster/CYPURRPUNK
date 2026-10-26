@@ -42,6 +42,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
   RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
   Roombas/extraction ignore `is_down` cats. Test: `--give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3 --frames=1500`.
+- Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
+  Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (lockers on the east wall,
+  `hub._build_stash`); the inventory screen (`InventoryScreen`) swaps the loot bag for the stash there.
+  (`request_put_away` = paw -> backpack.) `scripts/player_profile.gd` (`Profile` node): each player saves
+  their OWN cash + stash to `user://profiles/<name>.cfg`, sends it to the host on start/join
+  (`_request_restore`, host validates), and saves only after `_restore_done`. Test runs use
+  `user://test_profiles/` (`--fresh_profile`). Test: `--to_stash=hand:0`, `--from_stash=N`.
 - `scenes/player.tscn` + `scripts/cat_player.gd` (`CatPlayer`): owner-authoritative cat. Owner writes
   `sync_position` / `sync_model_rotation` / `player_name`; remote copies glide toward them in `_process`.
   Only `CatModel` rotates; body never does (camera is a child).

@@ -24,6 +24,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/lil_mittens.tscn" id="22_mittens"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/comrade_whiskers.tscn" id="23_whiskers"]
 [ext_resource type="Script" path="res://scripts/cat_health.gd" id="24_health"]
+[ext_resource type="Script" path="res://scripts/player_profile.gd" id="25_profile"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -140,6 +141,9 @@ script = ExtResource("10_heist")
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("24_health")
+
+[node name="Profile" type="Node" parent="."]
+script = ExtResource("25_profile")
 
 [node name="Roombas" type="Node3D" parent="."]
 script = ExtResource("20_roombas")

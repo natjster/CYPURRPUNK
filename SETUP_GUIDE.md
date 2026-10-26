@@ -419,6 +419,39 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
   price on the item card and your cash, takes the money and puts the item in your paws (or the
   backpack). Make another shopkeeper the same way: set an NPC's script to `shopkeeper.gd`.
 
+### The stash & saved progress
+**THE STASH** is a row of lockers with a blue sign on the **east wall**, across from the Black
+Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STASH**. Press E
+(or open the inventory with Tab while standing there) and the inventory shows your **STASH**
+(9 slots) where the loot bag usually is:
+- **Click** something in your paws or backpack = put it in the stash.
+- **Click** something in the stash = take it into your backpack (equip it from there as usual).
+- Only gear goes in the stash (no fish: fish are for cashing in at the beam).
+
+Gear in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
+
+**Saved between games:** your **cash** and your **stash** are saved on your own computer and
+come back next time you HOST or JOIN with the **same cat name**, in anyone's game.
+What you're **carrying is not saved**: anything in your paws, backpack or loot bag is lost when
+you quit (it drops on the floor in that game). So stash your gear before you leave!
+
+- Save files: `%APPDATA%\MeowCity1999\profiles\<cat name>.cfg` (a cat with no name saves as
+  `cat.cfg`). Delete the file to start that cat from scratch. Two copies of the game on one PC
+  need different cat names, or they share one save.
+- It saves by itself whenever your cash or stash changes (`scripts/player_profile.gd` on the
+  **Profile** node in `main.tscn`).
+- In multiplayer, your computer sends your save to the host when you join; the host checks it
+  (only real gear, at most 9 items, cash between $0 and $10,000,000) and uses it. Like the rest of
+  the game this trusts players, so it's fine between friends but easy to cheat by editing the file.
+- **Tuning:** **Stash Size** on the **Items** node. Move the lockers: select **Hub** > Inspector >
+  **Stash** > **Stash Spot** (where you stand; the lockers are built against the east wall next
+  to it) and **Stash Radius** (how close you must be).
+
+**Test it without playing:** `--fresh_profile --cash=500 --give=pistol --to_stash=hand:0
+--inventory` stashes the pistol (and shows the screen); run again without `--fresh_profile` and
+the printout shows `cash={ 1: 500 }` and `"stash": ["pistol"]`. `--from_stash=0` takes it out.
+Test runs save to `test_profiles\` instead, so they never touch your real saves.
+
 **Where it lives:**
 - The tunnel: `scripts/hub.gd` on the **Hub** node in `main.tscn`. It's built from code when the
   game starts (like the city), but it's always the same — no seed, no randomness. The Hub node sits
@@ -605,8 +638,7 @@ At **0 HP you're KNOCKED OUT**:
 **Healing:** back in the sewers you're healed to full straight away (after extracting or after
 a knockout). Cats in the car and in the hub can't be hurt. Your cash and quests are never lost.
 
-So gear you bought at the Black Markitten is now at risk every time you go up top. (There's no
-safe stash in the sewers yet, so everything you own rides along with you.)
+So gear you take up top is at risk every time. Gear left in **the stash** (below) is safe.
 
 **Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the HP line
 is **PS1Overlay > HUD > Health**. The fall-over is `knocked_out` in `cat_player.gd`.
@@ -731,7 +763,11 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 - **Hover** an item to read its description (the **Description** line on its item card).
 - **Picking things up:** a held item goes into a free paw first; if your paws are busy it goes
   into the backpack; only if the backpack is full too does it swap with what's in your paw.
-- The screen builds its own buttons; the scene just has an empty `Inventory` node under PS1Overlay.
+- **At the stash lockers** in the sewers the LOOT BAG rows are replaced by your **STASH**
+  (9 slots), and clicking moves items between you and the stash instead (see **The stash &
+  saved progress** in §8).
+- The screen builds its own buttons; the scene just has an empty `Inventory` node under PS1Overlay
+  (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`).
 
 ---
 

@@ -20,6 +20,9 @@ extends Node
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
+##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
+##   --from_stash=N    (at the lockers) take stash slot N into the backpack
+##   --fresh_profile   start this test's saved cash + stash from scratch (user://test_profiles/)
 ##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
 ##                     --cash=500 --talk=ComradeWhiskers --choose=0,3 buys the 4th item)
 ##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
@@ -89,6 +92,24 @@ func _ready() -> void:
 			# (host) put items straight into our paws/backpack, e.g. --give=pistol,catnip
 			for item_id in args["give"].split(","):
 				ItemManager.instance._put_in_inventory(multiplayer.get_unique_id(), item_id, player.global_position)
+		if args.has("to_stash") or args.has("from_stash"):
+			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
+			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
+			#   --from_stash=0             (stash slot 0 into the backpack)
+			var hub := (scene as Game).hub
+			player.teleport_to(hub.to_global(hub.stash_spot), 0.0)
+			for i in 20:
+				await get_tree().process_frame  # let the host see our new position first
+			if args.has("to_stash"):
+				for slot in args["to_stash"].split(","):
+					var parts: PackedStringArray = slot.split(":")
+					ItemManager.instance.request_to_stash.rpc_id(1, parts[0], int(parts[1]))
+					for i in 10:
+						await get_tree().process_frame
+			if args.has("from_stash"):
+				ItemManager.instance.request_from_stash.rpc_id(1, int(args["from_stash"]))
+				for i in 10:
+					await get_tree().process_frame
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			(scene as Game).hub.deploy(player)
@@ -129,9 +150,9 @@ func _ready() -> void:
 			ItemManager.instance.request_equip.rpc_id(1, int(args["equip"]))
 			for i in 10:
 				await get_tree().process_frame
-		if args.has("stash"):
+		if args.has("put_away"):
 			# Click paw N in the inventory screen (0 = right, 1 = left): put it in the backpack.
-			ItemManager.instance.request_stash.rpc_id(1, int(args["stash"]))
+			ItemManager.instance.request_put_away.rpc_id(1, int(args["put_away"]))
 			for i in 10:
 				await get_tree().process_frame
 		if args.has("drop_slot"):

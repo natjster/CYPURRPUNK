@@ -7,7 +7,8 @@ extends Node3D
 ##     (today only the heist's fish: gear is BOUGHT in the sewers, see request_buy)
 ##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
 ##   - pickups (walk-into for auto_pickup items, E for the rest), drops (G), using up (catnip)
-##   - each cat's PAWS (right + left; a 2-paw item takes both) and LOOT BAG
+##   - each cat's PAWS (right + left; a 2-paw item takes both), BACKPACK and LOOT BAG
+##   - each player's STASH: safe lockers in the sewers, saved between games (player_profile.gd)
 ##   - shows held items in paws and loot stacked on the cat, on every computer
 ##   - Left Mouse uses the right-paw item, Right Mouse the left-paw item
 ##
@@ -35,6 +36,9 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var bag_size: int = 3
 ## Backpack slots for held items you aren't using right now (open the inventory: Tab or I).
 @export var pack_size: int = 6
+## Slots in each player's STASH, the safe lockers down in the sewers (gear only, no loot).
+## What's in the stash never drops when you're knocked out, and is saved between games.
+@export var stash_size: int = 9
 ## How close (metres) a cat must be to grab an auto-pickup item by walking into it.
 @export var pickup_radius: float = 1.4
 ## How close (metres) a cat must be to grab an item with E.
@@ -61,8 +65,10 @@ const MAX_REACH_HEIGHT: float = 3.0
 var catalog := {}
 ## World item ID -> {"item": item id, "pos": Vector3}. Items lying on the street.
 var world := {}
-## Network ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids]}.
+## Network ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids],
+##                "stash": [held item ids]}.
 ## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is the backpack.
+## "stash" is the safe locker in the sewers (see request_to_stash / player_profile.gd).
 var inventories := {}
 
 var _world_nodes := {}   # world item ID -> Node3D on the street
@@ -424,7 +430,7 @@ func request_equip(pack_index: int) -> void:
 
 ## Inventory screen: put the item in this paw (0 = right, 1 = left) into the backpack. Host only.
 @rpc("any_peer", "call_local", "reliable")
-func request_stash(hand: int) -> void:
+func request_put_away(hand: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
@@ -499,15 +505,74 @@ func drop_on_street(item_id: String, at: Vector3) -> void:
 
 
 ## Host: empty a player's paws, backpack and loot bag onto the ground around "at"
-## (a knocked-out cat, see cat_health.gd, or a player who quit).
+## (a knocked-out cat, see cat_health.gd, or a player who quit). The STASH is safe: it stays.
 func drop_everything(peer_id: int, at: Vector3) -> void:
-	var inventory := get_inventory(peer_id)
+	var inventory := get_inventory(peer_id).duplicate(true)
 	var dropped := _held_ids(inventory.hands) + Array(inventory.bag) + Array(inventory.pack)
 	var ground := _ground_below(at)  # a bonked cat may still be flying through the air
 	for i in dropped.size():
 		_spawn_dropped(dropped[i], ground + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
 	if not dropped.is_empty():
-		_set_inventory.rpc(peer_id, {"hands": ["", ""], "bag": [], "pack": []})
+		inventory.hands = ["", ""]
+		inventory.bag = []
+		inventory.pack = []
+		_set_inventory.rpc(peer_id, inventory)
+
+
+# --- The stash: safe lockers in the sewers (host decides, like everything else) ---
+
+## Inventory screen at the stash: put the item in this paw ("hand", 0 right / 1 left) or
+## backpack slot ("pack") into the stash. Only while standing at the lockers. Host only.
+@rpc("any_peer", "call_local", "reliable")
+func request_to_stash(where: String, index: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	var cat := _cat(peer_id)
+	var inventory := get_inventory(peer_id).duplicate(true)
+	var stash: Array = inventory.get("stash", [])
+	if cat == null or not UndergroundHub.instance.near_stash(cat) or stash.size() >= stash_size:
+		return
+	var item_id := ""
+	if where == "hand":
+		item_id = inventory.hands[clampi(index, 0, 1)]
+		if _is_two_handed(inventory.hands):
+			inventory.hands = ["", ""]
+		else:
+			inventory.hands[clampi(index, 0, 1)] = ""
+	elif where == "pack" and index >= 0 and index < inventory.pack.size():
+		item_id = inventory.pack.pop_at(index)
+	if item_id == "":
+		return
+	stash.append(item_id)
+	inventory.stash = stash
+	_set_inventory.rpc(peer_id, inventory)
+
+
+## Inventory screen at the stash: take stash slot "index" out, into the backpack. Host only.
+@rpc("any_peer", "call_local", "reliable")
+func request_from_stash(index: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var peer_id := multiplayer.get_remote_sender_id()
+	var cat := _cat(peer_id)
+	var inventory := get_inventory(peer_id).duplicate(true)
+	var stash: Array = inventory.get("stash", [])
+	if cat == null or not UndergroundHub.instance.near_stash(cat) or index < 0 or index >= stash.size():
+		return
+	if inventory.pack.size() >= pack_size:
+		return  # backpack full (the screen tells the player)
+	inventory.pack.append(stash.pop_at(index))
+	inventory.stash = stash
+	_set_inventory.rpc(peer_id, inventory)
+
+
+## Host: replace a player's whole stash (their saved one, when they start a game —
+## see player_profile.gd). The caller has already checked the item ids.
+func set_stash(peer_id: int, stash: Array) -> void:
+	var inventory := get_inventory(peer_id).duplicate(true)
+	inventory.stash = stash
+	_set_inventory.rpc(peer_id, inventory)
 
 
 ## Host: a player quit. Everything they carried drops where they stood.
@@ -647,7 +712,12 @@ func _update_hud() -> void:
 # --- Helpers anyone can use ---
 
 func get_inventory(peer_id: int) -> Dictionary:
-	return inventories.get(peer_id, {"hands": ["", ""], "bag": [], "pack": []})
+	return inventories.get(peer_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": []})
+
+
+## What's in a player's stash (the safe lockers in the sewers).
+func get_stash(peer_id: int) -> Array:
+	return get_inventory(peer_id).get("stash", [])
 
 
 ## A spot on the ground a step in front of the cat (where dropped things land).

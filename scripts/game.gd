@@ -135,6 +135,7 @@ func _start_playing() -> void:
 	hud.show()
 	pause_menu.enabled = true
 	_show_city_number()
+	$Profile.restore()  # bring back our saved cash + stash (player_profile.gd)
 
 
 ## Back to a fresh start menu: we chose LEAVE GAME, or the host closed the game.

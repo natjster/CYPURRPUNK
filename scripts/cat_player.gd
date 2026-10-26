@@ -227,6 +227,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("interact") and Npc.try_talk(self):
 		# Standing next to an NPC (e.g. Don Catleone in the hub): the talk box opens.
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("interact") and UndergroundHub.instance.near_stash(self):
+		# At THE STASH lockers in the sewers: the inventory opens with your stash in it.
+		InventoryScreen.instance.open()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
 		nearby_car.request_enter.rpc_id(1)
