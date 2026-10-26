@@ -31,6 +31,9 @@ const MAX_LEVEL: int = 5
 ## Heat added every second while at least one cat is up in the city.
 ## 0.5 = about 3 minutes from cool to the MEGA VAC-COP if you cause no trouble at all.
 @export var heat_per_second: float = 0.5
+## More cats up top heat the city faster: +this much (0.1 = +10%) for every cat up there beyond
+## the first. (8 cats up top with 0.1 = 1.7x as fast.)
+@export var heat_per_extra_cat: float = 0.1
 ## Heat added each time a gun hits a Roomba.
 @export var heat_per_roomba_hit: float = 1.0
 ## Heat added each time a Roomba is destroyed.
@@ -103,15 +106,16 @@ func reset() -> void:
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or Game.instance == null:
 		return
-	var anyone_up := false
+	var cats_up := 0
 	for cat in Game.instance.players.get_children():
 		var where := (cat as Node3D).global_position
 		if Game.instance.car.driver_id == (cat as CatPlayer).player_id:
 			where = Game.instance.car.global_position
 		if not UndergroundHub.is_in_hub(where):
-			anyone_up = true
-	if anyone_up:
-		heat = minf(heat + heat_per_second * delta, MAX_HEAT)
+			cats_up += 1
+	if cats_up > 0:
+		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
+		heat = minf(heat + heat_per_second * crowd * delta, MAX_HEAT)
 	else:
 		heat = maxf(heat - cool_per_second_when_empty * delta, 0.0)
 	# Share the number a few times a second (just for everyone's HUD).

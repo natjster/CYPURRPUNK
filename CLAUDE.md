@@ -31,6 +31,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   or a whole computer (`_game_full` -> `Game.leave_reason`, shown on the menu). Per-player pause:
   `PlayerPause` in hud.tscn (only when `PlayerPause.split_active()`; else the big PauseMenu); blocks only that
   seat (`cat._menu_open`, `car._driver_paused`). Test: `--saved_cats=A,B`, `--pad_press=1:Start` on `--menu=mode`.
+- Phase 7 (8 players): balance scales with `Game.player_count()` (Roombas `extra_roombas_per_player`, heat
+  `heat_per_extra_cat`, Items `regrow_faster_per_player`, Heist `extra_beam_players`). Hub `free_spawn_position`.
+  Sync: cat/car `replication_interval` 0.033, roomba 0.05 (host sends ~12 KB/s for 8 players). RoombaPatrol only
+  runs after `start_patrol` (the start menu counts as "server": it used to spawn Roombas that broke joining).
+  A real controller on this PC can disturb `--hold` tests (its events mix into actions). Test: `--net_stats=N`,
+  `--pad_press_delay=N`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
   via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
@@ -47,7 +53,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `PlayerProfile.restore(player_id, cat_id, name)` per local player. Per-player HUD feedback currently only
   for `PlayerId.first_local()`. Test: `--add_local=N --as_local=S`, `--remove_local=S`.
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
-  the transport; Steam swaps in here), `Settings` (`scripts/settings.gd`: all player settings,
+  the transport; Steam swaps in here; LAN discovery: hosts broadcast `Net.advert` (set by game.gd
+  `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999`; test runs with `--capture` use
   defaults and never save), `Controls`, `DevCapture` (debug builds only).
 - Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by

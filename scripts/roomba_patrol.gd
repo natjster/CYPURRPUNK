@@ -18,6 +18,9 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 ## How many Roombas patrol the city at once when the city is calm (HEAT level 1).
 ## Hotter levels add more (HeatMeter.extra_roombas_per_level, on the Heat node).
 @export var roomba_count: int = 8
+## More players = more VAC-COPs: this many extra for every player beyond the second
+## (8 players with 1.0 = 6 extra). Decimals are fine (0.5 = one extra per two players).
+@export var extra_roombas_per_player: float = 1.0
 ## Seconds before a destroyed Roomba is replaced.
 @export var respawn_seconds: float = 25.0
 ## New Roombas never appear closer than this to a cat, or to the centre crossroads where
@@ -38,6 +41,10 @@ var _clock: float = 0.0
 var _next_number: int = 0
 var _next_change_at: float = 0.0  # host: when the next reinforcement may arrive / leave
 var _boss: Roomba = null
+## True once this computer hosts a game (start_patrol). Before that - in the start menu the
+## game counts as its own "host" - no Roombas may be sent out: they'd clash with the real
+## host's when we join someone.
+var _patrolling: bool = false
 var _rng := RandomNumberGenerator.new()
 
 
@@ -49,6 +56,7 @@ func _ready() -> void:
 func start_patrol() -> void:
 	for old in get_children():
 		old.queue_free()
+	_patrolling = true
 	_respawn_at.clear()
 	_boss = null
 	for i in roomba_count:
@@ -67,7 +75,7 @@ func roomba_destroyed(roomba: Roomba) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or not _patrolling:
 		return
 	_clock += delta
 	for i in range(_respawn_at.size() - 1, -1, -1):
@@ -101,7 +109,8 @@ func _follow_the_heat() -> void:
 		var roomba := child as Roomba
 		if roomba != null and not roomba.is_boss and not roomba.is_queued_for_deletion():
 			regulars.append(roomba)
-	var wanted := roomba_count + heat.extra_roombas()
+	var wanted := roomba_count + heat.extra_roombas() \
+		+ floori(extra_roombas_per_player * maxi(Game.instance.player_count() - 2, 0))
 	if regulars.size() + _respawn_at.size() < wanted:
 		_spawn_one()
 		_next_change_at = _clock + reinforce_seconds

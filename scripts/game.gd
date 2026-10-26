@@ -195,6 +195,13 @@ func _receive_city_seed(city_seed: int) -> void:
 	_show_city_number()
 
 
+## Hosting: what the network hears about our game (Net.advert, the MULTIPLAYER screen's list).
+func _process(_delta: float) -> void:
+	if multiplayer.is_server():
+		Net.advert = {"name": local_player_name.to_upper(), "city": city.city_seed,
+			"players": player_count(), "max": Net.MAX_PLAYERS}
+
+
 func _show_city_number() -> void:
 	# Shown in the pause menu, so the bottom of the screen stays clear (keys: SETTINGS > KEYS).
 	pause_menu.get_node("Panel/VBox/Note").text = "CITY #%d\nthe city keeps going - it's online!" % city.city_seed
@@ -205,6 +212,12 @@ func _show_city_number() -> void:
 ## (Same as Hud.show_message; kept here because lots of scripts call it.)
 func show_message(text: String, seconds: float = 4.0, seat: int = -1) -> void:
 	Hud.show_message(text, seconds, seat)
+
+
+## How many players are in the game right now, on every computer (up to Net.MAX_PLAYERS = 8).
+## The balance scales with it: more VAC-COPs, faster heat, faster-growing loot, an extra beam.
+func player_count() -> int:
+	return players.get_child_count()
 
 
 ## Every player on this computer who has a screen right now (couch co-op): their cats.

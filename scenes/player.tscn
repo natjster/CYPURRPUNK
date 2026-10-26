@@ -56,3 +56,4 @@ pixel_size = 0.008
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("Sync_cat")
+replication_interval = 0.033

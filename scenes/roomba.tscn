@@ -135,3 +135,4 @@ omni_range = 5.0
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("Sync_roomba")
+replication_interval = 0.05

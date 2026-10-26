@@ -57,6 +57,9 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var scattered_items: Dictionary = {}
 ## Seconds before a scattered item grows back after it's taken.
 @export var scatter_respawn_seconds: float = 30.0
+## More players = loot grows back faster, so there's enough to go round: every player beyond
+## the first makes it this much faster (0.15 = 15%; 8 players = about twice as fast).
+@export var regrow_faster_per_player: float = 0.15
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
@@ -313,7 +316,8 @@ func _give(player_id: int, world_id: int) -> void:
 	_put_in_inventory(player_id, world[world_id].item, world[world_id].pos)
 	_remove_world.rpc(world_id)
 	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
-		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn
+		var crowd := 1.0 + regrow_faster_per_player * maxi(Game.instance.player_count() - 1, 0)
+		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn / crowd
 
 
 ## Host: put an item into a player's paws (or backpack, or loot bag) and tell everyone.

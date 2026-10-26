@@ -178,7 +178,7 @@ func _ready() -> void:
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
-		teleport_to(UndergroundHub.instance.spawn_position(get_index()), 0.0)
+		teleport_to(UndergroundHub.instance.free_spawn_position(self), 0.0)
 		# (_process does the controller's right-stick camera for our own cat.)
 	else:
 		# Someone else's cat: no input, no physics — _process glides it to the synced spot.

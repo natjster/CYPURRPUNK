@@ -55,6 +55,9 @@ extends Node3D
 @export var beam_spots: int = 4
 ## How many beams are open at the same time.
 @export var open_at_once: int = 2
+## A big game (this many players or more) gets one extra beam open, so 8 cats don't all queue
+## for the same two. 0 = never.
+@export var extra_beam_players: int = 5
 ## Each beam stays open for a random time between these (seconds).
 @export var beam_open_min_seconds: float = 40.0
 @export var beam_open_max_seconds: float = 70.0
@@ -254,6 +257,20 @@ func _flat_distance(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
+## How many beams should be open right now (more in a big game).
+func _beams_wanted() -> int:
+	var big := extra_beam_players > 0 and Game.instance.player_count() >= extra_beam_players
+	return open_at_once + (1 if big else 0)
+
+
+func _open_count() -> int:
+	var open := 0
+	for i in beam_time_left.size():
+		if is_beam_open(i):
+			open += 1
+	return open
+
+
 ## Host: open a random CLOSED beam (not "skip"). "fraction" shortens its first opening
 ## (used at the start so the first beams don't all close together).
 func _open_random_beam(skip: int, fraction: float = 1.0) -> void:
@@ -302,14 +319,20 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 
 	# Beams close when their time runs out, and another one opens somewhere else.
+	# (Big game: one more open, see extra_beam_players. When players leave, the extra one just
+	# isn't replaced when it closes.)
 	var changed := false
 	for i in beam_time_left.size():
 		if beam_time_left[i] > 0.0:
 			beam_time_left[i] -= delta
 			if beam_time_left[i] <= 0.0:
 				beam_time_left[i] = -1.0
-				_open_random_beam(i)
+				if _open_count() < _beams_wanted():
+					_open_random_beam(i)
 				changed = true
+	if _open_count() < mini(_beams_wanted(), beam_positions.size()):
+		_open_random_beam(-1)
+		changed = true
 	if changed:
 		_set_beams.rpc(beam_time_left)
 

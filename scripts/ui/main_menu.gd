@@ -59,6 +59,8 @@ var _camera_yaw: float
 ## The couch lobby line at the bottom of the SOLO / MULTIPLAYER and HOST / JOIN screens
 ## (scripts/seats.gd): who's sitting down, and with which cat.
 var _couch_label: Label
+## Buttons for the games found on your network (MULTIPLAYER screen, under JOIN).
+var _game_list: VBoxContainer
 
 
 func _ready() -> void:
@@ -80,6 +82,13 @@ func _ready() -> void:
 	$Version.text = "v%s  LAN" % ProjectSettings.get_setting("application/config/version", "0")
 	if menu_camera != null:
 		_camera_yaw = menu_camera.rotation.y
+	# Games found on your network (net.gd): one button each, under the JOIN button.
+	_game_list = VBoxContainer.new()
+	_game_list.name = "GameList"
+	_game_list.add_theme_constant_override("separation", 2)
+	$PlayScreen/VBox/Columns/JoinColumn.add_child(_game_list)
+	Net.games_changed.connect(_refresh_game_list)
+	_refresh_game_list()
 	_couch_label = Label.new()
 	_couch_label.name = "CouchLobby"
 	_couch_label.position = Vector2(30, 214)
@@ -125,6 +134,40 @@ func _show_only(screen: Control) -> void:
 	for each in [main_screen, mode_screen, play_screen]:
 		each.visible = each == screen
 	status_label.text = ""
+	# Only the MULTIPLAYER screen listens for games on the network.
+	if screen == play_screen:
+		Net.start_listening()
+	else:
+		Net.stop_listening()
+
+
+## The games found on your network, as buttons: "WHISKERS  #4242  3/8". Click = join it.
+func _refresh_game_list() -> void:
+	if _game_list == null:
+		return
+	for old in _game_list.get_children():
+		_game_list.remove_child(old)
+		old.queue_free()
+	var title := Label.new()
+	title.text = "ON YOUR NETWORK:" if not Net.found_games.is_empty() else "looking for games..."
+	title.modulate = Color(1, 1, 1, 0.6)
+	_game_list.add_child(title)
+	var shown := 0
+	for address in Net.found_games:
+		if shown >= 3:
+			break  # (room for 3; type the address for any other)
+		var info: Dictionary = Net.found_games[address]
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 14)
+		var full: bool = int(info.get("players", 0)) >= int(info.get("max", Net.MAX_PLAYERS))
+		button.text = "%s  #%d  %d/%d%s" % [str(info.get("name", "?")).left(9), int(info.get("city", 0)),
+			int(info.get("players", 0)), int(info.get("max", Net.MAX_PLAYERS)), "  FULL" if full else ""]
+		button.disabled = full
+		button.pressed.connect(func():
+			address_input.text = address
+			join_pressed.emit(address))
+		_game_list.add_child(button)
+		shown += 1
 
 
 ## Esc = one step back.

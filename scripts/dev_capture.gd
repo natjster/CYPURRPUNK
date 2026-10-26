@@ -16,6 +16,8 @@ extends Node
 ##   --join_pad=N      couch co-op: press START on fake controller N (1, 2, 3) right after our cat
 ##                     appears = a new player drops in on it (scripts/seats.gd). Repeat: --join_pad=1,2
 ##   --pad_device=N    which fake controller --pad and --pad_press use (default 0)
+##   --net_stats=N     measure network data sent / received per second over N frames (before the snap)
+##   --pad_press_delay=N  wait N frames before the --pad_press presses (e.g. for the network game list)
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
@@ -433,6 +435,8 @@ func _ready() -> void:
 	if args.has("pad_press"):
 		# --pad_press=Start,D-Pad_Down,A : real controller presses, one every few frames.
 		# "1:Start" = START on fake controller 1 (otherwise --pad_device, default 0).
+		for i in int(args.get("pad_press_delay", "0")):  # --pad_press_delay=N: wait N frames first
+			await get_tree().process_frame
 		for pad in args["pad_press"].replace("_", " ").split(","):
 			for pressed in [true, false]:
 				var event := _pad_event(pad.get_slice(":", 1) if ":" in pad else pad, pressed)
@@ -462,9 +466,25 @@ func _ready() -> void:
 	if args.has("track"):
 		await _track_other_cats(scene, int(args["track"]))
 
+	if args.has("net_stats") and multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+		# --net_stats=N: how much network data this computer sends / receives, over N frames.
+		var connection := (multiplayer.multiplayer_peer as ENetMultiplayerPeer).host
+		connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
+		connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
+		var started := Time.get_ticks_msec()
+		for i in int(args["net_stats"]):
+			await get_tree().process_frame
+		var seconds := (Time.get_ticks_msec() - started) / 1000.0
+		var sent := connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
+		var received := connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
+		print("DevCapture net: sent %.1f KB/s, received %.1f KB/s over %.1f s | players=%d roombas=%d computers=%d" % [
+			sent / 1024.0 / seconds, received / 1024.0 / seconds, seconds, Game.instance.player_count(),
+			Game.instance.get_node("Roombas").get_child_count(), multiplayer.get_peers().size() + 1])
 	print("DevCapture fps=%d" % Engine.get_frames_per_second())
 	if scene.main_menu.visible and scene.main_menu.status_label.text != "":
 		print("DevCapture menu status: %s" % scene.main_menu.status_label.text)
+	if scene.main_menu.visible and scene.main_menu.play_screen.visible:
+		print("DevCapture found games: %s" % [Net.found_games])
 	var city := scene.get_node_or_null("City") as CityGenerator
 	if city != null:
 		# Fingerprint of where every city object is: identical cities print identical numbers.

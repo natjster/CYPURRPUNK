@@ -130,6 +130,20 @@ func near_stash(cat: CatPlayer) -> bool:
 
 
 ## Where cat number n appears when it joins: rows of three on the walkway, facing Don.
+## A spawn spot nobody else is standing on (up to 12 spots: 3 across, 4 rows), so 8 cats
+## arriving at once don't land on top of each other.
+func free_spawn_position(cat: CatPlayer) -> Vector3:
+	for n in 12:
+		var spot := spawn_position(n)
+		var taken := false
+		for other in Game.instance.players.get_children():
+			if other != cat and (other as Node3D).global_position.distance_to(spot) < 1.0:
+				taken = true
+		if not taken:
+			return spot
+	return spawn_position(randi() % 12)
+
+
 func spawn_position(n: int) -> Vector3:
 	return to_global(spawn_spot + Vector3((n % 3) * 1.5 - 1.5, 0, (n / 3) * 1.5))
 
@@ -143,7 +157,7 @@ func deploy(cat: CatPlayer) -> void:
 
 ## Extracted: back down the drain to the hub.
 func return_cat(cat: CatPlayer) -> void:
-	cat.teleport_to(spawn_position(randi() % 6), 0.0)
+	cat.teleport_to(free_spawn_position(cat), 0.0)
 	print("[Hub] %s extracted back to the hub" % cat.name)
 
 

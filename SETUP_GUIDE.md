@@ -342,15 +342,41 @@ Either player can drive the car; the other sees it move. Only one cat fits in th
 argument `--host` and instance 2 `--join` to skip the menu (`--name=Whiskers` names the cat,
 `--seed=42` picks the city; `--solo` starts a solo game).
 
-### Play with a second computer on the same Wi-Fi/network
-1. On the host PC, open a terminal and run `ipconfig`. Note the **IPv4 Address** (e.g. `192.168.1.23`).
-2. Host clicks **PLAY > (cat) NEXT > MULTIPLAYER > HOST**. If Windows asks about the firewall,
-   allow **Private networks**.
-3. On the other PC, click **PLAY > (cat) NEXT > MULTIPLAYER**, type that address into the JOIN
-   box and click **JOIN**.
+### Play with other computers on the same Wi-Fi/network (up to 8 players)
+1. Host clicks **PLAY > (cat) NEXT > MULTIPLAYER > HOST**. If Windows asks about the firewall,
+   allow **Private networks** (the game uses UDP ports **7777** for playing and **7778** for
+   finding games).
+2. On the other PCs, click **PLAY > (cat) NEXT > MULTIPLAYER**. Under JOIN, **ON YOUR NETWORK**
+   lists every game being hosted nearby, e.g. `WHISKERS  #4242  3/8` (host's cat, city number,
+   players). Click it (or pick it with the d-pad + A). A full game says FULL and can't be picked.
+3. Not listed (a picky router or firewall)? On the host PC run `ipconfig`, note the **IPv4
+   Address** (e.g. `192.168.1.23`), type it into the JOIN box and click **JOIN**.
 
+Up to 8 players in total: e.g. 8 computers, or 2 computers with 4 couch players each (§10).
 Playing over the internet needs port forwarding (UDP port 7777) or Steam's relay. Steam is planned
 and will only change `scripts/net.gd`.
+
+### Bigger games get more of everything (balance knobs)
+The more players, the busier the city (counted on the host, players on every computer):
+
+| What | Where (select the node in `main.tscn`, Inspector) | Default |
+|---|---|---|
+| Extra VAC-COPs for every player beyond the 2nd | **Roombas** > Extra Roombas Per Player | 1 (8 players = +6) |
+| Heat rises faster per extra cat up top | **Heat** > Heat Per Extra Cat | 0.1 (+10% each) |
+| Loot grows back faster per extra player | **Items** > Regrow Faster Per Player | 0.15 (8 players = about 2x) |
+| One extra extraction beam open from this many players | **Heist** > Extra Beam Players | 5 (0 = never) |
+
+The script side: `Game.instance.player_count()` is how many players the game has right now.
+
+### Network traffic (how often positions are sent)
+Cats and the car send where they are **30 times a second**, VAC-COPs **20 times** (everyone's
+copies glide smoothly in between). To change it: open `scenes/player.tscn` (or
+`getaway_car.tscn`, `roomba.tscn`) > select **MultiplayerSynchronizer** > Inspector >
+**Replication Interval** (seconds between updates: 0.033 = 30/sec, 0 = every frame).
+Measured: a full 8-player game (2 computers x 4) = the host sends about **12 KB/s**; with 8
+separate computers about 85 KB/s. Easy for any home network or Wi-Fi.
+Test: `--net_stats=600` prints KB/s sent / received; `--track=150` shows how smoothly other
+players' cats move on screen.
 
 ### How it works
 ```
@@ -419,7 +445,8 @@ everyone's paws/bags), everyone's cash, quests and HP, their cat, and who is dri
 
 ### Known limitations (planned for later)
 1. **The host is trusted.** Fine for friends; a public game would need anti-cheat checks.
-2. **Your own cat's camera** moves at the physics rate (60/sec). On a 120 Hz+ monitor this can
+2. **One getaway car** for up to 8 players: first come, first served (no passengers yet).
+3. **Your own cat's camera** moves at the physics rate (60/sec). On a 120 Hz+ monitor this can
    look slightly stuttery; Godot's built-in "physics interpolation" setting can fix that later.
 
 ---
