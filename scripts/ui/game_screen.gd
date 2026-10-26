@@ -378,6 +378,9 @@ func _input(event: InputEvent) -> void:
 			return
 	elif seat == 0 and Hud.wants_input(0):
 		return
+	elif seat > 0 and Hud.menu_open() and Game.instance.pause_menu.enabled:
+		get_viewport().set_input_as_handled()  # player 1's pause / settings: only player 1 drives them
+		return
 	var scale_to_game := Vector2(game_viewport.size) / game_view.size
 	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),
 		-game_view.position * scale_to_game)

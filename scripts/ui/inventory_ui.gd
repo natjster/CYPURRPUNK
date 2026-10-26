@@ -38,6 +38,9 @@ static var instance: InventoryScreen
 var seat: int = 0
 ## Whose things are showing: this seat's cat (set when it opens).
 var owner_cat: CatPlayer = null
+## This player's highlighted slot (scripts/ui/seat_focus.gd): their d-pad / arrows move it,
+## A / Enter = click it, X = drop it (handled here, so A doesn't "press" the slot itself).
+var _focus := SeatFocus.new()
 
 ## Size of one item slot (HUD units).
 @export var slot_size: Vector2 = Vector2(220, 44)
@@ -139,6 +142,8 @@ func _build() -> void:
 	# As wide as the slot rows, and room for two lines, so the box doesn't jump in size.
 	_info.custom_minimum_size = Vector2(columns * slot_size.x + (columns - 1) * 8, (title_font_size + 4) * 2)
 	box.add_child(_info)
+	_focus.press_on_accept = false
+	_focus.highlighted.connect(_on_slot_hover)  # show what the highlighted item is
 	Controls.changed.connect(func():  # switched keyboard <-> controller: redo the "Click: ..." line
 		if visible:
 			_show_stash_section(_at_stash))
@@ -157,9 +162,11 @@ func _input(event: InputEvent) -> void:
 	elif visible and event.is_action_pressed("ui_cancel"):
 		_set_open(false)
 		get_viewport().set_input_as_handled()
+	elif visible and _focus.handle(event):  # d-pad / arrows: move the highlight
+		get_viewport().set_input_as_handled()
 	elif visible and (event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_drop")):
 		# Controller / keyboard: A (Enter) = click the highlighted slot, X = drop it.
-		var slot := get_viewport().gui_get_focus_owner() as Button
+		var slot := _focus.current
 		if slot != null and slot.has_meta("where"):
 			_use_slot(slot, slot.get_meta("where"), slot.get_meta("index"), event.is_action_pressed("ui_drop"))
 			get_viewport().set_input_as_handled()
@@ -184,10 +191,10 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 		if seat == 0:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
-		if Seats.uses_pad(owner_cat.slot):
-			_paw_buttons[0].grab_focus()  # a highlighted slot for the d-pad to move around from
+		# A highlighted slot for the d-pad / arrows to move around from (left paw first).
+		_focus.set_buttons(_paw_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
 	else:
-		get_viewport().gui_release_focus()
+		_focus.clear()
 		var first := Game.instance.my_cat() if Game.instance != null else null
 		if seat == 0 and first != null and first.is_controlled:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -272,9 +279,8 @@ func _grid(list: Array[Button], where: String, count: int) -> GridContainer:
 func _slot(where: String, index: int) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = slot_size
-	# Focusable, so a controller's d-pad can move between slots. (Tab still closes the screen:
-	# _input sees the INVENTORY key before the focus does.)
-	button.focus_mode = Control.FOCUS_ALL
+	# (The d-pad / arrows move a highlight between slots: _focus, scripts/ui/seat_focus.gd.)
+	button.focus_mode = Control.FOCUS_NONE
 	button.set_meta("where", where)
 	button.set_meta("index", index)
 	button.clip_text = true
@@ -283,11 +289,9 @@ func _slot(where: String, index: int) -> Button:
 	button.add_theme_stylebox_override("normal", _slot_style(Color(0.55, 0.35, 0.85, 0.8)))
 	button.add_theme_stylebox_override("hover", _slot_style(Color(1, 0.4, 0.8)))
 	button.add_theme_stylebox_override("pressed", _slot_style(Color(1, 1, 1)))
-	button.add_theme_stylebox_override("focus", _slot_style(Color(0.4, 1, 1)))  # highlighted by the controller
 	button.set_meta("item", "")
 	button.gui_input.connect(_on_slot_input.bind(button, where, index))
 	button.mouse_entered.connect(_on_slot_hover.bind(button))
-	button.focus_entered.connect(_on_slot_hover.bind(button))
 	return button
 
 

@@ -23,6 +23,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   producers loop `Game.instance.playing_cats()`; windows: `NpcDialog.for_cat(cat)/for_seat`,
   `InventoryScreen.for_seat`, `Hud.wants_input(seat)`. `hud.fit_to(rect, scale)` (`hud_scale_for`).
   Name tags use `GameScreen.camera_for_seat/screen_size_for_seat`.
+  HUD windows must NOT use grab_focus (Godot keeps one focus per Window, across SubViewports): each keeps a
+  `SeatFocus` (`scripts/ui/seat_focus.gd`: set_buttons/handle(event)/clear, highlight = "hover" stylebox).
+- Phase 6: couch LOBBY = `Seats.lobby_cats` (START on an unclaimed pad while main_menu mode/play screen is up;
+  `cycle_lobby_cat`, `leave_lobby`; MainMenu eats seat>0 events; `Seats.start_lobby_players()` from
+  `_start_playing`). Host refuses a couch player over `Net.MAX_PLAYERS` (`_add_player_refused` -> `Seats.refused`)
+  or a whole computer (`_game_full` -> `Game.leave_reason`, shown on the menu). Per-player pause:
+  `PlayerPause` in hud.tscn (only when `PlayerPause.split_active()`; else the big PauseMenu); blocks only that
+  seat (`cat._menu_open`, `car._driver_paused`). Test: `--saved_cats=A,B`, `--pad_press=1:Start` on `--menu=mode`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
   via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.

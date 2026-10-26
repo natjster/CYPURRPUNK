@@ -107,6 +107,8 @@ func _profile_path(player_id: int, cat_id: String, player_name: String) -> Strin
 func _request_restore(player_id: int, cash: int, stash: Array) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
+	if PlayerId.slot_of(player_id) > 0 and Game.instance.cat_for(player_id) == null:
+		return  # a couch player the host didn't let in (the game was full)
 	var items := ItemManager.instance
 	var clean: Array = []
 	for item_id in stash:

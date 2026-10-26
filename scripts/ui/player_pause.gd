@@ -1,0 +1,139 @@
+class_name PlayerPause
+extends Control
+## MEOW-CITY 1999 — ONE PLAYER'S PAUSE MENU, for split screen (couch co-op).
+## Part of every player's HUD (scenes/ui/hud.tscn > HUD > Frame > PlayerPause); it builds its
+## own box and buttons, so the scene only needs the empty node.
+##
+## While 2-4 players share this computer, START (or Esc for player 1) opens THIS small menu on
+## that player's own screen only: their cat stops, everyone else keeps playing. Alone, the normal
+## full-screen pause menu opens instead (scripts/ui/pause_menu.gd).
+##
+##   Player 1:    RESUME / SETTINGS + MY CAT / LEAVE GAME / QUIT TO DESKTOP
+##                (SETTINGS + MY CAT opens the big pause menu: those screens are shared)
+##   Players 2-4: RESUME / DROP OUT (just them: scripts/seats.gd)
+##
+## Controller: d-pad + A, B or START = back to the game.
+
+## Text size of the title and buttons (HUD units; the HUD shrinks on small screens anyway).
+@export var font_size: int = 26
+
+## Which player's pause menu this is (its HUD's seat).
+var seat: int = 0
+## True while it's open: that player's cat ignores their buttons.
+var is_open: bool = false
+
+var _title: Label
+var _buttons: VBoxContainer
+## This player's highlighted button (scripts/ui/seat_focus.gd), moved by their own d-pad.
+var _focus := SeatFocus.new()
+
+
+func _enter_tree() -> void:
+	seat = (owner as Hud).seat if owner is Hud else 0
+
+
+func _ready() -> void:
+	hide()
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
+	var centre := CenterContainer.new()
+	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(centre)
+	var panel := PanelContainer.new()
+	centre.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+	_title = Label.new()
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_title.add_theme_font_size_override("font_size", font_size + 8)
+	_title.add_theme_color_override("font_color", Color(1, 0.4, 0.8))
+	box.add_child(_title)
+	_buttons = VBoxContainer.new()
+	_buttons.add_theme_constant_override("separation", 6)
+	box.add_child(_buttons)
+
+
+## This player's pause menu (seat 0 = player 1), or null.
+static func for_seat(seat_number: int) -> PlayerPause:
+	var hud := Hud.of(seat_number)
+	return hud.get_node_or_null("Frame/PlayerPause") as PlayerPause if hud != null else null
+
+
+## Is this player's own pause menu open?
+static func is_open_for(seat_number: int) -> bool:
+	var menu := for_seat(seat_number)
+	return menu != null and menu.is_open
+
+
+## More than one player on this computer right now? (Then everyone gets their own pause menu.)
+static func split_active() -> bool:
+	return Game.instance != null and is_instance_valid(Game.instance) and Game.instance.playing_cats().size() > 1
+
+
+## START / Esc: open or close (only this player's buttons: player 1's HUD hears every button first).
+func _input(event: InputEvent) -> void:
+	if Seats.seat_of_event(event) != seat:
+		return
+	if is_open and _focus.handle(event):  # up / down + A
+		get_viewport().set_input_as_handled()
+		return
+	if is_open and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
+		get_viewport().set_input_as_handled()
+		close()
+	elif not is_open and event.is_action_pressed("pause") and split_active() and not Hud.menu_open() \
+			and not Hud.wants_input(seat):
+		get_viewport().set_input_as_handled()
+		open()
+
+
+func open() -> void:
+	var game := Game.instance
+	_title.text = "PLAYER %d - PAUSED" % (seat + 1)
+	for old in _buttons.get_children():
+		_buttons.remove_child(old)
+		old.queue_free()
+	_add_button("RESUME", close)
+	if seat == 0:
+		_add_button("SETTINGS + MY CAT", func():
+			close()
+			game.pause_menu.opened_by = 0
+			game.pause_menu.open())  # the big pause menu: SETTINGS and MY CAT are in there
+		_add_button("LEAVE GAME", func():
+			close()
+			game.pause_menu.leave_pressed.emit())  # this whole computer leaves (game.gd)
+		_add_button("QUIT TO DESKTOP", get_tree().quit)
+	else:
+		_add_button("DROP OUT", func():
+			close()
+			Seats.leave(seat))  # just this player
+	is_open = true
+	show()
+	if seat == 0:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
+	_focus.set_buttons(_buttons.get_children())  # RESUME highlighted
+
+
+func close() -> void:
+	if not is_open:
+		return
+	is_open = false
+	hide()
+	_focus.clear()
+	if seat == 0:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _add_button(text: String, action: Callable) -> void:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(320, 40)
+	button.add_theme_font_size_override("font_size", font_size)
+	button.pressed.connect(action)
+	_buttons.add_child(button)

@@ -1008,15 +1008,27 @@ fine-tune it with STICK SPEED. Stick drift (cat creeps along by itself)? Raise
 **STICK_DEADZONE** at the top of `scripts/controls.gd`.
 
 ### Couch co-op: more players on one computer (`scripts/seats.gd`, Autoload **Seats**)
-Up to **4 players per computer**, each with their own controller.
+Up to **4 players per computer**, each with their own controller (8 in a whole game).
 
-- **Joining in:** during a game, press **START** on a controller nobody is using. A new player
-  drops in (in the sewers), playing your **next saved cat** from MY CAT that nobody here is using,
-  with that cat's own cash and stash. No saved cat left? A new one called "PLAYER 2" (3, 4) is
-  made and saved, so you can rename / restyle it later in MY CAT.
-- **Leaving:** that player presses **START** on their controller: their pause menu has
-  **DROP OUT (PLAYER 2)** instead of LEAVE GAME. Only they leave (what they carry drops where
-  they stand, their stash is safe). Player 1's LEAVE GAME still ends the game for this computer.
+- **The couch lobby (start menu):** on the SOLO / MULTIPLAYER screen (or HOST / JOIN), friends
+  press **START** on their controllers to sit down. The line at the bottom shows who's in:
+  `P2 < WHISKERS >   P3 < NEW CAT >`. Each picks a cat with **left / right** on their own
+  controller: one of your saved cats (MY CAT) that nobody else picked, or NEW CAT (made when the
+  game starts, called "PLAYER 3" etc.: rename / restyle it later in MY CAT). **B** = stand up again.
+  Their controllers don't move player 1's menu. When player 1 starts the game (SOLO, HOST or
+  JOIN), everyone comes along. Two players never play the same cat: each cat has its own cash
+  and stash.
+- **Joining mid-game:** press **START** on a controller nobody is using: a new player drops in
+  (in the sewers) with your next saved cat nobody is using (or a new "PLAYER 2").
+- **Full games:** a game holds 8 players. A couch player who doesn't fit is told "THE GAME IS
+  FULL"; a whole computer that doesn't fit goes back to the start menu with "That game is full."
+- **Pausing (each player their own):** with 2+ players, **START** (Esc for player 1) opens a small
+  pause menu on YOUR screen only: your cat stops, everyone else keeps playing.
+  Player 1's: RESUME / SETTINGS + MY CAT (opens the big pause menu: settings are shared, and take
+  the whole screen while open) / LEAVE GAME / QUIT TO DESKTOP. Players 2-4's: RESUME /
+  **DROP OUT** (only they leave: what they carry drops where they stand, their stash is safe).
+  Player 1's LEAVE GAME ends the game for this whole computer. Alone, START opens the normal
+  big pause menu as always. (`scripts/ui/player_pause.gd`, in every player's HUD.)
 - **Who uses what:** player 1 always has the keyboard + mouse, plus one controller. Everyone
   else has one controller. While player 1 plays alone, ANY controller drives them; the first one
   they use becomes theirs. (A controller used in the start menu counts as player 1's, so its
@@ -1032,8 +1044,11 @@ Up to **4 players per computer**, each with their own controller.
   highlight with their own controller. Messages about one player (their purchase, their knockout,
   what an NPC says to them) only show on their screen; news for everyone (golden koi grabbed,
   someone joined) shows on all.
-- **Shared:** the pause menu and SETTINGS (they take the whole screen while open; the game keeps
-  running).
+- **Shared:** SETTINGS and MY CAT (player 1's), and the keys / buttons (SETTINGS > KEYS).
+- **Highlighted buttons:** each HUD window (talk box, inventory, pause) keeps its own highlight
+  (`scripts/ui/seat_focus.gd`), so four players can each be in a menu at once. (Godot's own
+  "focus" allows only one highlighted button in the whole window: don't use `grab_focus()` in
+  HUD windows, use a SeatFocus.)
 - **In code:** a cat reads its own seat's buttons with `Seats.is_pressed(cat.slot, "jump")`,
   `Seats.is_just_pressed(...)`, `Seats.get_vector(cat.slot, "move_left", "move_right",
   "move_forward", "move_back")` or, for events, `Seats.event_is(cat.slot, event, "interact")`.

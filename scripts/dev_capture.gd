@@ -55,6 +55,7 @@ extends Node
 ##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --setting=NAME:VALUE  change a setting for this run (never saved), e.g. --setting=split_side_by_side:false
+##   --saved_cats=A,B  pretend you have more saved cats called A, B (for the couch lobby's cat picking)
 ##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
@@ -91,6 +92,11 @@ func _ready() -> void:
 	if args.has("setting"):
 		var parts: PackedStringArray = args["setting"].split(":")
 		Settings.set_value(parts[0], str_to_var(parts[1]))
+
+	if args.has("saved_cats"):
+		var look_rng := RandomNumberGenerator.new()
+		for cat_name in args["saved_cats"].split(","):
+			Settings.new_cat(false, cat_name, CatLook.random_look(look_rng))
 
 	# Let the main scene finish loading.
 	await get_tree().process_frame
@@ -438,9 +444,10 @@ func _ready() -> void:
 			await get_tree().process_frame  # (a join happens a moment later)
 			var game_focus := GameScreen.instance.game_viewport.gui_get_focus_owner()
 			var hud_focus := get_viewport().gui_get_focus_owner()
-			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s" % [
+			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s own_pause=%s lobby=%s" % [
 				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.for_seat(0).visible,
-				NpcDialog.is_open_for(0), Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus)])
+				NpcDialog.is_open_for(0), Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus),
+				range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats.lobby_text().replace("\n", " | ")])
 
 	if args.has("remove_local") and Game.instance != null:
 		Game.instance.remove_local_player(int(args["remove_local"]))
@@ -456,6 +463,8 @@ func _ready() -> void:
 		await _track_other_cats(scene, int(args["track"]))
 
 	print("DevCapture fps=%d" % Engine.get_frames_per_second())
+	if scene.main_menu.visible and scene.main_menu.status_label.text != "":
+		print("DevCapture menu status: %s" % scene.main_menu.status_label.text)
 	var city := scene.get_node_or_null("City") as CityGenerator
 	if city != null:
 		# Fingerprint of where every city object is: identical cities print identical numbers.

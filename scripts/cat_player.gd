@@ -416,8 +416,9 @@ func _update_footsteps(delta: float, on_floor: bool) -> void:
 
 
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
+## (Split screen: only THIS player's talk box / pause menu counts; the big pause menu stops everyone.)
 func _menu_open() -> bool:
-	return PauseMenu.is_open or NpcDialog.is_open_for(slot)
+	return PauseMenu.is_open or NpcDialog.is_open_for(slot) or PlayerPause.is_open_for(slot)
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.

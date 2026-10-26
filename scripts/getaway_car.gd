@@ -173,7 +173,7 @@ func _physics_process(delta: float) -> void:
 ## Fill in the drive input from the keyboard — only when OUR cat is behind the wheel,
 ## and not while the pause menu is open (then the car just rolls to a stop).
 func _read_driver_keys() -> void:
-	if _driver_reads_input() and not PauseMenu.is_open:
+	if _driver_reads_input() and not _driver_paused():
 		# W = +1, S = -1. On a controller the triggers work too (RT = GAS, LT = BRAKE), and
 		# they're analog: squeeze RT halfway for half gas.
 		var seat := PlayerId.slot_of(driver_id)  # the driver's own keys / controller (scripts/seats.gd)
@@ -187,7 +187,7 @@ func _read_driver_keys() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _driver_reads_input() or PauseMenu.is_open:
+	if not _driver_reads_input() or _driver_paused():
 		return
 	var seat := PlayerId.slot_of(driver_id)
 	if Seats.event_is(seat, event, "interact"):
@@ -204,6 +204,12 @@ func _unhandled_input(event: InputEvent) -> void:
 func _driver_reads_input() -> bool:
 	var driver := Game.instance.cat_for(driver_id) if driver_id != 0 and Game.instance != null else null
 	return driver != null and driver.reads_input()
+
+
+## Is the driver's player in a menu (the pause menu, or their own split-screen pause)?
+func _driver_paused() -> bool:
+	var driver := Game.instance.cat_for(driver_id) if driver_id != 0 and Game.instance != null else null
+	return PauseMenu.is_open or (driver != null and driver._menu_open())
 
 
 ## A cat (player ID) asks to get in. Runs on the host only, which decides.
@@ -267,7 +273,7 @@ func _process(delta: float) -> void:
 
 ## Driver only, every frame: right-stick look, and swinging the camera back behind the car.
 func _update_look_around(delta: float) -> void:
-	if not PauseMenu.is_open:
+	if not _driver_paused():
 		var stick := Seats.get_vector(PlayerId.slot_of(driver_id), "look_left", "look_right", "look_up", "look_down")
 		if stick != Vector2.ZERO:
 			stick *= stick.length()  # gentle near the middle, fast at full tilt (like on foot)

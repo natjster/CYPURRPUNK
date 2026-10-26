@@ -56,6 +56,9 @@ signal settings_pressed
 
 ## Where the menu camera starts, so it can sway around it.
 var _camera_yaw: float
+## The couch lobby line at the bottom of the SOLO / MULTIPLAYER and HOST / JOIN screens
+## (scripts/seats.gd): who's sitting down, and with which cat.
+var _couch_label: Label
 
 
 func _ready() -> void:
@@ -68,9 +71,23 @@ func _ready() -> void:
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.pressed.connect(_on_host_pressed)
 	$PlayScreen/VBox/Columns/JoinColumn/JoinButton.pressed.connect(func(): join_pressed.emit(address_input.text.strip_edges()))
 	$PlayScreen/VBox/BackButton.pressed.connect(show_mode_screen)
+	# Controller / arrow keys: left / right hops straight between HOST and JOIN (Godot's own
+	# guess sent "right" from HOST down to BACK).
+	var host_button: Button = $PlayScreen/VBox/Columns/HostColumn/HostButton
+	var join_button: Button = $PlayScreen/VBox/Columns/JoinColumn/JoinButton
+	host_button.focus_neighbor_right = host_button.get_path_to(join_button)
+	join_button.focus_neighbor_left = join_button.get_path_to(host_button)
 	$Version.text = "v%s  LAN" % ProjectSettings.get_setting("application/config/version", "0")
 	if menu_camera != null:
 		_camera_yaw = menu_camera.rotation.y
+	_couch_label = Label.new()
+	_couch_label.name = "CouchLobby"
+	_couch_label.position = Vector2(30, 214)
+	_couch_label.size = Vector2(260, 24)
+	_couch_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_couch_label.add_theme_color_override("font_color", Color(0.4, 1, 1))
+	_couch_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_couch_label)
 	show_main_screen()
 
 
@@ -111,7 +128,19 @@ func _show_only(screen: Control) -> void:
 
 
 ## Esc = one step back.
+## Couch lobby players' controllers (seats 2-4) only pick their cat (left / right) or leave (B):
+## they never move player 1's menu.
 func _input(event: InputEvent) -> void:
+	var seat := Seats.seat_of_event(event)
+	if visible and seat > 0:
+		get_viewport().set_input_as_handled()
+		if event.is_action_pressed("ui_left"):
+			Seats.cycle_lobby_cat(seat, -1)
+		elif event.is_action_pressed("ui_right"):
+			Seats.cycle_lobby_cat(seat, 1)
+		elif event.is_action_pressed("ui_cancel"):
+			Seats.leave_lobby(seat)
+		return
 	if not visible or not event.is_action_pressed("ui_cancel"):
 		return
 	if play_screen.visible:
@@ -147,6 +176,9 @@ func _on_settings_pressed() -> void:
 func _process(_delta: float) -> void:
 	if not visible:
 		return
+	_couch_label.visible = mode_screen.visible or play_screen.visible
+	if _couch_label.visible:
+		_couch_label.text = Seats.lobby_text()
 	var t := Time.get_ticks_msec() / 1000.0
 	if menu_camera != null:
 		menu_camera.rotation.y = _camera_yaw + deg_to_rad(camera_sway_degrees) * sin(TAU * t / camera_sway_seconds)

@@ -16,7 +16,8 @@ extends CanvasLayer
 ##       ├── Top          <- stays up while you talk / shop: Cash, Carrying, Health, DropOff, Scoreboard
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
-##       └── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
+##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
+##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
 ##   Hud.set_text("Cash", "$120")            change a label's words (by node name)
@@ -160,7 +161,8 @@ static func _targets(seat_number: int) -> Array:
 ## (and for player 1 the mouse and keys), not the game.
 static func wants_input(seat_number: int = 0) -> bool:
 	var inventory := InventoryScreen.for_seat(seat_number)
-	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible)
+	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible) \
+		or PlayerPause.is_open_for(seat_number)
 
 
 ## True while a full-screen game menu (pause, settings, MY CAT) is open; the HUD hides under it.

@@ -9,10 +9,14 @@ extends Node
 ## While seat 0 plays alone, ANY controller drives it (like a normal single-player game); the
 ## first controller they use becomes theirs ("claimed").
 ##
-## JOINING IN (until there's a proper split-screen lobby): during a game, press START on a
-## controller nobody has claimed: a new player drops in, playing your next saved cat that nobody
-## is using (MY CAT; a new one called "PLAYER 2" is made if there isn't one). They leave again with
-## START > LEAVE GAME on their own controller (that drops only them, not the whole computer).
+## JOINING: press START on a controller nobody has claimed
+##   - in the start menu's SOLO / MULTIPLAYER (or HOST / JOIN) screen = the COUCH LOBBY: the new
+##     player picks one of your saved cats with left / right (or NEW CAT), B = leave again. When the
+##     game starts (solo, host or join) they all come along (start_lobby_players).
+##   - during a game = drop in straight away, playing your next saved cat nobody is using (a new
+##     one called "PLAYER 2" is made if there isn't one). They leave again with their own pause
+##     menu's DROP OUT (that drops only them, not the whole computer).
+## Two players never play the same cat (each cat has its own cash and stash).
 ##
 ## HOW SCRIPTS READ A SEAT'S BUTTONS: every control in Controls.ACTIONS also exists once per seat,
 ## named "jump@0", "jump@1"... listening only to that seat's keys / controller. Use the helpers:
@@ -36,6 +40,9 @@ var taken: Array[bool] = []
 var _menu_pad: int = -1
 ## A controller whose START is joining a new player right now (its press opens no menu).
 var _joining: int = -1
+## The couch lobby (start menu): seat -> the saved cat id they picked ("" = a NEW CAT, made
+## when the game starts).
+var lobby_cats := {}
 ## What the per-seat controls were last built from, so they're only rebuilt when something
 ## really changed (rebuilding lets go of every button being held, e.g. the gas trigger).
 var _built_from: String = ""
@@ -52,6 +59,7 @@ func _ready() -> void:
 func reset() -> void:
 	pads.clear()
 	taken.clear()
+	lobby_cats.clear()
 	for seat in PlayerId.MAX_LOCAL:
 		pads.append(-1)
 		taken.append(seat == 0)
@@ -150,8 +158,11 @@ func _on_window_input(event: InputEvent) -> void:
 	if not (pressed_button or pushed_stick) or pads.has(event.device):
 		return
 	if not _in_game():
+		if _in_lobby() and pressed_button and event.button_index == JOY_BUTTON_START and event.device != _menu_pad:
+			_join_lobby(event.device)  # the couch lobby: a new player sits down
+			return
 		_menu_pad = event.device
-		return  # in the start menu every controller just works the menus
+		return  # in the start menu every other controller just works the menus
 	var players_own: bool = _seat0_takes_any_pad() and event.device == _menu_pad
 	if pressed_button and event.button_index == JOY_BUTTON_START and not players_own:
 		# Deferred: this START must not also open the pause menu (the pause menu ignores
@@ -187,6 +198,122 @@ func _join(device: int) -> void:
 	Game.instance.add_local_player(seat, {"name": cat.get("name", ""), "look": cat.get("look", {}), "cat_id": cat.get("id", "")})
 	Hud.show_message("PLAYER %d JOINED AS %s!  (%s > LEAVE GAME to drop out)" % [seat + 1, cat.get("name", ""), Controls.display_name("Pad Start")], 4.0)
 	print("[Seats] Controller %d joined as player %d (%s)" % [device, seat + 1, cat.get("name", "")])
+	changed.emit()
+
+
+# --- The couch lobby (start menu) ---
+
+## Is the start menu's SOLO / MULTIPLAYER or HOST / JOIN screen up (where couch players gather)?
+func _in_lobby() -> bool:
+	var game := Game.instance
+	return game != null and is_instance_valid(game) and not game.pause_menu.enabled \
+		and (game.main_menu.mode_screen.visible or game.main_menu.play_screen.visible)
+
+
+## START on a free controller in the lobby: a new player sits down with the next free cat.
+func _join_lobby(device: int) -> void:
+	var seat := taken.find(false)
+	if seat == -1:
+		return  # 4 already
+	if pads[0] == -1:
+		pads[0] = _menu_pad if _menu_pad >= 0 else KEYBOARD_ONLY  # player 1 keeps the controller they used
+	pads[seat] = device
+	taken[seat] = true
+	lobby_cats[seat] = ""
+	lobby_cats[seat] = _lobby_choices(seat)[0]
+	_rebuild_actions()
+	print("[Seats] Controller %d sat down in the lobby as player %d" % [device, seat + 1])
+	changed.emit()
+
+
+## A lobby player picks the previous (-1) / next (+1) cat: one of your saved cats nobody else
+## here picked, or NEW CAT ("").
+func cycle_lobby_cat(seat: int, direction: int) -> void:
+	if not lobby_cats.has(seat):
+		return
+	var choices := _lobby_choices(seat)
+	var index := choices.find(lobby_cats[seat])
+	lobby_cats[seat] = choices[posmod(index + direction, choices.size())]
+	changed.emit()
+
+
+## A lobby player stands up again (B).
+func leave_lobby(seat: int) -> void:
+	if not lobby_cats.has(seat):
+		return
+	lobby_cats.erase(seat)
+	taken[seat] = false
+	pads[seat] = -1
+	if count() == 1 and pads[0] == KEYBOARD_ONLY:
+		pads[0] = -1
+	_rebuild_actions()
+	changed.emit()
+
+
+## The cats a lobby player can pick: saved, named, not player 1's, not another lobby player's.
+## NEW CAT ("") is always last.
+func _lobby_choices(seat: int) -> Array:
+	var choices: Array = []
+	for cat in Settings.cats:
+		var id: String = cat.get("id", "")
+		if id == Settings.current_cat_id or str(cat.get("name", "")) == "":
+			continue
+		var used := false
+		for other in lobby_cats:
+			used = used or (other != seat and lobby_cats[other] == id)
+		if not used:
+			choices.append(id)
+	choices.append("")
+	return choices
+
+
+## The lobby, as text for the start menu: "P2 < WHISKERS >   P3 < NEW CAT >".
+func lobby_text() -> String:
+	var parts := PackedStringArray()
+	for seat in range(1, PlayerId.MAX_LOCAL):
+		if lobby_cats.has(seat):
+			parts.append("P%d < %s >" % [seat + 1, _cat_name(lobby_cats[seat])])
+	var start := Controls.display_name("Pad Start")
+	if parts.is_empty():
+		return "COUCH CO-OP: PRESS %s ON ANOTHER CONTROLLER" % start
+	var lines := "   ".join(parts)
+	if parts.size() < PlayerId.MAX_LOCAL - 1:
+		lines += "   + %s" % start
+	return lines + "\nLEFT / RIGHT = PICK CAT     %s = LEAVE" % Controls.display_name("Pad B")
+
+
+func _cat_name(cat_id: String) -> String:
+	for cat in Settings.cats:
+		if cat.get("id", "") == cat_id:
+			return str(cat.get("name", "")).to_upper()
+	return "NEW CAT"
+
+
+## game.gd, once we're in a game (solo, hosting or joined): every lobby player joins in with
+## the cat they picked (a NEW CAT is made now, called "PLAYER 2" etc.).
+func start_lobby_players() -> void:
+	for seat in lobby_cats.keys():
+		var cat_id: String = lobby_cats[seat]
+		var cat: Dictionary = {}
+		for saved in Settings.cats:
+			if saved.get("id", "") == cat_id and cat_id != Settings.current_cat_id:
+				cat = saved
+		if cat.is_empty():
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			cat = Settings.new_cat(false, "PLAYER %d" % (seat + 1), CatLook.random_look(rng))
+		Game.instance.add_local_player(seat, {"name": cat.get("name", ""), "look": cat.get("look", {}), "cat_id": cat.get("id", "")})
+	lobby_cats.clear()
+
+
+## The host said no (the game is full): that player stands up again.
+func refused(seat: int) -> void:
+	taken[seat] = false
+	pads[seat] = -1
+	if count() == 1 and pads[0] == KEYBOARD_ONLY:
+		pads[0] = -1
+	_rebuild_actions()
+	Hud.show_message("THE GAME IS FULL (%d PLAYERS): PLAYER %d CAN'T JOIN" % [Net.MAX_PLAYERS, seat + 1], 4.0)
 	changed.emit()
 
 

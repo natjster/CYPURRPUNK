@@ -40,6 +40,8 @@ static var instance: Game
 ## The name typed in the lobby. Your own cat reads this when it appears
 ## and shares it with everyone (see player_name in cat_player.gd).
 static var local_player_name: String = ""
+## Why we were sent back to the start menu (e.g. "That game is full."), shown there once.
+static var leave_reason: String = ""
 ## Split screen: the EXTRA players on this computer (slot 1, 2, 3 -> {"name", "look", "cat_id"}).
 ## Slot 0, the first player, is always the cat picked in CHOOSE YOUR CAT (Settings.current_cat()).
 var extra_local_players := {}
@@ -89,6 +91,9 @@ func _ready() -> void:
 	_apply_scene_settings()
 
 	Seats.reset()  # one player, no controllers claimed yet (scripts/seats.gd)
+	if leave_reason != "":
+		main_menu.show_status.call_deferred(leave_reason)
+		leave_reason = ""
 	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
 	city.generate(PREVIEW_SEED)
 	park_car()
@@ -163,6 +168,8 @@ func _start_playing() -> void:
 	_show_city_number()
 	# Bring back our first player's saved cash + stash (player_profile.gd).
 	$Profile.restore(PlayerId.first_local(), str(Settings.current_cat().get("id", "")), local_player_name)
+	# Couch players from the start menu's lobby come along (scripts/seats.gd).
+	Seats.start_lobby_players()
 
 
 ## Back to a fresh start menu: we chose LEAVE GAME, or the host closed the game.
@@ -291,9 +298,24 @@ func _request_add_player(slot: int) -> void:
 		return  # already playing
 	if players.get_child_count() >= Net.MAX_PLAYERS:
 		print("[Network] Game is full (%d players): no room for player %d" % [Net.MAX_PLAYERS, player_id])
+		_add_player_refused.rpc_id(PlayerId.peer_of(player_id), slot)
 		return
 	print("[Network] Player %d joined in (split screen, slot %d)" % [player_id, slot])
 	_spawn_cat(player_id)
+
+
+## Host -> a computer: no room for your player in "slot" (the game has 8 players).
+@rpc("authority", "call_local", "reliable")
+func _add_player_refused(slot: int) -> void:
+	extra_local_players.erase(slot)
+	$Profile.forget(PlayerId.make(multiplayer.get_unique_id(), slot))
+	Seats.refused(slot)
+
+
+## Host -> a computer that just connected: sorry, all 8 places are taken.
+@rpc("authority", "call_remote", "reliable")
+func _game_full() -> void:
+	leave_reason = "That game is full (%d players)." % Net.MAX_PLAYERS
 
 
 ## Host: a computer says one of its players dropped out.
@@ -313,6 +335,13 @@ func _spawn_cat(player_id: int) -> void:
 
 func _on_peer_connected(peer_id: int) -> void:
 	print("[Network] Computer %d connected" % peer_id)
+	if multiplayer.is_server() and players.get_child_count() >= Net.MAX_PLAYERS:
+		# All 8 places are taken (e.g. two computers with 4 players each): say why, then hang up.
+		print("[Network] Game is full: sending computer %d away" % peer_id)
+		_game_full.rpc_id(peer_id)
+		await get_tree().create_timer(0.5).timeout
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
+		return
 	if multiplayer.is_server():
 		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # build the same city first
 		$Items.send_state_to(peer_id)  # then which items are taken, who holds/carries what

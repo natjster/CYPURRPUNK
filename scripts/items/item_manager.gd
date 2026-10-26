@@ -281,7 +281,7 @@ func _use_held_items(delta: float) -> void:
 ## their own inventory. Player 1 on the mouse: only while the game has the mouse (not while
 ## clicking a menu).
 func _can_use_items(cat: CatPlayer) -> bool:
-	if PauseMenu.is_open or NpcDialog.is_open_for(cat.slot):
+	if cat._menu_open():
 		return false
 	var inventory := InventoryScreen.for_seat(cat.slot)
 	if inventory != null and inventory.visible:

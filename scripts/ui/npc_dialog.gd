@@ -47,6 +47,8 @@ var is_open: bool = false
 
 ## The box's size as set in hud.tscn: [left, top, right, bottom] offsets.
 var _design: Array[float] = []
+## This player's highlighted answer (scripts/ui/seat_focus.gd), moved by their own d-pad / arrows.
+var _focus := SeatFocus.new()
 
 
 func _enter_tree() -> void:
@@ -60,6 +62,7 @@ func _ready() -> void:
 	Hud.show_element("Prompt", false, seat)
 	_design = [panel.offset_left, panel.offset_top, panel.offset_right, panel.offset_bottom]
 	resized.connect(_fit_panel)
+	_focus.highlighted.connect(func(button: Button): scroll.ensure_control_visible(button))  # long pages scroll along
 	_fit_panel()
 
 
@@ -117,6 +120,9 @@ func _process(_delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if Seats.seat_of_event(event) != seat:
 		return  # another player's button (player 1's HUD hears every button first)
+	if is_open and _focus.handle(event):  # up / down picks an answer, A / Enter says it
+		get_viewport().set_input_as_handled()
+		return
 	if visible and event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -140,8 +146,7 @@ func open(speaker: String, line: String, choices: Array) -> void:
 	show()
 	if seat == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
-	scroll.follow_focus = true  # arrow keys scroll the list along with the highlighted button
-	(choices_box.get_child(0) as Button).grab_focus()
+	_focus.set_buttons(choices_box.get_children())  # the first answer is highlighted
 	# Every new page starts at the top (with the NPC's line). Deferred = after the
 	# focus-scroll above has happened, so this one wins.
 	scroll.set_deferred("scroll_vertical", 0)
@@ -151,6 +156,6 @@ func open(speaker: String, line: String, choices: Array) -> void:
 func close() -> void:
 	is_open = false
 	hide()
-	get_viewport().gui_release_focus()  # so the keyboard stops steering the old buttons
+	_focus.clear()
 	if seat == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
