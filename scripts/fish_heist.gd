@@ -356,12 +356,11 @@ func _extracted(player_id: int, earned: int, count: int, quest_bonus: int = 0) -
 	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [player_id, count, earned, quest_bonus, cash[player_id]])
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
-	if player_id == PlayerId.first_local():  # (the one HUD shows our first player)
-		var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
-		if quest_bonus > 0:
-			popup_text += "\nQUEST DONE +$%d" % quest_bonus
-		Hud.popup(popup_text, 2.5)  # the big text that fades out (scripts/ui/hud.gd)
-		Sound.play("extract")
+	var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
+	if quest_bonus > 0:
+		popup_text += "\nQUEST DONE +$%d" % quest_bonus
+	Hud.popup(popup_text, 2.5, PlayerId.slot_of(player_id))  # big fading text on THEIR screen (scripts/ui/hud.gd)
+	Sound.play("extract")
 	Seats.rumble(player_id, 0.5, 0.2, 0.3)  # a happy buzz on their controller
 	var cat := Game.instance.cat_for(player_id)
 	if cat != null:
@@ -407,18 +406,24 @@ func _forget_player(player_id: int) -> void:
 
 # --- HUD (your cash, your loot, where to go, everyone's cash: scenes/ui/hud.tscn) ---
 
+## Every player on this computer gets their own lines on their own HUD (split screen).
 func _update_hud() -> void:
-	var me := PlayerId.first_local()
-	var my_cat := Game.instance.cat_for(me)
-	if my_cat == null:
+	if Game.instance == null:
 		return
+	for cat in Game.instance.playing_cats():
+		_update_hud_for(cat)
+
+
+func _update_hud_for(my_cat: CatPlayer) -> void:
+	var me := my_cat.player_id
+	var seat := my_cat.slot
 	var items := ItemManager.instance
-	Hud.set_text("Cash", "$%d" % cash.get(me, 0))
+	Hud.set_text("Cash", "$%d" % cash.get(me, 0), seat)
 	# Under the cash: your quest's progress (e.g. "QUEST: MITTENS' FISH 2/3") if you have one,
 	# otherwise how full your loot bag is.
 	var quest_line := QuestManager.instance.hud_text(me)
 	if quest_line != "":
-		Hud.set_text("Carrying", "QUEST: " + quest_line)
+		Hud.set_text("Carrying", "QUEST: " + quest_line, seat)
 	else:
 		var used := items.bag_used(me)
 		var worth := 0
@@ -429,15 +434,15 @@ func _update_hud() -> void:
 			notes += "  FULL!"
 		if items.carry_speed(me) < 1.0:
 			notes += "  HEAVY!"
-		Hud.set_text("Carrying", "LOOT %d/%d ($%d)%s" % [used, items.bag_size, worth, notes])
+		Hud.set_text("Carrying", "LOOT %d/%d ($%d)%s" % [used, items.bag_size, worth, notes], seat)
 
 	# Distance and rough direction to the extraction beam, relative to where the camera looks.
 	# Down in the hub there's no beam to point at.
 	var where := car.global_position if car.driver_id == me else my_cat.global_position
 	if UndergroundHub.is_in_hub(where):
-		Hud.set_text("DropOff", "THE SEWERS - SAFE ZONE")
+		Hud.set_text("DropOff", "THE SEWERS - SAFE ZONE", seat)
 	else:
-		Hud.set_text("DropOff", _direction_text(where))
+		Hud.set_text("DropOff", _direction_text(where, GameScreen.instance.camera_for_seat(seat)), seat)
 
 	# Everyone's cash, richest first.
 	var rows: Array = []
@@ -448,12 +453,12 @@ func _update_hud() -> void:
 	var lines := PackedStringArray()
 	for row in rows:
 		lines.append("%s $%d" % [row[1], row[0]])
-	Hud.set_text("Scoreboard", "\n".join(lines))
+	Hud.set_text("Scoreboard", "\n".join(lines), seat)
 
 
 ## "EXTRACT > 120m": distance and rough direction to the nearest OPEN beam from where the
 ## camera looks. Adds "CLOSING 7s" when that beam is about to shut.
-func _direction_text(where: Vector3) -> String:
+func _direction_text(where: Vector3, camera: Camera3D) -> String:
 	var beam := nearest_open_beam(where)
 	if beam == -1:
 		return "NO EXTRACTION OPEN"
@@ -462,7 +467,6 @@ func _direction_text(where: Vector3) -> String:
 	if beam_time_left[beam] < beam_warning_seconds:
 		closing = "  CLOSING %ds!" % ceili(beam_time_left[beam])
 	var arrow := "^"
-	var camera := get_viewport().get_camera_3d()
 	if camera != null:
 		var look := -camera.global_transform.basis.z
 		var angle := rad_to_deg(Vector2(look.x, look.z).angle_to(Vector2(to_dropoff.x, to_dropoff.z)))

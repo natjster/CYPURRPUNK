@@ -45,7 +45,7 @@ func open_shop(cat: CatPlayer) -> void:
 			continue  # unknown item, or it has no price on its card
 		buttons.append(["BUY %s - $%d" % [data.display_name, data.price], _buy.bind(cat, item_id)])
 	buttons.append([back_text, talk.bind(cat)])
-	NpcDialog.instance.open(npc_name, line, buttons)
+	NpcDialog.for_cat(cat).open(npc_name, line, buttons)
 
 
 ## A BUY button: ask the host, then re-open the shop page (so the cash line is fresh).
@@ -53,5 +53,5 @@ func _buy(cat: CatPlayer, item_id: String) -> void:
 	ItemManager.instance.request_buy.rpc_id(1, cat.player_id, item_id)
 	# Give the host's answer (new cash) a moment to arrive before redrawing the page.
 	await get_tree().create_timer(0.2).timeout
-	if NpcDialog.is_open:
+	if NpcDialog.is_open_for(cat.slot):
 		open_shop(cat)

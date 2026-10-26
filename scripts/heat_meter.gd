@@ -151,10 +151,12 @@ func _process(_delta: float) -> void:
 	var text := "HEAT %d [%s%s]" % [lvl, "#".repeat(marks), "-".repeat(20 - marks)]
 	if lvl == MAX_LEVEL:
 		text = "HEAT MAX - MEGA VAC-COP!"
-	Hud.set_text("Heat", text)
+	for seat in PlayerId.MAX_LOCAL:  # every player on this computer sees the same heat
+		Hud.set_text("Heat", text, seat)
 	# Yellow when calm, orange, then red; blinks at max.
 	var colors := [Color(1, 0.9, 0.4), Color(1, 0.75, 0.3), Color(1, 0.55, 0.2), Color(1, 0.35, 0.2), Color(1, 0.15, 0.15)]
 	var color: Color = colors[lvl - 1]
 	if lvl == MAX_LEVEL and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25:
 		color = Color.WHITE
-	Hud.set_color("Heat", color)
+	for seat in PlayerId.MAX_LOCAL:
+		Hud.set_color("Heat", color, seat)

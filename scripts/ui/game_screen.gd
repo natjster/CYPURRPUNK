@@ -21,6 +21,10 @@ extends Control
 ## Full-screen menus (pause, settings, MY CAT) go back to one big screen while they're open.
 ## The whole picture stays 240 game pixels tall, so each player's screen is half or a quarter
 ## of it: chunky, like a real PS1 split screen.
+## Every player also gets their OWN HUD (cash, HP, prompts, inventory, talk box) on their own
+## screen, shrunk to fit (hud_scale_for). Player 1's is the HUD node; players 2-4's are copies of
+## scenes/ui/hud.tscn made here, each in its own SubViewport ("Hud2".."Hud4") so each player
+## has their own highlighted button. Each controller's presses go to its player's HUD first.
 ##
 ## Node tree:
 ##   GameScreen (this script)
@@ -32,6 +36,8 @@ extends Control
 ##   ├── GameView2..4        <- made by this script: players 2-4 (hidden until they join)
 ##   │   ├── GameViewport > Camera3D       <- their 3D view
 ##   │   └── Post > Dither                 <- the CRT look on top (what you see)
+##   ├── Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
+##   │   └── Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
 ##   └── JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
 ##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
@@ -46,6 +52,9 @@ static var instance: GameScreen
 @export var design_width: int = 320
 ## Split screen: the black line between players' screens, in game pixels (0 = none).
 @export var divider: int = 1
+## Split screen: how big a player's HUD is on a smaller screen, compared to "just shrink it to
+## fit" (1.0). Higher = bigger text (crowded), lower = smaller. Never bigger than full size.
+@export var split_hud_boost: float = 1.25
 
 @onready var hud: Hud = $HUD
 @onready var game_view: TextureRect = $GameView
@@ -56,6 +65,9 @@ static var instance: GameScreen
 ## "seat": which seat it shows (-1 = hidden)}.
 var _extra_panes: Array[Dictionary] = []
 var _join_hint: Label
+## Players 2-4's HUDs, by seat (index 1-3; index 0 unused): {"view": TextureRect,
+## "viewport": SubViewport, "hud": Hud}.
+var _seat_huds: Array = [null]
 ## What the screen was last laid out for, so it's only re-done when something changes.
 var _layout_key: String = ""
 
@@ -132,6 +144,27 @@ func _build_extra_panes() -> void:
 	Settings.changed.connect(_copy_crt_settings)
 	_copy_crt_settings()
 
+	# Players 2-4's HUDs, each in its own SubViewport (their own highlighted button).
+	for seat in range(1, PlayerId.MAX_LOCAL):
+		var hud_view := TextureRect.new()
+		hud_view.name = "Hud%d" % (seat + 1)
+		hud_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hud_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hud_view.hide()
+		add_child(hud_view)
+		var hud_viewport := SubViewport.new()
+		hud_viewport.name = "Viewport"
+		hud_viewport.transparent_bg = true
+		hud_viewport.size_2d_override_stretch = true  # laid out in HUD units, drawn at real resolution
+		hud_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		hud_viewport.gui_embed_subwindows = true
+		hud_view.add_child(hud_viewport)
+		hud_view.texture = hud_viewport.get_texture()
+		var seat_hud := preload("res://scenes/ui/hud.tscn").instantiate() as Hud
+		seat_hud.seat = seat  # before it enters the tree: it registers as that player's HUD
+		hud_viewport.add_child(seat_hud)
+		_seat_huds.append({"view": hud_view, "viewport": hud_viewport, "hud": seat_hud})
+
 	_join_hint = Label.new()
 	_join_hint.name = "JoinHint"
 	_join_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -147,7 +180,7 @@ func _build_extra_panes() -> void:
 ## extra screens' cameras where their players' cats are looking.
 func _process(_delta: float) -> void:
 	var seats := shown_seats()
-	var key := "%s %s %s" % [seats, Settings.split_side_by_side, Hud.wants_input()]
+	var key := "%s %s" % [seats, Settings.split_side_by_side]
 	if key != _layout_key:
 		_fit()
 	_follow_cameras()
@@ -165,6 +198,27 @@ func shown_seats() -> Array[int]:
 		if cat != null and cat.reads_input():
 			seats.append(seat)
 	return seats
+
+
+## The camera a player's screen looks through (seat 0 = player 1), or null if they have no
+## screen right now.
+func camera_for_seat(seat: int) -> Camera3D:
+	if seat == 0:
+		return game_viewport.get_camera_3d()
+	for pane in _extra_panes:
+		if pane.seat == seat:
+			return pane.camera
+	return null
+
+
+## How big a player's screen is in game pixels (for placing things on it, e.g. name tags).
+func screen_size_for_seat(seat: int) -> Vector2:
+	if seat == 0:
+		return Vector2(game_viewport.size)
+	for pane in _extra_panes:
+		if pane.seat == seat:
+			return Vector2(pane.viewport.size)
+	return Vector2.ONE
 
 
 ## The cameras of every screen being shown (player 1's first). The hub uses this to decide
@@ -187,7 +241,7 @@ func _fit() -> void:
 	if window.x < 1.0 or window.y < 1.0:
 		return  # minimised
 	var seats := shown_seats()
-	_layout_key = "%s %s %s" % [seats, Settings.split_side_by_side, Hud.wants_input()]
+	_layout_key = "%s %s" % [seats, Settings.split_side_by_side]
 	# This scene is laid out in "HUD units" (Project Settings > Display > Window: 720 tall),
 	# which Godot scales to the real window. units_per_pixel turns real pixels into those units.
 	var units_per_pixel := get_viewport_rect().size.y / window.y
@@ -227,12 +281,29 @@ func _fit() -> void:
 		_join_hint.position = (corner + Vector2(rects[3].position) * zoom) * units_per_pixel
 		_join_hint.size = Vector2(rects[3].size) * zoom * units_per_pixel
 
-	# The HUD sits on player 1's screen. (While the inventory or talk box is open it gets the
-	# whole picture, so those windows fit.)
-	var hud_rect := Rect2(corner * units_per_pixel, whole * zoom * units_per_pixel)
-	if not Hud.wants_input():
-		hud_rect = Rect2(game_view.position, game_view.size)
-	hud.fit_to(hud_rect)
+	# Every player's HUD sits on their own screen, shrunk to fit.
+	hud.fit_to(Rect2(game_view.position, game_view.size), hud_scale_for(game_view.size))
+	for seat in range(1, PlayerId.MAX_LOCAL):
+		var seat_hud: Dictionary = _seat_huds[seat]
+		var pane_index := seats.find(seat)
+		var shown := pane_index > 0
+		seat_hud.view.visible = shown
+		seat_hud.viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown else SubViewport.UPDATE_DISABLED
+		if not shown:
+			continue
+		var pane_view: TextureRect = _extra_panes[pane_index - 1].view
+		seat_hud.view.position = pane_view.position
+		seat_hud.view.size = pane_view.size
+		seat_hud.viewport.size = Vector2i((pane_view.size / units_per_pixel).round())  # real pixels: sharp
+		seat_hud.viewport.size_2d_override = Vector2i(pane_view.size.round())  # laid out in HUD units
+		(seat_hud.hud as Hud).fit_to(Rect2(Vector2.ZERO, pane_view.size), hud_scale_for(pane_view.size))
+
+
+## How big a HUD should be on a screen this size (HUD units): 1 = full size (a 720-tall screen),
+## smaller for a half or quarter screen, so the cash, HP and windows still fit.
+func hud_scale_for(screen_units: Vector2) -> float:
+	var fit := minf(screen_units.y / 720.0, screen_units.x / 960.0)
+	return clampf(fit * split_hud_boost, 0.5, 1.0)
 
 
 ## Where each player's screen goes inside the whole picture (game pixels), player 1 first.
@@ -293,10 +364,19 @@ func _follow_cameras() -> void:
 
 ## Your mouse and keys arrive here first. Pass them on to the game inside GameViewport,
 ## with mouse positions turned into game pixels (so menus and mouse-look work as before).
-## (Except while a HUD window - the talk box or inventory - is open: then they stay up here
-## for the HUD's own buttons.)
+## (Except while player 1's HUD window - the talk box or inventory - is open: then their keys,
+## mouse and controller stay up here for the HUD's own buttons.)
+## Split screen: players 2-4's controller presses go to THEIR HUD first (their inventory and
+## talk box), and only on to the game if their HUD didn't want them.
 func _input(event: InputEvent) -> void:
-	if Hud.wants_input():
+	var seat := Seats.seat_of_event(event)
+	if seat > 0 and _seat_huds[seat].view.visible:
+		var hud_viewport: SubViewport = _seat_huds[seat].viewport
+		hud_viewport.push_input(event)
+		if hud_viewport.is_input_handled() or Hud.wants_input(seat):
+			get_viewport().set_input_as_handled()
+			return
+	elif seat == 0 and Hud.wants_input(0):
 		return
 	var scale_to_game := Vector2(game_viewport.size) / game_view.size
 	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),

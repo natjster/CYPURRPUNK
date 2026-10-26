@@ -173,7 +173,8 @@ func _ready() -> void:
 			# the screen: scripts/ui/game_screen.gd.)
 			camera.make_current()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-			$NameTag.hide()  # no need to see your own name
+			# (Your own name isn't shown on YOUR screen: hud_name_tags.gd skips it. Couch
+			# players next to you still see it on theirs.)
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
@@ -291,7 +292,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif Seats.event_is(slot, event, "interact") and UndergroundHub.instance.near_stash(self):
 		# At THE STASH lockers in the sewers: the inventory opens with your stash in it.
-		InventoryScreen.instance.open(self)
+		InventoryScreen.for_seat(slot).open(self)
 		get_viewport().set_input_as_handled()
 	elif Seats.event_is(slot, event, "interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
@@ -416,7 +417,7 @@ func _update_footsteps(delta: float, on_floor: bool) -> void:
 
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
 func _menu_open() -> bool:
-	return PauseMenu.is_open or NpcDialog.is_open
+	return PauseMenu.is_open or NpcDialog.is_open_for(slot)
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
@@ -428,8 +429,8 @@ func _input_blocked() -> bool:
 
 
 func _pad_in_inventory() -> bool:
-	return InventoryScreen.instance != null and InventoryScreen.instance.visible \
-		and InventoryScreen.instance.owner_cat == self and Seats.uses_pad(slot)
+	var inventory := InventoryScreen.for_seat(slot)
+	return inventory != null and inventory.visible and Seats.uses_pad(slot)
 
 
 ## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".

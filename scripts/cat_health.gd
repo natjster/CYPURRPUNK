@@ -32,7 +32,8 @@ static var instance: CatHealth
 ## A player who isn't in the list has full health.
 var health := {}
 
-var _flash_time: float = 0.0
+## Player ID -> seconds left of flashing the HP line (one of our players just got hurt).
+var _flash_time := {}
 
 
 
@@ -86,12 +87,11 @@ func _physics_process(_delta: float) -> void:
 ## Host -> everyone: this player's HP is now "hp".
 @rpc("authority", "call_local", "reliable")
 func _set_health(player_id: int, hp: int) -> void:
-	# One of our players got hurt: thump their controller. (The one HUD shows our first player;
-	# split screen gives each player their own later.)
+	# One of our players got hurt: thump their controller (and flash their HP line, below).
 	if PlayerId.is_local(player_id) and hp < get_health(player_id) and hp > 0:
 		Seats.rumble(player_id, 0.3, 0.7, 0.25)
-	if player_id == PlayerId.first_local() and hp < get_health(player_id):
-		_flash_time = 0.6  # we got hurt: flash the HP line
+	if PlayerId.is_local(player_id) and hp < get_health(player_id):
+		_flash_time[player_id] = 0.6  # flash their HP line
 		if hp > 0:
 			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
 	health[player_id] = hp
@@ -105,9 +105,8 @@ func _knocked_out(player_id: int, cause: String) -> void:
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
 	Seats.rumble(player_id, 0.8, 1.0, 0.7)  # big shake on their controller
-	if player_id == PlayerId.first_local():
-		Sound.play("knockout")
-		Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
+	Sound.play("knockout")
+	Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5, cat.slot)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):
 		cat.knocked_out = false
@@ -134,14 +133,14 @@ func _forget_player(player_id: int) -> void:
 	health.erase(player_id)
 
 
-# --- HUD: "HP ##-" under your cash ---
+# --- HUD: "HP ##-" under your cash (every player on this computer, on their own HUD) ---
 
 func _process(delta: float) -> void:
-	var me := PlayerId.first_local()
-	if Game.instance.my_cat() == null:
-		return
-	var hp := get_health(me)
-	Hud.set_text("Health", "HP " + "#".repeat(hp) + "-".repeat(maxi(max_health - hp, 0)) + ("  KNOCKED OUT" if hp <= 0 else ""))
-	_flash_time = maxf(_flash_time - delta, 0.0)
-	var blink := _flash_time > 0.0 and fmod(_flash_time, 0.2) < 0.1
-	Hud.set_color("Health", Color.WHITE if blink else hud_color)
+	for cat in Game.instance.playing_cats():
+		var me := cat.player_id
+		var hp := get_health(me)
+		Hud.set_text("Health", "HP " + "#".repeat(hp) + "-".repeat(maxi(max_health - hp, 0)) + ("  KNOCKED OUT" if hp <= 0 else ""), cat.slot)
+		var flash := maxf(_flash_time.get(me, 0.0) - delta, 0.0)
+		_flash_time[me] = flash
+		var blink := flash > 0.0 and fmod(flash, 0.2) < 0.1
+		Hud.set_color("Health", Color.WHITE if blink else hud_color, cat.slot)

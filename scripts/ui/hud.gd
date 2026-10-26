@@ -35,9 +35,25 @@ extends CanvasLayer
 ## The whole HUD hides itself while a full-screen menu (pause, settings, MY CAT) is open.
 ## While a HUD window (talk box, inventory) is open, the mouse and keys go to the HUD instead of
 ## the game (scripts/ui/game_screen.gd asks Hud.wants_input()).
+##
+## SPLIT SCREEN: every player on this computer has their OWN HUD on their own part of the screen
+## (shrunk to fit), with their own talk box and inventory. Player 1's is this scene in
+## game_screen.tscn; players 2-4's are copies made by scripts/ui/game_screen.gd (each inside its
+## own little SubViewport, so each player has their own highlighted button). Each HUD knows its
+## SEAT (0 = player 1, scripts/seats.gd). The functions below take an optional seat:
+##   Hud.set_text("Cash", "$120", cat.slot)   player 2's cash line (seat left out = player 1)
+##   Hud.show_message("HI", 3, cat.slot)      only player 2 sees it
+##   Hud.show_message("KOI GRABBED!")         messages / popups with no seat: EVERY player sees them
 
-## The one HUD (Hud.instance).
+## Player 1's HUD (Hud.instance).
 static var instance: Hud
+## Every player's HUD on this computer, by seat (0 = player 1). Use Hud.of(seat).
+static var huds: Array = [null, null, null, null]
+## In a game right now? (So a HUD made later starts in the right state.)
+static var _playing: bool = false
+
+## Which player this HUD belongs to (their seat). Set before it's added to the scene.
+var seat: int = 0
 
 ## How long the big popup takes to fade away at the end (seconds).
 @export var popup_fade_seconds: float = 1.0
@@ -53,10 +69,19 @@ var _popup_time: float = 0.0
 
 
 func _enter_tree() -> void:
-	instance = self
+	huds[seat] = self
+	if seat == 0:
+		instance = self
+
+
+func _exit_tree() -> void:
+	if huds[seat] == self:
+		huds[seat] = null
 
 
 func _ready() -> void:
+	in_game = _playing
+	frame.clip_contents = true  # split screen: nothing spills onto another player's screen
 	frame.hide()
 	element("Message").hide()
 	element("Popup").hide()
@@ -64,55 +89,78 @@ func _ready() -> void:
 
 # --- The functions other scripts call ---
 
-## The HUD piece with this node name (anywhere under Frame), or null if there isn't one.
-static func element(element_name: String) -> Control:
-	if instance == null:
+## The HUD of the player in this seat (0 = player 1), or null.
+static func of(seat_number: int) -> Hud:
+	if seat_number < 0 or seat_number >= huds.size():
 		return null
-	return instance.get_node("Frame").find_child(element_name, true, false) as Control
+	var hud: Hud = huds[seat_number]
+	return hud if hud != null and is_instance_valid(hud) else null
+
+
+## The HUD piece with this node name (anywhere under Frame), or null if there isn't one.
+static func element(element_name: String, seat_number: int = 0) -> Control:
+	var hud := of(seat_number)
+	if hud == null:
+		return null
+	return hud.get_node("Frame").find_child(element_name, true, false) as Control
 
 
 ## Change the words on a HUD label.
-static func set_text(element_name: String, text: String) -> void:
-	var label := element(element_name) as Label
+static func set_text(element_name: String, text: String, seat_number: int = 0) -> void:
+	var label := element(element_name, seat_number) as Label
 	if label != null:
 		label.text = text
 
 
 ## Show or hide one HUD piece.
-static func show_element(element_name: String, shown: bool) -> void:
-	var piece := element(element_name)
+static func show_element(element_name: String, shown: bool, seat_number: int = 0) -> void:
+	var piece := element(element_name, seat_number)
 	if piece != null:
 		piece.visible = shown
 
 
 ## Change a label's text colour (e.g. flash the HP line white when you're hurt).
-static func set_color(element_name: String, color: Color) -> void:
-	var label := element(element_name) as Label
+static func set_color(element_name: String, color: Color, seat_number: int = 0) -> void:
+	var label := element(element_name, seat_number) as Label
 	if label != null:
 		label.add_theme_color_override("font_color", color)
 
 
 ## A line of text in the middle of the screen for a few seconds (e.g. what Don says).
-static func show_message(text: String, seconds: float = 4.0) -> void:
-	if instance == null:
-		return
-	set_text("Message", text)
-	show_element("Message", true)
-	instance._message_time = seconds
+## seat_number = only that player sees it; left out (-1) = every player on this computer.
+static func show_message(text: String, seconds: float = 4.0, seat_number: int = -1) -> void:
+	for hud in _targets(seat_number):
+		set_text("Message", text, hud.seat)
+		show_element("Message", true, hud.seat)
+		hud._message_time = seconds
 
 
 ## The big text in the middle that fades out (e.g. "EXTRACTED +$80").
-static func popup(text: String, seconds: float = 2.5) -> void:
-	if instance == null:
-		return
-	set_text("Popup", text)
-	show_element("Popup", true)
-	instance._popup_time = seconds
+## seat_number = only that player sees it; left out (-1) = every player on this computer.
+static func popup(text: String, seconds: float = 2.5, seat_number: int = -1) -> void:
+	for hud in _targets(seat_number):
+		set_text("Popup", text, hud.seat)
+		show_element("Popup", true, hud.seat)
+		hud._popup_time = seconds
 
 
-## True while a HUD window (talk box or inventory) is open: it gets the mouse and keys, not the game.
-static func wants_input() -> bool:
-	return NpcDialog.is_open or (InventoryScreen.instance != null and InventoryScreen.instance.visible)
+## The HUDs a message goes to: one player's, or everyone's (-1).
+static func _targets(seat_number: int) -> Array:
+	if seat_number >= 0:
+		var hud := of(seat_number)
+		return [hud] if hud != null else []
+	var all: Array = []
+	for i in huds.size():
+		if of(i) != null:
+			all.append(of(i))
+	return all
+
+
+## True while this player's HUD window (talk box or inventory) is open: it gets their buttons
+## (and for player 1 the mouse and keys), not the game.
+static func wants_input(seat_number: int = 0) -> bool:
+	var inventory := InventoryScreen.for_seat(seat_number)
+	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible)
 
 
 ## True while a full-screen game menu (pause, settings, MY CAT) is open; the HUD hides under it.
@@ -123,16 +171,29 @@ static func menu_open() -> bool:
 	return PauseMenu.is_open or game.settings_menu.visible or game.cat_creator.visible
 
 
-## The whole HUD on (in a game) or off (start menu).
+## The whole HUD on (in a game) or off (start menu): every player's.
 static func set_in_game(on: bool) -> void:
-	if instance != null:
-		instance.in_game = on
+	_playing = on
+	for hud in _targets(-1):
+		hud.in_game = on
 
 
 ## GameScreen calls this so the HUD covers exactly the game picture (not the black bars).
-func fit_to(rect: Rect2) -> void:
-	frame.position = rect.position
-	frame.size = rect.size
+## hud_scale < 1 shrinks everything (a quarter of the screen gets a smaller HUD that still fits).
+func fit_to(rect: Rect2, hud_scale: float = 1.0) -> void:
+	offset = rect.position
+	scale = Vector2(hud_scale, hud_scale)
+	frame.position = Vector2.ZERO
+	frame.size = rect.size / hud_scale
+	# The message line never runs off a narrow (split) screen: it wraps instead.
+	var message := frame.find_child("Message", true, false) as Label
+	if message != null:
+		if not message.has_meta("design_half_width"):
+			message.set_meta("design_half_width", -message.offset_left)
+		var half_width := minf(message.get_meta("design_half_width"), frame.size.x / 2.0 - 12.0)
+		message.offset_left = -half_width
+		message.offset_right = half_width
+		message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 # --- Every frame: timers, and hiding behind menus ---
@@ -149,4 +210,4 @@ func _process(delta: float) -> void:
 
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
 	frame.visible = in_game and not menu_open()
-	middle.visible = not wants_input()
+	middle.visible = not wants_input(seat)

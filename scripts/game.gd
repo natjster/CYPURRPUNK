@@ -194,9 +194,19 @@ func _show_city_number() -> void:
 
 
 ## A line of text in the middle of the screen for a few seconds (e.g. what Don says).
+## seat = only that player on this computer sees it (split screen); left out = everyone here.
 ## (Same as Hud.show_message; kept here because lots of scripts call it.)
-func show_message(text: String, seconds: float = 4.0) -> void:
-	Hud.show_message(text, seconds)
+func show_message(text: String, seconds: float = 4.0, seat: int = -1) -> void:
+	Hud.show_message(text, seconds, seat)
+
+
+## Every player on this computer who has a screen right now (couch co-op): their cats.
+func playing_cats() -> Array[CatPlayer]:
+	var list: Array[CatPlayer] = []
+	for cat in local_cats():
+		if cat.reads_input():
+			list.append(cat)
+	return list
 
 
 ## Host (and start menu): put the car back at its parking spot, stopped.

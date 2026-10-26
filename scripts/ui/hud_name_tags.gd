@@ -41,8 +41,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	# Split screen: each player's HUD places names using THAT player's camera and screen size.
+	var seat: int = (owner as Hud).seat if owner is Hud else 0
 	var screen := GameScreen.instance
-	var camera: Camera3D = screen.game_viewport.get_camera_3d() if screen != null else null
+	var camera: Camera3D = screen.camera_for_seat(seat) if screen != null else null
+	var game_size: Vector2 = screen.screen_size_for_seat(seat) if screen != null else Vector2.ONE
+	var me: CatPlayer = Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
 	var seen := {}
 	if camera != null:
 		for node in get_tree().get_nodes_in_group(GROUP):
@@ -50,12 +54,14 @@ func _process(_delta: float) -> void:
 			if tag == null:
 				continue
 			tag.transparency = 1.0  # see-through: the HUD draws the name instead
+			if me != null and tag.get_parent() == me:
+				continue  # (no need to see your own name)
 			var id := tag.get_instance_id()
 			seen[id] = true
 			if not _labels.has(id):
 				_labels[id] = _new_label()
 			var label: Label = _labels[id]
-			label.visible = _place(label, tag, camera, Vector2(screen.game_viewport.size))
+			label.visible = _place(label, tag, camera, game_size)
 	# Forget the names of things that are gone (a player left, the scene changed).
 	for id in _labels.keys():
 		if not seen.has(id):
@@ -101,7 +107,8 @@ func _behind_wall(camera: Camera3D, tag: Label3D) -> bool:
 	var owner_body := tag.get_parent() as CollisionObject3D
 	if owner_body != null:
 		skip.append(owner_body.get_rid())
-	var my_cat := Game.instance.my_cat() if Game.instance != null else null
+	var seat: int = (owner as Hud).seat if owner is Hud else 0
+	var my_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
 	if my_cat != null:
 		skip.append(my_cat.get_rid())
 	for car in get_tree().get_nodes_in_group("cars"):

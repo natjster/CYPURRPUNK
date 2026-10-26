@@ -355,9 +355,9 @@ func _hit_flash() -> void:
 ## Host -> the bonked cat's owner: tell them what got vacuumed.
 @rpc("authority", "call_local", "reliable")
 func _vacuumed(player_id: int, display_name: String) -> void:
-	if player_id != PlayerId.first_local():
-		return  # (the one HUD shows our first player; split screen gives each their own later)
-	Game.instance.show_message("A VAC-COP VACUUMED YOUR %s!  Smash it to get it back." % display_name, 3.0)
+	if not PlayerId.is_local(player_id):
+		return
+	Game.instance.show_message("A VAC-COP VACUUMED YOUR %s!  Smash it to get it back." % display_name, 3.0, PlayerId.slot_of(player_id))
 
 
 # --- Every computer: gliding (non-host) and the flashing lights ---

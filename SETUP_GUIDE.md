@@ -1026,9 +1026,14 @@ Up to **4 players per computer**, each with their own controller.
   The keys/buttons are the same for everyone (SETTINGS > KEYS, PAD column).
 - **Split screen:** every player gets their own part of the screen (§13, "How the screen is put
   together").
-- **Not yet (next split-screen step):** the HUD (cash, HP, prompts) only shows player 1's, on
-  player 1's screen. Menus (pause, inventory, talk box) are shared: any controller can move the
-  highlight, and a full-screen menu shows over everyone while it's open.
+- **Their own HUD:** every player has their own cash, loot, HP, extraction arrow, prompts,
+  messages and scoreboard ("YOU") on their own screen, plus their OWN inventory (Y) and talk box /
+  shop: two players can shop and sort their bags at the same time, each moving their own
+  highlight with their own controller. Messages about one player (their purchase, their knockout,
+  what an NPC says to them) only show on their screen; news for everyone (golden koi grabbed,
+  someone joined) shows on all.
+- **Shared:** the pause menu and SETTINGS (they take the whole screen while open; the game keeps
+  running).
 - **In code:** a cat reads its own seat's buttons with `Seats.is_pressed(cat.slot, "jump")`,
   `Seats.is_just_pressed(...)`, `Seats.get_vector(cat.slot, "move_left", "move_right",
   "move_forward", "move_back")` or, for events, `Seats.event_is(cat.slot, event, "interact")`.
@@ -1402,7 +1407,8 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
 - **Give something a floating name:** add a **Label3D** child where the name should be, type the
   name in **Text**, pick a **Modulate** colour, then **Node** dock (next to Inspector) > **Groups**
   > type `hud_name_tags` > **Add**.
-- Hiding the Label3D (like your own cat's, or a cat in a car) hides the HUD name too.
+- Hiding the Label3D (like a cat in a car) hides the HUD name too. Your own cat's name isn't
+  shown on your own screen (split screen: the other players still see it on theirs).
 
 ### Using it from a script (no node paths needed)
 ```gdscript
@@ -1415,6 +1421,21 @@ Hud.set_in_game(true)                     # whole HUD on (game) / off (start men
 Hud.element("Cash")                       # the node itself, for anything else
 ```
 (`Game.instance.show_message(...)` still works too: it calls `Hud.show_message`.)
+
+**Split screen (couch co-op): every player has their own HUD.** Add the player's SEAT
+(`cat.slot`: 0 = player 1, 1 = player 2...) at the end to talk to their HUD:
+```gdscript
+Hud.set_text("Cash", "$120", cat.slot)         # player 2's cash line
+Hud.show_message("SOLD!", 3.0, cat.slot)       # only that player sees it
+Hud.show_message("THE KOI IS GONE!")           # no seat on a message / popup = EVERY player sees it
+for cat in Game.instance.playing_cats():       # every player on this computer
+	Hud.set_text("Health", "...", cat.slot)
+```
+(Labels with no seat go to player 1. Their talk box and inventory: `NpcDialog.for_cat(cat)`,
+`InventoryScreen.for_seat(cat.slot)`.) Players 2-4's HUDs are made by `game_screen.gd` from
+`hud.tscn`, so any piece you add to `hud.tscn` appears on every player's HUD. On a smaller
+screen the whole HUD is shrunk to fit (Inspector of **GameScreen** > **Split Hud Boost**: higher =
+bigger text), and the talk box and message line get narrower by themselves.
 
 **Add a new HUD piece:** in `hud.tscn` right-click **Top** (or **Middle**) > **Add Child Node** >
 **Label**, give it a unique name (e.g. `Ammo`), pick an anchor, then in your script call

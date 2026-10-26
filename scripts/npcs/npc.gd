@@ -135,7 +135,7 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 	var page := _find_page(page_id)
 	if page == null:
 		push_warning("NPC %s has no page with Id '%s'." % [npc_name, page_id])
-		NpcDialog.instance.close()
+		NpcDialog.for_cat(cat).close()
 		return
 	var line := "..." if page.lines.is_empty() else page.lines[randi() % page.lines.size()]
 	var fallback := _greeting if _greeting != null else pages[0]
@@ -144,8 +144,8 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 	for choice in choices:
 		buttons.append([choice.text, _choose.bind(cat, choice)])
 	if buttons.is_empty():
-		buttons.append(["BYE", NpcDialog.instance.close])  # never leave the player stuck
-	NpcDialog.instance.open(npc_name, line, buttons)
+		buttons.append(["BYE", NpcDialog.for_cat(cat).close])  # never leave the player stuck
+	NpcDialog.for_cat(cat).open(npc_name, line, buttons)  # in the talking player's own HUD
 
 
 func _find_page(page_id: String) -> NpcPage:
@@ -158,9 +158,9 @@ func _find_page(page_id: String) -> NpcPage:
 ## A button was clicked: message, then action, then the next page (or close).
 func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 	if choice.go_to.is_empty():
-		NpcDialog.instance.close()  # close first, so an action can open something else
+		NpcDialog.for_cat(cat).close()  # close first, so an action can open something else
 	if not choice.message.is_empty():
-		Game.instance.show_message("%s: %s" % [npc_name, choice.message])
+		Game.instance.show_message("%s: %s" % [npc_name, choice.message], 4.0, cat.slot)
 	if not choice.action.is_empty():
 		_run_action(choice.action, cat)
 	if not choice.go_to.is_empty():

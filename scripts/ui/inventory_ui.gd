@@ -11,6 +11,8 @@ extends Control
 ##   LOOT BAG  fish etc. Delivered at the drop-off.
 ##   Right-click any item = drop it on the ground in front of you.
 ##   CONTROLLER: Y opens it, the d-pad / left stick picks a slot, A = click, X = drop, B / Y = close.
+## SPLIT SCREEN: every player has their own inventory screen in their own HUD (Hud.seat), showing
+## their own cat's things. InventoryScreen.for_seat(seat) finds it.
 ##
 ## AT THE STASH (standing at the lockers in the sewers, or pressing E there) the loot bag is
 ## swapped for your STASH, and clicks move things between you and the stash instead:
@@ -29,11 +31,12 @@ extends Control
 ##       ├── BagTitle + BagGrid  / StashTitle + StashGrid   (only one of the two is shown)
 ##       └── Info (hints, item descriptions, "Backpack is full.")
 
-## The one inventory screen (the cat opens it when E is pressed at the stash).
+## Player 1's inventory screen.
 static var instance: InventoryScreen
 
-## Whose inventory is showing: the cat of the player who opened it (couch co-op: any player
-## on this computer can open it with their own INVENTORY button, scripts/seats.gd).
+## Which player's screen this is (its HUD's seat).
+var seat: int = 0
+## Whose things are showing: this seat's cat (set when it opens).
 var owner_cat: CatPlayer = null
 
 ## Size of one item slot (HUD units).
@@ -60,7 +63,15 @@ var _at_stash := false
 
 
 func _enter_tree() -> void:
-	instance = self
+	seat = (owner as Hud).seat if owner is Hud else 0
+	if seat == 0:
+		instance = self
+
+
+## This player's inventory screen (seat 0 = player 1), or null.
+static func for_seat(seat_number: int) -> InventoryScreen:
+	var hud := Hud.of(seat_number)
+	return hud.get_node_or_null("Frame/Inventory") as InventoryScreen if hud != null else null
 
 
 func _ready() -> void:
@@ -134,8 +145,9 @@ func _build() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var seat := Seats.seat_of_event(event)
-	if event.is_action_pressed("inventory") and seat != -1 and not Hud.menu_open() and not NpcDialog.is_open:
+	if Seats.seat_of_event(event) != seat:
+		return  # another player's button (player 1's HUD hears every button first)
+	if event.is_action_pressed("inventory") and not Hud.menu_open() and not NpcDialog.is_open_for(seat):
 		var cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if visible:
 			_set_open(false)
@@ -163,20 +175,21 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 	if _info == null:
 		return  # not built yet (the very first frame)
 	if open_it:
-		owner_cat = cat if cat != null else Game.instance.my_cat()
+		owner_cat = cat if cat != null else Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if owner_cat == null:
 			return
 	visible = open_it
 	_last_key = ""
 	if open_it:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		if seat == 0:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
 		if Seats.uses_pad(owner_cat.slot):
 			_paw_buttons[0].grab_focus()  # a highlighted slot for the d-pad to move around from
 	else:
 		get_viewport().gui_release_focus()
 		var first := Game.instance.my_cat() if Game.instance != null else null
-		if first != null and first.is_controlled:
+		if seat == 0 and first != null and first.is_controlled:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 

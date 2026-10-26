@@ -384,7 +384,7 @@ func _ready() -> void:
 		for i in 10:
 			await get_tree().process_frame
 	if args.has("inventory"):
-		InventoryScreen.instance._set_open(true)  # same as pressing Tab
+		InventoryScreen.for_seat(0)._set_open(true)  # same as pressing Tab
 	if args.has("press_key"):
 		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
 		for pressed in [true, false]:
@@ -394,7 +394,7 @@ func _ready() -> void:
 			key.pressed = pressed
 			Input.parse_input_event(key)
 			await get_tree().process_frame
-		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s" % [args["press_key"], InventoryScreen.instance.visible, NpcDialog.is_open, PauseMenu.is_open])
+		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s" % [args["press_key"], InventoryScreen.for_seat(0).visible, NpcDialog.is_open_for(0), PauseMenu.is_open])
 	# --menu=play / settings / pause   open that menu before the snap
 	# --settings_tab=N                  which settings tab to show (0 = DISPLAY)
 	if args.has("menu") and scene is Game:
@@ -439,8 +439,8 @@ func _ready() -> void:
 			var game_focus := GameScreen.instance.game_viewport.gui_get_focus_owner()
 			var hud_focus := get_viewport().gui_get_focus_owner()
 			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s" % [
-				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.instance.visible,
-				NpcDialog.is_open, Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus)])
+				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.for_seat(0).visible,
+				NpcDialog.is_open_for(0), Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus)])
 
 	if args.has("remove_local") and Game.instance != null:
 		Game.instance.remove_local_player(int(args["remove_local"]))
@@ -596,13 +596,13 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			npc = node
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
-	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Npc.try_talk(player), NpcDialog.instance.line_label.text.left(50)])
+	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Npc.try_talk(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):
 		# --click_choice=N: a REAL mouse click on talk-box button N (through the game screen and
 		# the HUD, like a player's click), instead of --choose's direct button press.
 		for i in 3:
 			await get_tree().process_frame  # let the talk box lay out its buttons first
-		var button := NpcDialog.instance.choices_box.get_child(int(args["click_choice"])) as Button
+		var button := NpcDialog.for_cat(player).choices_box.get_child(int(args["click_choice"])) as Button
 		var at := get_viewport().get_final_transform() * button.get_global_rect().get_center()
 		var button_text := button.text
 		for pressed in [true, false]:
@@ -615,18 +615,18 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			await get_tree().process_frame
 		for i in 5:
 			await get_tree().process_frame
-		print("DevCapture click_choice %s (\"%s\"): open=%s line=\"%s\"" % [args["click_choice"], button_text, NpcDialog.is_open, NpcDialog.instance.line_label.text.left(40)])
+		print("DevCapture click_choice %s (\"%s\"): open=%s line=\"%s\"" % [args["click_choice"], button_text, NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.left(40)])
 	if args.has("choose"):
 		for n in args["choose"].split(","):
-			var buttons := NpcDialog.instance.choices_box.get_children()
-			if not NpcDialog.is_open or int(n) >= buttons.size():
+			var buttons := NpcDialog.for_cat(player).choices_box.get_children()
+			if not NpcDialog.is_open_for(0) or int(n) >= buttons.size():
 				print("DevCapture choose: no button %s" % n)
 				break
 			(buttons[int(n)] as Button).pressed.emit()
 			for i in 5:
 				await get_tree().process_frame
-			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open,
-				NpcDialog.instance.line_label.text.left(40), NpcDialog.instance.choices_box.get_child_count()])
+			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open_for(0),
+				NpcDialog.for_cat(player).line_label.text.left(40), NpcDialog.for_cat(player).choices_box.get_child_count()])
 
 
 ## --car_watch=N: every N frames, print where the car camera is looking (runs alongside the rest).

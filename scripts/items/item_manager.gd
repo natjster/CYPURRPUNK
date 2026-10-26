@@ -281,10 +281,10 @@ func _use_held_items(delta: float) -> void:
 ## their own inventory. Player 1 on the mouse: only while the game has the mouse (not while
 ## clicking a menu).
 func _can_use_items(cat: CatPlayer) -> bool:
-	if PauseMenu.is_open or NpcDialog.is_open:
+	if PauseMenu.is_open or NpcDialog.is_open_for(cat.slot):
 		return false
-	var inventory := InventoryScreen.instance
-	if inventory != null and inventory.visible and inventory.owner_cat == cat:
+	var inventory := InventoryScreen.for_seat(cat.slot)
+	if inventory != null and inventory.visible:
 		return false
 	if cat.slot == 0 and not Controls.using_pad:
 		return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
@@ -392,21 +392,21 @@ func request_buy(player_id: int, item_id: String) -> void:
 	if not UndergroundHub.is_in_hub(cat.global_position):
 		return  # the shop is down in the sewers: no buying from up top
 	if not _can_take(player_id, data):
-		_buy_result.rpc_id(PlayerId.peer_of(player_id), false, "No room for that, comrade.")
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No room for that, comrade.")
 	elif not FishHeist.instance.spend(player_id, data.price):
-		_buy_result.rpc_id(PlayerId.peer_of(player_id), false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
 	else:
 		_put_in_inventory(player_id, item_id, cat.global_position)
 		print("[Items] Player %d bought %s for $%d" % [player_id, item_id, data.price])
-		_buy_result.rpc_id(PlayerId.peer_of(player_id), true, "Bought %s for $%d." % [data.display_name, data.price])
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, "Bought %s for $%d." % [data.display_name, data.price])
 
 
 ## Host -> the buyer: how the purchase went (shown in the middle of the screen).
 @rpc("authority", "call_local", "reliable")
-func _buy_result(ok: bool, text: String) -> void:
+func _buy_result(player_id: int, ok: bool, text: String) -> void:
 	print("[Items] Shop says: %s" % text)
 	Sound.play("buy" if ok else "error")
-	Game.instance.show_message(("SOLD! " if ok else "") + text, 3.0)
+	Game.instance.show_message(("SOLD! " if ok else "") + text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
 
 
 ## The holder used up the item in this paw (catnip). Host only.
@@ -716,12 +716,19 @@ func _free_now(node: Node) -> void:
 		node.queue_free()
 
 
-## The bottom-of-screen text (HUD "Held") and crosshair, for whatever OUR cat holds.
+## The bottom-of-screen text (HUD "Held") and crosshair, for whatever each of OUR players holds
+## (on their own HUD: split screen).
 func _update_hud() -> void:
-	var cat := local_cat()
+	if Game.instance == null:
+		return
+	for cat in Game.instance.playing_cats():
+		_update_hud_for(cat)
+
+
+func _update_hud_for(cat: CatPlayer) -> void:
 	var lines := PackedStringArray()
 	var wants_crosshair := false
-	if cat != null and cat.is_controlled:
+	if cat.is_controlled:
 		var labels := ["R:", "L:"]  # right paw, left paw (keys: SETTINGS > KEYS)
 		for hand in 2:
 			var held := held_item(cat, hand)
@@ -729,9 +736,9 @@ func _update_hud() -> void:
 				var text := held.hud_text()
 				lines.append(("%s %s" % [labels[hand], text]) if text != "" else labels[hand])
 				wants_crosshair = wants_crosshair or held.wants_crosshair()
-	Hud.show_element("Held", not lines.is_empty())
-	Hud.set_text("Held", "  |  ".join(lines))
-	Hud.show_element("Crosshair", wants_crosshair)
+	Hud.show_element("Held", not lines.is_empty(), cat.slot)
+	Hud.set_text("Held", "  |  ".join(lines), cat.slot)
+	Hud.show_element("Crosshair", wants_crosshair, cat.slot)
 
 
 # --- Helpers anyone can use ---

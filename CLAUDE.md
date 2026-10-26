@@ -16,6 +16,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
   GameScreen stops forwarding input so the root GUI gets it (HUD `_input` runs before GameScreen's).
+  ONE HUD PER LOCAL PLAYER: `Hud.seat`; `Hud.of(seat)`; every static takes an optional seat (labels default
+  to seat 0; `show_message`/`popup` default -1 = all). Players 2-4's HUDs are hud.tscn copies in SubViewports
+  (`GameScreen._seat_huds`, own GUI focus); GameScreen._input pushes seat>0 pad events to that HUD first.
+  HUD scripts filter `Seats.seat_of_event(e) != seat` (player 1's root HUD hears every event). Per-player
+  producers loop `Game.instance.playing_cats()`; windows: `NpcDialog.for_cat(cat)/for_seat`,
+  `InventoryScreen.for_seat`, `Hud.wants_input(seat)`. `hud.fit_to(rect, scale)` (`hud_scale_for`).
+  Name tags use `GameScreen.camera_for_seat/screen_size_for_seat`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
   via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
@@ -43,7 +50,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,
-  then `ColorDepthDither` LAST. (`NpcDialog.is_open` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
+  then `ColorDepthDither` LAST. (`NpcDialog.is_open_for(seat)` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. (The HUD is not here: see `Hud` above.)
   Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
   `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
