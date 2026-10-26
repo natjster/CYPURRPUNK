@@ -1,6 +1,6 @@
 class_name UndergroundHub
 extends Node3D
-## MEOW-CITY 1999 â€” THE SEWERS: the underground hub where every cat starts.
+## MEOW-CITY 1999 — THE SEWERS: the underground hub where every cat starts.
 ## Attach to the "Hub" node in main.tscn. That node sits 200 m BELOW the city
 ## (position 0, -200, 0), so the hub and the city are one world and one multiplayer game:
 ## going "up top" or "back down" is just moving your cat between the two.
@@ -173,7 +173,7 @@ func _build_tunnel() -> void:
 	# Walkways either side of the channel: 1 m thick slabs with their top at floor level (0).
 	_add_box(Vector3(-(c + walkway * 0.5), -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
 	_add_box(Vector3(c + walkway * 0.5, -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
-	# Channel bottom (1 m lower) and the murky water in it (looks only â€” you can wade in it).
+	# Channel bottom (1 m lower) and the murky water in it (looks only — you can wade in it).
 	_add_box(Vector3(0, -1.5, 0), Vector3(channel_width, 1, l * 2), _wall, true)
 	var water := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
@@ -242,7 +242,7 @@ func _build_props() -> void:
 
 	_build_shop()
 
-	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now â€” later,
+	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
 	# players will feed it scrap for server-wide buffs.
 	var frame_x := -w + 1.0
 	_add_box(Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)

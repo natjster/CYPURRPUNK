@@ -241,6 +241,9 @@ func take_hit() -> void:
 
 ## Host: boom. Spit out everything we vacuumed, tell the patrol to send a new one later.
 func explode() -> void:
+	# Shot dead and run over in the same frame? Only blow up once (or two replacements come).
+	if is_queued_for_deletion():
+		return
 	if health > 0:
 		health = 0
 	for i in stomach.size():

@@ -542,6 +542,15 @@ normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
 - How much a fish pays: **Cash Value** on `items/fish.tres`.
 - How many you can carry: **Bag Size** on the **Items** node.
 
+**Multiplayer:** the host referees every pickup and extraction. Fish spots and the beam come from
+the city number, so the same city always has the same heist. The hub and Don aren't networked at
+all — everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
+player who leaves takes their cash with them (their carried fish drop where they stood).
+
+**Items stay on their own level:** a cat can only grab things within 3 m above or below it
+(`MAX_REACH_HEIGHT` in `item_manager.gd`), and something dropped in the sewers stays in the
+sewers. (Before, a cat standing in the hub could pick up fish lying in the city right above it.)
+
 ### VAC-COPs (police Roombas — the enemy)
 Eight police Roombas patrol the city's sidewalks. When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
@@ -577,11 +586,6 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
 
 **Multiplayer:** the host runs every Roomba's brain; everyone else's copy glides to where the
 host says it is. Bonks, stolen fish and explosions are all decided by the host.
-
-**Multiplayer:** the host referees every pickup and extraction. Fish spots and the beam come from
-the city number, so the same city always has the same heist. The hub and Don aren't networked at
-all — everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
-player who leaves takes their cash with them (their carried fish drop where they stood).
 
 ---
 

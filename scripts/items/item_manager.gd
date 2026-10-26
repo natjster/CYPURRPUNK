@@ -27,6 +27,8 @@ const FIRST_DROPPED_ID: int = 100000
 const SCATTER_SEED_SALT: int = 4242
 ## Where loot sits on a cat: first in its mouth, then stacked on its head.
 const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0), Vector3(0, 1.23, 0), Vector3(0, 1.34, 0)]
+## A cat can't grab an item more than this many metres above or below it (see _reach_distance).
+const MAX_REACH_HEIGHT: float = 3.0
 
 @export_group("Rules")
 ## How much loot one cat can carry.
@@ -106,6 +108,7 @@ func _on_city_generated(city_seed: int) -> void:
 	_world_nodes.clear()
 	world.clear()
 	_spawns.clear()
+	_dropped_by.clear()
 	_next_id = FIRST_DROPPED_ID
 
 	for item_id in fixed_items:
@@ -182,6 +185,7 @@ func _add_world_local(id: int, item_id: String, at: Vector3) -> void:
 
 func _remove_world_local(id: int) -> void:
 	world.erase(id)
+	_dropped_by.erase(id)  # gone from the street: nobody needs to "step away" from it any more
 	if _world_nodes.has(id):
 		_world_nodes[id].queue_free()
 		_world_nodes.erase(id)
@@ -236,7 +240,7 @@ func _host_tick() -> void:
 			continue  # no grabbing things from inside the car
 		for id in world.keys():
 			var data: ItemData = catalog[world[id].item]
-			var distance := _flat(cat.global_position, world[id].pos)
+			var distance := _reach_distance(cat.global_position, world[id].pos)
 			if _dropped_by.get(id, 0) == peer_id:
 				if distance > pickup_radius + 0.5:
 					_dropped_by.erase(id)  # walked away: it can be grabbed again
@@ -318,7 +322,8 @@ func _put_in_inventory(peer_id: int, item_id: String, fallback_spot: Vector3) ->
 func _spawn_dropped(item_id: String, at: Vector3, dropper: int = 0) -> void:
 	if dropper != 0:
 		_dropped_by[_next_id] = dropper
-	_add_world.rpc(_next_id, item_id, Vector3(at.x, 0, at.z))
+	# Keep the height: a drop in the sewers stays in the sewers (it used to pop up in the city).
+	_add_world.rpc(_next_id, item_id, at)
 	_next_id += 1
 
 
@@ -331,7 +336,7 @@ func request_pickup(world_id: int) -> void:
 	var cat := _cat(peer_id)
 	if cat == null or car.driver_id == peer_id:
 		return
-	if _flat(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(peer_id, catalog[world[world_id].item]):
+	if _reach_distance(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(peer_id, catalog[world[world_id].item]):
 		_give(peer_id, world_id)
 
 
@@ -532,7 +537,7 @@ func try_interact(cat: CatPlayer) -> bool:
 	var best_distance := interact_radius
 	for id in world:
 		var data: ItemData = catalog[world[id].item]
-		var distance := _flat(cat.global_position, world[id].pos)
+		var distance := _reach_distance(cat.global_position, world[id].pos)
 		if not data.auto_pickup and distance < best_distance:
 			best_id = id
 			best_distance = distance
@@ -677,5 +682,10 @@ func _cat(peer_id: int) -> CatPlayer:
 	return players.get_node_or_null(str(peer_id)) as CatPlayer
 
 
-func _flat(a: Vector3, b: Vector3) -> float:
+## How far apart a cat and an item are, for grabbing: measured along the ground, but
+## "out of reach" (INF) if one is far above the other. Without the height check, a cat in the
+## sewers (200 m down) could grab fish lying in the city right above its head.
+func _reach_distance(a: Vector3, b: Vector3) -> float:
+	if absf(a.y - b.y) > MAX_REACH_HEIGHT:
+		return INF
 	return Vector2(a.x - b.x, a.z - b.z).length()

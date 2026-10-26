@@ -1,5 +1,5 @@
 extends Node
-## DEV TOOL â€” takes a screenshot of the running game, saves it, then quits.
+## DEV TOOL — takes a screenshot of the running game, saves it, then quits.
 ## Does nothing during normal play (it only wakes up when given --capture).
 ##
 ## Run from a terminal in the project folder, e.g.:
@@ -50,7 +50,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var scene := get_tree().current_scene
 
-	# Wait (up to ~10 s) for OUR cat to exist â€” a joining game needs time to connect.
+	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
 	var player: CatPlayer = null
 	if args.has("host") or args.has("join"):
