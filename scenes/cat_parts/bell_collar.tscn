@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_collar"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.85, 0.1, 0.15, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_bell"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(1, 0.8, 0.25, 1)
+shader_parameter/specular = 1.0
+shader_parameter/roughness = 0.2
+
+[sub_resource type="TorusMesh" id="Mesh_collar"]
+inner_radius = 0.14
+outer_radius = 0.18
+rings = 10
+ring_segments = 4
+
+[sub_resource type="SphereMesh" id="Mesh_bell"]
+radius = 0.045
+height = 0.09
+radial_segments = 6
+rings = 3
+
+[node name="BellCollar" type="Node3D"]
+
+[node name="Collar" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_collar")
+surface_material_override/0 = SubResource("Mat_collar")
+
+[node name="Bell" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.04, -0.18)
+mesh = SubResource("Mesh_bell")
+surface_material_override/0 = SubResource("Mat_bell")

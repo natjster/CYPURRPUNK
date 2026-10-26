@@ -20,6 +20,9 @@ const SAVE_PATH: String = "user://settings.cfg"
 # --- The settings and their defaults ---
 # Player
 var player_name: String = ""
+## How your cat looks, made in the MY CAT screen (a CatLook dictionary, see scripts/cat/cat_look.gd).
+## Empty = never customised: you get a fur colour picked for you.
+var cat_look: Dictionary = {}
 # Display
 var fullscreen: bool = false
 ## Window size as a multiple of the 320x240 game picture (4 = 1280x960).
@@ -43,7 +46,7 @@ var volumetric_fog: bool = true
 
 ## Which variables get saved: [section in the file, variable name].
 const SAVED: Array = [
-	["player", "player_name"],
+	["player", "player_name"], ["player", "cat_look"],
 	["display", "fullscreen"], ["display", "window_scale"], ["display", "vsync"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
@@ -83,10 +86,10 @@ func set_value(setting: String, value: Variant) -> void:
 	save_settings()
 
 
-## Put every setting back to its default (the player name is kept).
+## Put every setting back to its default (the player name and cat look are kept).
 func reset_to_defaults() -> void:
 	for setting in _defaults:
-		if setting != "player_name":
+		if setting != "player_name" and setting != "cat_look":
 			set(setting, _defaults[setting])
 	apply()
 	save_settings()

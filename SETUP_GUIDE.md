@@ -10,6 +10,8 @@ Meow-City/
 ├── scenes/
 │   ├── main.tscn              <- THE game scene (press F5 to run this)
 │   ├── player.tscn            <- the cat
+│   ├── cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, §11)
+│   ├── cat_parts/             <- accessory models: fedora, beanie, neon_halo, shades... (§11)
 │   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
 │   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
@@ -18,6 +20,7 @@ Meow-City/
 │   └── ui/settings_menu.tscn  <- the Settings screen
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
+├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── scripts/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
@@ -35,7 +38,10 @@ Meow-City/
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
-│   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog
+│   ├── cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (§11)
+│   ├── cat_health.gd          <- HP and knockouts (§8)
+│   ├── player_profile.gd      <- saves your cash + stash between games (§8)
+│   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
 │   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
@@ -108,16 +114,19 @@ group. To see the game without it, click the eye icon next to `ColorDepthDither`
 ```
 Player (CharacterBody3D)            script: cat_player.gd
 ├── CollisionShape3D                 CapsuleShape3D r=0.3 h=0.9, position y=0.45
-├── CatModel (Node3D)                <- turns to face movement; leans during zoomies
+├── CatModel                         <- an instance of scenes/cat_model.tscn (the cat's body);
+│   │                                   turns to face movement; leans during zoomies
 │   ├── Body, Belly, LegL, LegR, Head, EarL, EarR, Muzzle, Nose, EyeL, EyeR, Tail
 │   │   (upright "villager" style: big round head, no arms; low-poly spheres/cylinders.
-│   │    Parts using the fur material get each player's fur colour automatically.)
+│   │    Colours and hats/shades/collars come from the player's MY CAT look, §11.)
 ├── CameraPivot (Node3D)             position y=0.6 — mouse left/right turns this
 │   └── SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 — mouse up/down tilts this
 │       └── Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
 ├── NameTag (Label3D)                the player's name, shown to everyone else
-└── MultiplayerSynchronizer          shares sync_position, sync_model_rotation, player_name
+└── MultiplayerSynchronizer          shares sync_position, sync_model_rotation, player_name, look
 ```
+To change the cat's body shape, open `scenes/cat_model.tscn` (every player cat and the MY CAT
+preview use it). Keep the mesh names: the colour options paint meshes by name (§11).
 
 **Key design choice:** only `CatModel` rotates, never the `Player` body. If the body rotated, the
 camera (its child) would whip around every time the cat turned.
@@ -259,7 +268,7 @@ scene so the CRT runs at full window size. Doable later if you want it.
 
 ## 6. Multiplayer
 
-The game starts on the **start menu** (PLAY / SETTINGS / QUIT, see §10). **PLAY** shows the
+The game starts on the **start menu** (PLAY / MY CAT / SETTINGS / QUIT, see §10). **PLAY** shows the
 lobby: your cat name, **HOST** (with an optional city #) and **JOIN** (with the host's address).
 Hosting alone = single player.
 
@@ -775,9 +784,9 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 
 ### What the player sees
 - **Start menu:** big flickering MEOW-CITY 1999 title over the rainy city (the camera slowly pans),
-  then **PLAY / SETTINGS / QUIT**. **PLAY** opens the lobby box (cat name, HOST + city #,
+  then **PLAY / MY CAT / SETTINGS / QUIT** (MY CAT = the character creator, §11). **PLAY** opens the lobby box (cat name, HOST + city #,
   JOIN + address, BACK). **Esc** = back. The game version shows bottom-left.
-- **Pause menu (Esc in a game):** RESUME / SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
+- **Pause menu (Esc in a game):** RESUME / MY CAT / SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
   **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
   open. LEAVE GAME goes back to the start menu; if the host leaves, everyone does.
 - **Settings:** five tabs. Click **<** / **>** to change a value; hover a row for a one-line
@@ -795,7 +804,8 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 | KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |
 | EFFECTS | CRT TV look (0-100%), PS1 wobble on/off, volumetric fog on/off |
 
-Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cat name) and `controls.cfg` (keys).
+Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cat name and MY CAT look) and
+`controls.cfg` (keys).
 Delete those files to get a fresh start.
 
 ### Controls & key binding (`scripts/controls.gd`, Autoload **Controls**)
@@ -825,7 +835,7 @@ HUD (Control)                     <- shown during a game: Cash, Carrying, DropOf
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
 ├── Title / Subtitle / Tagline (Label)
-├── MainScreen (VBoxContainer)    <- PlayButton, SettingsButton, QuitButton
+├── MainScreen (VBoxContainer)    <- PlayButton, CatButton, SettingsButton, QuitButton
 ├── PlayScreen (PanelContainer) > VBox
 │   ├── NameRow > NameLabel, NameInput
 │   ├── Columns > HostColumn (HostLabel, SeedInput, HostButton)
@@ -834,8 +844,9 @@ Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme
 ├── Status (Label)                <- "Connecting..." / errors
 └── Version (Label)
 PauseMenu (Control)               script: ui/pause_menu.gd
-└── Dim, Panel > VBox > Title, ResumeButton, SettingsButton, LeaveButton, QuitButton, Note
+└── Dim, Panel > VBox > Title, ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton, Note
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
+CatCreator (Control)              script: ui/cat_creator.gd  (MY CAT; builds itself, §11)
 Inventory (Control)               script: ui/inventory_ui.gd
 NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
 └── Panel > VBox > Speaker, Line, Choices   <- choice buttons are made by the script
@@ -881,7 +892,77 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 
 ---
 
-## 11. Backups and undo (git + GitHub Desktop)
+## 11. Character creator (MY CAT)
+
+### What the player sees
+**MY CAT** on the start menu (or in the pause menu during a game) opens the character creator:
+a list of rows on the left and your cat slowly turning on the right.
+```
+FUR       <  [colour]  >        main coat
+MARKINGS  <  [colour]  >        belly and muzzle
+EYES      <  [colour]  >        bright colours glow a little in the dark
+NOSE      <  [colour]  >
+HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / NEON HALO
+FACE      <  SHADES    >        NONE / CYBER VISOR / SHADES
+NECK      <  NONE      >        NONE / BANDANA / BELL COLLAR
+[ RANDOM ]            [ DONE ]
+```
+Every click is **saved straight away** (in `settings.cfg`, with your cat name). Changing it in the
+middle of a game changes your cat right there, and everyone else sees it. A player who never
+opens MY CAT still gets their own fur colour picked for them, like before.
+
+### Add a new accessory (no code)
+1. **Make its model.** In the FileSystem dock, right-click `scenes/cat_parts/beanie.tscn` >
+   **Duplicate...** and name it (e.g. `cowboy_hat.tscn`). Double-click it and change the meshes:
+   select a mesh > Inspector > **Mesh** for the shape, **Surface Material Override** > albedo_color
+   for the colour. Build it around the **origin (0, 0, 0)**: that point is put on the cat at the
+   slot's spot: **hat** = top of the head, **face** = just in front of the eyes, **neck** = round
+   the neck.
+2. **Make its card.** Right-click `cat_parts/beanie.tres` > **Duplicate...** (e.g.
+   `cowboy_hat.tres`). Double-click it and set: **Id** (unique, no spaces, e.g. `cowboy_hat`),
+   **Display Name** (what MY CAT shows), **Slot** (hat / face / neck), and drag your `.tscn` into
+   **Scene**.
+3. **Fit it** (optional): **Fit > Offset** nudges it (metres; -Z is towards the nose),
+   **Rotation Degrees** tilts it, **Scale** resizes it. Open MY CAT to check how it sits.
+
+That's it: it's in the MY CAT screen next time you press F5.
+
+### Change the colours (no code)
+Double-click `cat_parts/palette.tres`. It has four lists: **Fur Colors**, **Marking Colors**,
+**Eye Colors**, **Nose Colors**. Click a colour to change it; **+ Add Element** adds one. The first
+colour of each list is what a brand-new cat starts with in MY CAT.
+
+### Where it lives
+- `scripts/cat/cat_look.gd` (`CatLook`) — the framework. A cat's **look** is a small list of
+  values: four colours plus which part is in each slot. `CatLook.apply(model, look)` paints a cat
+  model and puts the parts on. It also loads the part cards and palette, makes random looks, and
+  throws away anything broken (unknown parts, wrong types).
+- `scripts/cat/cat_part.gd` (`CatPart`) — the accessory card. `scripts/cat/cat_palette.gd`
+  (`CatPalette`) — the colour lists.
+- `cat_parts/` — the cards and the palette. `scenes/cat_parts/` — the accessory models.
+- `scenes/cat_model.tscn` — the cat's body, used by player cats and the MY CAT preview. The colour
+  rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
+  EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
+- `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
+  itself, one row per colour and per slot.
+- **Multiplayer:** your look is the `look` property on your cat (`cat_player.gd`). The cat's
+  MultiplayerSynchronizer shares it like the name tag, so everyone (late joiners too) sees it.
+  Looks are only for show: they don't change anything about how you play.
+
+### Add a new slot (a little code)
+For a fourth kind of accessory (e.g. **back** for capes and jetpacks): in `cat_look.gd` add
+`"back"` to **SLOTS** and a spot to **SLOT_ANCHORS** (e.g. `"back": Vector3(0, 0.5, 0.2)`); in
+`cat_part.gd` add `"back"` to the Slot list (`@export_enum`); and add `"back": "BACK"` to
+**LABELS** in `cat_creator.gd`. The new row then appears in MY CAT by itself.
+
+### Testing shortcut
+`--menu=cat` opens MY CAT before the screenshot. `--look=N` wears a random look made from the
+number N (both on the start menu and with `--host` / `--join`); test runs never save it. Every
+cat's look is printed, e.g. `DevCapture look 1: fur=#383342 hat=neon_halo face=shades neck=-`.
+
+---
+
+## 12. Backups and undo (git + GitHub Desktop)
 
 The project is a **git repository**: every "commit" is a saved snapshot of the whole project that
 you can look at or go back to. Claude commits after each finished piece of work.

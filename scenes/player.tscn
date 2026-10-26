@@ -1,7 +1,8 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/cat_player.gd" id="1_script"]
-[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="PackedScene" path="res://scenes/cat_model.tscn" id="2_model"]
+
 [sub_resource type="SceneReplicationConfig" id="Sync_cat"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
@@ -15,82 +16,13 @@ properties/2/replication_mode = 1
 properties/3/path = NodePath(".:player_name")
 properties/3/spawn = true
 properties/3/replication_mode = 2
+properties/4/path = NodePath(".:look")
+properties/4/spawn = true
+properties/4/replication_mode = 2
 
 [sub_resource type="CapsuleShape3D" id="Shape_cat"]
 radius = 0.3
 height = 1.05
-
-[sub_resource type="ShaderMaterial" id="Mat_fur"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.95, 0.55, 0.2, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_cream"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(1, 0.93, 0.82, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_dark"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.2, 0.12, 0.25, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_eye"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.04, 0.03, 0.06, 1)
-shader_parameter/specular = 0.8
-shader_parameter/roughness = 0.2
-
-[sub_resource type="ShaderMaterial" id="Mat_nose"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(1, 0.45, 0.6, 1)
-
-[sub_resource type="SphereMesh" id="Mesh_head"]
-radius = 0.3
-height = 0.55
-radial_segments = 8
-rings = 5
-
-[sub_resource type="CylinderMesh" id="Mesh_body"]
-top_radius = 0.15
-bottom_radius = 0.22
-height = 0.36
-radial_segments = 8
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_leg"]
-top_radius = 0.07
-bottom_radius = 0.08
-height = 0.2
-radial_segments = 6
-rings = 1
-
-[sub_resource type="PrismMesh" id="Mesh_ear"]
-size = Vector3(0.17, 0.2, 0.09)
-
-[sub_resource type="SphereMesh" id="Mesh_muzzle"]
-radius = 0.12
-height = 0.16
-radial_segments = 7
-rings = 3
-
-[sub_resource type="SphereMesh" id="Mesh_eye"]
-radius = 0.045
-height = 0.12
-radial_segments = 6
-rings = 3
-
-[sub_resource type="BoxMesh" id="Mesh_nose"]
-size = Vector3(0.06, 0.04, 0.04)
-
-[sub_resource type="CylinderMesh" id="Mesh_tail"]
-top_radius = 0.035
-bottom_radius = 0.05
-height = 0.45
-radial_segments = 6
-rings = 1
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_script")
@@ -99,71 +31,7 @@ script = ExtResource("1_script")
 position = Vector3(0, 0.525, 0)
 shape = SubResource("Shape_cat")
 
-[node name="CatModel" type="Node3D" parent="."]
-
-[node name="Body" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.37, 0)
-mesh = SubResource("Mesh_body")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Belly" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.36, -0.1)
-scale = Vector3(1, 1.3, 0.7)
-mesh = SubResource("Mesh_muzzle")
-surface_material_override/0 = SubResource("Mat_cream")
-
-[node name="LegL" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(-0.1, 0.1, 0)
-mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="LegR" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0.1, 0.1, 0)
-mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Head" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.78, 0)
-mesh = SubResource("Mesh_head")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="EarL" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(-0.16, 1.04, 0)
-rotation = Vector3(0, 0, 0.3)
-mesh = SubResource("Mesh_ear")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="EarR" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0.16, 1.04, 0)
-rotation = Vector3(0, 0, -0.3)
-mesh = SubResource("Mesh_ear")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Muzzle" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.7, -0.24)
-mesh = SubResource("Mesh_muzzle")
-surface_material_override/0 = SubResource("Mat_cream")
-
-[node name="Nose" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.75, -0.35)
-mesh = SubResource("Mesh_nose")
-surface_material_override/0 = SubResource("Mat_nose")
-
-[node name="EyeL" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(-0.11, 0.83, -0.265)
-mesh = SubResource("Mesh_eye")
-surface_material_override/0 = SubResource("Mat_eye")
-
-[node name="EyeR" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0.11, 0.83, -0.265)
-mesh = SubResource("Mesh_eye")
-surface_material_override/0 = SubResource("Mat_eye")
-
-[node name="Tail" type="MeshInstance3D" parent="CatModel"]
-position = Vector3(0, 0.42, 0.28)
-rotation = Vector3(0.65, 0, 0)
-mesh = SubResource("Mesh_tail")
-surface_material_override/0 = SubResource("Mat_fur")
+[node name="CatModel" parent="." instance=ExtResource("2_model")]
 
 [node name="CameraPivot" type="Node3D" parent="."]
 position = Vector3(0, 0.75, 0)

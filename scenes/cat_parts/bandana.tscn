@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_cloth"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.3, 0.35, 0.95, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_band"]
+inner_radius = 0.14
+outer_radius = 0.18
+rings = 10
+ring_segments = 4
+
+[sub_resource type="PrismMesh" id="Mesh_flap"]
+size = Vector3(0.28, 0.17, 0.03)
+
+[node name="Bandana" type="Node3D"]
+
+[node name="Band" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_band")
+surface_material_override/0 = SubResource("Mat_cloth")
+
+[node name="Flap" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.08, -0.17)
+rotation = Vector3(0.25, 0, 3.14159)
+mesh = SubResource("Mesh_flap")
+surface_material_override/0 = SubResource("Mat_cloth")

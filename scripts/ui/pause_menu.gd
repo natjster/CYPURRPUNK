@@ -6,7 +6,7 @@ extends Control
 ##   ├── Dim (ColorRect)
 ##   └── Panel (PanelContainer) > VBox
 ##       ├── Title (Label)
-##       ├── ResumeButton, SettingsButton, LeaveButton, QuitButton
+##       ├── ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton
 ##       └── Note (Label)
 ##
 ## The game does NOT stop while it's open (it's online), but your cat and car ignore the
@@ -16,6 +16,8 @@ extends Control
 signal settings_pressed
 ## LEAVE GAME was clicked.
 signal leave_pressed
+## MY CAT was clicked (game.gd opens the character creator).
+signal cat_pressed
 
 ## True while this menu (or the settings menu opened from it) is up. The cat, the car and
 ## the inventory screen ignore the keyboard while it's true.
@@ -28,6 +30,9 @@ var enabled: bool = false
 func _ready() -> void:
 	$Panel/VBox/ResumeButton.pressed.connect(close)
 	$Panel/VBox/SettingsButton.pressed.connect(_on_settings_pressed)
+	$Panel/VBox/CatButton.pressed.connect(func():
+		hide()  # is_open stays true: the MY CAT screen is on top, so still no walking
+		cat_pressed.emit())
 	$Panel/VBox/LeaveButton.pressed.connect(func(): leave_pressed.emit())
 	$Panel/VBox/QuitButton.pressed.connect(get_tree().quit)
 	is_open = false  # (it's static, so reset it when the scene reloads)

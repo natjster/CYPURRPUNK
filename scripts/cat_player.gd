@@ -91,6 +91,15 @@ var player_name: String = "":
 		if is_node_ready():
 			_update_name_tag()
 
+## How this cat looks (colours + accessories), made in the MY CAT screen. A CatLook dictionary
+## (scripts/cat/cat_look.gd). The owner sets it from Settings.cat_look; the synchronizer
+## sends it to everyone, and setting it re-dresses the model on every computer.
+var look: Dictionary = {}:
+	set(value):
+		look = CatLook.clean(value)
+		if is_node_ready():
+			_apply_look()
+
 ## Where the owner says this cat is. Sent over the network.
 var sync_position: Vector3
 ## How the owner's cat model is turned/leaning. Sent over the network.
@@ -117,7 +126,7 @@ func _ready() -> void:
 	Settings.changed.connect(_on_settings_changed)
 	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
 	spring_arm.add_excluded_object(get_rid())
-	_apply_fur_color()
+	_apply_look()
 
 	if is_multiplayer_authority():
 		# This is MY cat: use its camera and grab the mouse.
@@ -125,6 +134,7 @@ func _ready() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		$NameTag.hide()  # no need to see your own name
 		player_name = Game.local_player_name  # the synchronizer shares it with everyone
+		look = Settings.cat_look  # ...and so is our look from the MY CAT screen
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
@@ -173,6 +183,9 @@ func _on_settings_changed() -> void:
 	_base_fov = Settings.field_of_view
 	if not is_controlled:
 		camera.fov = _base_fov
+	# Changed our look in the MY CAT screen (from the pause menu): wear it, and share it.
+	if is_multiplayer_authority() and look != CatLook.clean(Settings.cat_look):
+		look = Settings.cat_look
 
 
 ## Show the chosen name, or a stand-in if the player left the name box empty.
@@ -183,15 +196,12 @@ func _update_name_tag() -> void:
 		$NameTag.text = "HOST" if name == "1" else "CAT " + name.right(3)
 
 
-func _apply_fur_color() -> void:
+## Dress the model in our look. A player who never used the MY CAT screen gets a fur colour
+## from FUR_COLORS picked by their network ID, so cats are still easy to tell apart.
+func _apply_look() -> void:
 	var peer_id := name.to_int() if name.is_valid_int() else 1
 	var index := 0 if peer_id == 1 else 1 + peer_id % (FUR_COLORS.size() - 1)
-	var fur := ($CatModel/Body as MeshInstance3D).get_surface_override_material(0)
-	var my_fur := fur.duplicate() as ShaderMaterial  # own copy so other cats don't change
-	my_fur.set_shader_parameter("albedo_color", FUR_COLORS[index])
-	for part in cat_model.get_children():
-		if part is MeshInstance3D and part.get_surface_override_material(0) == fur:
-			part.set_surface_override_material(0, my_fur)
+	CatLook.apply(cat_model, {"fur": FUR_COLORS[index]}.merged(look, true))
 
 
 func _unhandled_input(event: InputEvent) -> void:

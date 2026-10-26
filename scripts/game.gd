@@ -44,6 +44,7 @@ static var local_player_name: String = ""
 @onready var main_menu: MainMenu = $PS1Overlay/Lobby
 @onready var pause_menu: PauseMenu = $PS1Overlay/PauseMenu
 @onready var settings_menu: SettingsMenu = $PS1Overlay/SettingsMenu
+@onready var cat_creator: CatCreator = $PS1Overlay/CatCreator
 @onready var hud: Control = $PS1Overlay/HUD
 @onready var message_label: Label = $PS1Overlay/HUD/Message
 @onready var hub: UndergroundHub = $Hub
@@ -65,6 +66,9 @@ func _ready() -> void:
 	pause_menu.settings_pressed.connect(settings_menu.open)
 	pause_menu.leave_pressed.connect(_back_to_menu.bind(true))
 	settings_menu.closed.connect(_on_settings_closed)
+	main_menu.cat_pressed.connect(cat_creator.open)
+	pause_menu.cat_pressed.connect(cat_creator.open)
+	cat_creator.closed.connect(_on_settings_closed)  # back to whichever menu opened it, too
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -146,7 +150,7 @@ func _back_to_menu(we_left: bool) -> void:
 	get_tree().reload_current_scene()
 
 
-## The settings menu closed: go back to whichever menu opened it.
+## The settings menu (or the MY CAT screen) closed: go back to whichever menu opened it.
 func _on_settings_closed() -> void:
 	if pause_menu.enabled:
 		pause_menu.open()

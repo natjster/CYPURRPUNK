@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CatPalette" format=3]
+
+[ext_resource type="Script" path="res://scripts/cat/cat_palette.gd" id="1_palette"]
+
+[resource]
+script = ExtResource("1_palette")
+fur_colors = Array[Color]([Color(0.95, 0.55, 0.2, 1), Color(0.55, 0.56, 0.62, 1), Color(0.95, 0.9, 0.8, 1), Color(0.22, 0.2, 0.26, 1), Color(0.85, 0.72, 0.4, 1), Color(0.97, 0.97, 1, 1), Color(0.45, 0.3, 0.2, 1), Color(0.4, 0.45, 0.6, 1), Color(1, 0.4, 0.75, 1), Color(0.2, 0.8, 0.75, 1)])
+marking_colors = Array[Color]([Color(1, 0.93, 0.82, 1), Color(1, 1, 1, 1), Color(0.7, 0.7, 0.75, 1), Color(0.15, 0.13, 0.18, 1), Color(0.95, 0.6, 0.3, 1), Color(1, 0.7, 0.85, 1)])
+eye_colors = Array[Color]([Color(0.04, 0.03, 0.06, 1), Color(0.3, 1, 0.4, 1), Color(1, 0.8, 0.2, 1), Color(0.3, 0.7, 1, 1), Color(1, 0.2, 0.2, 1), Color(0.7, 0.4, 1, 1)])
+nose_colors = Array[Color]([Color(1, 0.45, 0.6, 1), Color(0.1, 0.08, 0.1, 1), Color(0.5, 0.3, 0.25, 1), Color(0.9, 0.2, 0.25, 1)])

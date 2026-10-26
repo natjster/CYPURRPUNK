@@ -5,7 +5,7 @@ extends Control
 ##   Lobby (Control)                 <- this script
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
 ##   ├── Title / Subtitle / Tagline (Label)
-##   ├── MainScreen (VBoxContainer)  <- PlayButton, SettingsButton, QuitButton
+##   ├── MainScreen (VBoxContainer)  <- PlayButton, CatButton, SettingsButton, QuitButton
 ##   ├── PlayScreen (PanelContainer) > VBox
 ##   │   ├── NameRow > NameLabel, NameInput
 ##   │   ├── Columns > HostColumn (HostLabel, SeedInput, HostButton)
@@ -23,6 +23,8 @@ signal host_pressed(city_seed: int)
 signal join_pressed(address: String)
 ## SETTINGS was clicked (game.gd opens the settings menu).
 signal settings_pressed
+## MY CAT was clicked (game.gd opens the character creator, scripts/ui/cat_creator.gd).
+signal cat_pressed
 
 @export_group("Start Menu")
 ## The camera that looks at the city behind the menu (it slowly pans while the menu is open).
@@ -49,6 +51,9 @@ var _camera_yaw: float
 func _ready() -> void:
 	$MainScreen/PlayButton.pressed.connect(show_play_screen)
 	$MainScreen/SettingsButton.pressed.connect(_on_settings_pressed)
+	$MainScreen/CatButton.pressed.connect(func():
+		main_screen.hide()  # the MY CAT screen takes its place; it calls show_main_screen() after
+		cat_pressed.emit())
 	$MainScreen/QuitButton.pressed.connect(get_tree().quit)
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.pressed.connect(_on_host_pressed)
 	$PlayScreen/VBox/Columns/JoinColumn/JoinButton.pressed.connect(func(): join_pressed.emit(address_input.text.strip_edges()))

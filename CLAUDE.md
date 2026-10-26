@@ -64,6 +64,16 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `Controls.key_text("action")`, never a hard-coded key; no key-hint bar on the HUD. Test: `--rebind=A,S,KEY`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
+## Character creator (MY CAT)
+`scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
+`scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
+Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and
+`cat_parts/palette.tres` (`CatPalette`). `CatLook.apply(model, look)` / `clean()` / `random_look()`.
+Player look = `Settings.cat_look` (saved in settings.cfg); `CatPlayer.look` is synced by the cat's
+MultiplayerSynchronizer (on change) and re-dresses the model; no look = per-peer `FUR_COLORS` fallback.
+Screen: `scripts/ui/cat_creator.gd` (`PS1Overlay/CatCreator`, built in code), from main + pause menu.
+Test: `--look=N`, `--menu=cat`; prints `DevCapture look`.
+
 ## Items framework
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour

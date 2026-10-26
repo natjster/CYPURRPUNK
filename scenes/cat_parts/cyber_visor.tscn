@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_visor"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.2, 0.9, 1, 1)
+shader_parameter/emission_color = Color(0.2, 0.9, 1, 1)
+shader_parameter/emission_energy = 2.5
+
+[sub_resource type="ShaderMaterial" id="Mat_frame"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.25, 0.27, 0.3, 1)
+shader_parameter/specular = 0.6
+
+[sub_resource type="BoxMesh" id="Mesh_visor"]
+size = Vector3(0.36, 0.07, 0.03)
+
+[sub_resource type="BoxMesh" id="Mesh_side"]
+size = Vector3(0.03, 0.09, 0.2)
+
+[node name="CyberVisor" type="Node3D"]
+
+[node name="Visor" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_visor")
+surface_material_override/0 = SubResource("Mat_visor")
+
+[node name="SideL" type="MeshInstance3D" parent="."]
+position = Vector3(-0.19, 0, 0.09)
+mesh = SubResource("Mesh_side")
+surface_material_override/0 = SubResource("Mat_frame")
+
+[node name="SideR" type="MeshInstance3D" parent="."]
+position = Vector3(0.19, 0, 0.09)
+mesh = SubResource("Mesh_side")
+surface_material_override/0 = SubResource("Mat_frame")

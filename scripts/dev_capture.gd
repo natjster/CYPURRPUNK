@@ -38,7 +38,8 @@ extends Node
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --scale=N         upscale factor for the saved image (default 4)
-##   --menu=NAME       open a menu first: play, settings or pause (--settings_tab=N picks the tab)
+##   --menu=NAME       open a menu first: play, settings, pause or cat (MY CAT) (--settings_tab=N picks the tab)
+##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 
@@ -235,6 +236,14 @@ func _ready() -> void:
 			args.erase("choose")
 			await _talk(player, args)
 
+	if args.has("look"):
+		# --look=N: a random cat look from seed N, as if picked in the MY CAT screen
+		# (our cat wears it and shares it; test runs never save it).
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(args["look"])
+		Settings.set_value("cat_look", CatLook.random_look(rng))
+		for i in 10:
+			await get_tree().process_frame
 	if args.has("inventory"):
 		scene.get_node("PS1Overlay/Inventory")._set_open(true)  # same as pressing Tab
 	# --menu=play / settings / pause   open that menu before the snap
@@ -244,6 +253,7 @@ func _ready() -> void:
 			"play": scene.main_menu.show_play_screen()
 			"settings": scene.settings_menu.open()
 			"pause": scene.pause_menu.open()
+			"cat": scene.cat_creator.open()
 		if args.has("settings_tab"):
 			scene.settings_menu._show_tab(int(args["settings_tab"]))
 		# --rebind=ACTION,SLOT,KEY   click a box on the KEYS tab and press KEY (e.g. jump,1,J)
@@ -307,6 +317,14 @@ func _ready() -> void:
 	if players != null:
 		for cat in players.get_children():
 			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.name.to_int()), cat.knocked_out])
+			# What it's wearing, as seen on THIS computer (fur colour as hex + accessories).
+			var model: Node3D = cat.cat_model
+			var worn := PackedStringArray()
+			for slot in CatLook.SLOTS:
+				var part := model.get_node_or_null("Look_" + slot.capitalize())
+				worn.append("%s=%s" % [slot, part.get_meta("part_id") if part != null else "-"])
+			var fur: Color = ((model.get_node("Body") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
+			print("DevCapture look %s: fur=#%s %s" % [cat.name, fur.to_html(false), " ".join(worn)])
 
 	var image := get_viewport().get_texture().get_image()
 	var scale := int(args.get("scale", "4"))

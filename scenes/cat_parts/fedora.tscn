@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_hat"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.08, 0.06, 0.1, 1)
+shader_parameter/specular = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_band"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(1, 0.35, 0.8, 1)
+shader_parameter/emission_color = Color(1, 0.35, 0.8, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="CylinderMesh" id="Mesh_brim"]
+top_radius = 0.3
+bottom_radius = 0.3
+height = 0.03
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_crown"]
+top_radius = 0.16
+bottom_radius = 0.19
+height = 0.18
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_band"]
+top_radius = 0.195
+bottom_radius = 0.195
+height = 0.04
+radial_segments = 8
+rings = 1
+
+[node name="Fedora" type="Node3D"]
+
+[node name="Brim" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.02, 0)
+mesh = SubResource("Mesh_brim")
+surface_material_override/0 = SubResource("Mat_hat")
+
+[node name="Crown" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.12, 0)
+mesh = SubResource("Mesh_crown")
+surface_material_override/0 = SubResource("Mat_hat")
+
+[node name="Band" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.06, 0)
+mesh = SubResource("Mesh_band")
+surface_material_override/0 = SubResource("Mat_band")
