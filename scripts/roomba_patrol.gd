@@ -6,22 +6,38 @@ extends Node3D
 ## MultiplayerSpawner pointing at Roombas) copies every Roomba to every player's game,
 ## including players who join later.
 ##
+## How many are out follows the HEAT (scripts/heat_meter.gd): every heat level adds a few, and
+## at max heat the MEGA VAC-COP (scenes/roomba_boss.tscn) comes out until the heat cools down.
+##
 ## Only the HOST creates Roombas (game.gd calls start_patrol() when hosting). Where they appear
 ## is random each game — they're not part of the city seed, so they never change the city.
 
 const ROOMBA_SCENE: PackedScene = preload("res://scenes/roomba.tscn")
+const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 
-## How many Roombas patrol the city at once.
+## How many Roombas patrol the city at once when the city is calm (HEAT level 1).
+## Hotter levels add more (HeatMeter.extra_roombas_per_level, on the Heat node).
 @export var roomba_count: int = 8
 ## Seconds before a destroyed Roomba is replaced.
 @export var respawn_seconds: float = 25.0
 ## New Roombas never appear closer than this to a cat, or to the centre crossroads where
 ## cats arrive from the hub.
 @export var min_spawn_distance: float = 25.0
+## When the heat goes UP a level, one reinforcement Roomba arrives every this many seconds
+## until there are enough. (When it cools down, spare Roombas far from cats go home just as slowly.)
+@export var reinforce_seconds: float = 4.0
+
+@export_group("MEGA VAC-COP (boss)")
+## The boss appears at least this far from every cat (it drives in from across town).
+@export var boss_spawn_distance: float = 45.0
+## The boss goes home once the heat cools below this (out of 100).
+@export var boss_leaves_below_heat: float = 60.0
 
 var _respawn_at: Array[float] = []  # host: when each replacement is due
 var _clock: float = 0.0
 var _next_number: int = 0
+var _next_change_at: float = 0.0  # host: when the next reinforcement may arrive / leave
+var _boss: Roomba = null
 var _rng := RandomNumberGenerator.new()
 
 
@@ -34,14 +50,20 @@ func start_patrol() -> void:
 	for old in get_children():
 		old.queue_free()
 	_respawn_at.clear()
+	_boss = null
 	for i in roomba_count:
 		_spawn_one()
 
 
-## Host: a Roomba blew up. Show the explosion everywhere and queue its replacement.
-func roomba_destroyed(at: Vector3) -> void:
-	_show_explosion.rpc(at)
-	_respawn_at.append(_clock + respawn_seconds)
+## Host: a Roomba blew up. Show the explosion everywhere and queue its replacement
+## (the boss has no replacement: the heat decides if another one comes).
+func roomba_destroyed(roomba: Roomba) -> void:
+	_show_explosion.rpc(roomba.global_position)
+	if roomba == _boss:
+		_boss = null
+		_announce.rpc("THE MEGA VAC-COP IS DOWN!")
+	else:
+		_respawn_at.append(_clock + respawn_seconds)
 
 
 func _physics_process(delta: float) -> void:
@@ -52,6 +74,44 @@ func _physics_process(delta: float) -> void:
 		if _clock >= _respawn_at[i]:
 			_respawn_at.remove_at(i)
 			_spawn_one()
+	_follow_the_heat()
+
+
+## Host: more Roombas when the city is hot, fewer when it cools, and the boss at max heat.
+func _follow_the_heat() -> void:
+	var heat := HeatMeter.instance
+	# The boss: out at max heat, home again once it cools.
+	if _boss == null and heat.level() == HeatMeter.MAX_LEVEL:
+		_boss = BOSS_SCENE.instantiate() as Roomba
+		_boss.name = "RoombaBoss%d" % _next_number
+		_next_number += 1
+		_boss.position = _spawn_spot(boss_spawn_distance)
+		add_child(_boss, true)
+		print("[Roombas] MEGA VAC-COP deployed at %s" % _boss.position)
+	elif _boss != null and is_instance_valid(_boss) and heat.heat < boss_leaves_below_heat:
+		_boss.queue_free()  # it drives off (the spawner removes it everywhere)
+		_boss = null
+		_announce.rpc("THE MEGA VAC-COP WENT HOME.")
+
+	# Regular Roombas: how many are out (or on their way back after being smashed)?
+	if _clock < _next_change_at:
+		return
+	var regulars: Array[Roomba] = []
+	for child in get_children():
+		var roomba := child as Roomba
+		if roomba != null and not roomba.is_boss and not roomba.is_queued_for_deletion():
+			regulars.append(roomba)
+	var wanted := roomba_count + heat.extra_roombas()
+	if regulars.size() + _respawn_at.size() < wanted:
+		_spawn_one()
+		_next_change_at = _clock + reinforce_seconds
+	elif regulars.size() + _respawn_at.size() > wanted:
+		# Too many for this heat: send one home, but only one nobody is looking at.
+		for roomba in regulars:
+			if roomba.state == Roomba.State.PATROL and _far_from_cats(roomba.global_position, 30.0):
+				roomba.queue_free()
+				break
+		_next_change_at = _clock + reinforce_seconds
 
 
 func _spawn_one() -> void:
@@ -62,17 +122,27 @@ func _spawn_one() -> void:
 	add_child(roomba, true)
 
 
-## A random sidewalk spot away from the centre and from every cat.
-func _spawn_spot() -> Vector3:
+## A random sidewalk spot away from the centre and at least "distance" from every cat.
+func _spawn_spot(distance: float = min_spawn_distance) -> Vector3:
 	var spot := Vector3.ZERO
-	for attempt in 20:
+	for attempt in 30:
 		spot = ItemManager.instance.random_sidewalk_spot(_rng) + Vector3(0, 0.1, 0)
-		var clear := Vector2(spot.x, spot.z).length() > min_spawn_distance
-		for cat in Game.instance.players.get_children():
-			clear = clear and spot.distance_to((cat as Node3D).global_position) > min_spawn_distance
-		if clear:
+		if Vector2(spot.x, spot.z).length() > min_spawn_distance and _far_from_cats(spot, distance):
 			break
 	return spot
+
+
+func _far_from_cats(spot: Vector3, distance: float) -> bool:
+	for cat in Game.instance.players.get_children():
+		if spot.distance_to((cat as Node3D).global_position) < distance:
+			return false
+	return true
+
+
+## Host -> everyone: a line of text in the middle of the screen.
+@rpc("authority", "call_local", "reliable")
+func _announce(text: String) -> void:
+	Hud.show_message(text, 3.0)
 
 
 ## Everyone: a flash of orange light and bits of Roomba flying everywhere.

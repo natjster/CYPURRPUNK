@@ -25,6 +25,7 @@
 [ext_resource type="Script" path="res://scripts/player_profile.gd" id="25_profile"]
 [ext_resource type="Script" path="res://scripts/ui/cat_creator.gd" id="26_creator"]
 [ext_resource type="Script" path="res://scripts/ui/ps1_overlay.gd" id="27_overlay"]
+[ext_resource type="Script" path="res://scripts/heat_meter.gd" id="28_heat"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -145,11 +146,14 @@ script = ExtResource("24_health")
 [node name="Profile" type="Node" parent="."]
 script = ExtResource("25_profile")
 
+[node name="Heat" type="Node" parent="."]
+script = ExtResource("28_heat")
+
 [node name="Roombas" type="Node3D" parent="."]
 script = ExtResource("20_roombas")
 
 [node name="RoombaSpawner" type="MultiplayerSpawner" parent="."]
-_spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn")
+_spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn", "res://scenes/roomba_boss.tscn")
 spawn_path = NodePath("../Roombas")
 
 [node name="Hub" type="Node3D" parent="."]

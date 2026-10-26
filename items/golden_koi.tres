@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/golden_koi.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "golden_koi"
+display_name = "GOLDEN KOI"
+description = "Worth $400! But it's HEAVY (slows you down), it JINGLES (VAC-COPs spot you from further away) and grabbing it raises the HEAT."
+kind = 0
+cash_value = 400
+bag_space = 2
+carry_speed = 0.8
+noise = 1.6
+heat_on_pickup = 20.0
+pickup_announcement = "%s GRABBED THE GOLDEN KOI!"
+scene = ExtResource("2_scene")
+auto_pickup = true
+world_scale = 1.8
+glow_color = Color(1, 0.8, 0.2, 1)

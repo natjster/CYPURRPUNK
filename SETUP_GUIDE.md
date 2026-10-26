@@ -265,7 +265,9 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
   `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
   `--mouse_test` (checks mouse-look still reaches the game through the HUD screen),
-  `--click_choice=N` (a real mouse click on a talk-box button), `--press_key=Tab` (a real key).
+  `--click_choice=N` (a real mouse click on a talk-box button), `--press_key=Tab` (a real key),
+  `--heat=100` (max HEAT: the MEGA VAC-COP comes out), `--grab=golden_koi`,
+  `--roomba=boss --bait_roomba=7` (put the boss 7 m in front of you) or `--zap_roomba=18` (kill it).
   The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
   cat name. The tool switches itself off in release (exported) builds.
@@ -605,31 +607,49 @@ Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
 **The mood switch:** while *your* camera is in the hub, the moon and rain switch off and the fog
 turns green — on your screen only. Go back up and the rainy night city returns.
 
-### Fish Heist (no timer)
+### Fish Heist: loot, greed and moving beams
 
-**How to play:** glowing fish lie outside **Meow-Mart** and on sidewalks around the city. Walk
-into a fish to pick it up automatically (up to 3: one in your mouth, two stacked on your head).
-Reach the **EXTRACTION** point — the tall green light beam you can see through the fog — on foot
-or by car. Each fish pays **$50** into **your own** cash, and you're sent **back down to the
-hub** (with or without fish). If you drove in, the getaway car goes back to its parking spot,
-ready for the next trip up. Taken fish grow back after 20 seconds.
+**How to play:** loot lies around the city. Walk into it to pick it up automatically (your loot
+bag holds 3 spaces: one in your mouth, the rest stacked on your head). Three kinds:
 
-**HUD:** top-left = your cash, loot carried (or your quest's progress, see **Quests**) and your HP
-(see **Health & knockouts**); top-middle = distance and direction to the
-extraction beam (`^` ahead, `<` `>` turn, `v` behind), or `THE SEWERS - SAFE ZONE` in the hub;
-top-right = everyone's cash, richest first. (Moving / restyling the HUD: §13.)
+| Loot | Worth | Bag space | Where | Catch |
+|---|---|---|---|---|
+| **Sardine** | $20 | 1 | 8 on random sidewalks | none: small fry |
+| **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
+| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it adds **+20 HEAT** and tells everyone `NAME GRABBED THE GOLDEN KOI!` |
 
-**Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Fish are a
-normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
+Reach an **open EXTRACTION beam**, the tall green light you can see through the fog, on foot or
+by car. The city has **4 beam spots** at crossroads (you'll see their ring of posts even when
+they're off), and **only 2 are open at a time**. Each stays open 40-70 seconds; in its last 10
+seconds it **blinks** and its sign counts down (`CLOSING 7`), then it shuts and a different one
+opens somewhere else. So plan your escape and keep an eye on the clock!
+
+Every piece of loot pays its worth into **your own** cash, you're sent **back down to the hub**
+(with or without loot), and the city **cools down 15 HEAT** (see **HEAT** below). If you drove
+in, the getaway car goes back to its parking spot. Fish and sardines grow back after 20 seconds,
+the koi after 2 minutes.
+
+**HUD:** top-left = your cash, `LOOT 2/3 ($400) HEAVY!` (or your quest's progress, see
+**Quests**) and your HP; top-middle = distance and direction to the **nearest open** beam (`^`
+ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about to shut), or
+`THE SEWERS - SAFE ZONE` in the hub; under it the **HEAT** bar; top-right = everyone's cash.
+
+**Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Loot is normal
+loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres` (models in
+`scenes/items/`).
 
 **Tuning:**
-- Select **Heist** in `main.tscn`: Loot Item, Meow Mart Fish, Street Fish, Respawn Seconds,
-  Dropoff Radius, Min Dropoff Distance, Beam Color.
-- How much a fish pays: **Cash Value** on `items/fish.tres`.
-- How many you can carry: **Bag Size** on the **Items** node.
+- Select **Heist** in `main.tscn`:
+  - **Loot**: Loot Item (what sits outside Meow-Mart), Meow Mart Fish, Street Fish, Street
+    Sardines, Golden Koi (how many), Respawn Seconds, Koi Respawn Seconds, Koi Min Distance.
+  - **Extraction Beams**: Dropoff Radius, Beam Spots, Open At Once, Beam Open Min/Max Seconds,
+    Beam Warning Seconds, Min Dropoff Distance (from Meow-Mart), Beam Spacing, Beam Color.
+- What loot pays, how heavy / noisy it is: open its card in `items/` (see §9, **Loot settings**).
+- How much you can carry: **Bag Size** on the **Items** node.
 
-**Multiplayer:** the host referees every pickup and extraction. Fish spots and the beam come from
-the city number, so the same city always has the same heist. The hub and Don aren't networked at
+**Multiplayer:** the host referees every pickup and extraction. Loot spots and beam spots come
+from the city number, so the same city always has the same heist; the host alone decides which
+beams are open and tells everyone. The hub and Don aren't networked at
 all — everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
 player who leaves takes their cash with them (their carried fish drop where they stood).
 
@@ -638,7 +658,7 @@ player who leaves takes their cash with them (their carried fish drop where they
 sewers. (Before, a cat standing in the hub could pick up fish lying in the city right above it.)
 
 ### VAC-COPs (police Roombas — the enemy)
-Eight police Roombas patrol the city's sidewalks. When one spots a cat **on foot** within 14 m,
+Eight police Roombas patrol the city's sidewalks (more as the HEAT rises, see below). When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
 slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying,
 **vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **1 HP**.
@@ -669,11 +689,48 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
   Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
   Steals Loot, **Bonk Damage** = HP a bonk takes, 0 = harmless), **Toughness** (Max Health, Car
   Smash Speed).
+- **Boss** group (Is Boss, Drop On Destroy, Heat Scaling): see **HEAT and the MEGA VAC-COP**.
+  Normal Roombas get faster and sharper-eyed with heat (Heat Scaling on).
 - Roombas are on collision **Layer 2**, so cats and the car pass over them instead of getting
   stuck (Inspector > Collision > Layer). Guns still hit them.
 
 **Multiplayer:** the host runs every Roomba's brain; everyone else's copy glides to where the
 host says it is. Bonks, stolen fish and explosions are all decided by the host.
+
+### HEAT and the MEGA VAC-COP (the pressure)
+The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-middle, under the
+extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**:
+
+- It creeps up **0.5 per second** while any cat is in the city (about 3 minutes from 0 to 100 if
+  you cause no trouble).
+- Trouble adds more: **+20** for grabbing the golden koi, **+1** per gun hit on a Roomba, **+6**
+  per Roomba destroyed.
+- It cools **-15** each time someone extracts, and drains **3 per second** while nobody is up top.
+
+Every 25 heat is one **HEAT LEVEL** (a `HEAT LEVEL 3` popup + alarm). Each level above 1 brings
+**+2 Roombas** (they roll in one every 4 seconds), and all Roombas chase **7% faster** and spot
+you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
+carrying the koi...
+
+At **100 heat**: `MEGA VAC-COP DEPLOYED!`. A giant Roomba (`scenes/roomba_boss.tscn`) drives in
+from across town. It **always knows where you are** (sight 400 m), bonks for **2 HP**, can't be
+run over, and takes **18 hits**. Destroy it and it spits out a **golden koi** and the heat drops
+**45**. If the heat cools below 60 on its own (everyone extracts), it goes home.
+
+**Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
+levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas and the boss).
+
+**Tuning:**
+- Select **Heat** in `main.tscn`: **Heating Up** (Heat Per Second, Heat Per Roomba Hit, Heat Per
+  Roomba Destroyed), **Cooling Down** (Cool Per Extraction, Cool Per Second When Empty, Cool When
+  Boss Destroyed), **What Each Level Does** (Extra Roombas Per Level, Speed Per Level, Sight Per
+  Level).
+- Select **Roombas**: **Reinforce Seconds**, and under **MEGA VAC-COP**: Boss Spawn Distance,
+  Boss Leaves Below Heat.
+- The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
+  with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On
+  Destroy** (`golden_koi`), Heat Scaling (off: the boss doesn't get faster with heat).
+- How much heat an item adds when grabbed: **Heat On Pickup** on its card.
 
 ### Health & knockouts (the risk in "extraction")
 Every cat has **3 HP**, shown top-left under your cash and loot: `HP ###` (it flashes when
@@ -736,7 +793,9 @@ Markitten in the sewers (§8).
 | **Paw-Pistol** | 1 | shop, $60 | One shot per click; buy two to dual wield |
 | **Catnip** | 1 | shop, $25 | Click: 8 s of super zoomies (used up) |
 | **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
+| **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
+| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy, noisy and raises the HEAT (§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
 it (`HEAT [####------]`). About 3 s of non-stop fire overheats it: it blinks and won't fire until
@@ -786,9 +845,18 @@ Steps for your next one (e.g. a shotgun):
    (Or make it lie in the city instead: select **Items** and add it to **Scattered Items** or
    **Fixed Items** — both are empty on purpose right now.)
 
-### Adding new loot (example: a golden fish worth $250)
-Duplicate `items/fish.tres` as `golden_fish.tres`, change **Id**, **Cash Value** 250 and the
-**Scene** (e.g. a gold-tinted copy of `scenes/items/fish.tscn`), then add it to **Scattered Items**.
+### Adding new loot (example: a silver tuna worth $150)
+Duplicate `items/fish.tres` as `silver_tuna.tres`, change **Id**, **Cash Value** 150 and the
+**Scene** (e.g. a tinted copy of `scenes/items/fish.tscn`), then add it to **Scattered Items** on
+the **Items** node (or ask Claude to place it from the heist like the koi).
+
+**Loot settings** (on any loot card, Inspector > **Loot**):
+- **Cash Value**: what it pays at an extraction beam.
+- **Bag Space**: how many of the 3 bag spaces it fills (the koi takes 2).
+- **Carry Speed**: 1 = normal, 0.8 = your cat moves 20% slower while carrying it.
+- **Noise**: 1 = normal, 1.6 = VAC-COPs spot you from 60% further away.
+- **Heat On Pickup**: HEAT added when someone grabs it (§8).
+- **Pickup Announcement**: shown to everyone when it's grabbed; `%s` = the cat's name.
 
 ### Adding an item with a new behaviour (a shield, a bomb...)
 Copy **catnip** (`scripts/items/catnip.gd`: click for 8 s of speed) or **catdip**
@@ -1065,6 +1133,9 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `car_door` | getting in / out of the car | everyone nearby |
 | `hurt` / `knockout` | you lose HP / hit 0 HP | just you |
 | `extract` | you reach the extraction beam | just you |
+| `koi_grab` | someone grabs a golden koi | everyone (2D) |
+| `heat_up` | the HEAT goes up a level | everyone (2D) |
+| `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
 
@@ -1144,6 +1215,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
     │   ├── Health           <- "HP ##-" (flashes white when hurt)
     │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
+    │   ├── Heat             <- under it: "HEAT 2 [######--------------]" (scripts/heat_meter.gd)
     │   └── Scoreboard       <- top-right: everyone's cash
     ├── Middle (Control)     <- hidden while the talk box or inventory is open
     │   ├── Popup            <- big "EXTRACTED +$150" that fades out

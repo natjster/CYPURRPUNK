@@ -280,6 +280,14 @@ func _can_take(peer_id: int, data: ItemData) -> bool:
 ## Host: give the item lying at world ID to a player.
 func _give(peer_id: int, world_id: int) -> void:
 	Sound.play_everywhere("pickup", world[world_id].pos, -4.0)
+	# Big prizes (the golden koi) make the city angrier and tell everyone who took it.
+	var data: ItemData = catalog[world[world_id].item]
+	if data.heat_on_pickup > 0.0 and not UndergroundHub.is_in_hub(world[world_id].pos):
+		HeatMeter.instance.add_heat(data.heat_on_pickup)
+	if data.pickup_announcement != "":
+		var cat := _cat(peer_id)
+		var who: String = cat.player_name if cat != null and cat.player_name != "" else "SOMEONE"
+		_announce.rpc(data.pickup_announcement % who)
 	_put_in_inventory(peer_id, world[world_id].item, world[world_id].pos)
 	_remove_world.rpc(world_id)
 	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
@@ -739,6 +747,31 @@ func _ground_below(at: Vector3) -> Vector3:
 	query.exclude = skip
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	return hit.position if hit else at
+
+
+## Speed multiplier from HEAVY loot in a player's bag (ItemData.carry_speed): 1.0 = not slowed.
+## cat_player.gd multiplies its walking and zoomies speed by this.
+func carry_speed(peer_id: int) -> float:
+	var slowest := 1.0
+	for item_id in get_inventory(peer_id).bag:
+		slowest = minf(slowest, (catalog[item_id] as ItemData).carry_speed)
+	return slowest
+
+
+## How NOISY a player's loot is (ItemData.noise): 1.0 = normal. Roombas multiply how far
+## they can spot that cat by this (roomba.gd).
+func loot_noise(peer_id: int) -> float:
+	var loudest := 1.0
+	for item_id in get_inventory(peer_id).bag:
+		loudest = maxf(loudest, (catalog[item_id] as ItemData).noise)
+	return loudest
+
+
+## Host -> everyone: a line of text in the middle of the screen (e.g. "MITTENS GRABBED THE GOLDEN KOI!").
+@rpc("authority", "call_local", "reliable")
+func _announce(text: String) -> void:
+	Hud.show_message(text, 3.5)
+	Sound.play("koi_grab")  # sounds/sfx/koi_grab.wav
 
 
 ## How much loot-bag room a player is using.

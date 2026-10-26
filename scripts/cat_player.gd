@@ -315,7 +315,9 @@ func _physics_process(delta: float) -> void:
 	# Zoomies = holding Shift while actually moving (or being boosted).
 	var is_zooming := (Input.is_action_pressed("sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
 	var target_speed := zoomies_speed if is_zooming else walk_speed
-	var target_velocity := direction * target_speed * speed_boost
+	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
+	var heavy := ItemManager.instance.carry_speed(name.to_int()) if ItemManager.instance != null else 1.0
+	var target_velocity := direction * target_speed * speed_boost * heavy
 
 	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
 	var weight := 1.0 - exp(-acceleration * delta)

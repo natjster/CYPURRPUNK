@@ -19,6 +19,7 @@ extends Node
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
+##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
@@ -44,6 +45,8 @@ extends Node
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
+##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
+##                     keep it there for --heat_hold frames (default: until the snap)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 
@@ -98,6 +101,15 @@ func _ready() -> void:
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				FishHeist.instance._set_cash.rpc(peer_id, int(args["cash"])))
+		if args.has("heat") and multiplayer.is_server():
+			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
+			var hold := int(args.get("heat_hold", args.get("frames", 90)))
+			var heat_meter := HeatMeter.instance
+			var force_heat := func() -> void:
+				for i in hold:
+					heat_meter.heat = float(args["heat"])
+					await get_tree().physics_frame
+			force_heat.call()
 		if args.has("give") and multiplayer.is_server():
 			# (host) put items straight into our paws/backpack, e.g. --give=pistol,catnip
 			for item_id in args["give"].split(","):
@@ -189,7 +201,7 @@ func _ready() -> void:
 			# (where the camera's centre line meets the ground), stunned so it stays put a moment.
 			for i in 20:
 				await get_tree().process_frame  # let the camera settle (over-the-shoulder slide)
-			var roomba := _nearest_roomba(scene, player.global_position)
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
 			if not multiplayer.is_server():
 				# A client can't move the host's Roombas, so walk our cat up to one instead.
 				player.teleport_to(roomba.global_position + Vector3(float(args["bait_roomba"]), 0, 0), 0.0)
@@ -205,7 +217,7 @@ func _ready() -> void:
 				roomba.global_position = player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * float(args["bait_roomba"]) + Vector3(0, 0.1, 0)
 			print("DevCapture bait: %s placed at %s" % [roomba.name, roomba.global_position.snapped(Vector3.ONE * 0.1)])
 		if args.has("zap_roomba"):
-			var roomba := _nearest_roomba(scene, player.global_position)
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
 			for i in int(args["zap_roomba"]):
 				roomba.take_hit()
 		if args.has("hold"):
@@ -245,7 +257,8 @@ func _ready() -> void:
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
-			var beam := (scene.get_node("Heist") as FishHeist).dropoff_position + Vector3(1, 0, 1)
+			var heist_node := scene.get_node("Heist") as FishHeist
+			var beam := heist_node.beam_positions[heist_node.nearest_open_beam(player.global_position)] + Vector3(1, 0, 1)
 			var car := scene.get_node("GetawayCar") as GetawayCar
 			if car.driver_id == multiplayer.get_unique_id():
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
@@ -324,7 +337,17 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
-		print("DevCapture heist: dropoff=%s cash=%s" % [heist.dropoff_position, heist.cash])
+		print("DevCapture heist: beams=%s open=%s cash=%s" % [heist.beam_positions, heist.beam_time_left, heist.cash])
+	if HeatMeter.instance != null:
+		var regulars := 0
+		var bosses := 0
+		for roomba in scene.get_node("Roombas").get_children():
+			if roomba is Roomba and not roomba.is_queued_for_deletion():
+				if (roomba as Roomba).is_boss:
+					bosses += 1
+				else:
+					regulars += 1
+		print("DevCapture heat: %.1f level=%d roombas=%d bosses=%d" % [HeatMeter.instance.heat, HeatMeter.instance.level(), regulars, bosses])
 	var items := scene.get_node_or_null("Items") as ItemManager
 	if items != null:
 		var lying := {}
@@ -412,6 +435,18 @@ func _describe(steps: Array) -> String:
 		biggest = maxf(biggest, step)
 		total += step
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
+
+
+## The Roomba --bait_roomba / --zap_roomba act on: the nearest one, or the MEGA VAC-COP
+## with --roomba=boss (waits for it to appear).
+func _pick_roomba(scene: Node, near: Vector3, args: Dictionary) -> Roomba:
+	if args.get("roomba", "") == "boss":
+		for wait in 300:
+			for roomba in scene.get_node("Roombas").get_children():
+				if roomba is Roomba and (roomba as Roomba).is_boss:
+					return roomba
+			await get_tree().physics_frame
+	return _nearest_roomba(scene, near)
 
 
 func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:

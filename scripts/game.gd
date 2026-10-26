@@ -127,6 +127,7 @@ func _begin_game(city_seed: int) -> void:
 	park_car()
 	_start_playing()
 	_spawn_cat(1)  # the host's own cat
+	$Heat.reset()  # the city starts calm (scripts/heat_meter.gd)
 	$Roombas.start_patrol()  # the VAC-COPs come out (the spawner copies them to everyone)
 
 
@@ -237,6 +238,7 @@ func _on_peer_connected(peer_id: int) -> void:
 		$Heist.send_state_to(peer_id)  # then everyone's cash
 		$Quests.send_state_to(peer_id)  # and everyone's quests
 		$Health.send_state_to(peer_id)  # and everyone's HP
+		$Heat.send_state_to(peer_id)  # and how angry the city is
 		_spawn_cat(peer_id)
 		# Late joiner: tell them who's already driving, so that driver's cat is hidden
 		# and their copy of the car follows the right player.

@@ -22,6 +22,9 @@ extends CharacterBody3D
 ##   Shoot it (max_health hits) or ram it with the car (faster than car_smash_speed) and it
 ##   explodes, spitting out everything it vacuumed.
 ## Cats in the car and cats down in the hub are ignored.
+## The HEAT (scripts/heat_meter.gd) makes it chase faster and spot cats from further away, and a
+## cat carrying NOISY loot (the golden koi) is spotted from further too.
+## scenes/roomba_boss.tscn (the MEGA VAC-COP) is this same scene with bigger numbers + "Is Boss".
 ## Roombas sit on collision LAYER 2 (Inspector > CollisionObject3D > Collision > Layer) and
 ## only bump into layer 1 (the city). So cats and the car pass over them instead of getting
 ## stuck on them, and guns still hit them (bolts check every layer).
@@ -62,6 +65,16 @@ enum State { PATROL, CHASE, STUNNED }
 @export var max_health: int = 3
 ## The getaway car smashes it if driving faster than this (m/s).
 @export var car_smash_speed: float = 7.0
+
+@export_group("Boss")
+## The MEGA VAC-COP (scenes/roomba_boss.tscn) ticks this. Destroying a boss COOLS the heat
+## instead of raising it, and the patrol doesn't send a replacement.
+@export var is_boss: bool = false
+## Item dropped on the street when it's destroyed, on top of whatever it vacuumed
+## (e.g. "golden_koi" for the boss). "" = nothing extra.
+@export var drop_on_destroy: String = ""
+## Does the HEAT level (scripts/heat_meter.gd) make it faster and sharper-eyed?
+@export var heat_scaling: bool = true
 
 @export_group("Network Smoothing")
 @export var network_smoothing: float = 12.0
@@ -148,7 +161,8 @@ func _physics_process(delta: float) -> void:
 				_pick_patrol_target()
 			else:
 				move = _flat(cat.global_position - global_position)
-				speed = chase_speed
+				# Hotter city = faster Roombas (heat_meter.gd).
+				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
 				if move.length() < bump_range:
 					_bonk(cat)
 
@@ -176,10 +190,15 @@ func _find_cat_to_chase() -> CatPlayer:
 
 
 ## A cat on foot (visible = not in the car), up in the city, not knocked out, within "reach" metres.
+## Noisy loot (the jingling golden koi) and a hot city make "reach" longer.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
-	return cat != null and cat.visible and not UndergroundHub.is_in_hub(cat.global_position) \
-		and not CatHealth.instance.is_down(cat.name.to_int()) \
-		and _flat(cat.global_position - global_position).length() < reach
+	if cat == null or not cat.visible or UndergroundHub.is_in_hub(cat.global_position) \
+			or CatHealth.instance.is_down(cat.name.to_int()):
+		return false
+	reach *= ItemManager.instance.loot_noise(cat.name.to_int())
+	if heat_scaling:
+		reach *= HeatMeter.instance.sight_multiplier()
+	return _flat(cat.global_position - global_position).length() < reach
 
 
 ## Knock the cat flying and vacuum one piece of loot out of its bag.
@@ -242,6 +261,7 @@ func take_hit() -> void:
 		return
 	health -= 1
 	_hit_flash.rpc()
+	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit)  # gunfire makes the city angry
 	if health <= 0:
 		explode()
 		return
@@ -262,9 +282,14 @@ func explode() -> void:
 	for i in stomach.size():
 		ItemManager.instance.drop_on_street(stomach[i], global_position + Vector3(cos(i * 2.1), 0, sin(i * 2.1)) * 1.2)
 	stomach.clear()
+	if drop_on_destroy != "":
+		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
+	# Smashing a Roomba makes the city angrier... but smashing the boss cools it right down.
+	var heat := HeatMeter.instance
+	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)
 	Sound.play_everywhere("explode", global_position)
 	print("[Roomba] %s exploded" % name)
-	(get_parent() as RoombaPatrol).roomba_destroyed(global_position)
+	(get_parent() as RoombaPatrol).roomba_destroyed(self)
 	queue_free()  # the spawner removes it on everyone's screen
 
 

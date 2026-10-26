@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/sardine.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "sardine"
+display_name = "SARDINE"
+description = "Small, silver, everywhere. Worth $20 at the drop-off."
+kind = 0
+cash_value = 20
+bag_space = 1
+scene = ExtResource("2_scene")
+auto_pickup = true
+world_scale = 0.7

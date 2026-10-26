@@ -38,6 +38,18 @@ enum Kind { LOOT, HELD }
 @export var cash_value: int = 0
 ## Room it takes in the loot bag.
 @export var bag_space: int = 1
+## HEAVY loot: your cat's speed is multiplied by this while it's in your bag
+## (1.0 = no change, 0.8 = 20% slower). With several heavy things, the slowest one counts.
+@export_range(0.3, 1.0, 0.05) var carry_speed: float = 1.0
+## NOISY loot: VAC-COPs spot you from this many times further away while you carry it
+## (1.0 = normal, 1.6 = they notice you from 60% further). The loudest item counts.
+@export_range(1.0, 3.0, 0.1) var noise: float = 1.0
+## HEAT added the moment someone picks it up (scripts/heat_meter.gd). 0 = none.
+## Big prizes should make the whole city angry.
+@export var heat_on_pickup: float = 0.0
+## Message shown to EVERY player when someone picks it up ("" = nobody is told).
+## %s is replaced with the cat's name, e.g. "%s GRABBED THE GOLDEN KOI!"
+@export var pickup_announcement: String = ""
 
 @export_group("Shop")
 ## Price at the Black Markitten, the shop down in the sewers (scenes/npcs/comrade_whiskers.tscn).

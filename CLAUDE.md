@@ -61,6 +61,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
   Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;
   explode drops stomach via `ItemManager.drop_on_street`. Test: `--bait_roomba=D|aim`, `--zap_roomba=N`.
+- Greed + pressure: loot tiers sardine $20 / fish $50 / `golden_koi` $400 (ItemData `carry_speed`,
+  `noise`, `heat_on_pickup`, `pickup_announcement`; `ItemManager.carry_speed/loot_noise`). HEAT =
+  `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
+  levels 1-5, HUD label `Heat`): `RoombaPatrol._follow_the_heat` adds Roombas per level and spawns
+  the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`, drops a koi) at 100.
+  Extraction beams: `FishHeist.beam_positions` (from city seed) + host-timed `beam_time_left`
+  (`_set_beams` RPC; `nearest_open_beam`). Test: `--heat=100 [--heat_hold=N]`, `--roomba=boss`.
 - Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
   `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
   RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
