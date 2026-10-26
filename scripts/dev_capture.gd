@@ -38,6 +38,7 @@ extends Node
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --scale=N         upscale factor for the saved image (default 4)
+##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
@@ -50,6 +51,11 @@ func _ready() -> void:
 	if not args.has("capture") or not OS.is_debug_build():
 		queue_free()
 		return
+
+	# --window=WxH   open the game window at that size (e.g. 1720x720 = ultrawide shape; never saved)
+	if args.has("window"):
+		var parts: PackedStringArray = args["window"].split("x")
+		Settings.set_value("resolution", Vector2i(int(parts[0]), int(parts[1])))
 
 	# Let the main scene finish loading.
 	await get_tree().process_frame

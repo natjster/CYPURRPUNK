@@ -26,6 +26,7 @@
 [ext_resource type="Script" path="res://scripts/cat_health.gd" id="24_health"]
 [ext_resource type="Script" path="res://scripts/player_profile.gd" id="25_profile"]
 [ext_resource type="Script" path="res://scripts/ui/cat_creator.gd" id="26_creator"]
+[ext_resource type="Script" path="res://scripts/ui/ps1_overlay.gd" id="27_overlay"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -171,6 +172,7 @@ rotation = Vector3(0, 1.5708, 0)
 [node name="Rain" parent="." instance=ExtResource("9_rain")]
 
 [node name="PS1Overlay" type="CanvasLayer" parent="."]
+script = ExtResource("27_overlay")
 
 [node name="HUD" type="Control" parent="PS1Overlay"]
 visible = false
@@ -210,9 +212,12 @@ theme_override_font_sizes/font_size = 8
 text = "HP ###"
 
 [node name="DropOff" type="Label" parent="PS1Overlay/HUD"]
-offset_left = 100.0
+layout_mode = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -60.0
 offset_top = 6.0
-offset_right = 220.0
+offset_right = 60.0
 offset_bottom = 18.0
 theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
 theme_override_font_sizes/font_size = 8
@@ -220,17 +225,21 @@ text = "EXTRACT ^ 0m"
 horizontal_alignment = 1
 
 [node name="Scoreboard" type="Label" parent="PS1Overlay/HUD"]
-offset_left = 200.0
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
 offset_top = 6.0
-offset_right = 312.0
+offset_right = -8.0
 offset_bottom = 60.0
 modulate = Color(1, 1, 1, 0.8)
 theme_override_font_sizes/font_size = 8
 horizontal_alignment = 2
 
 [node name="Popup" type="Label" parent="PS1Overlay/HUD"]
+layout_mode = 1
+anchor_right = 1.0
 offset_top = 90.0
-offset_right = 320.0
 offset_bottom = 116.0
 theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
 theme_override_font_sizes/font_size = 22
@@ -238,11 +247,14 @@ text = "+$0"
 horizontal_alignment = 1
 
 [node name="Crosshair" type="Label" parent="PS1Overlay/HUD"]
+layout_mode = 1
 visible = false
 modulate = Color(0.4, 1, 1, 0.8)
-offset_left = 150.0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -10.0
 offset_top = 110.0
-offset_right = 170.0
+offset_right = 10.0
 offset_bottom = 130.0
 theme_override_font_sizes/font_size = 12
 text = "+"
@@ -258,10 +270,13 @@ theme_override_font_sizes/font_size = 8
 text = "R: HEAT [----------]"
 
 [node name="Message" type="Label" parent="PS1Overlay/HUD"]
+layout_mode = 1
 visible = false
-offset_left = 20.0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -140.0
 offset_top = 150.0
-offset_right = 300.0
+offset_right = 140.0
 offset_bottom = 180.0
 theme_override_colors/font_color = Color(1, 0.8, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0.02, 0.1, 1)
@@ -271,9 +286,10 @@ horizontal_alignment = 1
 autowrap_mode = 3
 
 [node name="Prompt" type="Label" parent="PS1Overlay/HUD"]
+layout_mode = 1
 visible = false
+anchor_right = 1.0
 offset_top = 192.0
-offset_right = 320.0
 offset_bottom = 204.0
 theme_override_colors/font_color = Color(0.4, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.1, 1)

@@ -79,6 +79,9 @@ void vertex() {
 
 	// Snap its on-screen x/y to the low-res grid -> vertex jitter.
 	vec2 grid = snap_resolution * 0.5;
+	// On widescreen the picture is wider than 4:3, so widen the grid to match:
+	// keeps the wobble the same size (square steps) on every monitor shape.
+	grid.x *= (VIEWPORT_SIZE.x / VIEWPORT_SIZE.y) / (4.0 / 3.0);
 	vec2 ndc = clip.xy / clip.w;
 	ndc = mix(ndc, round(ndc * grid) / grid, psx_wobble);
 	clip.xy = ndc * clip.w;

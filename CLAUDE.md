@@ -17,6 +17,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,
   `NpcDialog` (`NpcDialog.is_open` -> cat ignores keys), then `ColorDepthDither` LAST. Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. HUD labels all live under `PS1Overlay/HUD`.
+  Widescreen: the viewport is always 240 tall but can be wider (`Settings.widescreen` = keep_height).
+  `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
+  ColorRect backgrounds stretched back out); HUD + ColorDepthDither are full width, so HUD labels must
+  use anchors, never x offsets assuming 320 wide. Test: `--window=1720x720`.
 - `scripts/city_generator.gd` (`CityGenerator`, the `City` node): the whole level is generated from a
   seed with one seeded RNG — keep all randomness on `_rng` and in a fixed order, or players' cities
   diverge. Host sends only the seed (`Game._receive_city_seed`). Centre crossroads, car spot

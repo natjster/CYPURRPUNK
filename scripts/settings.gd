@@ -36,6 +36,10 @@ var resolution: Vector2i = Vector2i(1280, 960)
 ## true  = SHARP: whole-number zoom only (every game pixel is the same size), may leave a black border.
 ## false = FILL:  zooms as big as fits (fills the screen height), some pixel rows a hair bigger.
 var pixel_perfect: bool = true
+## true  = WIDE: the game stays 240 pixels tall but gets wider to fill widescreen / ultrawide
+##         monitors (e.g. 573x240 on 21:9) - you see more of the city to the sides.
+## false = 4:3: always exactly 320x240, with black bars at the sides on wide monitors.
+var widescreen: bool = true
 var vsync: bool = true
 # Audio (0.0 = silent, 1.0 = full)
 var master_volume: float = 0.8
@@ -56,7 +60,8 @@ var volumetric_fog: bool = true
 ## Which variables get saved: [section in the file, variable name].
 const SAVED: Array = [
 	["player", "cats"], ["player", "current_cat_id"],
-	["display", "fullscreen"], ["display", "resolution"], ["display", "pixel_perfect"], ["display", "vsync"],
+	["display", "fullscreen"], ["display", "resolution"], ["display", "pixel_perfect"], ["display", "widescreen"],
+	["display", "vsync"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
 	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "ps1_wobble"],
@@ -224,6 +229,10 @@ func apply() -> void:
 	# How the 320x240 picture is zoomed up to the window / screen (see pixel_perfect above).
 	get_tree().root.content_scale_stretch = (Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect
 		else Window.CONTENT_SCALE_STRETCH_FRACTIONAL)
+	# WIDE keeps the height at 240 and lets the width grow; 4:3 keeps 320x240 and adds side bars.
+	# (Menus stay in a 320-wide middle column either way: scripts/ui/ps1_overlay.gd.)
+	get_tree().root.content_scale_aspect = (Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if widescreen
+		else Window.CONTENT_SCALE_ASPECT_KEEP)
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 

@@ -80,6 +80,23 @@ In-game **SCALING > FILL** switches Scale Mode to fractional so fullscreen fills
 height instead of leaving a black border. The resolution list lives in `scripts/settings.gd`
 → `COMMON_RESOLUTIONS`; your monitor's own size is always added as the biggest option.)
 
+**Widescreen / ultrawide (ASPECT = WIDE, the default):** the game stays **240 pixels tall** but
+gets wider to match the monitor (16:9 → ~427x240, 21:9 ultrawide → ~573x240), so the city fills
+the whole screen and you see more to the sides. Same chunky pixels, no black bars. ASPECT = 4:3
+puts back exact 320x240 with side bars. How it works:
+- `scripts/settings.gd` sets the window's **Stretch Aspect** to *keep_height* (WIDE) or *keep* (4:3).
+- `PS1Overlay` has the script `scripts/ui/ps1_overlay.gd`: it keeps every menu in a 320-wide
+  column in the middle of the screen (they were designed for 320x240), and stretches their dark
+  background ColorRects edge to edge. Children named in its **Full Width Children** list (Inspector)
+  are skipped: `HUD` and `ColorDepthDither`.
+- HUD labels are anchored instead (select one in `main.tscn` > Inspector > **Layout > Anchors
+  Preset**): money/loot/HP top-left, scoreboard top-right, extract arrow / crosshair / messages /
+  prompts centred. **When you add a HUD label, give it an anchor** (top-left, centre-top, etc.) or
+  it will sit at the left on wide screens.
+- The PS1 wobble grid in `psx_lit.gdshader` widens with the screen, so the wobble is the same size
+  on every monitor.
+- Test without an ultrawide: add `--window=1720x720` to a DevCapture run.
+
 ### Vertex jitter + affine textures — `shaders/psx_lit.gdshader`
 This replaces the normal material on 3D objects. Every mesh in the game already uses it.
 
@@ -816,7 +833,7 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 
 | Tab | Settings |
 |---|---|
-| DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), VSync, field of view |
+| DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), aspect (WIDE = fill wide/ultrawide monitors, still 240 tall / 4:3), VSync, field of view |
 | SOUND | Master, music, sound FX volume |
 | CONTROLS | Mouse speed, invert mouse Y |
 | KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |

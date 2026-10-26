@@ -39,6 +39,8 @@ const TABS: Array = [
 			"hint": "Window size. The biggest one is your monitor's max."},
 		{"setting": "pixel_perfect", "label": "SCALING", "choices": [[true, "SHARP"], [false, "FILL"]],
 			"hint": "SHARP = even pixels (may leave a border). FILL = as big as fits."},
+		{"setting": "widescreen", "label": "ASPECT", "choices": [[true, "WIDE"], [false, "4:3"]],
+			"hint": "WIDE fills widescreen + ultrawide monitors. Still 240 pixels tall."},
 		{"setting": "vsync", "label": "VSYNC", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "ON stops screen tearing. OFF can feel a tiny bit snappier."},
 		{"setting": "field_of_view", "label": "FIELD OF VIEW", "min": 50.0, "max": 100.0, "step": 5.0, "format": "number",
