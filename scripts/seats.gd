@@ -10,9 +10,10 @@ extends Node
 ## first controller they use becomes theirs ("claimed").
 ##
 ## JOINING: press START on a controller nobody has claimed
-##   - in the start menu's SOLO / MULTIPLAYER (or HOST / JOIN) screen = the COUCH LOBBY: the new
-##     player picks one of your saved cats with left / right (or NEW CAT), B = leave again. When the
-##     game starts (solo, host or join) they all come along (start_lobby_players).
+##   - on the start menu's LANDING PAGE (MULTIPLAYER > LOCAL / ONLINE CO-OP; also still on the
+##     HOST / JOIN screen after it) = the COUCH LOBBY: the new player picks one of your saved cats
+##     with left / right (or NEW CAT), B = leave again. When the game starts (local, host or join)
+##     they all come along (start_lobby_players).
 ##   - during a game = drop in straight away, playing your next saved cat nobody is using (a new
 ##     one called "PLAYER 2" is made if there isn't one). They leave again with their own pause
 ##     menu's DROP OUT (that drops only them, not the whole computer).
@@ -273,11 +274,38 @@ func _join(device: int) -> void:
 
 # --- The couch lobby (start menu) ---
 
-## Is the start menu's SOLO / MULTIPLAYER or HOST / JOIN screen up (where couch players gather)?
+## Is the start menu's landing page (or the HOST / JOIN screen after it) up? (Couch players gather there.)
 func _in_lobby() -> bool:
 	var game := Game.instance
 	return game != null and is_instance_valid(game) and not game.pause_menu.enabled \
-		and (game.main_menu.mode_screen.visible or game.main_menu.play_screen.visible)
+		and game.main_menu.landing_screen != null \
+		and (game.main_menu.landing_screen.visible or game.main_menu.play_screen.visible)
+
+
+## Everyone in the lobby stands up (leaving the landing page, or picking SOLO).
+func clear_lobby() -> void:
+	for seat in lobby_cats.keys():
+		leave_lobby(seat)
+
+
+## The cat name a lobby player picked ("NEW CAT" for a new one), or "" if nobody sits there.
+func lobby_cat_name(seat: int) -> String:
+	return _cat_name(lobby_cats[seat]) if lobby_cats.has(seat) else ""
+
+
+## Player 1 on the landing page: left / right = their previous / next saved cat (one nobody
+## in the lobby picked; only named cats - make a new one with A = CHOOSE YOUR CAT).
+func cycle_p1_cat(direction: int) -> void:
+	var choices: Array = []
+	for cat in Settings.cats:
+		var id: String = cat.get("id", "")
+		if str(cat.get("name", "")) != "" and not id in lobby_cats.values():
+			choices.append(id)
+	if choices.is_empty():
+		return
+	var index := choices.find(Settings.current_cat_id)
+	Settings.select_cat(choices[posmod(index + direction, choices.size())])
+	changed.emit()
 
 
 ## START on a free controller in the lobby: a new player sits down with the next free cat.

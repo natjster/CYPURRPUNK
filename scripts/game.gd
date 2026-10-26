@@ -65,9 +65,10 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
-	# The start menu's way through: PLAY -> CHOOSE YOUR CAT -> SOLO / MULTIPLAYER (main_menu.gd).
-	main_menu.play_pressed.connect(cat_creator.open.bind(false))
-	cat_creator.next_pressed.connect(main_menu.show_mode_screen)
+	# The start menu's way through (main_menu.gd): PLAY -> SOLO (pick your cat) or MULTIPLAYER ->
+	# LOCAL / ONLINE CO-OP -> the landing page where everyone joins and picks a cat.
+	main_menu.cat_pressed.connect(cat_creator.open.bind(false))
+	cat_creator.next_pressed.connect(main_menu.cat_done)
 	main_menu.solo_pressed.connect(solo_game)
 	main_menu.host_pressed.connect(host_game)
 	main_menu.join_pressed.connect(join_game)
@@ -76,7 +77,7 @@ func _ready() -> void:
 	pause_menu.cat_pressed.connect(cat_creator.open.bind(true))  # restyle your cat mid-game
 	pause_menu.leave_pressed.connect(_back_to_menu.bind(true))
 	settings_menu.closed.connect(_on_settings_closed)
-	cat_creator.closed.connect(_on_settings_closed)  # back to whichever menu opened it, too
+	cat_creator.closed.connect(_on_cat_creator_closed)  # back to whichever menu opened it
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
@@ -180,7 +181,15 @@ func _back_to_menu(we_left: bool) -> void:
 	get_tree().reload_current_scene()
 
 
-## The settings menu (or the MY CAT screen) closed: go back to whichever menu opened it.
+## CHOOSE YOUR CAT / MY CAT closed (BACK / DONE): back to whichever menu opened it.
+func _on_cat_creator_closed() -> void:
+	if pause_menu.enabled:
+		pause_menu.open()
+	else:
+		main_menu.cat_closed()
+
+
+## The settings menu closed: go back to whichever menu opened it.
 func _on_settings_closed() -> void:
 	if pause_menu.enabled:
 		pause_menu.open()

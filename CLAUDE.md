@@ -163,10 +163,13 @@ Players have several cats: `Settings.cats` ([{id, name, look}]) + `current_cat_i
 `current_cat()/new_cat()/select_cat()/update_current_cat()/delete_cat()` (old player_name/cat_look keys are
 migrated in `load_settings`). Profiles (cash + stash) are per cat id. `CatPlayer.look`/`player_name` come
 from `current_cat()`; the look is synced by the cat's MultiplayerSynchronizer (on change).
-Menu flow: Lobby MainScreen (PLAY/SETTINGS/QUIT) -> `CatCreator.open(false)` = CHOOSE YOUR CAT (NEXT
-needs a name) -> Lobby ModeScreen (SOLO = `Game.solo_game`, offline peer, no Net.host / MULTIPLAYER ->
-PlayScreen host/join). Pause > MY CAT = `open(true)` (no switching). Test: `--solo`, `--name=`, `--look=N`,
-`--menu=cat|mode|play`; prints `DevCapture look`.
+Menu flow: Lobby MainScreen (PLAY/SETTINGS/QUIT) -> ModeScreen (SOLO / MULTIPLAYER). SOLO -> `cat_pressed` ->
+`CatCreator.open(false)` (NEXT needs a name) -> `main_menu.cat_done()` -> `Game.solo_game`. MULTIPLAYER -> CoopScreen
+(LOCAL / ONLINE CO-OP, built in main_menu.gd) -> LandingScreen (built in code: P1 row button = cycle cat /
+A = cat creator, P2-4 rows from `Seats.lobby_cats`; LOCAL START GAME = `solo_pressed` with lobby players,
+ONLINE NEXT = PlayScreen host/join, its BACK -> landing). Leaving the landing page `Seats.clear_lobby()`.
+Cat creator NEXT/BACK route by `main_menu._cat_from` (`cat_done` / `cat_closed`). Pause > MY CAT = `open(true)`.
+Test: `--solo`, `--name=`, `--look=N`, `--menu=cat|mode|coop|local|online|play`; prints `DevCapture look`.
 
 ## Items framework
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):

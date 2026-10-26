@@ -971,9 +971,20 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 - **Start menu:** big flickering MEOW-CITY 1999 title over the rainy city (the camera slowly pans),
   then **PLAY / SETTINGS / QUIT**. The way through:
   ```
-  PLAY  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, §11)  -- NEXT -->
-            SOLO / MULTIPLAYER  --SOLO-->  a game just for you
-                                --MULTIPLAYER-->  HOST (+ city #)  or  JOIN (+ address)
+  PLAY  ->  SOLO / MULTIPLAYER
+              SOLO  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, §11) -- NEXT --> a game just for you
+              MULTIPLAYER  ->  LOCAL CO-OP / ONLINE CO-OP
+                                 -> the LANDING PAGE: everyone on this computer joins and picks a cat
+                                      LOCAL:  START GAME = everyone into the sewers together
+                                      ONLINE: NEXT -> HOST (+ city #) or JOIN (a game on your network)
+  ```
+  The landing page:
+  ```
+  P1   < WHISKERS >          <- player 1: left / right = pick your cat, A (Enter) = make / edit cats
+  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat, B = leave
+  P3   PRESS START TO JOIN
+  P4   PRESS START TO JOIN
+  [START GAME]  [BACK]       (ONLINE CO-OP: [NEXT])
   ```
   **BACK** (or **Esc**) always goes one step back. The game version shows bottom-left.
 - **Pause menu (Esc, or START on a controller, in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
@@ -1037,14 +1048,16 @@ fine-tune it with STICK SPEED. Stick drift (cat creeps along by itself)? Raise
 ### Couch co-op: more players on one computer (`scripts/seats.gd`, Autoload **Seats**)
 Up to **4 players per computer**, each with their own controller (8 in a whole game).
 
-- **The couch lobby (start menu):** on the SOLO / MULTIPLAYER screen (or HOST / JOIN), friends
-  press **START** on their controllers to sit down. The line at the bottom shows who's in:
-  `P2 < WHISKERS >   P3 < NEW CAT >`. Each picks a cat with **left / right** on their own
-  controller: one of your saved cats (MY CAT) that nobody else picked, or NEW CAT (made when the
-  game starts, called "PLAYER 3" etc.: rename / restyle it later in MY CAT). **B** = stand up again.
-  Their controllers don't move player 1's menu. When player 1 starts the game (SOLO, HOST or
-  JOIN), everyone comes along. Two players never play the same cat: each cat has its own cash
-  and stash.
+- **The landing page (start menu > PLAY > MULTIPLAYER > LOCAL CO-OP or ONLINE CO-OP):** this is
+  where everyone gathers BEFORE anyone goes down into the sewers. Friends press **START** on their
+  controllers to take a seat (P2, P3, P4, in their player colour). Each picks a cat with
+  **left / right** on their own controller: one of your saved cats (MY CAT) that nobody else
+  picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.: rename / restyle it
+  later in MY CAT). **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
+  right), or presses A on it to make / edit cats. Their controllers don't move player 1's menu.
+  LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
+  JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone
+  up. Two players never play the same cat: each cat has its own cash and stash.
 - **Joining mid-game:** press **START** on a controller nobody is using: a new player drops in
   (in the sewers) with your next saved cat nobody is using (or a new "PLAYER 2").
 - **Full games:** a game holds 8 players. A couch player who doesn't fit is told "THE GAME IS

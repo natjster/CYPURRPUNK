@@ -60,7 +60,9 @@ extends Node
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --setting=NAME:VALUE  change a setting for this run (never saved), e.g. --setting=split_side_by_side:false
 ##   --saved_cats=A,B  pretend you have more saved cats called A, B (for the couch lobby's cat picking)
-##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
+##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER),
+##                     coop (LOCAL / ONLINE CO-OP), local / online (the landing page), play (host / join),
+##                     settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
@@ -411,6 +413,9 @@ func _ready() -> void:
 		match args["menu"]:
 			"play": scene.main_menu.show_play_screen()
 			"mode": scene.main_menu.show_mode_screen()
+			"coop": scene.main_menu.show_coop_screen()
+			"local": scene.main_menu.show_landing(false)
+			"online": scene.main_menu.show_landing(true)
 			"settings": scene.settings_menu.open()
 			"pause": scene.pause_menu.open()
 			"cat": scene.cat_creator.open(scene.pause_menu.enabled)
