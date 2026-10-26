@@ -77,9 +77,13 @@ func _fit() -> void:
 
 ## Your mouse and keys arrive here first. Pass them on to the game inside GameViewport,
 ## with mouse positions turned into game pixels (so menus and mouse-look work as before).
+## (Except while a HUD window - the talk box or inventory - is open: then they stay up here
+## for the HUD's own buttons.)
 func _input(event: InputEvent) -> void:
+	if Hud.wants_input():
+		return
 	var scale_to_game := Vector2(game_viewport.size) / game_view.size
 	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),
 		-game_view.position * scale_to_game)
 	game_viewport.push_input(event.xformed_by(to_game), true)
-	get_viewport().set_input_as_handled()  # the HUD never needs clicks
+	get_viewport().set_input_as_handled()  # the HUD doesn't need them right now

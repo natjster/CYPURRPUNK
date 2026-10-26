@@ -298,7 +298,7 @@ light_color = Color(1, 0.75, 0.45, 1)
 light_energy = 1.8
 omni_range = 4.0
 
-[node name="NameTag" type="Label3D" parent="."]
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
 position = Vector3(0, 1.35, 0)
 billboard = 1
 texture_filter = 0

@@ -167,7 +167,7 @@ rotation = Vector3(0.65, 0, 0)
 mesh = SubResource("Mesh_tail")
 surface_material_override/0 = SubResource("Mat_fur")
 
-[node name="NameTag" type="Label3D" parent="."]
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
 position = Vector3(0, 1.6, 0)
 billboard = 1
 texture_filter = 0

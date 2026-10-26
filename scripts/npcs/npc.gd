@@ -9,7 +9,7 @@ extends StaticBody3D
 ##   ├── CollisionShape3D      <- so cats bump into them instead of walking through
 ##   ├── Model (Node3D)        <- their meshes; turns to look at the nearest cat (optional)
 ##   │   └── Tail              <- swishes slowly (optional)
-##   └── NameTag (Label3D)     <- floating name; its text is set from Npc Name (optional)
+##   └── NameTag (Label3D)     <- floating name (group "hud_name_tags": the HUD draws it sharp); text = Npc Name (optional)
 ##
 ## Talking: cat_player.gd calls Npc.try_talk() when E is pressed. The nearest NPC in reach
 ## opens the talk box (NpcDialog) at its FIRST page. The whole conversation is data in the

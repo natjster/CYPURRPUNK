@@ -12,8 +12,11 @@ extends CanvasLayer
 ## Node tree (scenes/ui/hud.tscn):
 ##   HUD (this script)
 ##   └── Frame            <- exactly covers the game picture (resized by GameScreen)
+##       ├── Names        <- names over cats' / NPCs' heads (scripts/ui/hud_name_tags.gd)
 ##       ├── Top          <- stays up while you talk / shop: Cash, Carrying, Health, DropOff, Scoreboard
-##       └── Middle       <- hidden while the talk box is open: Popup, Crosshair, Message, Prompt, Held
+##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
+##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
+##       └── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
 ##   Hud.set_text("Cash", "$120")            change a label's words (by node name)
@@ -29,7 +32,9 @@ extends CanvasLayer
 ## Preset, e.g. Top Right) so it sticks to that corner on every screen shape, then from your
 ## script call Hud.set_text("Ammo", "...").
 ##
-## The whole HUD hides itself while a full-screen menu (pause, settings, MY CAT, inventory) is open.
+## The whole HUD hides itself while a full-screen menu (pause, settings, MY CAT) is open.
+## While a HUD window (talk box, inventory) is open, the mouse and keys go to the HUD instead of
+## the game (scripts/ui/game_screen.gd asks Hud.wants_input()).
 
 ## The one HUD (Hud.instance).
 static var instance: Hud
@@ -105,6 +110,19 @@ static func popup(text: String, seconds: float = 2.5) -> void:
 	instance._popup_time = seconds
 
 
+## True while a HUD window (talk box or inventory) is open: it gets the mouse and keys, not the game.
+static func wants_input() -> bool:
+	return NpcDialog.is_open or (InventoryScreen.instance != null and InventoryScreen.instance.visible)
+
+
+## True while a full-screen game menu (pause, settings, MY CAT) is open; the HUD hides under it.
+static func menu_open() -> bool:
+	var game := Game.instance
+	if game == null or not is_instance_valid(game):
+		return true
+	return PauseMenu.is_open or game.settings_menu.visible or game.cat_creator.visible
+
+
 ## The whole HUD on (in a game) or off (start menu).
 static func set_in_game(on: bool) -> void:
 	if instance != null:
@@ -130,13 +148,5 @@ func _process(delta: float) -> void:
 		popup_label.modulate.a = clampf(_popup_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
 
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
-	frame.visible = in_game and not _menu_covers_screen()
-	middle.visible = not NpcDialog.is_open
-
-
-func _menu_covers_screen() -> bool:
-	var game := Game.instance
-	if game == null or not is_instance_valid(game):
-		return true
-	return PauseMenu.is_open or game.settings_menu.visible or game.cat_creator.visible \
-		or (InventoryScreen.instance != null and InventoryScreen.instance.visible)
+	frame.visible = in_game and not menu_open()
+	middle.visible = not wants_input()

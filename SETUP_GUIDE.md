@@ -151,7 +151,8 @@ Player (CharacterBody3D)            script: cat_player.gd
 ├── CameraPivot (Node3D)             position y=0.6 — mouse left/right turns this
 │   └── SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 — mouse up/down tilts this
 │       └── Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
-├── NameTag (Label3D)                the player's name, shown to everyone else
+├── NameTag (Label3D)                the player's name, shown to everyone else. Group "hud_name_tags":
+│                                    the HUD draws it sharp (§13); this Label3D is just the marker
 └── MultiplayerSynchronizer          shares sync_position, sync_model_rotation, player_name, look
 ```
 To change the cat's body shape, open `scenes/cat_model.tscn` (every player cat and the MY CAT
@@ -263,7 +264,8 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
   `--talk` (open Don's talk box), `--drive` (car view), `--grab=fish`, `--hold=shoot`,
   `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
-  `--mouse_test` (checks mouse-look still reaches the game through the HUD screen).
+  `--mouse_test` (checks mouse-look still reaches the game through the HUD screen),
+  `--click_choice=N` (a real mouse click on a talk-box button), `--press_key=Tab` (a real key).
   The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
   cat name. The tool switches itself off in release (exported) builds.
@@ -506,8 +508,11 @@ Test runs save to `test_profiles\` instead, so they never touch your real saves.
   hub". Going up or down is just moving your cat between the two.
 - Don: `scenes/npcs/don_catleone.tscn`, an NPC (see **NPCs** below), placed under **Hub** in
   `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
-- The talk box: **NpcDialog** under PS1Overlay (`scripts/ui/npc_dialog.gd`). It also shows the
-  "[E] TALK TO ..." prompt whenever your cat is near any NPC.
+- The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, §13),
+  drawn sharp at full resolution. It also shows the "[E] TALK TO ..." prompt whenever your cat
+  is near any NPC.
+- NPC names over their heads: each NPC's **NameTag** (Label3D) sets where the name floats and
+  its colour (**Modulate**); the HUD draws it sharp (§13). Its text comes from **Npc Name**.
 
 **Change what Don says:** open `scenes/npcs/don_catleone.tscn`, click the root **DonCatleone**,
 and in the Inspector open **Pages** (how pages work is just below).
@@ -813,8 +818,10 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 - **At the stash lockers** in the sewers the LOOT BAG rows are replaced by your **STASH**
   (9 slots), and clicking moves items between you and the stash instead (see **The stash &
   saved progress** in §8).
-- The screen builds its own buttons; the scene just has an empty `Inventory` node under PS1Overlay
-  (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`).
+- The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, §13) just has an empty
+  `Inventory` node (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`). It's drawn sharp at
+  full resolution. Select **Inventory** in `hud.tscn` to change **Slot Size**, **Slot Font Size**,
+  **Title Font Size** and **Columns**; colours and borders: `ui/hud_theme.tres`.
 
 ---
 
@@ -889,11 +896,8 @@ PauseMenu (Control)               script: ui/pause_menu.gd
 └── Dim, Panel > VBox > Title, ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton, Note
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
 CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, §11)
-Inventory (Control)               script: ui/inventory_ui.gd
-NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
-└── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons are made by the script
-    (Panel is a fixed size; long pages scroll inside it. Resize it in Panel > Inspector > Layout > Transform)
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
+(The inventory screen and the NPC talk box are in the sharp HUD instead: scenes/ui/hud.tscn, §13.)
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,
 Panel > VBox > Title, Tabs, Scroll (ScrollContainer) > Rows, Hint, Buttons (ResetButton,
@@ -913,9 +917,10 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 - **`scripts/settings.gd`** — Autoload named **Settings**. Holds every setting with its default,
   loads/saves the file, and applies the screen, sound and wobble settings. Other scripts read e.g.
   `Settings.mouse_speed`. `game.gd` applies the two that live in the scene (CRT look and fog).
-- **Esc order:** the topmost open thing handles Esc first — inventory, then settings, then the
-  pause menu, then the start menu. (Godot sends keys to the node lowest in the scene tree first,
-  so keep that order under PS1Overlay.)
+- **Esc order:** the topmost open thing handles Esc first — the talk box / inventory (in the
+  HUD, which always hears keys before the game), then settings, then the pause menu, then the
+  start menu. (Godot sends keys to the node lowest in the scene tree first, so keep that order
+  under PS1Overlay.)
 - **`ui/menu_theme.tres`** — the menu look (dark purple boxes, pink edges, cyan hover).
   Double-click it in the FileSystem dock to change colours in the Theme editor.
 - **PS1 wobble** is a *global shader parameter*: Project Settings > **Shader Globals** >
@@ -1133,18 +1138,22 @@ and **Design Width** (320).
 ```
 HUD (CanvasLayer)            script: ui/hud.gd
 └── Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
+    ├── Names (Control)      <- names over cats' and NPCs' heads (script ui/hud_name_tags.gd)
     ├── Top (Control)        <- stays up while you talk / shop
     │   ├── Cash             <- top-left, big green "$120"
     │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
     │   ├── Health           <- "HP ##-" (flashes white when hurt)
     │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
     │   └── Scoreboard       <- top-right: everyone's cash
-    └── Middle (Control)     <- hidden while the talk box is open
-        ├── Popup            <- big "EXTRACTED +$150" that fades out
-        ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
-        ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
-        ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
-        └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
+    ├── Middle (Control)     <- hidden while the talk box or inventory is open
+    │   ├── Popup            <- big "EXTRACTED +$150" that fades out
+    │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
+    │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
+    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
+    │   └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
+    ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
+    └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
+        └── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script
 ```
 - **Units:** positions are in "HUD units": the screen is always **720 units tall** (and 960 or
   more wide), whatever the real resolution. So a label 36 units big is 1/20 of the screen
@@ -1159,8 +1168,27 @@ HUD (CanvasLayer)            script: ui/hud.gd
 - **Crosshair look:** select **Frame > Middle > Crosshair**: Color, Line Length, Gap, Thickness,
   Dot Size, Outline.
 - **Popup fade:** select **HUD**: **Popup Fade Seconds**.
-- The whole HUD **hides itself while a full-screen menu is open** (pause, settings, MY CAT,
-  inventory), because those menus live inside the game picture, underneath it.
+- The whole HUD **hides itself while a full-screen menu is open** (pause, settings, MY CAT),
+  because those menus live inside the game picture, underneath it.
+- **HUD windows (talk box, inventory):** while one is open, your mouse and keys go to it instead
+  of the game (`game_screen.gd` asks `Hud.wants_input()`), and the **Middle** pieces hide.
+  - **Talk box size:** select **NpcDialog > Panel** > **Layout > Transform > Size** (it's anchored
+    to the bottom middle, so it stays centred on wide screens). Button height: **NpcDialog** >
+    **Choice Height**. Text sizes: **Speaker** / **Line** > Theme Overrides > Font Sizes.
+  - **Inventory:** select **Inventory**: Slot Size, Slot Font Size, Title Font Size, Columns.
+  - Box and button colours / borders for both: `ui/hud_theme.tres` (PanelContainer, Button).
+
+### Names over heads (`scripts/ui/hud_name_tags.gd`, on **Frame > Names**)
+Cats and NPCs still have a **NameTag** (Label3D) in their own scene: it's the *marker* that says
+where the name floats, what it says (**Text**) and its colour (**Modulate**). Every Label3D in the
+group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label in its place.
+- It shrinks with distance like a real sign, fades out far away and hides behind walls.
+- Knobs (select **Names**): **Max Distance**, **Fade Distance**, **World Text Height** (how big it
+  is in metres), **Min / Max Font Size**, **Hide Behind Walls**, **Wall Layers**.
+- **Give something a floating name:** add a **Label3D** child where the name should be, type the
+  name in **Text**, pick a **Modulate** colour, then **Node** dock (next to Inspector) > **Groups**
+  > type `hud_name_tags` > **Add**.
+- Hiding the Label3D (like your own cat's, or a cat in a car) hides the HUD name too.
 
 ### Using it from a script (no node paths needed)
 ```gdscript

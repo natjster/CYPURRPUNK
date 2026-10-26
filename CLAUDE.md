@@ -13,7 +13,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   so it's sharp at real resolution and not CRT'd. Use the statics: `Hud.set_text/show_element/set_color/
   show_message/popup/set_in_game/element` by label name (Cash, Carrying, Health, DropOff, Scoreboard |
   Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
-  whole HUD hides under full-screen menus. Never reference HUD nodes by path. Test: `--mouse_test`.
+  whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
+  HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
+  GameScreen stops forwarding input so the root GUI gets it (HUD `_input` runs before GameScreen's).
+  Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
+  `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
+  via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
 - `scenes/main.tscn` (script `scripts/game.gd`, class `Game`, `Game.instance`): starts games, spawns
   cats via `MultiplayerSpawner` → `Players/` (cats named by peer id; look up with
   `Game.instance.cat_for(id)` / `my_cat()`), late-joiner catch-up, CRT/fog settings.
@@ -28,8 +33,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   AudioStreamPlayers elsewhere. Sound table in SETUP_GUIDE.md section 12. Test: `--sound_log`.
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
-  keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,
-  `NpcDialog` (`NpcDialog.is_open` -> cat ignores keys), then `ColorDepthDither` LAST. Each menu handles its own Esc in `_input`; tree order decides who
+  keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,
+  then `ColorDepthDither` LAST. (`NpcDialog.is_open` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. (The HUD is not here: see `Hud` above.)
   Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
   `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect

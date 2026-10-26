@@ -1,8 +1,10 @@
 class_name InventoryScreen
 extends Control
 ## INVENTORY SCREEN — press Tab or I to open/close (Esc closes too).
-## Attach to the "Inventory" Control under PS1Overlay in main.tscn. It builds its own
-## buttons when the game starts, so the scene only needs the empty node.
+## Part of the HUD (scenes/ui/hud.tscn > HUD > Frame > Inventory), so it's drawn sharp at your
+## monitor's real resolution, on top of the low-res game. It builds its own boxes and buttons
+## when the game starts, so the scene only needs the empty node. Sizes are in HUD units (the
+## screen is 720 tall); tweak them with the exports below (select Inventory in hud.tscn).
 ##
 ##   PAWS      what you're holding. Click = put it in the backpack.
 ##   BACKPACK  held items you're carrying but not using. Click = take it into your paws.
@@ -15,25 +17,41 @@ extends Control
 ##
 ## The screen only ASKS the item system (ItemManager) to move things; the host decides,
 ## and the screen redraws itself from the result. So it's always in sync in multiplayer.
+## While it's open the mouse and keys go to it instead of the game (scripts/ui/game_screen.gd).
+##
+## What it builds:
+##   Inventory (this)
+##   ├── Dim (ColorRect)                   <- darkens the game behind it
+##   └── Centre (CenterContainer) > Panel (PanelContainer) > VBox
+##       ├── Title, Paws (left + right paw slots)
+##       ├── PackTitle + PackGrid           (3 slots per row)
+##       ├── BagTitle + BagGrid  / StashTitle + StashGrid   (only one of the two is shown)
+##       └── Info (hints, item descriptions, "Backpack is full.")
 
 ## The one inventory screen (the cat opens it when E is pressed at the stash).
 static var instance: InventoryScreen
 
-const SLOT_SIZE := Vector2(70, 16)
+## Size of one item slot (HUD units).
+@export var slot_size: Vector2 = Vector2(220, 44)
+## Text size inside the slots.
+@export var slot_font_size: int = 18
+## Text size of the section titles (BACKPACK, LOOT BAG...).
+@export var title_font_size: int = 20
+## How many slots per row.
+@export var columns: int = 3
 
 var _paw_buttons: Array[Button] = []    # [left paw, right paw] as shown on screen
 var _pack_buttons: Array[Button] = []
 var _bag_buttons: Array[Button] = []
 var _stash_buttons: Array[Button] = []
-var _panel: Panel
 var _pack_title: Label
 var _bag_title: Label
+var _bag_grid: GridContainer
 var _stash_title: Label
+var _stash_grid: GridContainer
 var _info: Label
 var _last_key := ""
 var _at_stash := false
-var _bag_bottom := 0.0    # where the info line goes when the loot bag is shown
-var _stash_bottom := 0.0  # ...and when the stash is shown
 
 
 func _enter_tree() -> void:
@@ -44,52 +62,72 @@ func _ready() -> void:
 	hide()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP  # clicks on the dim background don't reach the game
+	_build.call_deferred()  # after the game (and its ItemManager, which knows the slot counts) is ready
 
+
+func _build() -> void:
+	var items := ItemManager.instance
 	var dim := ColorRect.new()
+	dim.name = "Dim"
 	dim.color = Color(0, 0, 0, 0.55)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 
-	_panel = Panel.new()
-	_panel.position = Vector2(36, 24)
-	_panel.size = Vector2(248, 186)
-	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_panel)
+	var centre := CenterContainer.new()
+	centre.name = "Centre"
+	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+	centre.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(centre)
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	centre.add_child(panel)
+	var box := VBoxContainer.new()
+	box.name = "VBox"
+	box.add_theme_constant_override("separation", 8)
+	panel.add_child(box)
 
-	_label("INVENTORY", Vector2(36, 27), 248, 12, Color(1, 0.4, 0.8))
+	box.add_child(_label("INVENTORY", 34, Color(1, 0.4, 0.8)))
 
-	_label("LEFT PAW", Vector2(80, 46), SLOT_SIZE.x, 8, Color(0.7, 0.7, 0.8))
-	_label("RIGHT PAW", Vector2(170, 46), SLOT_SIZE.x, 8, Color(0.7, 0.7, 0.8))
-	_paw_buttons.append(_slot(Vector2(80, 56), "hand", 1))   # left paw = hands[1]
-	_paw_buttons.append(_slot(Vector2(170, 56), "hand", 0))  # right paw = hands[0]
+	# The two paws side by side, each with a little title above.
+	var paws := HBoxContainer.new()
+	paws.name = "Paws"
+	paws.alignment = BoxContainer.ALIGNMENT_CENTER
+	paws.add_theme_constant_override("separation", 24)
+	box.add_child(paws)
+	for paw in [["LEFT PAW", 1], ["RIGHT PAW", 0]]:  # left paw = hands[1], right paw = hands[0]
+		var column := VBoxContainer.new()
+		column.add_child(_label(paw[0], title_font_size - 2, Color(0.7, 0.7, 0.8)))
+		var button := _slot("hand", paw[1])
+		column.add_child(button)
+		_paw_buttons.append(button)
+		paws.add_child(column)
 
-	_pack_title = _label("BACKPACK", Vector2(36, 78), 248, 8, Color(0.6, 0.85, 1))
-	for i in ItemManager.instance.pack_size:
-		var column := i % 3
-		var row := i / 3
-		_pack_buttons.append(_slot(Vector2(47 + column * (SLOT_SIZE.x + 6), 88 + row * (SLOT_SIZE.y + 3)), "pack", i))
+	_pack_title = _label("BACKPACK", title_font_size, Color(0.6, 0.85, 1))
+	box.add_child(_pack_title)
+	box.add_child(_grid(_pack_buttons, "pack", items.pack_size))
 
 	# The loot bag and the stash share the same spot: only one is shown at a time.
-	var pack_rows := ceili(ItemManager.instance.pack_size / 3.0)
-	var bag_top := 88 + pack_rows * (SLOT_SIZE.y + 3) + 6
-	_bag_title = _label("LOOT BAG", Vector2(36, bag_top), 248, 8, Color(0.45, 1, 0.55))
-	for i in ItemManager.instance.bag_size:
-		_bag_buttons.append(_slot(Vector2(47 + (i % 3) * (SLOT_SIZE.x + 6), bag_top + 10 + (i / 3) * (SLOT_SIZE.y + 3)), "bag", i))
-	_bag_bottom = bag_top + 10 + ceili(ItemManager.instance.bag_size / 3.0) * (SLOT_SIZE.y + 3)
-	_stash_title = _label("STASH", Vector2(36, bag_top), 248, 8, Color(0.4, 0.9, 1))
-	for i in ItemManager.instance.stash_size:
-		_stash_buttons.append(_slot(Vector2(47 + (i % 3) * (SLOT_SIZE.x + 6), bag_top + 10 + (i / 3) * (SLOT_SIZE.y + 3)), "stash", i))
-	_stash_bottom = bag_top + 10 + ceili(ItemManager.instance.stash_size / 3.0) * (SLOT_SIZE.y + 3)
+	_bag_title = _label("LOOT BAG", title_font_size, Color(0.45, 1, 0.55))
+	box.add_child(_bag_title)
+	_bag_grid = _grid(_bag_buttons, "bag", items.bag_size)
+	box.add_child(_bag_grid)
+	_stash_title = _label("STASH", title_font_size, Color(0.4, 0.9, 1))
+	box.add_child(_stash_title)
+	_stash_grid = _grid(_stash_buttons, "stash", items.stash_size)
+	box.add_child(_stash_grid)
 
-	_info = _label("", Vector2(40, 186), 240, 8, Color(1, 1, 1, 0.85))
+	_info = _label("", title_font_size - 2, Color(1, 1, 1, 0.85))
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_info.size.y = 22
+	# As wide as the slot rows, and room for two lines, so the box doesn't jump in size.
+	_info.custom_minimum_size = Vector2(columns * slot_size.x + (columns - 1) * 8, (title_font_size + 4) * 2)
+	box.add_child(_info)
 
 
 func _input(event: InputEvent) -> void:
 	var cat := ItemManager.instance.local_cat()
-	if event.is_action_pressed("inventory") and cat != null and not PauseMenu.is_open and not NpcDialog.is_open:
+	if event.is_action_pressed("inventory") and cat != null and not Hud.menu_open() and not NpcDialog.is_open:
 		_set_open(not visible)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
@@ -104,6 +142,8 @@ func open() -> void:
 
 
 func _set_open(open_it: bool) -> void:
+	if _info == null:
+		return  # not built yet (the very first frame)
 	visible = open_it
 	_last_key = ""
 	var cat := ItemManager.instance.local_cat()
@@ -149,17 +189,12 @@ func _process(_delta: float) -> void:
 	_stash_title.text = "STASH  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
 
 
-## At the lockers: show the stash instead of the loot bag (and size the panel to fit).
+## At the lockers: show the stash instead of the loot bag (the box resizes itself to fit).
 func _show_stash_section(at_stash: bool) -> void:
 	_bag_title.visible = not at_stash
-	for button in _bag_buttons:
-		button.visible = not at_stash
+	_bag_grid.visible = not at_stash
 	_stash_title.visible = at_stash
-	for button in _stash_buttons:
-		button.visible = at_stash
-	var bottom := _stash_bottom if at_stash else _bag_bottom
-	_info.position.y = maxf(bottom + 2, 186)
-	_panel.size.y = _info.position.y + 24 - _panel.position.y
+	_stash_grid.visible = at_stash
 	if at_stash:
 		_info.text = "Click: move between you and the stash   Right-click: drop   %s: close" % Controls.key_text("inventory")
 	else:
@@ -179,13 +214,25 @@ func _fill(button: Button, item_id: String) -> void:
 		button.add_theme_color_override("font_color", data.glow_color.lightened(0.3))
 
 
-func _slot(at: Vector2, where: String, index: int) -> Button:
+## A grid of "count" slots, "columns" per row (the buttons are also added to "list").
+func _grid(list: Array[Button], where: String, count: int) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.columns = columns
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 6)
+	for i in count:
+		var button := _slot(where, i)
+		grid.add_child(button)
+		list.append(button)
+	return grid
+
+
+func _slot(where: String, index: int) -> Button:
 	var button := Button.new()
-	button.position = at
-	button.size = SLOT_SIZE
+	button.custom_minimum_size = slot_size
 	button.focus_mode = Control.FOCUS_NONE  # so Tab closes the screen instead of moving focus
 	button.clip_text = true
-	button.add_theme_font_size_override("font_size", 8)
+	button.add_theme_font_size_override("font_size", slot_font_size)
 	# Dark slot box with a neon edge (brighter when the mouse is over it).
 	button.add_theme_stylebox_override("normal", _slot_style(Color(0.55, 0.35, 0.85, 0.8)))
 	button.add_theme_stylebox_override("hover", _slot_style(Color(1, 0.4, 0.8)))
@@ -193,7 +240,6 @@ func _slot(at: Vector2, where: String, index: int) -> Button:
 	button.set_meta("item", "")
 	button.gui_input.connect(_on_slot_input.bind(button, where, index))
 	button.mouse_entered.connect(_on_slot_hover.bind(button))
-	add_child(button)
 	return button
 
 
@@ -201,20 +247,20 @@ func _slot_style(edge: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.05, 0.13, 0.95)
 	style.border_color = edge
-	style.set_border_width_all(1)
+	style.set_border_width_all(2)
+	style.set_content_margin_all(6)
 	return style
 
 
-func _label(text: String, at: Vector2, width: float, font_size: int, color: Color) -> Label:
+func _label(text: String, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.position = at
-	label.size = Vector2(width, font_size + 4)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	label.add_theme_constant_override("outline_size", 0)  # the box is dark already
+	label.add_theme_constant_override("shadow_offset_y", 2)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(label)
 	return label
 
 

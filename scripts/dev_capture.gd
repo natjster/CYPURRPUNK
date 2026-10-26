@@ -15,6 +15,7 @@ extends Node
 ##   --talk[=NAME]     walk up to an NPC (node name, e.g. LilMittens; default Don Catleone)
 ##                     and press E (talk box open)
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
+##   --click_choice=N  (with --talk) a REAL mouse click on button N (tests clicks reach the HUD)
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
@@ -30,6 +31,7 @@ extends Node
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
 ##   --equip=N         take backpack slot N into the paws (what clicking it in the inventory does)
 ##   --inventory       open the inventory screen (Tab) before the snap
+##   --press_key=KEY   press and release a real key, e.g. --press_key=Tab (inventory) or Escape
 ##   --hold=ACTION     hold a control for --hold_frames (default 60), e.g. move_forward,
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
@@ -265,7 +267,17 @@ func _ready() -> void:
 		for i in 10:
 			await get_tree().process_frame
 	if args.has("inventory"):
-		scene.get_node("PS1Overlay/Inventory")._set_open(true)  # same as pressing Tab
+		InventoryScreen.instance._set_open(true)  # same as pressing Tab
+	if args.has("press_key"):
+		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
+		for pressed in [true, false]:
+			var key := InputEventKey.new()
+			key.physical_keycode = OS.find_keycode_from_string(args["press_key"])
+			key.keycode = key.physical_keycode
+			key.pressed = pressed
+			Input.parse_input_event(key)
+			await get_tree().process_frame
+		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s" % [args["press_key"], InventoryScreen.instance.visible, NpcDialog.is_open, PauseMenu.is_open])
 	# --menu=play / settings / pause   open that menu before the snap
 	# --settings_tab=N                  which settings tab to show (0 = DISPLAY)
 	if args.has("menu") and scene is Game:
@@ -421,6 +433,25 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
 	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Npc.try_talk(player), NpcDialog.instance.line_label.text.left(50)])
+	if args.has("click_choice"):
+		# --click_choice=N: a REAL mouse click on talk-box button N (through the game screen and
+		# the HUD, like a player's click), instead of --choose's direct button press.
+		for i in 3:
+			await get_tree().process_frame  # let the talk box lay out its buttons first
+		var button := NpcDialog.instance.choices_box.get_child(int(args["click_choice"])) as Button
+		var at := get_viewport().get_final_transform() * button.get_global_rect().get_center()
+		var button_text := button.text
+		for pressed in [true, false]:
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = pressed
+			click.position = at
+			click.global_position = at
+			Input.parse_input_event(click)
+			await get_tree().process_frame
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture click_choice %s (\"%s\"): open=%s line=\"%s\"" % [args["click_choice"], button_text, NpcDialog.is_open, NpcDialog.instance.line_label.text.left(40)])
 	if args.has("choose"):
 		for n in args["choose"].split(","):
 			var buttons := NpcDialog.instance.choices_box.get_children()

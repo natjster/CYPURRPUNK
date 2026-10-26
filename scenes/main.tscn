@@ -13,12 +13,10 @@
 [ext_resource type="Script" path="res://scripts/items/item_manager.gd" id="11_items"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="12_settings"]
 [ext_resource type="Theme" path="res://ui/menu_theme.tres" id="13_theme"]
-[ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="14_inventory"]
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="15_main_menu"]
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="16_pause_menu"]
 [ext_resource type="Script" path="res://scripts/hub.gd" id="17_hub"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/don_catleone.tscn" id="18_don"]
-[ext_resource type="Script" path="res://scripts/ui/npc_dialog.gd" id="19_npc_dialog"]
 [ext_resource type="Script" path="res://scripts/roomba_patrol.gd" id="20_roombas"]
 [ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="21_quests"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/lil_mittens.tscn" id="22_mittens"]
@@ -444,62 +442,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("26_creator")
-
-[node name="Inventory" type="Control" parent="PS1Overlay"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("14_inventory")
-
-[node name="NpcDialog" type="Control" parent="PS1Overlay"]
-visible = false
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme = ExtResource("13_theme")
-script = ExtResource("19_npc_dialog")
-
-[node name="Panel" type="PanelContainer" parent="PS1Overlay/NpcDialog"]
-offset_left = 16.0
-offset_top = 116.0
-offset_right = 304.0
-offset_bottom = 232.0
-
-[node name="VBox" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel"]
-layout_mode = 2
-theme_override_constants/separation = 2
-
-[node name="Speaker" type="Label" parent="PS1Overlay/NpcDialog/Panel/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.8, 0.3, 1)
-text = "DON CATLEONE"
-
-[node name="Scroll" type="ScrollContainer" parent="PS1Overlay/NpcDialog/Panel/VBox"]
-layout_mode = 2
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="Body" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="Line" type="Label" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll/Body"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.88, 1, 1)
-text = "..."
-autowrap_mode = 3
-
-[node name="Choices" type="VBoxContainer" parent="PS1Overlay/NpcDialog/Panel/VBox/Scroll/Body"]
-layout_mode = 2
-theme_override_constants/separation = 1
 
 [node name="ColorDepthDither" type="ColorRect" parent="PS1Overlay"]
 material = SubResource("Mat_post")
