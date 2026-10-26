@@ -30,7 +30,8 @@ var current_cat_id: String = ""
 ## Fullscreen always uses your monitor's own (biggest) resolution.
 var fullscreen: bool = false
 ## Window size in pixels when NOT fullscreen (pick from resolution_choices()).
-## The game itself is always drawn at 320x240 and then blown up to fill this.
+## The game itself is always drawn at 320x240 and then blown up to fill this
+## (scripts/ui/game_screen.gd); the HUD on top is drawn at this full size, so it stays sharp.
 var resolution: Vector2i = Vector2i(1280, 960)
 ## How the 320x240 picture is blown up to fill the screen:
 ## true  = SHARP: whole-number zoom only (every game pixel is the same size), may leave a black border.
@@ -227,13 +228,9 @@ func apply() -> void:
 				var area := DisplayServer.screen_get_usable_rect(screen)
 				# Keeps the title bar on screen if the window is as big as the monitor.
 				DisplayServer.window_set_position(area.position + ((area.size - wanted) / 2).max(Vector2i.ZERO))
-	# How the 320x240 picture is zoomed up to the window / screen (see pixel_perfect above).
-	get_tree().root.content_scale_stretch = (Window.CONTENT_SCALE_STRETCH_INTEGER if pixel_perfect
-		else Window.CONTENT_SCALE_STRETCH_FRACTIONAL)
-	# WIDE keeps the height at 240 and lets the width grow; 4:3 keeps 320x240 and adds side bars.
+	# pixel_perfect and widescreen (how the 320x240 picture is zoomed up to the window) are used
+	# by scripts/ui/game_screen.gd, which listens to the "changed" signal below.
 	# (Menus stay in a 320-wide middle column either way: scripts/ui/ps1_overlay.gd.)
-	get_tree().root.content_scale_aspect = (Window.CONTENT_SCALE_ASPECT_KEEP_HEIGHT if widescreen
-		else Window.CONTENT_SCALE_ASPECT_KEEP)
 	if DisplayServer.get_name() != "headless":
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 

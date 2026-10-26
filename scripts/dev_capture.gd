@@ -34,10 +34,11 @@ extends Node
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
 ##   --goto_dropoff_after=N   jump into the extraction beam after N more frames (in the car if driving)
-##   --track=N        measure how smoothly other players' cats move over N frames
+##   --mouse_test      check mouse-look gets the mouse through the game screen (prints how far it turned)
+##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
-##   --scale=N         upscale factor for the saved image (default 4)
+##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
@@ -59,7 +60,7 @@ func _ready() -> void:
 
 	# Let the main scene finish loading.
 	await get_tree().process_frame
-	var scene := get_tree().current_scene
+	var scene: Node = Game.instance  # the game (main.tscn), inside scenes/game_screen.tscn
 
 	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
@@ -129,6 +130,19 @@ func _ready() -> void:
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
 			player.spring_arm.rotation.x = deg_to_rad(float(args["pitch"]))
+		if args.has("mouse_test"):
+			# Move the mouse 100 real screen pixels to the right (as if the player did) and print
+			# how far that is in game pixels (should be 100 x 240 / window height).
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			var yaw_before := player.camera_pivot.rotation.y
+			var motion := InputEventMouseMotion.new()
+			motion.relative = Vector2(100, 0)  # real screen pixels, like a real mouse
+			motion.position = Vector2(get_window().size) / 2.0
+			Input.parse_input_event(motion)
+			for i in 3:
+				await get_tree().process_frame
+			var moved := (yaw_before - player.camera_pivot.rotation.y) / (player.mouse_sensitivity * Settings.mouse_speed)
+			print("DevCapture mouse: 100 screen px = %.2f game px (expected %.2f)" % [moved, 100.0 * 240.0 / get_window().size.y])
 		if args.has("talk"):
 			await _talk(player, args)
 		if args.has("drive"):
@@ -283,7 +297,7 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# The scene may have been reloaded meanwhile (e.g. the host quit), so look it up again.
-	scene = get_tree().current_scene
+	scene = Game.instance
 	if args.has("track"):
 		await _track_other_cats(scene, int(args["track"]))
 
@@ -333,9 +347,14 @@ func _ready() -> void:
 			var fur: Color = ((model.get_node("Body") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
 			print("DevCapture look %s: fur=#%s %s" % [cat.name, fur.to_html(false), " ".join(worn)])
 
+	# The whole window: the blown-up game picture plus the sharp HUD on top.
+	# --scale=N saves it as if each game pixel were N screen pixels (N x 240 tall).
 	var image := get_viewport().get_texture().get_image()
-	var scale := int(args.get("scale", "4"))
-	image.resize(image.get_width() * scale, image.get_height() * scale, Image.INTERPOLATE_NEAREST)
+	var screen := GameScreen.instance
+	var game_pixels_tall := screen.game_view.size.y / get_viewport().get_visible_rect().size.y * image.get_height()
+	var factor := float(args.get("scale", "4")) * screen.game_height / game_pixels_tall
+	image.resize(roundi(image.get_width() * factor), roundi(image.get_height() * factor),
+		Image.INTERPOLATE_BILINEAR if factor < 1.0 else Image.INTERPOLATE_NEAREST)
 	var path := ProjectSettings.globalize_path("res://" + args["capture"])
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	image.save_png(path)

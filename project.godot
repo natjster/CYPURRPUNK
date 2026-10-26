@@ -14,7 +14,7 @@ config/name="MEOW-CITY 1999"
 config/version="0.1"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="MeowCity1999"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/game_screen.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]
@@ -27,12 +27,12 @@ DevCapture="*res://scripts/dev_capture.gd"
 
 [display]
 
-window/size/viewport_width=320
-window/size/viewport_height=240
+window/size/viewport_width=960
+window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=960
-window/stretch/mode="viewport"
-window/stretch/scale_mode="integer"
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep_height"
 
 [shader_globals]
 

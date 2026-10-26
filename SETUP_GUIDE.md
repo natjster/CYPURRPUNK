@@ -8,7 +8,8 @@ open the project and press Play. The sections explain what each piece is, so you
 Meow-City/
 ├── project.godot              <- project settings (low-res, crunchy pixels, autoloads, version)
 ├── scenes/
-│   ├── main.tscn              <- THE game scene (press F5 to run this)
+│   ├── game_screen.tscn       <- the top scene F5 runs: the low-res game + the sharp HUD over it (§13)
+│   ├── main.tscn              <- THE game (city, cats, menus), shown inside game_screen.tscn
 │   ├── player.tscn            <- the cat
 │   ├── cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, §11)
 │   ├── cat_parts/             <- accessory models: fedora, beanie, neon_halo, shades... (§11)
@@ -17,7 +18,7 @@ Meow-City/
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
 │   ├── npcs/                  <- characters you talk to: don_catleone, lil_mittens, npc_template (§8)
 │   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
-│   └── ui/settings_menu.tscn  <- the Settings screen
+│   └── ui/                    <- settings_menu.tscn (the Settings screen), hud.tscn (the HUD, §13)
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
@@ -43,12 +44,13 @@ Meow-City/
 │   ├── cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (§11)
 │   ├── cat_health.gd          <- HP and knockouts (§8)
 │   ├── player_profile.gd      <- saves your cash + stash between games (§8)
-│   └── ui/                    <- main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
+│   └── ui/                    <- game_screen + hud (§13), main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
 │   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
 ├── textures/                  <- tiny placeholder pixel textures
 ├── ui/menu_theme.tres         <- the look of every menu (colours, borders)
+├── ui/hud_theme.tres          <- the look of the HUD text (font, outline, shadow) (§13)
 └── shots/                     <- screenshots from the capture tool (Godot ignores this folder)
 ```
 
@@ -68,33 +70,36 @@ Already set in `project.godot`. To see/change by hand: **Project > Project Setti
 
 | Setting path | Value | Why |
 |---|---|---|
-| Display > Window > Size > Viewport Width | `320` | Internal render width |
-| Display > Window > Size > Viewport Height | `240` | Internal render height |
-| Display > Window > Size > Window Width Override | `1280` | Window opens 4x bigger |
+| Display > Window > Size > Viewport Width | `960` | Size the HUD is designed at (HUD units) |
+| Display > Window > Size > Viewport Height | `720` | The screen is always 720 HUD units tall |
+| Display > Window > Size > Window Width Override | `1280` | Window opens at 1280x960 (4x the game) |
 | Display > Window > Size > Window Height Override | `960` | |
-| Display > Window > Stretch > Mode | `viewport` | Render 3D at 320x240, then upscale |
-| Display > Window > Stretch > Scale Mode | `integer` | Whole-number scaling = square pixels |
+| Display > Window > Stretch > Mode | `canvas_items` | The HUD is drawn sharp at the real resolution |
+| Display > Window > Stretch > Aspect | `keep_height` | HUD units: always 720 tall, wider on wide screens |
 | Rendering > Textures > Canvas Textures > Default Texture Filter | `Nearest` | No blur |
+
+**The 320x240 game picture is NOT a project setting any more:** the game (`main.tscn`) is drawn
+into a 320x240 **SubViewport** inside `scenes/game_screen.tscn`, which blows it up with chunky
+pixels, and the HUD is drawn sharp on top (§13). `scripts/ui/game_screen.gd` does the sizing.
 
 (Players can change the resolution, fullscreen and scaling in the in-game Settings, §10. The game
 is still *drawn* at 320x240 whatever the resolution; a bigger resolution just shows it bigger.
-In-game **SCALING > FILL** switches Scale Mode to fractional so fullscreen fills the full screen
-height instead of leaving a black border. The resolution list lives in `scripts/settings.gd`
+**SCALING > SHARP** zooms by whole numbers only (square pixels, maybe a black border);
+**SCALING > FILL** zooms as big as fits. The resolution list lives in `scripts/settings.gd`
 → `COMMON_RESOLUTIONS`; your monitor's own size is always added as the biggest option.)
 
 **Widescreen / ultrawide (ASPECT = WIDE, the default):** the game stays **240 pixels tall** but
 gets wider to match the monitor (16:9 → ~427x240, 21:9 ultrawide → ~573x240), so the city fills
 the whole screen and you see more to the sides. Same chunky pixels, no black bars. ASPECT = 4:3
 puts back exact 320x240 with side bars. How it works:
-- `scripts/settings.gd` sets the window's **Stretch Aspect** to *keep_height* (WIDE) or *keep* (4:3).
+- `scripts/ui/game_screen.gd` makes the game picture wider (WIDE) or keeps it 320 wide (4:3).
 - `PS1Overlay` has the script `scripts/ui/ps1_overlay.gd`: it keeps every menu in a 320-wide
   column in the middle of the screen (they were designed for 320x240), and stretches their dark
   background ColorRects edge to edge. Children named in its **Full Width Children** list (Inspector)
-  are skipped: `HUD` and `ColorDepthDither`.
-- HUD labels are anchored instead (select one in `main.tscn` > Inspector > **Layout > Anchors
-  Preset**): money/loot/HP top-left, scoreboard top-right, extract arrow / crosshair / messages /
-  prompts centred. **When you add a HUD label, give it an anchor** (top-left, centre-top, etc.) or
-  it will sit at the left on wide screens.
+  are skipped: `ColorDepthDither`.
+- The HUD (§13) covers the game picture, whatever its shape; its labels are anchored (select one
+  in `scenes/ui/hud.tscn` > Inspector > **Layout > Anchors Preset**). **When you add a HUD label,
+  give it an anchor** (top-left, centre-top, etc.) or it will sit at the left on wide screens.
 - The PS1 wobble grid in `psx_lit.gdshader` widens with the screen, so the wobble is the same size
   on every monitor.
 - Test without an ultrawide: add `--window=1720x720` to a DevCapture run.
@@ -117,11 +122,12 @@ both off for every material at once (via the `psx_wobble` shader global, §10).
 
 ### Color-depth + dither overlay — `shaders/psx_post.gdshader`
 A **ColorRect overlay** at the end of `PS1Overlay` in `main.tscn`. Everything drawn before it
-(the 3D world, HUD and menus) gets the PS1 colours and CRT look:
+(the 3D world and the menus) gets the PS1 colours and CRT look. The HUD does NOT: it's drawn
+sharp on top of the finished picture (§13).
 
 ```
 PS1Overlay (CanvasLayer)
-├── HUD, Lobby, PauseMenu, SettingsMenu, Inventory   <- drawn first, so they get dithered too
+├── Lobby, PauseMenu, SettingsMenu, Inventory...   <- drawn first, so they get dithered too
 └── ColorDepthDither (ColorRect)  <- Anchors: Full Rect, Mouse > Filter: Ignore
                                      Material: ShaderMaterial with psx_post.gdshader
 ```
@@ -256,7 +262,8 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
 - Useful extras: `--deploy` (go up to the city first — without it you're in the hub),
   `--talk` (open Don's talk box), `--drive` (car view), `--grab=fish`, `--hold=shoot`,
   `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
-  `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image).
+  `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
+  `--mouse_test` (checks mouse-look still reaches the game through the HUD screen).
   The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
   cat name. The tool switches itself off in release (exported) builds.
@@ -605,7 +612,7 @@ ready for the next trip up. Taken fish grow back after 20 seconds.
 **HUD:** top-left = your cash, loot carried (or your quest's progress, see **Quests**) and your HP
 (see **Health & knockouts**); top-middle = distance and direction to the
 extraction beam (`^` ahead, `<` `>` turn, `v` behind), or `THE SEWERS - SAFE ZONE` in the hub;
-top-right = everyone's cash, richest first.
+top-right = everyone's cash, richest first. (Moving / restyling the HUD: §13.)
 
 **Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Fish are a
 normal loot item (§9): card `items/fish.tres`, model `scenes/items/fish.tscn`.
@@ -681,7 +688,7 @@ a knockout). Cats in the car and in the hub can't be hurt. Your cash and quests 
 So gear you take up top is at risk every time. Gear left in **the stash** (below) is safe.
 
 **Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the HP line
-is **PS1Overlay > HUD > Health**. The fall-over is `knocked_out` in `cat_player.gd`.
+is the **Health** label in `scenes/ui/hud.tscn` (§13). The fall-over is `knocked_out` in `cat_player.gd`.
 
 **Tuning** (select **Health** in `main.tscn`): **Max Health**, **Knockout Seconds** (how long
 you lie there), **Hud Color**. How much a bonk hurts: **Bonk Damage** on the Roomba (above).
@@ -755,7 +762,7 @@ scripts/items/
   catnip.gd, catdip.gd       <- examples of use-it-once items
 scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
-The HUD pieces for items are **PS1Overlay > HUD > Crosshair** and **HUD > GunHud**; they only
+The HUD pieces for items are **Crosshair** and **Held** in `scenes/ui/hud.tscn` (§13); they only
 show while you hold something that wants them.
 
 ### Adding a new weapon — no code needed
@@ -866,9 +873,7 @@ Delete those files to get a fresh start.
 
 ### Node tree (in `main.tscn`, under PS1Overlay)
 ```
-HUD (Control)                     <- shown during a game: Cash, Carrying, DropOff, Scoreboard,
-                                     Popup, Crosshair, GunHud, Message (what Don says),
-                                     Prompt ("[E] TALK TO...")
+(The in-game HUD is NOT here: it's the sharp overlay in scenes/ui/hud.tscn, §13.)
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
 ├── Title / Subtitle / Tagline (Label)
@@ -1100,7 +1105,82 @@ Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] foo
 
 ---
 
-## 13. Backups and undo (git + GitHub Desktop)
+## 13. The HUD (sharp overlay)
+
+The HUD is everything on screen during a game that isn't the world or a menu: cash, loot / quest
+line, HP, the extraction arrow, the scoreboard, the "[E] TALK TO..." prompt, the crosshair, what
+you're holding, messages and the big EXTRACTED popup.
+
+**It is drawn at your monitor's real resolution, on top of the game.** The game itself (3D city,
+menus, CRT + dither) is still drawn at PS1 size (240 pixels tall) and blown up with chunky pixels;
+the HUD is not part of that picture, so its text is crisp at any resolution and the CRT effect
+doesn't bend or dither it.
+
+### How the screen is put together (`scenes/game_screen.tscn`, the scene F5 runs)
+```
+GameScreen (Control)        script: ui/game_screen.gd  <- sizes everything when the window changes
+├── HUD (CanvasLayer)       <- an instance of scenes/ui/hud.tscn, Layer 10 = always on top
+├── Bars (ColorRect)        <- black, behind everything (the border in 4:3 / SHARP mode)
+└── GameView (TextureRect)  <- shows the game picture, blown up (Texture Filter: Nearest)
+    └── GameViewport (SubViewport)   <- the "PS1 screen", 320x240 (wider on wide monitors)
+        └── Main            <- scenes/main.tscn, the actual game
+```
+`game_screen.gd` works out the game picture's size from **SCALING** and **ASPECT** (§1, §10), and
+passes your mouse and keyboard through to the game. Its Inspector knobs: **Game Height** (240)
+and **Design Width** (320).
+
+### The HUD scene (`scenes/ui/hud.tscn`, script `scripts/ui/hud.gd`)
+```
+HUD (CanvasLayer)            script: ui/hud.gd
+└── Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
+    ├── Top (Control)        <- stays up while you talk / shop
+    │   ├── Cash             <- top-left, big green "$120"
+    │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
+    │   ├── Health           <- "HP ##-" (flashes white when hurt)
+    │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
+    │   └── Scoreboard       <- top-right: everyone's cash
+    └── Middle (Control)     <- hidden while the talk box is open
+        ├── Popup            <- big "EXTRACTED +$150" that fades out
+        ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
+        ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
+        ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
+        └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
+```
+- **Units:** positions are in "HUD units": the screen is always **720 units tall** (and 960 or
+  more wide), whatever the real resolution. So a label 36 units big is 1/20 of the screen
+  height on every monitor.
+- **Move / restyle a piece:** open `scenes/ui/hud.tscn`, click the label, change **Layout >
+  Transform** (position/size), **Theme Overrides > Colors / Font Sizes**, etc. Always keep an
+  **anchor** (toolbar **Anchors Preset**: Top Left, Center Top, Top Right, Bottom Left...) so it
+  sticks to its corner on wide screens.
+- **Fonts and outline for every label:** double-click `ui/hud_theme.tres`. It uses your
+  computer's **Consolas** (bold) with a dark outline + drop shadow. To use your own font, drop a
+  `.ttf`/`.otf` into the project and set the theme's **Default Font** to it.
+- **Crosshair look:** select **Frame > Middle > Crosshair**: Color, Line Length, Gap, Thickness,
+  Dot Size, Outline.
+- **Popup fade:** select **HUD**: **Popup Fade Seconds**.
+- The whole HUD **hides itself while a full-screen menu is open** (pause, settings, MY CAT,
+  inventory), because those menus live inside the game picture, underneath it.
+
+### Using it from a script (no node paths needed)
+```gdscript
+Hud.set_text("Cash", "$120")              # change a label's words (by node name)
+Hud.show_element("Crosshair", true)       # show / hide one piece
+Hud.set_color("Health", Color.WHITE)      # change a label's text colour
+Hud.show_message("DON: Go get 'em.", 4.0) # middle-of-screen line for N seconds
+Hud.popup("EXTRACTED +$80", 2.5)          # the big fading text
+Hud.set_in_game(true)                     # whole HUD on (game) / off (start menu)
+Hud.element("Cash")                       # the node itself, for anything else
+```
+(`Game.instance.show_message(...)` still works too: it calls `Hud.show_message`.)
+
+**Add a new HUD piece:** in `hud.tscn` right-click **Top** (or **Middle**) > **Add Child Node** >
+**Label**, give it a unique name (e.g. `Ammo`), pick an anchor, then in your script call
+`Hud.set_text("Ammo", "...")`.
+
+---
+
+## 14. Backups and undo (git + GitHub Desktop)
 
 The project is a **git repository**: every "commit" is a saved snapshot of the whole project that
 you can look at or go back to. Claude commits after each finished piece of work.

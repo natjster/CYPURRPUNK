@@ -58,8 +58,6 @@ const MAX_REACH_HEIGHT: float = 3.0
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
 @onready var car: GetawayCar = $"../GetawayCar"
-@onready var item_hud: Label = $"../PS1Overlay/HUD/GunHud"
-@onready var crosshair: Control = $"../PS1Overlay/HUD/Crosshair"
 
 ## Item id -> ItemData, for every card in res://items/.
 var catalog := {}
@@ -693,7 +691,7 @@ func _free_now(node: Node) -> void:
 		node.queue_free()
 
 
-## The bottom-of-screen text and crosshair, for whatever OUR cat holds.
+## The bottom-of-screen text (HUD "Held") and crosshair, for whatever OUR cat holds.
 func _update_hud() -> void:
 	var cat := local_cat()
 	var lines := PackedStringArray()
@@ -706,9 +704,9 @@ func _update_hud() -> void:
 				var text := held.hud_text()
 				lines.append(("%s %s" % [labels[hand], text]) if text != "" else labels[hand])
 				wants_crosshair = wants_crosshair or held.wants_crosshair()
-	item_hud.visible = not lines.is_empty()
-	item_hud.text = "  |  ".join(lines)
-	crosshair.visible = wants_crosshair
+	Hud.show_element("Held", not lines.is_empty())
+	Hud.set_text("Held", "  |  ".join(lines))
+	Hud.show_element("Crosshair", wants_crosshair)
 
 
 # --- Helpers anyone can use ---

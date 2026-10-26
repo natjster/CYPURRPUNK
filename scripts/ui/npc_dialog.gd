@@ -16,7 +16,7 @@ extends Control
 ## Whoever wants to talk calls NpcDialog.instance.open(name, line, choices), where each
 ## choice is [button text, function to run when clicked]. NPCs (scripts/npcs/npc.gd) do this
 ## for you from their Pages, so you normally never call it yourself.
-## It also shows the "[E] TALK TO ..." prompt (PS1Overlay/HUD/Prompt) when your cat is near an NPC,
+## It also shows the "[E] TALK TO ..." prompt (the HUD's "Prompt" label, scenes/ui/hud.tscn) when your cat is near an NPC,
 ## and "[E] OPEN STASH" at the stash lockers in the sewers.
 ## While it's open your cat ignores the keyboard (cat_player.gd checks NpcDialog.is_open),
 ## and Esc closes it. It sits after the other menus in the scene, so it sees Esc first.
@@ -30,7 +30,6 @@ static var is_open: bool = false
 @onready var scroll: ScrollContainer = $Panel/VBox/Scroll
 @onready var line_label: Label = $Panel/VBox/Scroll/Body/Line
 @onready var choices_box: VBoxContainer = $Panel/VBox/Scroll/Body/Choices
-@onready var prompt_label: Label = $"../HUD/Prompt"
 
 
 func _enter_tree() -> void:
@@ -40,7 +39,7 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	is_open = false  # (it's static, so reset it when the scene reloads)
 	hide()
-	prompt_label.hide()
+	Hud.show_element("Prompt", false)
 
 
 ## Every frame: "[E] TALK TO <name>" while our cat stands next to an NPC (this computer only).
@@ -53,11 +52,11 @@ func _process(_delta: float) -> void:
 	# The stash lockers use the same prompt line (they aren't an NPC, but it's the same E key).
 	var stash := npc == null and cat != null and cat.is_controlled and not is_open \
 		and not InventoryScreen.instance.visible and UndergroundHub.instance.near_stash(cat)
-	prompt_label.visible = npc != null or stash
+	Hud.show_element("Prompt", npc != null or stash)
 	if npc != null:
-		prompt_label.text = "[%s] TALK TO %s" % [Controls.key_text("interact"), npc.npc_name]
+		Hud.set_text("Prompt", "[%s] TALK TO %s" % [Controls.key_text("interact"), npc.npc_name])
 	elif stash:
-		prompt_label.text = "[%s] OPEN STASH" % Controls.key_text("interact")
+		Hud.set_text("Prompt", "[%s] OPEN STASH" % Controls.key_text("interact"))
 
 
 func _input(event: InputEvent) -> void:

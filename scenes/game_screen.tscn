@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/game_screen.gd" id="1_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="2_hud"]
+[ext_resource type="PackedScene" path="res://scenes/main.tscn" id="3_main"]
+
+[node name="GameScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_screen")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="Bars" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="GameView" type="TextureRect" parent="."]
+texture_filter = 1
+layout_mode = 0
+offset_right = 960.0
+offset_bottom = 720.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
+
+[node name="GameViewport" type="SubViewport" parent="GameView"]
+size = Vector2i(320, 240)
+render_target_update_mode = 4
+canvas_item_default_texture_filter = 0
+audio_listener_enable_2d = true
+audio_listener_enable_3d = true
+positional_shadow_atlas_size = 4096
+gui_embed_subwindows = true
+
+[node name="Main" parent="GameView/GameViewport" instance=ExtResource("3_main")]

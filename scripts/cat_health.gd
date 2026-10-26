@@ -34,7 +34,6 @@ var health := {}
 
 var _flash_time: float = 0.0
 
-@onready var health_label: Label = $"../PS1Overlay/HUD/Health"
 
 
 func _enter_tree() -> void:
@@ -136,7 +135,7 @@ func _process(delta: float) -> void:
 	if Game.instance.my_cat() == null:
 		return
 	var hp := get_health(me)
-	health_label.text = "HP " + "#".repeat(hp) + "-".repeat(maxi(max_health - hp, 0)) + ("  KNOCKED OUT" if hp <= 0 else "")
+	Hud.set_text("Health", "HP " + "#".repeat(hp) + "-".repeat(maxi(max_health - hp, 0)) + ("  KNOCKED OUT" if hp <= 0 else ""))
 	_flash_time = maxf(_flash_time - delta, 0.0)
 	var blink := _flash_time > 0.0 and fmod(_flash_time, 0.2) < 0.1
-	health_label.add_theme_color_override("font_color", Color.WHITE if blink else hud_color)
+	Hud.set_color("Health", Color.WHITE if blink else hud_color)

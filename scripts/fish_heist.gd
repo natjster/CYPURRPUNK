@@ -48,11 +48,6 @@ const HEIST_SEED_SALT: int = 7331
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
 @onready var car: GetawayCar = $"../GetawayCar"
-@onready var cash_label: Label = $"../PS1Overlay/HUD/Cash"
-@onready var carry_label: Label = $"../PS1Overlay/HUD/Carrying"
-@onready var dropoff_label: Label = $"../PS1Overlay/HUD/DropOff"
-@onready var scoreboard_label: Label = $"../PS1Overlay/HUD/Scoreboard"
-@onready var popup_label: Label = $"../PS1Overlay/HUD/Popup"
 
 ## Where the drop-off is in the current city.
 var dropoff_position: Vector3
@@ -60,7 +55,6 @@ var dropoff_position: Vector3
 var cash := {}
 
 var _built: Array[Node] = []  # the drop-off pieces, so a new city can clear them
-var _popup_time: float = 0.0
 var _clock: float = 0.0
 ## Host: network ID -> time until we ignore that cat at the beam (it's on its way down).
 var _extract_wait := {}
@@ -72,7 +66,6 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group("item_placers")  # the item system calls place_items() for every new city
-	popup_label.hide()
 
 
 # --- Setting up the heist for a city (called by the item system, on every computer) ---
@@ -170,8 +163,8 @@ func _add_built(node: Node3D) -> void:
 
 # --- Every frame ---
 
-func _process(delta: float) -> void:
-	_update_hud(delta)
+func _process(_delta: float) -> void:
+	_update_hud()
 
 
 ## Host only: the referee. Who reached the extraction beam?
@@ -212,10 +205,10 @@ func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> 
 	cash[peer_id] = cash.get(peer_id, 0) + earned + quest_bonus
 	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [peer_id, count, earned, quest_bonus, cash[peer_id]])
 	if peer_id == multiplayer.get_unique_id():
-		popup_label.text = ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
+		var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
 		if quest_bonus > 0:
-			popup_label.text += "\nQUEST DONE +$%d" % quest_bonus
-		_popup_time = 2.5
+			popup_text += "\nQUEST DONE +$%d" % quest_bonus
+		Hud.popup(popup_text, 2.5)  # the big text that fades out (scripts/ui/hud.gd)
 		Sound.play("extract")
 		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
 
@@ -255,31 +248,31 @@ func _forget_player(peer_id: int) -> void:
 	cash.erase(peer_id)
 
 
-# --- HUD (your cash, your loot, where to go, everyone's cash) ---
+# --- HUD (your cash, your loot, where to go, everyone's cash: scenes/ui/hud.tscn) ---
 
-func _update_hud(delta: float) -> void:
+func _update_hud() -> void:
 	var me := multiplayer.get_unique_id()
 	var my_cat := players.get_node_or_null(str(me)) as CatPlayer
 	if my_cat == null:
 		return
 	var items := ItemManager.instance
-	cash_label.text = "$%d" % cash.get(me, 0)
+	Hud.set_text("Cash", "$%d" % cash.get(me, 0))
 	# Under the cash: your quest's progress (e.g. "QUEST: MITTENS' FISH 2/3") if you have one,
 	# otherwise how full your loot bag is.
 	var quest_line := QuestManager.instance.hud_text(me)
 	if quest_line != "":
-		carry_label.text = "QUEST: " + quest_line
+		Hud.set_text("Carrying", "QUEST: " + quest_line)
 	else:
 		var used := items.bag_used(me)
-		carry_label.text = "LOOT %d/%d%s" % [used, items.bag_size, "  FULL!" if used >= items.bag_size else ""]
+		Hud.set_text("Carrying", "LOOT %d/%d%s" % [used, items.bag_size, "  FULL!" if used >= items.bag_size else ""])
 
 	# Distance and rough direction to the extraction beam, relative to where the camera looks.
 	# Down in the hub there's no beam to point at.
 	var where := car.global_position if car.driver_id == me else my_cat.global_position
 	if UndergroundHub.is_in_hub(where):
-		dropoff_label.text = "THE SEWERS - SAFE ZONE"
+		Hud.set_text("DropOff", "THE SEWERS - SAFE ZONE")
 	else:
-		dropoff_label.text = _direction_text(where)
+		Hud.set_text("DropOff", _direction_text(where))
 
 	# Everyone's cash, richest first.
 	var rows: Array = []
@@ -290,12 +283,7 @@ func _update_hud(delta: float) -> void:
 	var lines := PackedStringArray()
 	for row in rows:
 		lines.append("%s $%d" % [row[1], row[0]])
-	scoreboard_label.text = "\n".join(lines)
-
-	if _popup_time > 0.0:
-		_popup_time -= delta
-		popup_label.visible = _popup_time > 0.0
-		popup_label.modulate.a = clampf(_popup_time, 0.0, 1.0)
+	Hud.set_text("Scoreboard", "\n".join(lines))
 
 
 ## "EXTRACT > 120m": distance and rough direction to the beam from where the camera looks.

@@ -8,14 +8,14 @@ extends CanvasLayer
 ## 320-wide column in the middle, while their dark backgrounds (ColorRects that cover the
 ## whole menu) still stretch edge to edge.
 ##
-## Children listed in full_width_children are left alone: the HUD (its labels are anchored
-## to the screen edges / centre in main.tscn) and the CRT + dither effect, which must cover
-## the whole screen.
+## Children listed in full_width_children are left alone: the CRT + dither effect, which must
+## cover the whole screen. (The HUD isn't in here at all: it's the sharp overlay drawn on top,
+## scenes/ui/hud.tscn.)
 
 ## The width the menus were designed for.
 @export var design_width: float = 320.0
 ## Direct children that should span the full screen width instead of the middle column.
-@export var full_width_children: Array[String] = ["HUD", "ColorDepthDither"]
+@export var full_width_children: Array[String] = ["ColorDepthDither"]
 
 
 func _ready() -> void:

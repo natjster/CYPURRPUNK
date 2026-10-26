@@ -5,6 +5,15 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 (the user-facing guide) whenever behaviour or node trees change.
 
 ## Layout
+- Main scene = `scenes/game_screen.tscn` (`scripts/ui/game_screen.gd`, `GameScreen.instance`): `main.tscn`
+  runs inside `GameView/GameViewport` (SubViewport, 240 tall, width from `Settings.widescreen`/
+  `pixel_perfect`), blown up with nearest filtering; `_input` forwards events into it (push_input).
+  Root window = stretch `canvas_items`, keep_height, 960x720 base ("HUD units").
+- HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport,
+  so it's sharp at real resolution and not CRT'd. Use the statics: `Hud.set_text/show_element/set_color/
+  show_message/popup/set_in_game/element` by label name (Cash, Carrying, Health, DropOff, Scoreboard |
+  Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  whole HUD hides under full-screen menus. Never reference HUD nodes by path. Test: `--mouse_test`.
 - `scenes/main.tscn` (script `scripts/game.gd`, class `Game`, `Game.instance`): starts games, spawns
   cats via `MultiplayerSpawner` → `Players/` (cats named by peer id; look up with
   `Game.instance.cat_for(id)` / `my_cat()`), late-joiner catch-up, CRT/fog settings.
@@ -21,11 +30,11 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,
   `NpcDialog` (`NpcDialog.is_open` -> cat ignores keys), then `ColorDepthDither` LAST. Each menu handles its own Esc in `_input`; tree order decides who
-  sees Esc first. HUD labels all live under `PS1Overlay/HUD`.
-  Widescreen: the viewport is always 240 tall but can be wider (`Settings.widescreen` = keep_height).
+  sees Esc first. (The HUD is not here: see `Hud` above.)
+  Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
   `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
-  ColorRect backgrounds stretched back out); HUD + ColorDepthDither are full width, so HUD labels must
-  use anchors, never x offsets assuming 320 wide. Test: `--window=1720x720`.
+  ColorRect backgrounds stretched back out); ColorDepthDither is full width. HUD labels must use
+  anchors (the HUD Frame matches the game picture's shape). Test: `--window=1720x720`.
 - `scripts/city_generator.gd` (`CityGenerator`, the `City` node): the whole level is generated from a
   seed with one seeded RNG — keep all randomness on `_rng` and in a fixed order, or players' cities
   diverge. Host sends only the seed (`Game._receive_city_seed`). Centre crossroads, car spot
@@ -47,7 +56,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
   Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;
   explode drops stomach via `ItemManager.drop_on_street`. Test: `--bait_roomba=D|aim`, `--zap_roomba=N`.
-- Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD `HUD/Health`): host-only
+- Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
   `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
   RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
   Roombas/extraction ignore `is_down` cats. Test: `--give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3 --frames=1500`.
@@ -133,6 +142,8 @@ Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from th
 - Multiplayer: start a `--host` process with `Start-Process` (redirect output), wait ~4 s, start a
   `--join` one. Host's `--frames` must outlast the client's. Useful: `--name=`, `--hold=ACTION
   --hold_delay=N --hold_frames=N`, `--exit_after=N`, `--track=N`, `--net_interval=S`.
+- DevCapture finds the game via `Game.instance` (current_scene is GameScreen). Captures save the whole
+  window (HUD included); `--scale=N` = N screen px per game px.
 - Captures print car/cat state (`DevCapture ...` lines) — prefer checking those over viewing images;
   view screenshots only when judging visuals, and use `--scale=2` to keep them small.
 - `shots/` has a `.gdignore`, so Godot ignores it.

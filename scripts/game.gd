@@ -45,14 +45,11 @@ static var local_player_name: String = ""
 @onready var pause_menu: PauseMenu = $PS1Overlay/PauseMenu
 @onready var settings_menu: SettingsMenu = $PS1Overlay/SettingsMenu
 @onready var cat_creator: CatCreator = $PS1Overlay/CatCreator
-@onready var hud: Control = $PS1Overlay/HUD
-@onready var message_label: Label = $PS1Overlay/HUD/Message
 @onready var hub: UndergroundHub = $Hub
 @onready var crt_material: ShaderMaterial = $PS1Overlay/ColorDepthDither.material
 
 ## The CRT slider values at full strength (read from the shader), scaled by Settings.crt_strength.
 var _crt_full: Dictionary = {}
-var _message_time: float = 0.0
 
 
 func _enter_tree() -> void:
@@ -85,7 +82,7 @@ func _ready() -> void:
 	Settings.changed.connect(_apply_scene_settings)
 	_apply_scene_settings()
 
-	hud.hide()
+	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
 	city.generate(PREVIEW_SEED)
 	park_car()
 	_handle_test_shortcuts()
@@ -153,7 +150,7 @@ func _on_joined() -> void:
 
 func _start_playing() -> void:
 	main_menu.hide()
-	hud.show()
+	Hud.set_in_game(true)
 	pause_menu.enabled = true
 	_show_city_number()
 	$Profile.restore()  # bring back our saved cash + stash (player_profile.gd)
@@ -188,16 +185,9 @@ func _show_city_number() -> void:
 
 
 ## A line of text in the middle of the screen for a few seconds (e.g. what Don says).
+## (Same as Hud.show_message; kept here because lots of scripts call it.)
 func show_message(text: String, seconds: float = 4.0) -> void:
-	message_label.text = text
-	message_label.show()
-	_message_time = seconds
-
-
-func _process(delta: float) -> void:
-	if _message_time > 0.0:
-		_message_time -= delta
-		message_label.visible = _message_time > 0.0
+	Hud.show_message(text, seconds)
 
 
 ## Host (and start menu): put the car back at its parking spot, stopped.
