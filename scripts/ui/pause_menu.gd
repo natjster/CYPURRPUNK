@@ -1,6 +1,6 @@
 class_name PauseMenu
 extends Control
-## MEOW-CITY 1999 — the PAUSE MENU (press Esc during a game).
+## MEOW-CITY 1999 — the PAUSE MENU (press Esc, or START on a controller, during a game).
 ## Attach to the "PauseMenu" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   PauseMenu (Control)   <- this script
 ##   ├── Dim (ColorRect)
@@ -39,15 +39,18 @@ func _ready() -> void:
 	hide()
 
 
-## Esc during a game: open, or close if already open.
+## Esc / START during a game: open, or close if already open. B (back) also closes it.
 ## (Runs before the cat and car see the key. The settings menu catches Esc first when it's open.)
 func _input(event: InputEvent) -> void:
-	if enabled and event.is_action_pressed("ui_cancel"):
+	if not enabled:
+		return
+	if visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
-		if visible:
-			close()
-		else:
-			open()
+		close()
+	elif not is_open and event.is_action_pressed("pause"):
+		# (is_open is also true while SETTINGS or MY CAT is up on top of us: START does nothing then.)
+		get_viewport().set_input_as_handled()
+		open()
 
 
 func open() -> void:

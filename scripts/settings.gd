@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — every player setting in one place (screen, sound, mouse, effects).
+## MEOW-CITY 1999 — every player setting in one place (screen, sound, mouse, controller, effects).
 ## Loaded automatically on startup (it's an Autoload named "Settings").
 ##
 ## Other scripts just read the values, e.g. Settings.mouse_speed, and listen to the
@@ -50,6 +50,12 @@ var sfx_volume: float = 0.8
 ## Multiplies the cat's mouse_sensitivity (1.0 = normal).
 var mouse_speed: float = 1.0
 var invert_y: bool = false
+## Multiplies how fast the right stick turns the camera (1.0 = normal).
+var stick_speed: float = 1.0
+## true = push the right stick up to look down.
+var invert_stick_y: bool = false
+## Controller rumble (shakes when you get hit, shoot, get knocked out...).
+var rumble: bool = true
 # Camera / effects
 var field_of_view: float = 70.0
 ## How strong the curved-TV look is (0 = off, 1 = full). Colour dithering always stays.
@@ -65,6 +71,7 @@ const SAVED: Array = [
 	["display", "vsync"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
+	["controls", "stick_speed"], ["controls", "invert_stick_y"], ["controls", "rumble"],
 	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "ps1_wobble"],
 	["effects", "volumetric_fog"],
 ]

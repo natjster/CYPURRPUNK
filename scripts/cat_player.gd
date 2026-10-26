@@ -24,6 +24,11 @@ extends CharacterBody3D
 
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
+## Controller: how fast the right stick turns the camera at full tilt (radians per second,
+## about 3 = half a turn per second). STICK SPEED in SETTINGS > CONTROLS multiplies this.
+@export var stick_turn_speed: float = 3.2
+## Controller: up/down look speed compared to left/right (looking up/down needs less).
+@export var stick_pitch_ratio: float = 0.6
 @export var min_pitch_degrees: float = -70.0
 @export var max_pitch_degrees: float = 20.0
 ## While holding the tommy gun, the camera slides this far to the right (over the shoulder)
@@ -152,7 +157,7 @@ func _ready() -> void:
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
 		teleport_to(UndergroundHub.instance.spawn_position(get_index()), 0.0)
-		set_process(false)  # _process is only for smoothing other players' cats
+		# (_process does the controller's right-stick camera for our own cat.)
 	else:
 		# Someone else's cat: no input, no physics — _process glides it to the synced spot.
 		set_physics_process(false)
@@ -165,8 +170,12 @@ func _ready() -> void:
 				enter_car(car)
 
 
-## Other players' cats only: ease toward the latest position from the network.
+## Our own cat: turn the camera with the controller's right stick.
+## Other players' cats: ease toward the latest position from the network.
 func _process(delta: float) -> void:
+	if is_multiplayer_authority():
+		_stick_look(delta)
+		return
 	var weight := 1.0 - exp(-network_smoothing * delta)
 	if position.distance_to(sync_position) > teleport_distance:
 		position = sync_position
@@ -271,6 +280,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## Controller camera: the right stick (LOOK UP / DOWN / LEFT / RIGHT in SETTINGS > KEYS) turns
+## the camera like the mouse does. Gentle near the middle (for aiming), fast at full tilt.
+## STICK SPEED and INVERT STICK Y come from SETTINGS > CONTROLS.
+func _stick_look(delta: float) -> void:
+	if not is_controlled or _menu_open() or _pad_in_inventory():
+		return
+	var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	if stick == Vector2.ZERO:
+		return
+	stick *= stick.length()  # response curve: half tilt = quarter speed
+	var turn := stick_turn_speed * Settings.stick_speed * delta
+	var pitch_sign := -1.0 if Settings.invert_stick_y else 1.0
+	camera_pivot.rotate_y(-stick.x * turn)
+	spring_arm.rotation.x = clamp(
+		spring_arm.rotation.x - stick.y * turn * stick_pitch_ratio * pitch_sign,
+		deg_to_rad(min_pitch_degrees),
+		deg_to_rad(max_pitch_degrees)
+	)
+
+
 func _physics_process(delta: float) -> void:
 	if not is_controlled:
 		return
@@ -296,7 +325,8 @@ func _physics_process(delta: float) -> void:
 			_air_jumps_left -= 1
 			Sound.play_everywhere("jump", global_position, -6.0)
 
-	# Read WASD as a 2D direction (x = left/right, y = forward/back).
+	# Read WASD (or the controller's left stick) as a 2D direction (x = left/right, y = forward/back).
+	# The stick is analog: push it halfway and the cat walks at half speed.
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if _input_blocked():
 		input_dir = Vector2.ZERO
@@ -305,7 +335,7 @@ func _physics_process(delta: float) -> void:
 	var cam_basis := camera_pivot.global_transform.basis
 	var direction := cam_basis.x * input_dir.x + cam_basis.z * input_dir.y
 	direction.y = 0.0
-	direction = direction.normalized()
+	direction = direction.normalized()  # (how far the stick is pushed is put back below)
 
 	# Catnip (or any boost) wears off over time.
 	_boost_time_left = maxf(_boost_time_left - delta, 0.0)
@@ -317,7 +347,7 @@ func _physics_process(delta: float) -> void:
 	var target_speed := zoomies_speed if is_zooming else walk_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
 	var heavy := ItemManager.instance.carry_speed(name.to_int()) if ItemManager.instance != null else 1.0
-	var target_velocity := direction * target_speed * speed_boost * heavy
+	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy
 
 	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
 	var weight := 1.0 - exp(-acceleration * delta)
@@ -370,8 +400,14 @@ func _menu_open() -> bool:
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
+## (Also while a controller player has the inventory open: their stick and A button are
+## moving around the inventory then, not the cat.)
 func _input_blocked() -> bool:
-	return _menu_open() or knocked_out
+	return _menu_open() or knocked_out or _pad_in_inventory()
+
+
+func _pad_in_inventory() -> bool:
+	return Controls.using_pad and InventoryScreen.instance != null and InventoryScreen.instance.visible
 
 
 ## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".

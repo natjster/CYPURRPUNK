@@ -360,6 +360,7 @@ func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> 
 			popup_text += "\nQUEST DONE +$%d" % quest_bonus
 		Hud.popup(popup_text, 2.5)  # the big text that fades out (scripts/ui/hud.gd)
 		Sound.play("extract")
+		Controls.rumble(0.5, 0.2, 0.3)  # a happy buzz on the controller
 		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
 
 

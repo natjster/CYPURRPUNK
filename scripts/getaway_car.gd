@@ -147,7 +147,9 @@ func _physics_process(delta: float) -> void:
 ## and not while the pause menu is open (then the car just rolls to a stop).
 func _read_driver_keys() -> void:
 	if driver_id == multiplayer.get_unique_id() and not PauseMenu.is_open:
-		throttle = Input.get_axis("move_back", "move_forward")  # W = +1, S = -1
+		# W = +1, S = -1. On a controller the triggers work too (RT = GAS, LT = BRAKE), and
+		# they're analog: squeeze RT halfway for half gas.
+		throttle = clampf(Input.get_axis("move_back", "move_forward") + Input.get_axis("brake", "gas"), -1.0, 1.0)
 		steer = Input.get_axis("move_right", "move_left")       # A = +1 (left), D = -1
 		handbrake = Input.is_action_pressed("handbrake")
 	else:

@@ -262,7 +262,9 @@ func _use_held_items(delta: float) -> void:
 	if cat == null or not cat.is_controlled or cat.knocked_out:
 		return
 	var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
-	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	# Mouse players: only while the mouse is grabbed by the game (not while clicking a menu).
+	# Controller players: whenever no menu / HUD window is open.
+	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED 		or (Controls.using_pad and not PauseMenu.is_open and not NpcDialog.is_open and not Hud.wants_input())
 	for hand in 2:
 		var held := held_item(cat, hand)
 		if held == null or (safe_zone and held is Weapon):

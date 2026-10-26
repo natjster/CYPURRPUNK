@@ -27,7 +27,7 @@ Meow-City/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
 │   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
-│   ├── controls.gd            <- autoload "Controls": every key, rebinding, saved to controls.cfg
+│   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
 │   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
@@ -168,6 +168,9 @@ camera (its child) would whip around every time the cat turned.
 - **Zoomies (Shift)** — higher top speed, cat leans nose-forward, camera rolls when strafing, FOV widens.
 - **Mouse look** — speed and invert-Y come from the Settings menu (§10). Esc opens the pause menu
   (which frees the mouse); if the mouse gets freed another way, click the game to grab it again.
+- **Controller** — right stick turns the camera (`_stick_look`, knobs **Stick Turn Speed** /
+  **Stick Pitch Ratio**), the left stick is analog (half push = walk at half speed). See §10,
+  "Playing with a controller".
 - **Items** — E grabs the nearest item, G drops what's in your paws, Left/Right Mouse use them
   (§9). With a gun, the cat turns to face where the camera looks, and the camera slides over the
   right shoulder (**Gun Shoulder Offset**, in the Camera group).
@@ -872,6 +875,8 @@ Scattered Items (both empty: gear comes from the shop), Scatter Respawn Seconds.
 
 ### Inventory screen (Tab or I)
 Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is freed while open).
+On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-click, **X** = drop,
+**B** / **Y** close (the cat stands still while a controller player has it open).
 ```
           INVENTORY
    LEFT PAW      RIGHT PAW        <- what you're holding (a 2-paw item shows BOTH PAWS)
@@ -905,7 +910,7 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
                                 --MULTIPLAYER-->  HOST (+ city #)  or  JOIN (+ address)
   ```
   **BACK** (or **Esc**) always goes one step back. The game version shows bottom-left.
-- **Pause menu (Esc in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
+- **Pause menu (Esc, or START on a controller, in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
   SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
   **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
   open. LEAVE GAME goes back to the start menu; if the host leaves, everyone does.
@@ -915,37 +920,81 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 - **No key list on screen during play** — the keys live in **SETTINGS > KEYS**, and prompts
   ("[E] TALK TO...", "E PURR-TOMMY" over items, "TAB: close" in the inventory) always show the
   player's *current* key. The city number is shown in the pause menu.
+- **Controllers** (Xbox, PlayStation, Switch Pro... anything Windows sees) work everywhere,
+  including every menu. Whatever the player touched last decides what the prompts show: touch the
+  controller and "[E] TALK" becomes "[X] TALK" (PlayStation pads show SQUARE, CROSS, L2...).
+  See "Playing with a controller" below.
 
 | Tab | Settings |
 |---|---|
 | DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), aspect (WIDE = fill wide/ultrawide monitors, still 240 tall / 4:3), VSync, field of view |
 | SOUND | Master, music, sound FX volume |
-| CONTROLS | Mouse speed, invert mouse Y |
-| KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |
+| CONTROLS | Mouse speed, invert mouse Y, stick speed (right-stick camera), invert stick Y, rumble on/off |
+| KEYS | Every control with two keyboard/mouse boxes + a **PAD** (controller) box (scrolls). **RESET KEYS** = default keys and buttons |
 | EFFECTS | CRT TV look (0-100%), PS1 wobble on/off, volumetric fog on/off |
 
 Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cats: names and looks) and
 `controls.cfg` (keys). RESET in Settings never touches your cats.
 Delete those files to get a fresh start.
 
+### Playing with a controller
+Just plug it in (or pair it) and press a button: no setting needed.
+
+| On foot | | In the car | |
+|---|---|---|---|
+| Left stick | walk (analog: half push = half speed) | Left stick | steer |
+| Right stick | camera | RT / LT | gas / brake + reverse (analog) |
+| A | jump | Left stick up/down | gas / brake too |
+| L3 (click left stick) | zoomies | RB | handbrake |
+| X | grab / talk / car | X | get out |
+| RT / LT | use right / left paw (shoot) | | |
+| Y | inventory | | |
+| B | meow | | |
+| D-pad down | drop | | |
+| START | pause menu | | |
+
+**In every menu:** d-pad or left stick = move the highlight, **A** = press, **B** = back,
+**START** = pause / unpause. In SETTINGS, **left/right** on a row changes its value and
+**LB / RB** switch tabs. In the inventory, **A** = what a left-click does, **X** = drop,
+**B** or **Y** = close. CHOOSE YOUR CAT: a controller can't type, so pressing NEXT without a
+name gives the cat a random one (rename it with a keyboard any time).
+
+Rumble: getting hit, getting knocked out, every shot, extracting. Turn it off in
+SETTINGS > CONTROLS > RUMBLE. To change how strong one is, find `Controls.rumble(` in the script
+(`cat_health.gd`, `items/weapon.gd`, `fish_heist.gd`): the numbers are light motor, heavy motor
+(0 to 1) and seconds. Right-stick turning speed: select a cat in `scenes/player.tscn` >
+Inspector > **Camera** > **Stick Turn Speed** (and **Stick Pitch Ratio** for up/down); players
+fine-tune it with STICK SPEED. Stick drift (cat creeps along by itself)? Raise
+**STICK_DEADZONE** at the top of `scripts/controls.gd`.
+
 ### Controls & key binding (`scripts/controls.gd`, Autoload **Controls**)
 - **Rebinding (player):** SETTINGS > KEYS, click a box (it shows `...`), press the new key or
   mouse button (Left/Right/Middle click, wheel, side buttons all work). **Esc** cancels,
-  **Delete/Backspace** empties the box. Each control has two boxes (e.g. W *and* Up).
+  **Delete/Backspace** empties the box. Each control has two keyboard boxes (e.g. W *and* Up)
+  and one **PAD** box: pick it (A on a controller) and press a controller button, stick
+  direction or trigger. **START** cancels. Keyboard boxes ignore controller buttons and the PAD
+  box ignores keys.
 - **Clashes:** if the key was already used by a control needed at the same time, that control
   loses it and the hint says "SPACE was taken from JUMP - give it a new key!". Controls only
   clash when their **context** overlaps: `foot` (walking), `car` (driving), `any` (both) — so
   JUMP (foot) and HANDBRAKE (car) can both be Space.
-- **Esc can't be rebound** — it always opens/closes menus.
+- **Esc and START can't be rebound** — they always open/close menus. The other menu buttons
+  (A = press, B = back, LB/RB = tabs, X = drop in the inventory) are in **FIXED** in
+  `scripts/controls.gd`.
 - **Adding a control:** add one line to **ACTIONS** in `scripts/controls.gd`, e.g.
-  `{"action": "wave", "label": "WAVE", "context": "foot", "keys": ["V"]},`
+  `{"action": "wave", "label": "WAVE", "context": "foot", "keys": ["V"], "pad": "Pad R3"},`
   It appears in the KEYS menu by itself. In your script use `Input.is_action_pressed("wave")`
   (or `event.is_action_pressed("wave")` in `_unhandled_input`, like MEOW in `cat_player.gd`).
 - **Changing a default key:** edit `"keys"` on that line (names like `"F"`, `"Space"`, `"Shift"`,
-  `"Up"`, `"Mouse Left"`, `"Wheel Up"`, `"Mouse 4"`). Players who already rebound keep theirs
-  until they press RESET KEYS.
+  `"Up"`, `"Mouse Left"`, `"Wheel Up"`, `"Mouse 4"`), or `"pad"` for the controller (`"Pad A"`,
+  `"Pad B"`, `"Pad X"`, `"Pad Y"`, `"Pad LB"`, `"Pad RB"`, `"Pad LT"`, `"Pad RT"`, `"Pad L3"`,
+  `"Pad R3"`, `"Pad Back"`, `"Pad D-Pad Up"`..., `"Pad Left Stick Up"`..., `"Pad Right Stick Left"`...).
+  Players who already rebound keep theirs until they press RESET KEYS.
 - **Showing a key on a prompt:** `Controls.key_text("interact")` gives `"E"` (or whatever the
-  player picked). Connect `Controls.changed` if the text is made once and needs updating.
+  player picked), or `"X"` while they're on a controller. Connect `Controls.changed` if the text
+  is made once and needs updating (it also fires when they switch keyboard <-> controller).
+- **Is the player on a controller?** `Controls.using_pad`. **Rumble:** `Controls.rumble(light, heavy, seconds)`
+  (does nothing on keyboard or with RUMBLE off).
 
 ### Node tree (in `main.tscn`, under PS1Overlay)
 ```
@@ -980,7 +1029,7 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
   `settings_pressed` signals, and `game.gd` does the work (e.g. `play_pressed` opens CHOOSE YOUR
   CAT, whose NEXT shows the SOLO / MULTIPLAYER screen again). Inspector knobs on **Lobby** > **Start Menu**: Menu Camera, Camera
   Sway Degrees / Seconds, Title Flicker.
-- **`scripts/ui/pause_menu.gd`** (on **PauseMenu**) — Esc opens/closes it once a game has
+- **`scripts/ui/pause_menu.gd`** (on **PauseMenu**) — Esc / START opens/closes it (B closes) once a game has
   started. While it (or Settings opened from it) is up, `PauseMenu.is_open` is true and the cat,
   car and inventory ignore the keyboard.
 - **`scripts/settings.gd`** — Autoload named **Settings**. Holds every setting with its default,
@@ -1007,7 +1056,12 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 ### Testing shortcut
 `--menu=play`, `--menu=settings` (plus `--settings_tab=0..4`, 3 = KEYS) or `--menu=pause` (with
 `--host`) open that menu before a DevCapture screenshot. `--rebind=drop,0,Space` (with
-`--menu=settings`) rebinds a key like a player would and prints every key.
+`--menu=settings`) rebinds a key like a player would and prints every key (`--rebind=jump,2,Pad_B`
+for the PAD box).
+Controller tests (fake controller presses, no controller needed): `--pad=Right_Stick_Right`
+(hold for `--hold_frames`, prints how far the camera turned / cat moved / car throttle),
+`--pad=RT,Left_Stick_Left --drive` (car), `--pad_press=Start,D-Pad_Down,A,B` (presses one by one,
+prints which menu is open and which button is highlighted after each).
 
 ---
 

@@ -118,6 +118,7 @@ func _fire() -> void:
 	aim = aim.rotated(camera.global_basis.x, _rng.randf_range(-spread, spread))
 	aim = aim.rotated(camera.global_basis.y, _rng.randf_range(-spread, spread))
 	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.3  # cat turns to face the shot
+	Controls.rumble(0.4, 0.1, 0.06)  # a little kick on the controller with every shot
 
 	var from := camera.global_position
 	var query := PhysicsRayQueryParameters3D.create(from, from + aim * max_range)

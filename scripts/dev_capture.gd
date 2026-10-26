@@ -49,6 +49,13 @@ extends Node
 ##                     keep it there for --heat_hold frames (default: until the snap)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
+##                     (slot 2 = the PAD box: --rebind=jump,2,Pad_B  - use _ for spaces)
+##   --pad=NAME,NAME   push controller sticks / triggers / buttons (fake but REAL controller events)
+##                     for --hold_frames after --hold_delay, e.g. --pad=Right_Stick_Right or
+##                     --pad=Left_Stick_Up,RT (names from Controls.PAD_BUTTONS / PAD_AXES, _ = space)
+##   --pad_press=A,B   press + release controller buttons one by one (after --menu), printing
+##                     which menu is open and which button is highlighted after each,
+##                     e.g. --pad_press=Start,D-Pad_Down,A
 
 
 func _ready() -> void:
@@ -232,6 +239,30 @@ func _ready() -> void:
 			if not args.has("keep_holding"):  # --keep_holding = still held when the snap is taken
 				for action in args["hold"].split(","):
 					Input.action_release(action)
+		if args.has("pad"):
+			# Push the controller like a player would, e.g. --pad=Right_Stick_Right --hold_frames=30
+			for i in int(args.get("hold_delay", "30")):
+				await get_tree().process_frame
+			var yaw_before := player.camera_pivot.rotation.y
+			var pos_before := player.global_position
+			var pads: PackedStringArray = args["pad"].replace("_", " ").split(",")
+			for pad in pads:
+				Input.parse_input_event(_pad_event(pad, true))
+			for i in int(args.get("hold_frames", "60")):
+				await get_tree().process_frame
+			var car := scene.get_node("GetawayCar") as GetawayCar
+			var held: Array = []
+			for entry in Controls.ACTIONS:
+				if Input.is_action_pressed(entry.action):
+					held.append(entry.action)
+			print("DevCapture pad held: %s" % [held])
+			print("DevCapture pad %s: using_pad=%s yaw turned %.2f rad, cat moved %.2f m, car throttle %.2f steer %.2f, speed %.1f, prompt key=%s" % [
+				args["pad"], Controls.using_pad, player.camera_pivot.rotation.y - yaw_before,
+				player.global_position.distance_to(pos_before), car.throttle, car.steer,
+				car.linear_velocity.length(), Controls.key_text("interact")])
+			if not args.has("keep_holding"):
+				for pad in pads:
+					Input.parse_input_event(_pad_event(pad, false))
 		if args.has("drop_after"):
 			# Wait, then drop what's in the paws (what G does).
 			for i in int(args["drop_after"]):
@@ -307,15 +338,31 @@ func _ready() -> void:
 			var parts: PackedStringArray = args["rebind"].split(",")
 			scene.settings_menu._start_listening(parts[0], int(parts[1]))
 			await get_tree().process_frame
-			var press := InputEventKey.new()
-			press.physical_keycode = OS.find_keycode_from_string(parts[2])
-			press.keycode = press.physical_keycode
-			press.pressed = true
-			Input.parse_input_event(press)
+			if parts[2].begins_with("Pad_"):
+				Input.parse_input_event(_pad_event(parts[2].trim_prefix("Pad_").replace("_", " "), true))
+			else:
+				var press := InputEventKey.new()
+				press.physical_keycode = OS.find_keycode_from_string(parts[2])
+				press.keycode = press.physical_keycode
+				press.pressed = true
+				Input.parse_input_event(press)
 			await get_tree().process_frame
 			print("DevCapture rebind %s -> %s | hint: %s" % [parts[0], Controls.bindings[parts[0]], scene.settings_menu.hint_label.text])
 			for entry in Controls.ACTIONS:
 				print("DevCapture key %s = %s" % [entry.action, Controls.bindings[entry.action]])
+
+	if args.has("pad_press"):
+		# --pad_press=Start,D-Pad_Down,A : real controller presses, one every few frames.
+		for pad in args["pad_press"].replace("_", " ").split(","):
+			for pressed in [true, false]:
+				Input.parse_input_event(_pad_event(pad, pressed))
+				for i in 4:
+					await get_tree().process_frame
+			var game_focus := GameScreen.instance.game_viewport.gui_get_focus_owner()
+			var hud_focus := get_viewport().gui_get_focus_owner()
+			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s" % [
+				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.instance.visible,
+				NpcDialog.is_open, Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus)])
 
 	for i in int(args.get("frames", "90")):
 		await get_tree().process_frame
@@ -498,6 +545,27 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 				await get_tree().process_frame
 			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open,
 				NpcDialog.instance.line_label.text.left(40), NpcDialog.instance.choices_box.get_child_count()])
+
+
+## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all
+## the way (pressed) or let go (not pressed). Same names as Controls.PAD_BUTTONS / PAD_AXES.
+func _pad_event(pad_name: String, pressed: bool) -> InputEvent:
+	var event := Controls._event_from_name("Pad " + pad_name)
+	assert(event != null, "unknown controller name: " + pad_name)
+	event.device = 0
+	if event is InputEventJoypadButton:
+		event.pressed = pressed
+	elif not pressed:
+		event.axis_value = 0.0
+	return event
+
+
+## "Button 'RESUME'" for the focus printout (or "-" when nothing is highlighted).
+func _describe_focus(control: Control) -> String:
+	if control == null:
+		return "-"
+	var text: String = control.get("text") if control.get("text") != null else ""
+	return "%s '%s'" % [control.get_class(), text]
 
 
 func _parse_args(raw: PackedStringArray) -> Dictionary:

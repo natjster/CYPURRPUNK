@@ -90,6 +90,7 @@ func _set_health(peer_id: int, hp: int) -> void:
 		_flash_time = 0.6  # we got hurt: flash the HP line
 		if hp > 0:
 			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
+			Controls.rumble(0.3, 0.7, 0.25)  # thump on the controller
 	health[peer_id] = hp
 
 
@@ -101,6 +102,7 @@ func _knocked_out(cause: String) -> void:
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
 	Sound.play("knockout")
+	Controls.rumble(0.8, 1.0, 0.7)  # big shake on the controller
 	Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):

@@ -47,6 +47,11 @@ const WARN_COLOR := Color(1, 0.8, 0.45)
 const SPIN_SPEED: float = 0.8
 ## Longest cat name (it floats over your cat).
 const MAX_NAME_LENGTH: int = 12
+## Names handed out when someone on a controller presses NEXT without typing one (max 12 letters).
+const PAD_NAMES: Array[String] = [
+	"WHISKERS", "MITTENS", "SOCKS", "PICKLES", "NOODLE", "BISCUIT", "SARDINE", "TUNA",
+	"CHAIRMEOW","PURRSIA", "SMUDGE", "GIZMO", "NACHO", "PEPPER", "ZIGGY", "MOCHI",
+]
 
 ## The look being edited (a CatLook dictionary).
 var _look: Dictionary = {}
@@ -211,9 +216,14 @@ func _on_next_pressed() -> void:
 		close()
 		return
 	if str(Settings.current_cat().get("name", "")).is_empty():
-		_set_note("Name your cat first!", WARN_COLOR)
-		_name_edit.grab_focus()
-		return
+		if Controls.using_pad:
+			# A controller can't type: pick a name for them (they can retype it on a keyboard later).
+			_name_edit.text = PAD_NAMES[_rng.randi_range(0, PAD_NAMES.size() - 1)]
+			_on_name_changed(_name_edit.text)
+		else:
+			_set_note("Name your cat first!", WARN_COLOR)
+			_name_edit.grab_focus()
+			return
 	hide()
 	next_pressed.emit()
 

@@ -92,6 +92,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   context foot/car/any, default keys) registers every input action in code (not in project.godot);
   players rebind in SETTINGS > KEYS (saved to `user://controls.cfg`). Prompts must show
   `Controls.key_text("action")`, never a hard-coded key; no key-hint bar on the HUD. Test: `--rebind=A,S,KEY`.
+  Controllers: each action also has a `pad` default (slot `PAD_SLOT` = 2, names "Pad A", "Pad RT",
+  "Pad Left Stick Up"); `FIXED` = unbindable menu actions (`pause` = Esc/Start; pad A/B/LB/RB/X added
+  to ui_accept/ui_cancel/ui_tab_left/right/ui_drop). Menus open/close the pause menu on `pause`, back
+  out on `ui_cancel` (B). `Controls.using_pad` (last device touched; key_text follows it),
+  `Controls.rumble(weak, strong, s)`. Every menu must work by focus (grab_focus on open).
+  Test: `--pad=Right_Stick_Right`, `--pad_press=Start,D-Pad_Down,A`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 ## Character creator (MY CAT)

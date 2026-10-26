@@ -10,6 +10,7 @@ extends Control
 ##   BACKPACK  held items you're carrying but not using. Click = take it into your paws.
 ##   LOOT BAG  fish etc. Delivered at the drop-off.
 ##   Right-click any item = drop it on the ground in front of you.
+##   CONTROLLER: Y opens it, the d-pad / left stick picks a slot, A = click, X = drop, B / Y = close.
 ##
 ## AT THE STASH (standing at the lockers in the sewers, or pressing E there) the loot bag is
 ## swapped for your STASH, and clicks move things between you and the stash instead:
@@ -123,6 +124,9 @@ func _build() -> void:
 	# As wide as the slot rows, and room for two lines, so the box doesn't jump in size.
 	_info.custom_minimum_size = Vector2(columns * slot_size.x + (columns - 1) * 8, (title_font_size + 4) * 2)
 	box.add_child(_info)
+	Controls.changed.connect(func():  # switched keyboard <-> controller: redo the "Click: ..." line
+		if visible:
+			_show_stash_section(_at_stash))
 
 
 func _input(event: InputEvent) -> void:
@@ -133,6 +137,12 @@ func _input(event: InputEvent) -> void:
 	elif visible and event.is_action_pressed("ui_cancel"):
 		_set_open(false)
 		get_viewport().set_input_as_handled()
+	elif visible and (event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_drop")):
+		# Controller / keyboard: A (Enter) = click the highlighted slot, X = drop it.
+		var slot := get_viewport().gui_get_focus_owner() as Button
+		if slot != null and slot.has_meta("where"):
+			_use_slot(slot, slot.get_meta("where"), slot.get_meta("index"), event.is_action_pressed("ui_drop"))
+			get_viewport().set_input_as_handled()
 
 
 ## Open the screen (the cat calls this when E is pressed at the stash lockers).
@@ -150,8 +160,12 @@ func _set_open(open_it: bool) -> void:
 	if open_it:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
-	elif cat != null and cat.is_controlled:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		if Controls.using_pad:
+			_paw_buttons[0].grab_focus()  # a highlighted slot for the d-pad to move around from
+	else:
+		get_viewport().gui_release_focus()
+		if cat != null and cat.is_controlled:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _process(_delta: float) -> void:
@@ -195,10 +209,12 @@ func _show_stash_section(at_stash: bool) -> void:
 	_bag_grid.visible = not at_stash
 	_stash_title.visible = at_stash
 	_stash_grid.visible = at_stash
+	var click := "%s:" % Controls.key_text("ui_accept") if Controls.using_pad else "Click:"
+	var drop := "%s:" % Controls.key_text("ui_drop") if Controls.using_pad else "Right-click:"
 	if at_stash:
-		_info.text = "Click: move between you and the stash   Right-click: drop   %s: close" % Controls.key_text("inventory")
+		_info.text = "%s move between you and the stash   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 	else:
-		_info.text = "Click: equip / put away   Right-click: drop   %s: close" % Controls.key_text("inventory")
+		_info.text = "%s equip / put away   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 
 
 ## Show an item in a slot (or "-" when empty), coloured like the item's glow.
@@ -230,16 +246,22 @@ func _grid(list: Array[Button], where: String, count: int) -> GridContainer:
 func _slot(where: String, index: int) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = slot_size
-	button.focus_mode = Control.FOCUS_NONE  # so Tab closes the screen instead of moving focus
+	# Focusable, so a controller's d-pad can move between slots. (Tab still closes the screen:
+	# _input sees the INVENTORY key before the focus does.)
+	button.focus_mode = Control.FOCUS_ALL
+	button.set_meta("where", where)
+	button.set_meta("index", index)
 	button.clip_text = true
 	button.add_theme_font_size_override("font_size", slot_font_size)
 	# Dark slot box with a neon edge (brighter when the mouse is over it).
 	button.add_theme_stylebox_override("normal", _slot_style(Color(0.55, 0.35, 0.85, 0.8)))
 	button.add_theme_stylebox_override("hover", _slot_style(Color(1, 0.4, 0.8)))
 	button.add_theme_stylebox_override("pressed", _slot_style(Color(1, 1, 1)))
+	button.add_theme_stylebox_override("focus", _slot_style(Color(0.4, 1, 1)))  # highlighted by the controller
 	button.set_meta("item", "")
 	button.gui_input.connect(_on_slot_input.bind(button, where, index))
 	button.mouse_entered.connect(_on_slot_hover.bind(button))
+	button.focus_entered.connect(_on_slot_hover.bind(button))
 	return button
 
 
@@ -267,7 +289,16 @@ func _label(text: String, font_size: int, color: Color) -> Label:
 ## Left-click = equip / put away (or, at the stash, move to/from the stash); right-click = drop.
 func _on_slot_input(event: InputEvent, button: Button, where: String, index: int) -> void:
 	var click := event as InputEventMouseButton
-	if click == null or not click.pressed or button.get_meta("item") == "":
+	if click == null or not click.pressed:
+		return
+	if click.button_index == MOUSE_BUTTON_LEFT or click.button_index == MOUSE_BUTTON_RIGHT:
+		_use_slot(button, where, index, click.button_index == MOUSE_BUTTON_RIGHT)
+		accept_event()
+
+
+## What clicking a slot does (drop = right-click / X on a controller).
+func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
+	if button.get_meta("item") == "":
 		return
 	var items := ItemManager.instance
 	var cat := items.local_cat()
@@ -275,9 +306,11 @@ func _on_slot_input(event: InputEvent, button: Button, where: String, index: int
 		_info.text = "Can't do that from inside the car."
 		return
 	var inventory := items.get_inventory(cat.name.to_int())
-	if click.button_index == MOUSE_BUTTON_RIGHT and where != "stash":
+	if drop and where != "stash":
 		items.request_drop_item.rpc_id(1, where, index, items.ground_in_front_of(cat))
-	elif click.button_index == MOUSE_BUTTON_LEFT and _at_stash:
+	elif drop:
+		pass  # (stash items can't be dropped)
+	elif _at_stash:
 		if where == "stash":
 			if inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."
@@ -287,7 +320,7 @@ func _on_slot_input(event: InputEvent, button: Button, where: String, index: int
 			_info.text = "Stash is full."
 		else:
 			items.request_to_stash.rpc_id(1, where, index)
-	elif click.button_index == MOUSE_BUTTON_LEFT:
+	else:
 		if where == "pack":
 			items.request_equip.rpc_id(1, index)
 		elif where == "hand":
@@ -297,7 +330,6 @@ func _on_slot_input(event: InputEvent, button: Button, where: String, index: int
 				items.request_put_away.rpc_id(1, index)
 		else:
 			_info.text = "Loot pays out at the drop-off (the green beam)."
-	accept_event()
 
 
 ## Hovering a slot shows what the item is.

@@ -17,8 +17,12 @@ extends Control
 ##
 ## Each row is "NAME   <  VALUE  >". The rows come from the TABS list below, and the values
 ## live in the Settings autoload (scripts/settings.gd), which saves them to disk.
-## The KEYS tab is different: one row per control, "NAME  [KEY 1] [KEY 2]". Click a box,
-## then press the new key. Those rows come from Controls.ACTIONS (scripts/controls.gd).
+## The KEYS tab is different: one row per control, "NAME  [KEY 1] [KEY 2] [PAD]". Click a box,
+## then press the new key (or controller button, in the PAD box). Those rows come from
+## Controls.ACTIONS (scripts/controls.gd).
+##
+## With a controller: up / down picks a row, left / right changes its value, A presses,
+## B goes back, LB / RB switch tabs.
 
 ## Fired when the player presses BACK (or Esc), so whoever opened us can show itself again.
 signal closed
@@ -59,6 +63,12 @@ const TABS: Array = [
 			"hint": "How fast the camera turns when you move the mouse."},
 		{"setting": "invert_y", "label": "INVERT MOUSE Y", "choices": [[false, "OFF"], [true, "ON"]],
 			"hint": "ON = push the mouse up to look down (flight-sim style)."},
+		{"setting": "stick_speed", "label": "STICK SPEED", "min": 0.2, "max": 3.0, "step": 0.1, "format": "percent",
+			"hint": "How fast the camera turns with the controller's right stick."},
+		{"setting": "invert_stick_y", "label": "INVERT STICK Y", "choices": [[false, "OFF"], [true, "ON"]],
+			"hint": "ON = push the right stick up to look down."},
+		{"setting": "rumble", "label": "RUMBLE", "choices": [[true, "ON"], [false, "OFF"]],
+			"hint": "Controller shakes when you get hit, shoot or extract."},
 	]],
 	["KEYS", "keys"],
 	["EFFECTS", [
@@ -79,14 +89,17 @@ const VALUE_COLOR := Color(0.4, 1, 1)
 @onready var rows_box: VBoxContainer = $Panel/VBox/Scroll/Rows
 @onready var hint_label: Label = $Panel/VBox/Hint
 
-const KEYS_HINT := "Click a box, then press the new key or mouse button."
+const KEYS_HINT := "Pick a box, then press the new key. PAD = controller."
 const LISTEN_HINT := "Press a key or mouse button...  ESC = cancel, DELETE = clear."
+const LISTEN_PAD_HINT := "Press a controller button...  START / ESC = cancel, DELETE = clear."
+## Width of each key box on the KEYS tab (game pixels).
+const KEY_BOX_WIDTH: float = 44.0
 
 var _tab_buttons: Array[Button] = []
 var _current_tab: int = 0
 ## Value label for each setting on screen, so they can be refreshed: {setting: Label}.
 var _value_labels: Dictionary = {}
-## The two key boxes of each control on the KEYS tab: {action: [Button, Button]}.
+## The key boxes of each control on the KEYS tab: {action: [KEY 1, KEY 2, PAD]}.
 var _key_buttons: Dictionary = {}
 ## While waiting for the player to press a new key: [action, slot]. Empty otherwise.
 var _listening: Array = []
@@ -134,6 +147,18 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		close()
+	elif event.is_action_pressed("ui_tab_left") or event.is_action_pressed("ui_tab_right"):
+		# LB / RB: previous / next tab.
+		get_viewport().set_input_as_handled()
+		var direction := -1 if event.is_action_pressed("ui_tab_left") else 1
+		_show_tab(posmod(_current_tab + direction, TABS.size()))
+		_tab_buttons[_current_tab].grab_focus()
+	elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
+		# Left / right on a "<  VALUE  >" row changes the value (instead of hopping between < and >).
+		var focused := get_viewport().gui_get_focus_owner()
+		if focused != null and focused.has_meta("row"):
+			get_viewport().set_input_as_handled()
+			_step(focused.get_meta("row"), -1 if event.is_action_pressed("ui_left") else 1)
 
 
 func _show_tab(index: int) -> void:
@@ -146,6 +171,7 @@ func _show_tab(index: int) -> void:
 	_key_buttons.clear()
 	scroll.scroll_vertical = 0
 	if TABS[index][1] is String:  # the KEYS tab
+		rows_box.add_child(_make_key_header())
 		for entry in Controls.ACTIONS:
 			rows_box.add_child(_make_key_row(entry))
 		$Panel/VBox/Buttons/ResetButton.text = "RESET KEYS"
@@ -174,6 +200,7 @@ func _make_row(row: Dictionary) -> HBoxContainer:
 	less.text = "<"
 	less.custom_minimum_size.x = 14
 	less.pressed.connect(_step.bind(row, -1))
+	less.set_meta("row", row)  # so left / right on a controller can change this row
 	less.focus_entered.connect(func(): hint_label.text = row.hint)
 	line.add_child(less)
 
@@ -188,6 +215,7 @@ func _make_row(row: Dictionary) -> HBoxContainer:
 	more.text = ">"
 	more.custom_minimum_size.x = 14
 	more.pressed.connect(_step.bind(row, 1))
+	more.set_meta("row", row)
 	more.focus_entered.connect(func(): hint_label.text = row.hint)
 	line.add_child(more)
 	return line
@@ -276,7 +304,24 @@ func _on_reset_pressed() -> void:
 
 # --- The KEYS tab ---
 
-## One "NAME   [KEY 1] [KEY 2]" line for a control from Controls.ACTIONS.
+## The "KEY 1  KEY 2  PAD" titles above the key boxes.
+func _make_key_header() -> HBoxContainer:
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 2)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(spacer)
+	for title in ["KEY 1", "KEY 2", "PAD"]:
+		var label := Label.new()
+		label.text = title
+		label.custom_minimum_size.x = KEY_BOX_WIDTH
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_color_override("font_color", HEADER_COLOR)
+		line.add_child(label)
+	return line
+
+
+## One "NAME   [KEY 1] [KEY 2] [PAD]" line for a control from Controls.ACTIONS.
 func _make_key_row(entry: Dictionary) -> HBoxContainer:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 2)
@@ -289,9 +334,10 @@ func _make_key_row(entry: Dictionary) -> HBoxContainer:
 	line.add_child(name_label)
 
 	var boxes: Array[Button] = []
-	for slot in Controls.SLOTS:
+	for slot in Controls.SLOTS + 1:  # 2 keyboard boxes + the controller box
 		var box := Button.new()
-		box.custom_minimum_size.x = 52
+		box.custom_minimum_size.x = KEY_BOX_WIDTH
+		box.clip_text = true
 		box.add_theme_color_override("font_color", VALUE_COLOR)
 		box.pressed.connect(_start_listening.bind(entry.action, slot))
 		box.focus_entered.connect(_show_keys_hint)
@@ -306,35 +352,37 @@ func _show_keys_hint() -> void:
 		hint_label.text = KEYS_HINT
 
 
-## A key box was clicked: the next key / mouse button pressed goes into it.
+## A key box was clicked: the next key / mouse button (or controller button, for the PAD box)
+## pressed goes into it.
 func _start_listening(action: String, slot: int) -> void:
 	_listening = [action, slot]
 	_refresh_keys()
-	hint_label.text = LISTEN_HINT
+	hint_label.text = LISTEN_PAD_HINT if Controls.is_pad_slot(slot) else LISTEN_HINT
 
 
-## Called by _input while a key box is waiting. Esc cancels, Delete / Backspace empties
-## the box, anything else (that can be bound) becomes the new key.
+## Called by _input while a key box is waiting. Esc / START cancels, Delete / Backspace empties
+## the box, anything else (that can be bound) becomes the new key. Keyboard boxes only take
+## keys and mouse buttons; the PAD box only takes controller buttons, sticks and triggers.
 func _listen_for_key(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		return  # moving the mouse is fine
 	get_viewport().set_input_as_handled()  # don't let the press also click a button
 	var action: String = _listening[0]
 	var slot: int = _listening[1]
+	if event.is_action_pressed("pause"):
+		_listening = []
+		_refresh_keys()
+		hint_label.text = KEYS_HINT
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.physical_keycode == KEY_ESCAPE or event.keycode == KEY_ESCAPE:
-			_listening = []
-			_refresh_keys()
-			hint_label.text = KEYS_HINT
-			return
 		if event.physical_keycode in [KEY_DELETE, KEY_BACKSPACE]:
 			_listening = []
 			Controls.set_binding(action, slot, "")
 			hint_label.text = "%s key %d cleared." % [Controls.label_of(action), slot + 1]
 			return
 	var key_name := Controls.name_from_event(event)
-	if key_name == "":
-		return  # a key release etc. - keep waiting
+	if key_name == "" or key_name.begins_with("Pad ") != Controls.is_pad_slot(slot):
+		return  # a key release, or the wrong kind of key for this box, etc. - keep waiting
 	_listening = []
 	var taken_from := Controls.set_binding(action, slot, key_name)
 	if taken_from != "":
@@ -346,7 +394,7 @@ func _listen_for_key(event: InputEvent) -> void:
 ## Rewrite every key box from the current keys.
 func _refresh_keys() -> void:
 	for action in _key_buttons:
-		for slot in Controls.SLOTS:
+		for slot in Controls.SLOTS + 1:
 			var box: Button = _key_buttons[action][slot]
 			if _listening == [action, slot]:
 				box.text = "..."
