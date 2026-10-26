@@ -75,7 +75,9 @@ func _process(delta: float) -> void:
 	if look_at_players and _model != null:
 		var nearest := _nearest_cat()
 		if nearest != null:
-			var to_cat := nearest.global_position - global_position
+			# Measured in the NPC's OWN space (to_local), because Model's rotation is relative to
+			# the NPC: an NPC turned in the level (e.g. Rotation Y = 90 in main.tscn) still looks right.
+			var to_cat := to_local(nearest.global_position)
 			var target_yaw := atan2(-to_cat.x, -to_cat.z)  # same maths as the player cats (face -Z)
 			_model.rotation.y = lerp_angle(_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
 
