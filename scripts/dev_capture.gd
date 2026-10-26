@@ -12,6 +12,9 @@ extends Node
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
 ##   --drive           put the cat in the car (car view)
+##   --car_mouse=PX    (with --drive) move the mouse PX screen pixels to the right while driving
+##                     (the car camera turns); prints the camera's look angle
+##   --car_watch=N     print the car camera's look angle every N frames until the snap
 ##   --talk[=NAME]     walk up to an NPC (node name, e.g. LilMittens; default Don Catleone)
 ##                     and press E (talk box open)
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
@@ -170,6 +173,20 @@ func _ready() -> void:
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
 			(scene.get_node("GetawayCar") as GetawayCar).request_enter.rpc_id(1)
+			if args.has("car_mouse"):
+				for i in 20:
+					await get_tree().process_frame  # wait until we're behind the wheel
+				var car := scene.get_node("GetawayCar") as GetawayCar
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+				var motion := InputEventMouseMotion.new()
+				motion.relative = Vector2(float(args["car_mouse"]), 0)
+				motion.position = Vector2(get_window().size) / 2.0
+				Input.parse_input_event(motion)
+				for i in 3:
+					await get_tree().process_frame
+				print("DevCapture car_mouse: driver=%d look_yaw=%.2f look_pitch=%.2f" % [car.driver_id, car.look_yaw, car.look_pitch])
+		if args.has("car_watch"):
+			_watch_car_camera(scene.get_node("GetawayCar") as GetawayCar, int(args["car_watch"]))
 		if args.has("grab"):
 			# For each item named: stand next to the nearest one and press E (send what E sends).
 			var items := ItemManager.instance
@@ -545,6 +562,15 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 				await get_tree().process_frame
 			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open,
 				NpcDialog.instance.line_label.text.left(40), NpcDialog.instance.choices_box.get_child_count()])
+
+
+## --car_watch=N: every N frames, print where the car camera is looking (runs alongside the rest).
+func _watch_car_camera(car: GetawayCar, every: int) -> void:
+	while is_instance_valid(car):
+		for i in every:
+			await get_tree().process_frame
+		if is_instance_valid(car):
+			print("DevCapture car_watch: look_yaw=%.2f look_pitch=%.2f speed=%.1f" % [car.look_yaw, car.look_pitch, -car.global_basis.z.dot(car.linear_velocity)])
 
 
 ## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all

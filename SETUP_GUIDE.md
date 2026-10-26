@@ -215,6 +215,14 @@ Arcade-style: each physics step it nudges velocity directly instead of simulatin
 - **Drive input is separate from the physics:** the keyboard fills in three variables
   (`throttle`, `steer`, `handbrake`) in `_read_driver_keys()`, and the physics only reads those.
   A future AI driver (the Dog Patrol) can fill in the same three and drive with the same physics.
+- **Look around while driving:** move the mouse (or the controller's right stick) to swing the
+  camera around the car and tilt it up/down. Stop looking and keep driving forward, and after
+  a moment it swings back behind the car by itself (parked, it stays where you left it).
+  Knobs: select **GetawayCar** in `main.tscn` > Inspector > **Camera & Exit**:
+  **Recenter Delay** (seconds before it swings back, 1.5), **Recenter Speed** (how fast, 2.5),
+  **Recenter Min Speed** (only above this speed, m/s, 3), **Min / Max Look Pitch Degrees**
+  (how far down / up), **Mouse Sensitivity**, **Stick Turn Speed**. The code is
+  `_update_look_around()` and `_turn_camera()` (offsets `look_yaw` / `look_pitch`).
 
 ### The interaction (E to enter/exit)
 1. `DoorZone` notices a cat walking in → sets that cat's `nearby_car`.
@@ -944,6 +952,7 @@ Just plug it in (or pair it) and press a button: no setting needed.
 |---|---|---|---|
 | Left stick | walk (analog: half push = half speed) | Left stick | steer |
 | Right stick | camera | RT / LT | gas / brake + reverse (analog) |
+| | | Right stick | look around (swings back when you drive on) |
 | A | jump | Left stick up/down | gas / brake too |
 | L3 (click left stick) | zoomies | RB | handbrake |
 | X | grab / talk / car | X | get out |
@@ -1060,7 +1069,8 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 for the PAD box).
 Controller tests (fake controller presses, no controller needed): `--pad=Right_Stick_Right`
 (hold for `--hold_frames`, prints how far the camera turned / cat moved / car throttle),
-`--pad=RT,Left_Stick_Left --drive` (car), `--pad_press=Start,D-Pad_Down,A,B` (presses one by one,
+`--pad=RT,Left_Stick_Left --drive` (car; add `--car_mouse=300` to look around with the mouse and
+`--car_watch=40` to print the car camera's angle as it swings back), `--pad_press=Start,D-Pad_Down,A,B` (presses one by one,
 prints which menu is open and which button is highlighted after each).
 
 ---

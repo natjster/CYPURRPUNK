@@ -18,7 +18,8 @@ extends RigidBody3D
 ## Network sync: MultiplayerSynchronizer (child node) shares sync_position + sync_rotation.
 ##
 ## Controls while driving: W = gas, S = brake / reverse, A/D = steer,
-## Space = handbrake (drift), E = get out.
+## Space = handbrake (drift), E = get out. Mouse / right stick = look around (the camera swings
+## back behind the car by itself a moment after you stop looking, while driving forward).
 
 @export_group("Engine")
 @export var max_speed: float = 26.0          ## m/s (~95 km/h)
@@ -49,6 +50,19 @@ extends RigidBody3D
 
 @export_group("Camera & Exit")
 @export var camera_follow_speed: float = 5.0
+## Mouse look while driving (same feel as on foot; MOUSE SPEED in Settings multiplies it).
+@export var mouse_sensitivity: float = 0.0025
+## Right stick look while driving, radians per second at full tilt (STICK SPEED multiplies it).
+@export var stick_turn_speed: float = 3.2
+## How far up / down you can tilt the camera (degrees; negative = looking down at the car).
+@export var min_look_pitch_degrees: float = -60.0
+@export var max_look_pitch_degrees: float = 10.0
+## Seconds after you stop moving the camera before it swings back behind the car.
+@export var recenter_delay: float = 1.5
+## How quickly it swings back (higher = snappier).
+@export var recenter_speed: float = 2.5
+## It only swings back while driving forward faster than this (m/s), so you can stop and look around.
+@export var recenter_min_speed: float = 3.0
 ## Where the cat pops out, relative to the car (-X = driver's side / left).
 @export var exit_offset: Vector3 = Vector3(-2.2, 0.2, 0.0)
 
@@ -92,6 +106,17 @@ var handbrake: bool = false
 var sync_position: Vector3
 var sync_rotation: Vector3
 
+## Driver's look-around: how far the camera is turned away from straight behind the car
+## (radians, left/right and up/down). 0, 0 = the normal chase view.
+var look_yaw: float = 0.0
+var look_pitch: float = 0.0
+## Seconds since the driver last moved the camera (see recenter_delay).
+var _since_look: float = 0.0
+## Where the chase camera points before the look-around is added (lags behind the car's turning).
+var _chase_yaw: float = 0.0
+## The spring arm's tilt in the scene (the normal chase view).
+var _base_pitch: float = 0.0
+
 ## Engine sound (every computer). Speed is measured from how far the car moved, because
 ## other players' copies are frozen and have no real velocity.
 var _engine: AudioStreamPlayer3D
@@ -111,6 +136,8 @@ func _ready() -> void:
 	door_zone.body_exited.connect(_on_door_zone_body_exited)
 	camera_rig.global_position = global_position
 	camera_rig.rotation.y = global_rotation.y
+	_chase_yaw = global_rotation.y
+	_base_pitch = camera_arm.rotation.x
 	add_to_group("cars")  # lets late-joining cats check if they're inside a car
 	sync_position = global_position
 	sync_rotation = global_rotation
@@ -159,9 +186,16 @@ func _read_driver_keys() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if driver_id == multiplayer.get_unique_id() and event.is_action_pressed("interact") and not PauseMenu.is_open:
+	if driver_id != multiplayer.get_unique_id() or PauseMenu.is_open:
+		return
+	if event.is_action_pressed("interact"):
 		request_exit.rpc_id(1)
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		# Mouse look while driving (MOUSE SPEED and INVERT MOUSE Y from Settings, like on foot).
+		var sensitivity := mouse_sensitivity * Settings.mouse_speed
+		var pitch_sign := -1.0 if Settings.invert_y else 1.0
+		_turn_camera(-event.relative.x * sensitivity, -event.relative.y * sensitivity * pitch_sign)
 
 
 ## A cat asks to get in. Runs on the host only, which decides.
@@ -189,6 +223,8 @@ func set_driver(peer_id: int) -> void:
 		return  # only the host may decide this
 	var previous_driver := Game.instance.cat_for(driver_id)
 	driver_id = peer_id
+	look_yaw = 0.0  # every ride starts with the normal chase view
+	look_pitch = 0.0
 	set_multiplayer_authority(peer_id if peer_id != 0 else 1)
 	_update_freeze()
 
@@ -212,8 +248,39 @@ func _process(delta: float) -> void:
 	# CameraRig is "Top Level", so it doesn't automatically move with the car.
 	# We drag it along ourselves and let its turning lag a little behind — a nice chase cam.
 	camera_rig.global_position = global_position
-	camera_rig.rotation.y = lerp_angle(camera_rig.rotation.y, global_rotation.y, 1.0 - exp(-camera_follow_speed * delta))
+	_chase_yaw = lerp_angle(_chase_yaw, global_rotation.y, 1.0 - exp(-camera_follow_speed * delta))
+	if driver_id == multiplayer.get_unique_id():
+		_update_look_around(delta)
+	# The chase view plus however far the driver has turned the camera.
+	camera_rig.rotation.y = _chase_yaw + look_yaw
+	camera_arm.rotation.x = _base_pitch + look_pitch
 	_update_engine_sound(delta)
+
+
+## Driver only, every frame: right-stick look, and swinging the camera back behind the car.
+func _update_look_around(delta: float) -> void:
+	if not PauseMenu.is_open:
+		var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+		if stick != Vector2.ZERO:
+			stick *= stick.length()  # gentle near the middle, fast at full tilt (like on foot)
+			var turn := stick_turn_speed * Settings.stick_speed * delta
+			var pitch_sign := -1.0 if Settings.invert_stick_y else 1.0
+			_turn_camera(-stick.x * turn, -stick.y * turn * 0.6 * pitch_sign)
+	_since_look += delta
+	# Done looking and driving forward: ease back to the normal view behind the car.
+	var forward_speed := -global_basis.z.dot(linear_velocity)
+	if _since_look > recenter_delay and forward_speed > recenter_min_speed:
+		var weight := 1.0 - exp(-recenter_speed * delta)
+		look_yaw = lerp_angle(look_yaw, 0.0, weight)
+		look_pitch = lerpf(look_pitch, 0.0, weight)
+
+
+## Turn the driving camera by this much (radians), from the mouse or the right stick.
+func _turn_camera(yaw: float, pitch: float) -> void:
+	look_yaw = wrapf(look_yaw + yaw, -PI, PI)
+	look_pitch = clampf(look_pitch + pitch,
+		deg_to_rad(min_look_pitch_degrees) - _base_pitch, deg_to_rad(max_look_pitch_degrees) - _base_pitch)
+	_since_look = 0.0
 
 
 ## Engine revs up with speed; silent when nobody's in it and it's standing still.
