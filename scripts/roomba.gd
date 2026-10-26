@@ -160,10 +160,11 @@ func _physics_process(delta: float) -> void:
 				state = State.PATROL
 				_pick_patrol_target()
 			else:
-				move = _flat(cat.global_position - global_position)
+				# Drive at the cat if nothing is in the way, otherwise around the block (streets).
+				move = _flat(_chase_point(cat) - global_position)
 				# Hotter city = faster Roombas (heat_meter.gd).
 				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
-				if move.length() < bump_range:
+				if _flat(cat.global_position - global_position).length() < bump_range:
 					_bonk(cat)
 
 	# Drive: ease toward the wanted velocity and turn to face where we're going.
@@ -187,6 +188,55 @@ func _find_cat_to_chase() -> CatPlayer:
 		if _can_chase(cat, sight_range) and (best == null or _flat(cat.global_position - global_position).length() < _flat(best.global_position - global_position).length()):
 			best = cat
 	return best
+
+
+## Where to drive to catch "cat". Straight at it when nothing is in the way. Otherwise along
+## the streets: the city is a grid (city_generator.gd), so drive down this street to the
+## crossing in the cat's row/column, turn, and repeat. Without this the MEGA VAC-COP (which
+## spots you from across town) drove straight into the first building and stayed there.
+func _chase_point(cat: CatPlayer) -> Vector3:
+	var goal := cat.global_position
+	if _clear_line_to(cat):
+		return goal
+	var city := Game.instance.city
+	var pitch := city.block_size + city.street_width  # streets run along every multiple of this
+	var half := city.blocks_per_side / 2
+	var on_street := city.street_width * 0.4  # this close to a street's middle = on that street
+	var here := global_position
+	# Nearest north-south street (x) and east-west street (z), to us and to the cat.
+	var my_x := clampi(roundi(here.x / pitch), -half, half)
+	var my_z := clampi(roundi(here.z / pitch), -half, half)
+	var cat_x := clampi(roundi(goal.x / pitch), -half, half)
+	var cat_z := clampi(roundi(goal.z / pitch), -half, half)
+	var on_ns := absf(here.x - my_x * pitch) < on_street
+	var on_ew := absf(here.z - my_z * pitch) < on_street
+	# The street the cat is closest to, and the spot on it right next to the cat.
+	var cat_on_ns := absf(goal.x - cat_x * pitch) < absf(goal.z - cat_z * pitch)
+	var cat_spot := Vector3(cat_x * pitch, here.y, goal.z) if cat_on_ns else Vector3(goal.x, here.y, cat_z * pitch)
+
+	if (on_ns and cat_on_ns and my_x == cat_x) or (on_ew and not cat_on_ns and my_z == cat_z):
+		# Same street as the cat: drive along it to the cat (then straight at it).
+		return goal if _flat(cat_spot - here).length() < 2.0 else cat_spot
+	if not on_ns and not on_ew:
+		# Off the street (sidewalk, yard): get onto the nearest one first.
+		if absf(here.x - my_x * pitch) < absf(here.z - my_z * pitch):
+			return Vector3(my_x * pitch, here.y, here.z)
+		return Vector3(here.x, here.y, my_z * pitch)
+	if on_ns and on_ew:
+		# At a crossing: turn toward the cat's column if we're in its row, and the other way round.
+		if my_z == cat_z or (my_x != cat_x and absf(goal.x - here.x) > absf(goal.z - here.z)):
+			return Vector3(cat_x * pitch, here.y, my_z * pitch)
+		return Vector3(my_x * pitch, here.y, cat_z * pitch)
+	if on_ns:
+		return Vector3(my_x * pitch, here.y, cat_z * pitch)  # down this street to the cat's row
+	return Vector3(cat_x * pitch, here.y, my_z * pitch)      # along this street to the cat's column
+
+
+## True if nothing solid (buildings, crates, the car) is between us and the cat.
+func _clear_line_to(cat: CatPlayer) -> bool:
+	var from := global_position + Vector3(0, 0.5, 0)
+	var query := PhysicsRayQueryParameters3D.create(from, cat.global_position + Vector3(0, 0.5, 0), 1, [get_rid(), cat.get_rid()])
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 ## A cat on foot (visible = not in the car), up in the city, not knocked out, within "reach" metres.

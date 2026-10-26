@@ -713,7 +713,8 @@ you from **10% further**. At level 4, a chasing Roomba is almost as fast as a ca
 carrying the koi...
 
 At **100 heat**: `MEGA VAC-COP DEPLOYED!`. A giant Roomba (`scenes/roomba_boss.tscn`) drives in
-from across town. It **always knows where you are** (sight 400 m), bonks for **2 HP**, can't be
+from across town, following the streets around buildings until it can see you (every Roomba
+does this while chasing). It **always knows where you are** (sight 400 m), bonks for **2 HP**, can't be
 run over, and takes **18 hits**. Destroy it and it spits out a **golden koi** and the heat drops
 **45**. If the heat cools below 60 on its own (everyone extracts), it goes home.
 

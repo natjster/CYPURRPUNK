@@ -242,6 +242,8 @@ func _host_tick() -> void:
 		var peer_id := cat.name.to_int()
 		if car.driver_id == peer_id:
 			continue  # no grabbing things from inside the car
+		if CatHealth.instance.is_down(peer_id):
+			continue  # knocked out: it's lying on the loot it just spilled, don't suck it back up
 		for id in world.keys():
 			var data: ItemData = catalog[world[id].item]
 			var distance := _reach_distance(cat.global_position, world[id].pos)
@@ -333,10 +335,13 @@ func _put_in_inventory(peer_id: int, item_id: String, fallback_spot: Vector3) ->
 ## Host: put an item on the street with a brand-new world ID.
 ## dropper = the cat that dropped it (it won't auto-grab it back until it steps away).
 func _spawn_dropped(item_id: String, at: Vector3, dropper: int = 0) -> void:
-	if dropper != 0:
-		_dropped_by[_next_id] = dropper
 	# Keep the height: a drop in the sewers stays in the sewers (it used to pop up in the city).
 	_add_world.rpc(_next_id, item_id, at)
+	# Remember who dropped it AFTER it's on the street: putting it there clears old notes about
+	# that ID (_remove_world_local), which used to wipe this one, so a dropped fish got
+	# grabbed straight back.
+	if dropper != 0:
+		_dropped_by[_next_id] = dropper
 	_next_id += 1
 
 
@@ -347,7 +352,7 @@ func request_pickup(world_id: int) -> void:
 		return
 	var peer_id := multiplayer.get_remote_sender_id()
 	var cat := _cat(peer_id)
-	if cat == null or car.driver_id == peer_id:
+	if cat == null or car.driver_id == peer_id or CatHealth.instance.is_down(peer_id):
 		return
 	if _reach_distance(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(peer_id, catalog[world[world_id].item]):
 		_give(peer_id, world_id)
