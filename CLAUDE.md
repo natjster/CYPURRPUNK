@@ -27,8 +27,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   quests, inventories, stash, `car.driver_id`, profiles) is keyed by player id, never peer id. Client->host
   `request_*` RPCs take the player id as their FIRST arg and the host checks `PlayerId.sender_owns(id)`;
   host->owner RPCs go to `rpc_id(PlayerId.peer_of(id), ...)`; `send_state_to(peer)` really is per computer.
-  Cat: `player_id`, `slot`, `reads_input()` (authority AND slot 0 until seats exist; extra couch cats stand
-  still). Couch players: `Game.add_local_player(slot, {name, look, cat_id})` / `remove_local_player(slot)`;
+  Cat: `player_id`, `slot`, `reads_input()` (authority AND `Seats.taken[slot]`; a test-added couch cat with no
+  seat stands still). Couch players: `Game.add_local_player(slot, {name, look, cat_id})` / `remove_local_player(slot)`;
   `PlayerProfile.restore(player_id, cat_id, name)` per local player. Per-player HUD feedback currently only
   for `PlayerId.first_local()`. Test: `--add_local=N --as_local=S`, `--remove_local=S`.
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
@@ -107,6 +107,15 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   out on `ui_cancel` (B). `Controls.using_pad` (last device touched; key_text follows it),
   `Controls.rumble(weak, strong, s)`. Every menu must work by focus (grab_focus on open).
   Test: `--pad=Right_Stick_Right`, `--pad_press=Start,D-Pad_Down,A`.
+- `scripts/seats.gd` autoload `Seats` (after Settings): couch seats 0-3 = player slots. Seat 0 = keyboard+mouse
+  + one pad (any pad while alone); others one pad each (`pads[]`, `taken[]`). Per-seat copies of every action
+  (`jump@1`) are built from Controls.bindings; gameplay input MUST go through `Seats.is_pressed/is_just_pressed/
+  get_axis/get_vector(cat.slot, ...)` / `Seats.event_is(slot, event, ...)` (plain actions = any device, menus only).
+  Rebuilding seat actions releases held buttons: only rebuild when bindings/pads change (`_built_from`).
+  START on an unclaimed pad in a game = join (next unused saved cat, else `Settings.new_cat(false, "PLAYER N")`);
+  `PauseMenu.opened_by` seat: LEAVE = `Seats.leave(seat)` for seats > 0. `Seats.seat_of_event(e)` (-1 =
+  unclaimed pad: menus ignore it). Rumble: `Seats.rumble(player_id, ...)`. `InventoryScreen.owner_cat`.
+  Test: `--join_pad=1`, `--pad_device=1`, `--pad_press=1:Start`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 ## Character creator (MY CAT)

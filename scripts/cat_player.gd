@@ -145,11 +145,11 @@ func _enter_tree() -> void:
 		set_multiplayer_authority(PlayerId.peer_of(player_id))  # the computer this player sits at
 
 
-## True if the keyboard / mouse / controller of THIS computer drives this cat.
-## For now that's this computer's first player only; extra split-screen players sit still
-## until each gets their own controller (roadmap phase 3).
+## True if someone at THIS computer steers this cat: our first player (keyboard, mouse and a
+## controller), or a couch player who joined in with their own controller (scripts/seats.gd).
+## Every button this cat reads is its SEAT's: Seats.is_pressed(slot, "jump") etc.
 func reads_input() -> bool:
-	return is_multiplayer_authority() and slot == 0
+	return is_multiplayer_authority() and Seats.taken[slot]
 
 
 func _ready() -> void:
@@ -255,7 +255,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# If the mouse got freed some other way (e.g. alt-tab), clicking the game grabs it again.
 	if _menu_open() or not reads_input():
 		return
-	if event is InputEventMouseButton and event.pressed:
+	if slot == 0 and event is InputEventMouseButton and event.pressed:  # (the mouse is player 1's)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 	if not is_controlled:
@@ -265,7 +265,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	# Mouse look: left/right turns the pivot, up/down tilts the spring arm.
 	# MOUSE SPEED and INVERT MOUSE Y come from the Settings menu.
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if slot == 0 and event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var sensitivity := mouse_sensitivity * Settings.mouse_speed
 		var pitch_sign := -1.0 if Settings.invert_y else 1.0
 		camera_pivot.rotate_y(-event.relative.x * sensitivity)
@@ -274,24 +274,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(min_pitch_degrees),
 			deg_to_rad(max_pitch_degrees)
 		)
-	elif event.is_action_pressed("interact") and ItemManager.instance.try_interact(self):
+	elif Seats.event_is(slot, event, "interact") and ItemManager.instance.try_interact(self):
 		# Grabbed an item lying here (the host decides). Items come before the car,
 		# so E near both picks up the item first.
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("drop"):
+	elif Seats.event_is(slot, event, "drop"):
 		ItemManager.instance.drop_from(self)
-	elif event.is_action_pressed("meow") and Time.get_ticks_msec() / 1000.0 >= _next_meow_at:
+	elif Seats.event_is(slot, event, "meow") and Time.get_ticks_msec() / 1000.0 >= _next_meow_at:
 		# Everyone nearby hears it (sounds/sfx/meow_1.wav, meow_2.wav... a random one each time).
 		_next_meow_at = Time.get_ticks_msec() / 1000.0 + meow_cooldown
 		Sound.play_everywhere("meow", global_position)
-	elif event.is_action_pressed("interact") and Npc.try_talk(self):
+	elif Seats.event_is(slot, event, "interact") and Npc.try_talk(self):
 		# Standing next to an NPC (e.g. Don Catleone in the hub): the talk box opens.
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("interact") and UndergroundHub.instance.near_stash(self):
+	elif Seats.event_is(slot, event, "interact") and UndergroundHub.instance.near_stash(self):
 		# At THE STASH lockers in the sewers: the inventory opens with your stash in it.
-		InventoryScreen.instance.open()
+		InventoryScreen.instance.open(self)
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("interact") and nearby_car != null:
+	elif Seats.event_is(slot, event, "interact") and nearby_car != null:
 		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
 		nearby_car.request_enter.rpc_id(1, player_id)
 		# Mark the E press as used so the car doesn't instantly treat it as "exit".
@@ -304,7 +304,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _stick_look(delta: float) -> void:
 	if not is_controlled or not reads_input() or _menu_open() or _pad_in_inventory():
 		return
-	var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+	var stick := Seats.get_vector(slot, "look_left", "look_right", "look_up", "look_down")
 	if stick == Vector2.ZERO:
 		return
 	stick *= stick.length()  # response curve: half tilt = quarter speed
@@ -334,7 +334,7 @@ func _physics_process(delta: float) -> void:
 		_air_jumps_left = air_jumps
 
 	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
-	if Input.is_action_just_pressed("jump") and not _input_blocked():
+	if Seats.is_just_pressed(slot, "jump") and not _input_blocked():
 		if is_on_floor():
 			velocity.y = jump_velocity
 			Sound.play_everywhere("jump", global_position, -6.0)
@@ -345,7 +345,7 @@ func _physics_process(delta: float) -> void:
 
 	# Read WASD (or the controller's left stick) as a 2D direction (x = left/right, y = forward/back).
 	# The stick is analog: push it halfway and the cat walks at half speed.
-	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir := Seats.get_vector(slot, "move_left", "move_right", "move_forward", "move_back")
 	if _input_blocked():
 		input_dir = Vector2.ZERO
 
@@ -361,7 +361,7 @@ func _physics_process(delta: float) -> void:
 		speed_boost = 1.0
 
 	# Zoomies = holding Shift while actually moving (or being boosted).
-	var is_zooming := (Input.is_action_pressed("sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
+	var is_zooming := (Seats.is_pressed(slot, "sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
 	var target_speed := zoomies_speed if is_zooming else walk_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
 	var heavy := ItemManager.instance.carry_speed(player_id) if ItemManager.instance != null else 1.0
@@ -426,7 +426,8 @@ func _input_blocked() -> bool:
 
 
 func _pad_in_inventory() -> bool:
-	return Controls.using_pad and InventoryScreen.instance != null and InventoryScreen.instance.visible
+	return InventoryScreen.instance != null and InventoryScreen.instance.visible \
+		and InventoryScreen.instance.owner_cat == self and Seats.uses_pad(slot)
 
 
 ## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".

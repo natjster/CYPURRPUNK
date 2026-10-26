@@ -259,22 +259,36 @@ func _host_tick() -> void:
 				break  # one item per cat per frame
 
 
-## The owner's computer: press the use buttons for whatever is in our paws.
+## The owner's computer: press the use buttons for whatever is in our cats' paws
+## (every player on this computer, each with their own buttons: scripts/seats.gd).
 func _use_held_items(delta: float) -> void:
-	var cat := local_cat()
-	if cat == null or not cat.is_controlled or cat.knocked_out:
+	if Game.instance == null:
 		return
-	var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
-	# Mouse players: only while the mouse is grabbed by the game (not while clicking a menu).
-	# Controller players: whenever no menu / HUD window is open.
-	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED \
-		or (Controls.using_pad and not PauseMenu.is_open and not NpcDialog.is_open and not Hud.wants_input())
-	for hand in 2:
-		var held := held_item(cat, hand)
-		if held == null or (safe_zone and held is Weapon):
-			continue  # the hub is a safe zone: guns don't fire down there (catnip still works)
-		var action := "shoot" if hand == 0 else "use_left"
-		held.use_tick(captured and Input.is_action_pressed(action), captured and Input.is_action_just_pressed(action), delta)
+	for cat in Game.instance.local_cats():
+		if not cat.reads_input() or not cat.is_controlled or cat.knocked_out:
+			continue
+		var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
+		var allowed := _can_use_items(cat)
+		for hand in 2:
+			var held := held_item(cat, hand)
+			if held == null or (safe_zone and held is Weapon):
+				continue  # the hub is a safe zone: guns don't fire down there (catnip still works)
+			var action := "shoot" if hand == 0 else "use_left"
+			held.use_tick(allowed and Seats.is_pressed(cat.slot, action), allowed and Seats.is_just_pressed(cat.slot, action), delta)
+
+
+## May this cat's player use their paws right now? Not while a menu or talk box is open, or
+## their own inventory. Player 1 on the mouse: only while the game has the mouse (not while
+## clicking a menu).
+func _can_use_items(cat: CatPlayer) -> bool:
+	if PauseMenu.is_open or NpcDialog.is_open:
+		return false
+	var inventory := InventoryScreen.instance
+	if inventory != null and inventory.visible and inventory.owner_cat == cat:
+		return false
+	if cat.slot == 0 and not Controls.using_pad:
+		return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	return true
 
 
 # --- Host decisions ---

@@ -225,7 +225,17 @@ func name_from_event(event: InputEvent) -> String:
 	return ""
 
 
-## True for controller names ("Pad A"), false for keys and mouse buttons.
+## An input event for a stored key name ("W", "Mouse Left", "Pad A"), or null for "".
+## Controller buttons listen to controller number "device" only (-1 = every controller).
+## (Seats uses this to give each couch player their own controls.)
+func event_for(key_name: String, device: int = -1) -> InputEvent:
+	var event := _event_from_name(key_name)
+	if event != null and _is_pad_name(key_name):
+		event.device = device
+	return event
+
+
+## True for the controller slot of the KEYS menu (slot 2), false for the keyboard slots.
 func is_pad_slot(slot: int) -> bool:
 	return slot == PAD_SLOT
 

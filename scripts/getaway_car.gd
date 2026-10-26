@@ -176,9 +176,10 @@ func _read_driver_keys() -> void:
 	if _driver_reads_input() and not PauseMenu.is_open:
 		# W = +1, S = -1. On a controller the triggers work too (RT = GAS, LT = BRAKE), and
 		# they're analog: squeeze RT halfway for half gas.
-		throttle = clampf(Input.get_axis("move_back", "move_forward") + Input.get_axis("brake", "gas"), -1.0, 1.0)
-		steer = Input.get_axis("move_right", "move_left")       # A = +1 (left), D = -1
-		handbrake = Input.is_action_pressed("handbrake")
+		var seat := PlayerId.slot_of(driver_id)  # the driver's own keys / controller (scripts/seats.gd)
+		throttle = clampf(Seats.get_axis(seat, "move_back", "move_forward") + Seats.get_axis(seat, "brake", "gas"), -1.0, 1.0)
+		steer = Seats.get_axis(seat, "move_right", "move_left")       # A = +1 (left), D = -1
+		handbrake = Seats.is_pressed(seat, "handbrake")
 	else:
 		throttle = 0.0
 		steer = 0.0
@@ -188,10 +189,11 @@ func _read_driver_keys() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _driver_reads_input() or PauseMenu.is_open:
 		return
-	if event.is_action_pressed("interact"):
+	var seat := PlayerId.slot_of(driver_id)
+	if Seats.event_is(seat, event, "interact"):
 		request_exit.rpc_id(1)
 		get_viewport().set_input_as_handled()
-	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	elif seat == 0 and event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		# Mouse look while driving (MOUSE SPEED and INVERT MOUSE Y from Settings, like on foot).
 		var sensitivity := mouse_sensitivity * Settings.mouse_speed
 		var pitch_sign := -1.0 if Settings.invert_y else 1.0
@@ -266,7 +268,7 @@ func _process(delta: float) -> void:
 ## Driver only, every frame: right-stick look, and swinging the camera back behind the car.
 func _update_look_around(delta: float) -> void:
 	if not PauseMenu.is_open:
-		var stick := Input.get_vector("look_left", "look_right", "look_up", "look_down")
+		var stick := Seats.get_vector(PlayerId.slot_of(driver_id), "look_left", "look_right", "look_up", "look_down")
 		if stick != Vector2.ZERO:
 			stick *= stick.length()  # gentle near the middle, fast at full tilt (like on foot)
 			var turn := stick_turn_speed * Settings.stick_speed * delta

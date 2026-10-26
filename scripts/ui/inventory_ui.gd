@@ -32,6 +32,10 @@ extends Control
 ## The one inventory screen (the cat opens it when E is pressed at the stash).
 static var instance: InventoryScreen
 
+## Whose inventory is showing: the cat of the player who opened it (couch co-op: any player
+## on this computer can open it with their own INVENTORY button, scripts/seats.gd).
+var owner_cat: CatPlayer = null
+
 ## Size of one item slot (HUD units).
 @export var slot_size: Vector2 = Vector2(220, 44)
 ## Text size inside the slots.
@@ -130,9 +134,13 @@ func _build() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	var cat := ItemManager.instance.local_cat()
-	if event.is_action_pressed("inventory") and cat != null and not Hud.menu_open() and not NpcDialog.is_open:
-		_set_open(not visible)
+	var seat := Seats.seat_of_event(event)
+	if event.is_action_pressed("inventory") and seat != -1 and not Hud.menu_open() and not NpcDialog.is_open:
+		var cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
+		if visible:
+			_set_open(false)
+		elif cat != null and cat.reads_input():
+			_set_open(true, cat)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
 		_set_open(false)
@@ -145,26 +153,30 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-## Open the screen (the cat calls this when E is pressed at the stash lockers).
-func open() -> void:
+## Open the screen for this cat (the cat calls this when E is pressed at the stash lockers).
+func open(cat: CatPlayer) -> void:
 	if not visible:
-		_set_open(true)
+		_set_open(true, cat)
 
 
-func _set_open(open_it: bool) -> void:
+func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 	if _info == null:
 		return  # not built yet (the very first frame)
+	if open_it:
+		owner_cat = cat if cat != null else Game.instance.my_cat()
+		if owner_cat == null:
+			return
 	visible = open_it
 	_last_key = ""
-	var cat := ItemManager.instance.local_cat()
 	if open_it:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
-		if Controls.using_pad:
+		if Seats.uses_pad(owner_cat.slot):
 			_paw_buttons[0].grab_focus()  # a highlighted slot for the d-pad to move around from
 	else:
 		get_viewport().gui_release_focus()
-		if cat != null and cat.is_controlled:
+		var first := Game.instance.my_cat() if Game.instance != null else null
+		if first != null and first.is_controlled:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -172,8 +184,8 @@ func _process(_delta: float) -> void:
 	if not visible:
 		return
 	var items := ItemManager.instance
-	var cat := items.local_cat()
-	if cat == null:
+	var cat := owner_cat
+	if cat == null or not is_instance_valid(cat):
 		_set_open(false)
 		return
 	var at_stash := UndergroundHub.instance.near_stash(cat)
@@ -209,8 +221,9 @@ func _show_stash_section(at_stash: bool) -> void:
 	_bag_grid.visible = not at_stash
 	_stash_title.visible = at_stash
 	_stash_grid.visible = at_stash
-	var click := "%s:" % Controls.key_text("ui_accept") if Controls.using_pad else "Click:"
-	var drop := "%s:" % Controls.key_text("ui_drop") if Controls.using_pad else "Right-click:"
+	var on_pad := owner_cat != null and Seats.uses_pad(owner_cat.slot)
+	var click := "%s:" % Controls.display_name("Pad A") if on_pad else "Click:"
+	var drop := "%s:" % Controls.display_name("Pad X") if on_pad else "Right-click:"
 	if at_stash:
 		_info.text = "%s move between you and the stash   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 	else:
@@ -301,8 +314,8 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 	if button.get_meta("item") == "":
 		return
 	var items := ItemManager.instance
-	var cat := items.local_cat()
-	if cat == null or not cat.is_controlled:
+	var cat := owner_cat
+	if cat == null or not is_instance_valid(cat) or not cat.is_controlled:
 		_info.text = "Can't do that from inside the car."
 		return
 	var inventory := items.get_inventory(cat.player_id)

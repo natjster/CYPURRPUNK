@@ -13,6 +13,9 @@ extends Node
 ##   --as_local=S      (with --add_local) every action below (--pos, --give, --grab, --drive,
 ##                     --goto_dropoff_after, --bait_roomba, --talk...) uses the cat in slot S instead
 ##   --remove_local=S  (at the very end, before the snap) the player in slot S drops out
+##   --join_pad=N      couch co-op: press START on fake controller N (1, 2, 3) right after our cat
+##                     appears = a new player drops in on it (scripts/seats.gd). Repeat: --join_pad=1,2
+##   --pad_device=N    which fake controller --pad and --pad_press use (default 0)
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
@@ -66,8 +69,13 @@ extends Node
 ##                     e.g. --pad_press=Start,D-Pad_Down,A
 
 
+## The command line options (so helper functions can read them too).
+var _args: Dictionary = {}
+
+
 func _ready() -> void:
 	var args := _parse_args(OS.get_cmdline_user_args())
+	_args = args
 	# Never runs in a release build (the exported .exe players get), only in Godot / debug builds.
 	if not args.has("capture") or not OS.is_debug_build():
 		queue_free()
@@ -103,6 +111,25 @@ func _ready() -> void:
 					break
 				await get_tree().process_frame
 			print("DevCapture add_local: our cats = %s" % [scene.local_cats().map(func(c): return "%s (slot %d)" % [c.name, c.slot])])
+			if args.has("as_local"):
+				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
+		if player != null and args.has("join_pad"):
+			# Couch co-op: START on another controller = a new player drops in (scripts/seats.gd).
+			for i in 20:
+				await get_tree().process_frame
+			for device in args["join_pad"].split(","):
+				for pressed in [true, false]:
+					var start := _pad_event("Start", pressed)
+					start.device = int(device)
+					Input.parse_input_event(start)
+					for i in 3:
+						await get_tree().process_frame
+			for i in 60:  # wait for the host to make their cats
+				if scene.local_cats().size() > args["join_pad"].split(",").size():
+					break
+				await get_tree().process_frame
+			print("DevCapture join_pad: seats pads=%s taken=%s paused=%s cats=%s" % [Seats.pads, Seats.taken, PauseMenu.is_open,
+				scene.local_cats().map(func(c): return "%s slot %d \"%s\" reads_input=%s" % [c.name, c.slot, c.player_name, c.reads_input()])])
 			if args.has("as_local"):
 				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
 
@@ -268,18 +295,21 @@ func _ready() -> void:
 				await get_tree().process_frame
 			# Several at once with a comma list, e.g. --hold=shoot,use_left (fire both pistols).
 			for action in args["hold"].split(","):
-				Input.action_press(action)
+				Input.action_press(Seats.action(player.slot, action))  # the test player's own controls
 			for i in int(args.get("hold_frames", "60")):
 				await get_tree().process_frame
 			if not args.has("keep_holding"):  # --keep_holding = still held when the snap is taken
 				for action in args["hold"].split(","):
-					Input.action_release(action)
+					Input.action_release(Seats.action(player.slot, action))
 		if args.has("pad"):
 			# Push the controller like a player would, e.g. --pad=Right_Stick_Right --hold_frames=30
 			for i in int(args.get("hold_delay", "30")):
 				await get_tree().process_frame
 			var yaw_before := player.camera_pivot.rotation.y
 			var pos_before := player.global_position
+			var all_before := {}
+			for cat in scene.local_cats():
+				all_before[cat] = cat.global_position
 			var pads: PackedStringArray = args["pad"].replace("_", " ").split(",")
 			for pad in pads:
 				Input.parse_input_event(_pad_event(pad, true))
@@ -291,6 +321,8 @@ func _ready() -> void:
 				if Input.is_action_pressed(entry.action):
 					held.append(entry.action)
 			print("DevCapture pad held: %s" % [held])
+			for cat in all_before:
+				print("DevCapture pad moved: %s (slot %d) %.2f m" % [cat.name, cat.slot, cat.global_position.distance_to(all_before[cat])])
 			print("DevCapture pad %s: using_pad=%s yaw turned %.2f rad, cat moved %.2f m, car throttle %.2f steer %.2f, speed %.1f, prompt key=%s" % [
 				args["pad"], Controls.using_pad, player.camera_pivot.rotation.y - yaw_before,
 				player.global_position.distance_to(pos_before), car.throttle, car.steer,
@@ -309,9 +341,9 @@ func _ready() -> void:
 			var peak := ground_y
 			for i in 100:
 				if i == 0 or i == 18:
-					Input.action_press("jump")
+					Input.action_press(Seats.action(player.slot, "jump"))
 				elif i == 2 or i == 20:
-					Input.action_release("jump")
+					Input.action_release(Seats.action(player.slot, "jump"))
 				await get_tree().physics_frame
 				peak = maxf(peak, player.global_position.y)
 			print("DevCapture jump: peak height %.2f m (air jumps active: %d)" % [peak - ground_y, player.air_jumps])
@@ -388,11 +420,16 @@ func _ready() -> void:
 
 	if args.has("pad_press"):
 		# --pad_press=Start,D-Pad_Down,A : real controller presses, one every few frames.
+		# "1:Start" = START on fake controller 1 (otherwise --pad_device, default 0).
 		for pad in args["pad_press"].replace("_", " ").split(","):
 			for pressed in [true, false]:
-				Input.parse_input_event(_pad_event(pad, pressed))
+				var event := _pad_event(pad.get_slice(":", 1) if ":" in pad else pad, pressed)
+				if ":" in pad:
+					event.device = int(pad.get_slice(":", 0))
+				Input.parse_input_event(event)
 				for i in 4:
 					await get_tree().process_frame
+			await get_tree().process_frame  # (a join happens a moment later)
 			var game_focus := GameScreen.instance.game_viewport.gui_get_focus_owner()
 			var hud_focus := get_viewport().gui_get_focus_owner()
 			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s" % [
@@ -600,7 +637,7 @@ func _watch_car_camera(car: GetawayCar, every: int) -> void:
 func _pad_event(pad_name: String, pressed: bool) -> InputEvent:
 	var event := Controls._event_from_name("Pad " + pad_name)
 	assert(event != null, "unknown controller name: " + pad_name)
-	event.device = 0
+	event.device = int(_args.get("pad_device", "0"))
 	if event is InputEventJoypadButton:
 		event.pressed = pressed
 	elif not pressed:

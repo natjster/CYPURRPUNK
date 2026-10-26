@@ -145,14 +145,19 @@ func select_cat(id: String) -> void:
 
 
 ## Make a brand-new cat (no name yet, default look) and play as it. Returns it.
-func new_cat() -> Dictionary:
+## select = false: just add it to your cats (a couch player who joins in plays it, scripts/seats.gd),
+## optionally with a name and look.
+func new_cat(select: bool = true, cat_name: String = "", look: Dictionary = {}) -> Dictionary:
 	var cat := {
 		"id": "cat_%d_%d" % [int(Time.get_unix_time_from_system()), randi() % 10000],
-		"name": "",
-		"look": CatLook.default_look(),
+		"name": cat_name,
+		"look": look if not look.is_empty() else CatLook.default_look(),
 	}
 	cats.append(cat)
-	select_cat(cat.id)
+	if select:
+		select_cat(cat.id)
+	else:
+		save_settings()
 	return cat
 
 

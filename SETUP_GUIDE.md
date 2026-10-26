@@ -45,6 +45,7 @@ Meow-City/
 │   ├── cat_health.gd          <- HP and knockouts (§8)
 │   ├── player_profile.gd      <- saves your cash + stash between games (§8)
 │   ├── player_id.gd           <- PlayerId: player numbers vs computer numbers, for split screen (§6)
+│   ├── seats.gd               <- autoload "Seats": which controller belongs to which couch player (§10)
 │   └── ui/                    <- game_screen + hud (§13), main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
@@ -394,8 +395,9 @@ keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
   `PlayerId.first_local()`. A cat knows its own: `cat.player_id`, `cat.slot`.
   `Game.instance.add_local_player(seat, {"name", "look", "cat_id"})` /
   `remove_local_player(seat)` add or drop a couch player.
-- **Not yet:** extra couch players have no screen or controller of their own yet (their cats stand
-  still in the sewers); that comes with the next split-screen steps. Test them with DevCapture:
+- **Controllers:** couch players join with START on their own controller (§10, "Couch co-op").
+  They don't have a screen of their own yet; that comes with the next split-screen steps.
+  Test them with DevCapture (these test players have no controller, so they stand still):
   `--add_local=1` (one more player joins in), `--as_local=1` (the test actions use that cat:
   `--grab`, `--goto_dropoff_after`, `--bait_roomba`...), `--remove_local=1` (they drop out).
 - **Network log:** lines starting with `[Network]` appear in Godot's **Output** panel (joins/leaves).
@@ -1004,6 +1006,36 @@ SETTINGS > CONTROLS > RUMBLE. To change how strong one is, find `Controls.rumble
 Inspector > **Camera** > **Stick Turn Speed** (and **Stick Pitch Ratio** for up/down); players
 fine-tune it with STICK SPEED. Stick drift (cat creeps along by itself)? Raise
 **STICK_DEADZONE** at the top of `scripts/controls.gd`.
+
+### Couch co-op: more players on one computer (`scripts/seats.gd`, Autoload **Seats**)
+Up to **4 players per computer**, each with their own controller.
+
+- **Joining in:** during a game, press **START** on a controller nobody is using. A new player
+  drops in (in the sewers), playing your **next saved cat** from MY CAT that nobody here is using,
+  with that cat's own cash and stash. No saved cat left? A new one called "PLAYER 2" (3, 4) is
+  made and saved, so you can rename / restyle it later in MY CAT.
+- **Leaving:** that player presses **START** on their controller: their pause menu has
+  **DROP OUT (PLAYER 2)** instead of LEAVE GAME. Only they leave (what they carry drops where
+  they stand, their stash is safe). Player 1's LEAVE GAME still ends the game for this computer.
+- **Who uses what:** player 1 always has the keyboard + mouse, plus one controller. Everyone
+  else has one controller. While player 1 plays alone, ANY controller drives them; the first one
+  they use becomes theirs. (A controller used in the start menu counts as player 1's, so its
+  START pauses instead of adding a player.)
+- **Each player's buttons are their own:** their stick walks their cat, their A jumps it, their
+  RT fires their gun, their Y opens the inventory with THEIR stuff in it, their rumble.
+  The keys/buttons are the same for everyone (SETTINGS > KEYS, PAD column).
+- **Not yet (coming in the next split-screen steps):** the extra players have no screen of
+  their own yet: everyone watches player 1's camera, so player 2 steers "blind" (their stick
+  moves relative to their own invisible camera). The HUD (cash, HP, prompts) shows player 1.
+  Menus (pause, inventory, talk box) are shared: any controller can move the highlight.
+- **In code:** a cat reads its own seat's buttons with `Seats.is_pressed(cat.slot, "jump")`,
+  `Seats.is_just_pressed(...)`, `Seats.get_vector(cat.slot, "move_left", "move_right",
+  "move_forward", "move_back")` or, for events, `Seats.event_is(cat.slot, event, "interact")`.
+  (Behind the scenes every control exists once per seat: `jump@0`, `jump@1`...)
+  `Seats.rumble(player_id, light, heavy, seconds)` shakes that player's controller.
+- **Testing without controllers:** `--join_pad=1` (fake controller 1 presses START),
+  `--pad=Left_Stick_Up --pad_device=1` (push its stick), `--pad_press=1:Start,0:Start` (presses
+  on a chosen controller), `--as_local=1` (the test actions use player 2's cat).
 
 ### Controls & key binding (`scripts/controls.gd`, Autoload **Controls**)
 - **Rebinding (player):** SETTINGS > KEYS, click a box (it shows `...`), press the new key or

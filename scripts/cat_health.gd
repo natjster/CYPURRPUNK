@@ -86,12 +86,14 @@ func _physics_process(_delta: float) -> void:
 ## Host -> everyone: this player's HP is now "hp".
 @rpc("authority", "call_local", "reliable")
 func _set_health(player_id: int, hp: int) -> void:
-	# Our own first player got hurt? (The one HUD shows them; split screen gives each player their own later.)
+	# One of our players got hurt: thump their controller. (The one HUD shows our first player;
+	# split screen gives each player their own later.)
+	if PlayerId.is_local(player_id) and hp < get_health(player_id) and hp > 0:
+		Seats.rumble(player_id, 0.3, 0.7, 0.25)
 	if player_id == PlayerId.first_local() and hp < get_health(player_id):
 		_flash_time = 0.6  # we got hurt: flash the HP line
 		if hp > 0:
 			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
-			Controls.rumble(0.3, 0.7, 0.25)  # thump on the controller
 	health[player_id] = hp
 
 
@@ -102,9 +104,9 @@ func _knocked_out(player_id: int, cause: String) -> void:
 	if cat == null or not cat.is_multiplayer_authority():
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
+	Seats.rumble(player_id, 0.8, 1.0, 0.7)  # big shake on their controller
 	if player_id == PlayerId.first_local():
 		Sound.play("knockout")
-		Controls.rumble(0.8, 1.0, 0.7)  # big shake on the controller
 		Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):

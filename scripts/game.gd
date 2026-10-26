@@ -88,6 +88,7 @@ func _ready() -> void:
 	Settings.changed.connect(_apply_scene_settings)
 	_apply_scene_settings()
 
+	Seats.reset()  # one player, no controllers claimed yet (scripts/seats.gd)
 	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
 	city.generate(PREVIEW_SEED)
 	park_car()

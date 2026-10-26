@@ -21,6 +21,7 @@ config/features=PackedStringArray("4.7")
 
 Controls="*res://scripts/controls.gd"
 Settings="*res://scripts/settings.gd"
+Seats="*res://scripts/seats.gd"
 Sound="*res://scripts/sound.gd"
 Net="*res://scripts/net.gd"
 DevCapture="*res://scripts/dev_capture.gd"
