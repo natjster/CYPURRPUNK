@@ -18,11 +18,14 @@ signal changed
 const SAVE_PATH: String = "user://settings.cfg"
 
 # --- The settings and their defaults ---
-# Player
-var player_name: String = ""
-## How your cat looks, made in the MY CAT screen (a CatLook dictionary, see scripts/cat/cat_look.gd).
-## Empty = never customised: you get a fur colour picked for you.
-var cat_look: Dictionary = {}
+# Player: your cats (made in the CHOOSE YOUR CAT screen, scripts/ui/cat_creator.gd)
+## Every cat you've made: [{"id": "cat_1761400000_42", "name": "WHISKERS", "look": {...}}].
+## "look" is a CatLook dictionary (scripts/cat/cat_look.gd). Each cat also has its OWN saved
+## cash and stash, kept by player_profile.gd in a file named after its "id".
+## Use the functions under "Your cats" below rather than changing this list directly.
+var cats: Array = []
+## The id of the cat you play as.
+var current_cat_id: String = ""
 # Display
 var fullscreen: bool = false
 ## Window size as a multiple of the 320x240 game picture (4 = 1280x960).
@@ -46,7 +49,7 @@ var volumetric_fog: bool = true
 
 ## Which variables get saved: [section in the file, variable name].
 const SAVED: Array = [
-	["player", "player_name"], ["player", "cat_look"],
+	["player", "cats"], ["player", "current_cat_id"],
 	["display", "fullscreen"], ["display", "window_scale"], ["display", "vsync"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
@@ -86,11 +89,63 @@ func set_value(setting: String, value: Variant) -> void:
 	save_settings()
 
 
-## Put every setting back to its default (the player name and cat look are kept).
+## Put every setting back to its default (your cats are kept).
 func reset_to_defaults() -> void:
 	for setting in _defaults:
-		if setting != "player_name" and setting != "cat_look":
+		if setting != "cats" and setting != "current_cat_id":
 			set(setting, _defaults[setting])
+	apply()
+	save_settings()
+
+
+# --- Your cats ---
+
+## The cat you play as ({"id", "name", "look"}), or {} if you haven't made one yet.
+func current_cat() -> Dictionary:
+	for cat in cats:
+		if cat.get("id", "") == current_cat_id:
+			return cat
+	return {}
+
+
+## Play as another of your cats.
+func select_cat(id: String) -> void:
+	current_cat_id = id
+	apply()
+	save_settings()
+
+
+## Make a brand-new cat (no name yet, default look) and play as it. Returns it.
+func new_cat() -> Dictionary:
+	var cat := {
+		"id": "cat_%d_%d" % [int(Time.get_unix_time_from_system()), randi() % 10000],
+		"name": "",
+		"look": CatLook.default_look(),
+	}
+	cats.append(cat)
+	select_cat(cat.id)
+	return cat
+
+
+## Change the current cat, e.g. update_current_cat({"name": "WHISKERS"}) or {"look": look}.
+## Makes a cat first if you have none.
+func update_current_cat(changes: Dictionary) -> void:
+	var cat := current_cat()
+	if cat.is_empty():
+		cat = new_cat()
+	cat.merge(changes, true)  # changes the cat inside the list
+	apply()
+	save_settings()
+
+
+## Delete one of your cats (its saved cash + stash too: player_profile.gd forget_cat()).
+func delete_cat(id: String) -> void:
+	for i in cats.size():
+		if cats[i].get("id", "") == id:
+			cats.remove_at(i)
+			break
+	if current_cat_id == id:
+		current_cat_id = cats[0].id if not cats.is_empty() else ""
 	apply()
 	save_settings()
 
@@ -108,12 +163,20 @@ func load_settings() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		return  # first time playing: keep the defaults
-	# Older versions saved only the cat name, as [player] name.
-	player_name = config.get_value("player", "name", player_name)
 	for entry in SAVED:
 		var value: Variant = config.get_value(entry[0], entry[1], get(entry[1]))
 		if typeof(value) == typeof(get(entry[1])):  # ignore broken / old values
 			set(entry[1], value)
+	# Older versions had ONE cat: a name ([player] player_name, or even older [player] name)
+	# and a look ([player] cat_look). Turn it into your first cat. Its id is the name its saved
+	# cash + stash file already has (profiles/<name>.cfg), so that progress comes along too.
+	var old_name: String = str(config.get_value("player", "player_name", config.get_value("player", "name", "")))
+	var old_look: Variant = config.get_value("player", "cat_look", {})
+	if cats.is_empty() and (old_name != "" or (old_look is Dictionary and not old_look.is_empty())):
+		var id := old_name.validate_filename().to_lower()
+		cats.append({"id": id if id != "" else "cat", "name": old_name, "look": old_look if old_look is Dictionary else {}})
+	if current_cat().is_empty() and not cats.is_empty():
+		current_cat_id = cats[0].get("id", "")
 
 
 ## Push the settings into the engine. Scene-specific ones (CRT, fog) are applied by

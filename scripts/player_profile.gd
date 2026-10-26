@@ -7,10 +7,10 @@ extends Node
 ## what you carry (paws, backpack, loot bag) is NOT saved, so put gear in the stash before you
 ## quit — a player who quits drops what they carry on the spot, like before.
 ##
-## Where: on YOUR computer, one file per cat name:
-##   user://profiles/<name>.cfg   (Windows: %APPDATA%\MeowCity1999\profiles\)
-## so the same name brings back the same progress, whoever's game you join. Two copies of
-## the game on one PC need different names, or they'd share (and overwrite) one save.
+## Where: on YOUR computer, one file per cat you've made (Settings.cats, CHOOSE YOUR CAT screen):
+##   user://profiles/<cat id>.cfg   (Windows: %APPDATA%\MeowCity1999\profiles\)
+## so each of your cats has its own cash and stash, whoever's game you join. Two copies of
+## the game on one PC should play different cats, or they'd share (and overwrite) one save.
 ##
 ## How it works (multiplayer: the host is the referee, as always):
 ##   1. When you start or join a game, game.gd calls restore(): we read our file and send
@@ -58,16 +58,26 @@ func restore() -> void:
 	_request_restore.rpc_id(1, cash, stash)
 
 
-## The save file for the name typed in the lobby (or "cat" if it was left empty).
+## Delete a cat's save file (the CHOOSE YOUR CAT screen calls this when you delete a cat).
+static func forget_cat(cat_id: String) -> void:
+	if not cat_id.is_empty():
+		DirAccess.remove_absolute(PROFILES_FOLDER + cat_id.validate_filename() + ".cfg")
+
+
+## The save file for the cat we're playing as.
 func _profile_path() -> String:
 	var user_args := OS.get_cmdline_user_args()
 	var is_test_run := false
 	for arg in user_args:
 		is_test_run = is_test_run or arg.begins_with("--capture")
-	var player := Game.local_player_name.validate_filename().to_lower()
-	if player.is_empty():
-		# Tests usually have no name: keep the host's and the joiner's saves apart.
-		player = ("host" if multiplayer.is_server() else "join") if is_test_run else "cat"
+	var player := str(Settings.current_cat().get("id", "")).validate_filename()
+	if is_test_run:
+		# Tests name their save after --name, or keep the host's and the joiner's apart.
+		player = Game.local_player_name.validate_filename().to_lower()
+		if player.is_empty():
+			player = "host" if multiplayer.is_server() else "join"
+	elif player.is_empty():
+		player = "cat"
 	var folder := TEST_PROFILES_FOLDER if is_test_run else PROFILES_FOLDER
 	DirAccess.make_dir_recursive_absolute(folder)
 	var path := folder + player + ".cfg"

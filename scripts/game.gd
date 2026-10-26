@@ -20,8 +20,8 @@ extends Node3D
 ##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
 ##     Don Catleone sends them up; the EXTRACTION beam brings them back (fish_heist.gd).
 ##
-## Testing shortcuts: launch the game with "--host" or "--join" to skip the menu
-## (plus "--name=Whiskers" / "--seed=42" to fill in those boxes).
+## Testing shortcuts: launch the game with "--solo", "--host" or "--join" to skip the menu
+## (plus "--name=Whiskers" / "--seed=42" for the cat's name and the city number).
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
 ## The crossroads at the centre of every generated city (where dropped items of a player
@@ -60,14 +60,17 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	# The start menu's way through: PLAY -> CHOOSE YOUR CAT -> SOLO / MULTIPLAYER (main_menu.gd).
+	main_menu.play_pressed.connect(cat_creator.open.bind(false))
+	cat_creator.next_pressed.connect(main_menu.show_mode_screen)
+	main_menu.solo_pressed.connect(solo_game)
 	main_menu.host_pressed.connect(host_game)
 	main_menu.join_pressed.connect(join_game)
 	main_menu.settings_pressed.connect(settings_menu.open)
 	pause_menu.settings_pressed.connect(settings_menu.open)
+	pause_menu.cat_pressed.connect(cat_creator.open.bind(true))  # restyle your cat mid-game
 	pause_menu.leave_pressed.connect(_back_to_menu.bind(true))
 	settings_menu.closed.connect(_on_settings_closed)
-	main_menu.cat_pressed.connect(cat_creator.open)
-	pause_menu.cat_pressed.connect(cat_creator.open)
 	cat_creator.closed.connect(_on_settings_closed)  # back to whichever menu opened it, too
 
 	multiplayer.peer_connected.connect(_on_peer_connected)
@@ -91,11 +94,13 @@ func _ready() -> void:
 func _handle_test_shortcuts() -> void:
 	var args := OS.get_cmdline_args() + OS.get_cmdline_user_args()
 	for arg in args:
-		if arg.begins_with("--name="):  # e.g. --name=Whiskers
-			main_menu.name_input.text = arg.trim_prefix("--name=")
+		if arg.begins_with("--name="):  # e.g. --name=Whiskers (names the current cat; tests never save it)
+			Settings.update_current_cat({"name": arg.trim_prefix("--name=")})
 		if arg.begins_with("--seed="):  # e.g. --seed=42
 			main_menu.seed_input.text = arg.trim_prefix("--seed=")
-	if "--host" in args:
+	if "--solo" in args:
+		solo_game(main_menu.chosen_seed())
+	elif "--host" in args:
 		host_game(main_menu.chosen_seed())
 	elif "--join" in args:
 		join_game(main_menu.address_input.text.strip_edges())
@@ -103,11 +108,24 @@ func _handle_test_shortcuts() -> void:
 
 # --- Starting and leaving a game ---
 
+## SOLO: a game just for you. No network at all: this computer stays "offline" (Net), where it
+## is its own host (player 1), so everything works exactly like hosting, but nobody can join.
+func solo_game(city_seed: int) -> void:
+	_remember_name()
+	_begin_game(city_seed)
+
+
+## MULTIPLAYER > HOST: start a game others can join.
 func host_game(city_seed: int) -> void:
 	_remember_name()
 	if Net.host() != OK:
 		main_menu.show_status("Can't host - is another game already hosting?")
 		return
+	_begin_game(city_seed)
+
+
+## Host (or solo): build the city and start.
+func _begin_game(city_seed: int) -> void:
 	city.generate(city_seed)
 	park_car()
 	_start_playing()
@@ -123,10 +141,9 @@ func join_game(address: String) -> void:
 	main_menu.show_status("Connecting to %s..." % (address if address != "" else "this computer"))
 
 
-## Store the typed name for our cat, and save it to disk for next time.
+## Our cat's name (from CHOOSE YOUR CAT), which our cat shows to everyone.
 func _remember_name() -> void:
-	local_player_name = main_menu.typed_name()
-	Settings.set_value("player_name", local_player_name)
+	local_player_name = str(Settings.current_cat().get("name", ""))
 
 
 func _on_joined() -> void:

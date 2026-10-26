@@ -91,8 +91,8 @@ var player_name: String = "":
 		if is_node_ready():
 			_update_name_tag()
 
-## How this cat looks (colours + accessories), made in the MY CAT screen. A CatLook dictionary
-## (scripts/cat/cat_look.gd). The owner sets it from Settings.cat_look; the synchronizer
+## How this cat looks (colours + accessories), made in the CHOOSE YOUR CAT screen. A CatLook
+## dictionary (scripts/cat/cat_look.gd). The owner sets it from Settings.current_cat(); the synchronizer
 ## sends it to everyone, and setting it re-dresses the model on every computer.
 var look: Dictionary = {}:
 	set(value):
@@ -134,7 +134,7 @@ func _ready() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		$NameTag.hide()  # no need to see your own name
 		player_name = Game.local_player_name  # the synchronizer shares it with everyone
-		look = Settings.cat_look  # ...and so is our look from the MY CAT screen
+		look = Settings.current_cat().get("look", {})  # ...and so is our cat's look
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
@@ -183,9 +183,14 @@ func _on_settings_changed() -> void:
 	_base_fov = Settings.field_of_view
 	if not is_controlled:
 		camera.fov = _base_fov
-	# Changed our look in the MY CAT screen (from the pause menu): wear it, and share it.
-	if is_multiplayer_authority() and look != CatLook.clean(Settings.cat_look):
-		look = Settings.cat_look
+	# Changed our cat in the MY CAT screen (from the pause menu): wear it, and share it.
+	if is_multiplayer_authority():
+		var my_cat := Settings.current_cat()
+		if look != CatLook.clean(my_cat.get("look", {})):
+			look = my_cat.get("look", {})
+		if player_name != str(my_cat.get("name", player_name)).strip_edges().left(12):
+			Game.local_player_name = my_cat.get("name", "")
+			player_name = Game.local_player_name
 
 
 ## Show the chosen name, or a stand-in if the player left the name box empty.

@@ -199,7 +199,8 @@ The E press is marked "handled" so the same key press can't enter and exit in on
 ## 4. Testing and fixing errors
 
 **Quick check after any change** (press F5):
-1. **Start menu** — the neon title over the rainy city; PLAY / SETTINGS / QUIT work.
+1. **Start menu** — the neon title over the rainy city; PLAY / SETTINGS / QUIT work, and PLAY
+   leads to CHOOSE YOUR CAT, then SOLO / MULTIPLAYER.
 2. **PLAY > HOST** — your cat appears down in **THE SEWERS** (the hub). Walk to Don Catleone
    (north end, under the pink sign), press E, pick **SEND ME UP TOP** — you're in the city.
 3. **Walk, jump, zoomies** (WASD, Space, Shift) — W always goes where the camera faces.
@@ -268,34 +269,38 @@ scene so the CRT runs at full window size. Doable later if you want it.
 
 ## 6. Multiplayer
 
-The game starts on the **start menu** (PLAY / MY CAT / SETTINGS / QUIT, see §10). **PLAY** shows the
-lobby: your cat name, **HOST** (with an optional city #) and **JOIN** (with the host's address).
-Hosting alone = single player.
+The game starts on the **start menu** (PLAY / SETTINGS / QUIT, see §10). **PLAY** goes to
+**CHOOSE YOUR CAT** (§11), then **NEXT** to **SOLO / MULTIPLAYER**. **SOLO** starts a game just
+for you (no network, nobody can join). **MULTIPLAYER** shows **HOST** (with an optional city #)
+and **JOIN** (with the host's address).
 
 ### Play two cats on one PC
 1. In Godot, open the **Debug** menu > **Customize Run Instances...**
 2. Tick **Enable Multiple Instances**, set the count to **2**, click OK.
 3. Press **F5**. Two game windows open (drag one aside; they start on top of each other).
-4. Window 1: click **PLAY** then **HOST**. Window 2: click **PLAY**, leave the address as
-   `127.0.0.1` and click **JOIN**.
+4. Window 1: **PLAY** > pick a cat > **NEXT** > **MULTIPLAYER** > **HOST**. Window 2: the same
+   but pick a **different cat** (both windows share your saved cats, and two windows playing the
+   same cat would overwrite each other's cash + stash), leave the address as `127.0.0.1` and
+   click **JOIN**.
 5. Click into a window to control that cat. Esc opens the pause menu and frees the mouse, so you
    can switch windows.
 
 Each cat gets its own fur colour (host is always ginger) and a name tag over its head.
 
-**Your cat name:** type it in the CAT NAME box before clicking HOST or JOIN (up to 12
-characters). Everyone else sees it floating over your cat. It's remembered for next time.
-Leave it empty and you'll show up as "HOST" or "CAT 123".
+**Your cat name:** you name your cat on the CHOOSE YOUR CAT screen (up to 12 characters; NEXT
+won't let you go on without one). Everyone else sees it floating over your cat.
 Either player can drive the car; the other sees it move. Only one cat fits in the car.
 
 *Shortcut:* in the same Customize Run Instances dialog, you can give instance 1 the launch
-argument `--host` and instance 2 `--join` to skip the menu (`--name=Whiskers` and `--seed=42`
-fill in those boxes).
+argument `--host` and instance 2 `--join` to skip the menu (`--name=Whiskers` names the cat,
+`--seed=42` picks the city; `--solo` starts a solo game).
 
 ### Play with a second computer on the same Wi-Fi/network
 1. On the host PC, open a terminal and run `ipconfig`. Note the **IPv4 Address** (e.g. `192.168.1.23`).
-2. Host clicks **PLAY > HOST**. If Windows asks about the firewall, allow **Private networks**.
-3. On the other PC, click **PLAY**, type that address into the JOIN box and click **JOIN**.
+2. Host clicks **PLAY > (cat) NEXT > MULTIPLAYER > HOST**. If Windows asks about the firewall,
+   allow **Private networks**.
+3. On the other PC, click **PLAY > (cat) NEXT > MULTIPLAYER**, type that address into the JOIN
+   box and click **JOIN**.
 
 Playing over the internet needs port forwarding (UDP port 7777) or Steam's relay. Steam is planned
 and will only change `scripts/net.gd`.
@@ -439,14 +444,16 @@ Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STA
 
 Gear in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
 
-**Saved between games:** your **cash** and your **stash** are saved on your own computer and
-come back next time you HOST or JOIN with the **same cat name**, in anyone's game.
+**Saved between games:** each of your cats has its own **cash** and **stash**, saved on your own
+computer. They come back whenever you play that cat again (CHOOSE YOUR CAT), solo or in anyone's
+game.
 What you're **carrying is not saved**: anything in your paws, backpack or loot bag is lost when
 you quit (it drops on the floor in that game). So stash your gear before you leave!
 
-- Save files: `%APPDATA%\MeowCity1999\profiles\<cat name>.cfg` (a cat with no name saves as
-  `cat.cfg`). Delete the file to start that cat from scratch. Two copies of the game on one PC
-  need different cat names, or they share one save.
+- Save files: `%APPDATA%\MeowCity1999\profiles\<cat id>.cfg`, one per cat (the id is a code like
+  `cat_1761400000_42`, made when you create the cat; it's in `settings.cfg` next to the name).
+  Deleting a cat in CHOOSE YOUR CAT deletes its file too. Two copies of the game on one PC should
+  play different cats, or they share one save.
 - It saves by itself whenever your cash or stash changes (`scripts/player_profile.gd` on the
   **Profile** node in `main.tscn`).
 - In multiplayer, your computer sends your save to the host when you join; the host checks it
@@ -784,9 +791,15 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 
 ### What the player sees
 - **Start menu:** big flickering MEOW-CITY 1999 title over the rainy city (the camera slowly pans),
-  then **PLAY / MY CAT / SETTINGS / QUIT** (MY CAT = the character creator, §11). **PLAY** opens the lobby box (cat name, HOST + city #,
-  JOIN + address, BACK). **Esc** = back. The game version shows bottom-left.
-- **Pause menu (Esc in a game):** RESUME / MY CAT / SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
+  then **PLAY / SETTINGS / QUIT**. The way through:
+  ```
+  PLAY  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, §11)  -- NEXT -->
+            SOLO / MULTIPLAYER  --SOLO-->  a game just for you
+                                --MULTIPLAYER-->  HOST (+ city #)  or  JOIN (+ address)
+  ```
+  **BACK** (or **Esc**) always goes one step back. The game version shows bottom-left.
+- **Pause menu (Esc in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
+  SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
   **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
   open. LEAVE GAME goes back to the start menu; if the host leaves, everyone does.
 - **Settings:** five tabs. Click **<** / **>** to change a value; hover a row for a one-line
@@ -804,8 +817,8 @@ Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is free
 | KEYS | Every control with two key boxes (scrolls). **RESET KEYS** = default keys |
 | EFFECTS | CRT TV look (0-100%), PS1 wobble on/off, volumetric fog on/off |
 
-Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cat name and MY CAT look) and
-`controls.cfg` (keys).
+Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cats: names and looks) and
+`controls.cfg` (keys). RESET in Settings never touches your cats.
 Delete those files to get a fresh start.
 
 ### Controls & key binding (`scripts/controls.gd`, Autoload **Controls**)
@@ -835,9 +848,9 @@ HUD (Control)                     <- shown during a game: Cash, Carrying, DropOf
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
 ├── Title / Subtitle / Tagline (Label)
-├── MainScreen (VBoxContainer)    <- PlayButton, CatButton, SettingsButton, QuitButton
-├── PlayScreen (PanelContainer) > VBox
-│   ├── NameRow > NameLabel, NameInput
+├── MainScreen (VBoxContainer)    <- PlayButton, SettingsButton, QuitButton
+├── ModeScreen (VBoxContainer)    <- PlayingAs (Label), SoloButton, MultiplayerButton, BackButton
+├── PlayScreen (PanelContainer) > VBox      <- the MULTIPLAYER screen
 │   ├── Columns > HostColumn (HostLabel, SeedInput, HostButton)
 │   │           > JoinColumn (JoinLabel, AddressInput, JoinButton)
 │   └── BackButton
@@ -846,7 +859,7 @@ Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme
 PauseMenu (Control)               script: ui/pause_menu.gd
 └── Dim, Panel > VBox > Title, ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton, Note
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
-CatCreator (Control)              script: ui/cat_creator.gd  (MY CAT; builds itself, §11)
+CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, §11)
 Inventory (Control)               script: ui/inventory_ui.gd
 NpcDialog (Control)               script: ui/npc_dialog.gd  (the hub talk box)
 └── Panel > VBox > Speaker, Line, Choices   <- choice buttons are made by the script
@@ -860,8 +873,9 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 
 ### The pieces
 - **`scripts/ui/main_menu.gd`** (on **Lobby**) — the start menu screens. It doesn't connect
-  anything itself: it sends `host_pressed` / `join_pressed` / `settings_pressed` signals, and
-  `game.gd` does the work. Inspector knobs on **Lobby** > **Start Menu**: Menu Camera, Camera
+  anything itself: it sends `play_pressed` / `solo_pressed` / `host_pressed` / `join_pressed` /
+  `settings_pressed` signals, and `game.gd` does the work (e.g. `play_pressed` opens CHOOSE YOUR
+  CAT, whose NEXT shows the SOLO / MULTIPLAYER screen again). Inspector knobs on **Lobby** > **Start Menu**: Menu Camera, Camera
   Sway Degrees / Seconds, Title Flicker.
 - **`scripts/ui/pause_menu.gd`** (on **PauseMenu**) — Esc opens/closes it once a game has
   started. While it (or Settings opened from it) is up, `PauseMenu.is_open` is true and the cat,
@@ -892,12 +906,14 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 
 ---
 
-## 11. Character creator (MY CAT)
+## 11. Character creator (CHOOSE YOUR CAT / MY CAT)
 
 ### What the player sees
-**MY CAT** on the start menu (or in the pause menu during a game) opens the character creator:
-a list of rows on the left and your cat slowly turning on the right.
+**PLAY** on the start menu opens **CHOOSE YOUR CAT**: your cats along the top, the look rows on
+the left, and the cat slowly turning on the right. (During a game, **MY CAT** in the pause menu
+opens the same screen to restyle or rename the cat you're playing; no switching cats mid-game.)
 ```
+<  [ WHISKERS ]  >  2/3  [NEW] [DELETE]     your cats: < > switch, type to rename
 FUR       <  [colour]  >        main coat
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
@@ -905,11 +921,16 @@ NOSE      <  [colour]  >
 HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / NEON HALO
 FACE      <  SHADES    >        NONE / CYBER VISOR / SHADES
 NECK      <  NONE      >        NONE / BANDANA / BELL COLLAR
-[ RANDOM ]            [ DONE ]
+[ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
 ```
-Every click is **saved straight away** (in `settings.cfg`, with your cat name). Changing it in the
-middle of a game changes your cat right there, and everyone else sees it. A player who never
-opens MY CAT still gets their own fur colour picked for them, like before.
+- **Your cats:** you can have as many as you like. **NEW** starts a fresh one (type its name in the
+  box), **<** / **>** switch between them, **DELETE** asks "SURE?" and a second click deletes that
+  cat **with its cash and stash**. The cat showing when you press NEXT is the one you play.
+- **Each cat has its own name, look, cash and stash** (§8 "The stash & saved progress").
+- **NEXT needs a name** ("Name your cat first!").
+- Everything is **saved straight away** (in `settings.cfg`). Changing your look in the middle of a
+  game changes your cat right there, and everyone else sees it.
+- **Upgrading from an older version:** your old cat name, look, cash and stash become your first cat.
 
 ### Add a new accessory (no code)
 1. **Make its model.** In the FileSystem dock, right-click `scenes/cat_parts/beanie.tscn` >
@@ -944,7 +965,10 @@ colour of each list is what a brand-new cat starts with in MY CAT.
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
 - `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
-  itself, one row per colour and per slot.
+  itself: the cat row, then one row per colour and per slot.
+- `scripts/settings.gd` — your cats: `Settings.cats` (each `{"id", "name", "look"}`) and
+  `Settings.current_cat_id`, with helpers `current_cat()`, `new_cat()`, `select_cat()`,
+  `update_current_cat()`, `delete_cat()`. Each cat's cash + stash file is named after its id.
 - **Multiplayer:** your look is the `look` property on your cat (`cat_player.gd`). The cat's
   MultiplayerSynchronizer shares it like the name tag, so everyone (late joiners too) sees it.
   Looks are only for show: they don't change anything about how you play.
@@ -956,7 +980,8 @@ For a fourth kind of accessory (e.g. **back** for capes and jetpacks): in `cat_l
 **LABELS** in `cat_creator.gd`. The new row then appears in MY CAT by itself.
 
 ### Testing shortcut
-`--menu=cat` opens MY CAT before the screenshot. `--look=N` wears a random look made from the
+`--menu=cat` opens CHOOSE YOUR CAT (MY CAT with `--host`/`--solo`), `--menu=mode` the SOLO /
+MULTIPLAYER screen, before the screenshot. `--solo` starts a solo game. `--look=N` wears a random look made from the
 number N (both on the start menu and with `--host` / `--join`); test runs never save it. Every
 cat's look is printed, e.g. `DevCapture look 1: fur=#383342 hat=neon_halo face=shades neck=-`.
 

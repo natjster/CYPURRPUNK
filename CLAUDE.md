@@ -69,10 +69,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
 Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and
 `cat_parts/palette.tres` (`CatPalette`). `CatLook.apply(model, look)` / `clean()` / `random_look()`.
-Player look = `Settings.cat_look` (saved in settings.cfg); `CatPlayer.look` is synced by the cat's
-MultiplayerSynchronizer (on change) and re-dresses the model; no look = per-peer `FUR_COLORS` fallback.
-Screen: `scripts/ui/cat_creator.gd` (`PS1Overlay/CatCreator`, built in code), from main + pause menu.
-Test: `--look=N`, `--menu=cat`; prints `DevCapture look`.
+Players have several cats: `Settings.cats` ([{id, name, look}]) + `current_cat_id`; use
+`current_cat()/new_cat()/select_cat()/update_current_cat()/delete_cat()` (old player_name/cat_look keys are
+migrated in `load_settings`). Profiles (cash + stash) are per cat id. `CatPlayer.look`/`player_name` come
+from `current_cat()`; the look is synced by the cat's MultiplayerSynchronizer (on change).
+Menu flow: Lobby MainScreen (PLAY/SETTINGS/QUIT) -> `CatCreator.open(false)` = CHOOSE YOUR CAT (NEXT
+needs a name) -> Lobby ModeScreen (SOLO = `Game.solo_game`, offline peer, no Net.host / MULTIPLAYER ->
+PlayScreen host/join). Pause > MY CAT = `open(true)` (no switching). Test: `--solo`, `--name=`, `--look=N`,
+`--menu=cat|mode|play`; prints `DevCapture look`.
 
 ## Items framework
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):

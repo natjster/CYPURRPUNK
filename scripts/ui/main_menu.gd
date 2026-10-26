@@ -5,26 +5,36 @@ extends Control
 ##   Lobby (Control)                 <- this script
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
 ##   ├── Title / Subtitle / Tagline (Label)
-##   ├── MainScreen (VBoxContainer)  <- PlayButton, CatButton, SettingsButton, QuitButton
-##   ├── PlayScreen (PanelContainer) > VBox
-##   │   ├── NameRow > NameLabel, NameInput
+##   ├── MainScreen (VBoxContainer)  <- PlayButton, SettingsButton, QuitButton
+##   ├── ModeScreen (VBoxContainer)  <- PlayingAs (Label), SoloButton, MultiplayerButton, BackButton
+##   ├── PlayScreen (PanelContainer) > VBox      <- the MULTIPLAYER screen
 ##   │   ├── Columns > HostColumn (HostLabel, SeedInput, HostButton)
 ##   │   │           > JoinColumn (JoinLabel, AddressInput, JoinButton)
 ##   │   └── BackButton
 ##   ├── Status (Label)
 ##   └── Version (Label)
 ##
-## This script only runs the menu. When the player clicks HOST or JOIN it sends a signal,
-## and game.gd does the actual hosting / joining.
+## The way through:
+##   PLAY / SETTINGS / QUIT
+##     PLAY -> CHOOSE YOUR CAT (scripts/ui/cat_creator.gd, its own node; game.gd opens it)
+##       NEXT -> SOLO / MULTIPLAYER (ModeScreen)
+##         SOLO        -> a game just for you, in a random city
+##         MULTIPLAYER -> HOST (with a city #) or JOIN (a friend's address) (PlayScreen)
+## BACK (or Esc) always goes one step back.
+##
+## This script only runs the menu. When the player picks something it sends a signal,
+## and game.gd does the actual work.
 
+## PLAY was clicked, or BACK on the SOLO / MULTIPLAYER screen (game.gd opens CHOOSE YOUR CAT).
+signal play_pressed
+## SOLO was clicked. city_seed = a random city.
+signal solo_pressed(city_seed: int)
 ## HOST was clicked. city_seed = the number typed, or a random one.
 signal host_pressed(city_seed: int)
 ## JOIN was clicked, with the address typed in.
 signal join_pressed(address: String)
 ## SETTINGS was clicked (game.gd opens the settings menu).
 signal settings_pressed
-## MY CAT was clicked (game.gd opens the character creator, scripts/ui/cat_creator.gd).
-signal cat_pressed
 
 @export_group("Start Menu")
 ## The camera that looks at the city behind the menu (it slowly pans while the menu is open).
@@ -38,8 +48,8 @@ signal cat_pressed
 
 @onready var title_label: Label = $Title
 @onready var main_screen: Control = $MainScreen
+@onready var mode_screen: Control = $ModeScreen
 @onready var play_screen: Control = $PlayScreen
-@onready var name_input: LineEdit = $PlayScreen/VBox/NameRow/NameInput
 @onready var seed_input: LineEdit = $PlayScreen/VBox/Columns/HostColumn/SeedInput
 @onready var address_input: LineEdit = $PlayScreen/VBox/Columns/JoinColumn/AddressInput
 @onready var status_label: Label = $Status
@@ -49,25 +59,19 @@ var _camera_yaw: float
 
 
 func _ready() -> void:
-	$MainScreen/PlayButton.pressed.connect(show_play_screen)
+	$MainScreen/PlayButton.pressed.connect(_on_play_pressed)
 	$MainScreen/SettingsButton.pressed.connect(_on_settings_pressed)
-	$MainScreen/CatButton.pressed.connect(func():
-		main_screen.hide()  # the MY CAT screen takes its place; it calls show_main_screen() after
-		cat_pressed.emit())
 	$MainScreen/QuitButton.pressed.connect(get_tree().quit)
+	$ModeScreen/SoloButton.pressed.connect(func(): solo_pressed.emit(randi_range(1, 99999)))
+	$ModeScreen/MultiplayerButton.pressed.connect(show_play_screen)
+	$ModeScreen/BackButton.pressed.connect(_on_play_pressed)
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.pressed.connect(_on_host_pressed)
 	$PlayScreen/VBox/Columns/JoinColumn/JoinButton.pressed.connect(func(): join_pressed.emit(address_input.text.strip_edges()))
-	$PlayScreen/VBox/BackButton.pressed.connect(show_main_screen)
+	$PlayScreen/VBox/BackButton.pressed.connect(show_mode_screen)
 	$Version.text = "v%s  LAN" % ProjectSettings.get_setting("application/config/version", "0")
-	name_input.text = Settings.player_name
 	if menu_camera != null:
 		_camera_yaw = menu_camera.rotation.y
 	show_main_screen()
-
-
-## The name typed in the CAT NAME box.
-func typed_name() -> String:
-	return name_input.text.strip_edges()
 
 
 ## Show a message under the menu ("Connecting...", errors).
@@ -77,26 +81,46 @@ func show_status(text: String) -> void:
 
 ## PLAY / SETTINGS / QUIT.
 func show_main_screen() -> void:
-	show()
-	play_screen.hide()
-	main_screen.show()
-	status_label.text = ""
+	_show_only(main_screen)
 	$MainScreen/PlayButton.grab_focus()
 
 
-## Name, host or join.
+## SOLO / MULTIPLAYER (after CHOOSE YOUR CAT).
+func show_mode_screen() -> void:
+	_show_only(mode_screen)
+	$ModeScreen/PlayingAs.text = "PLAYING AS %s" % str(Settings.current_cat().get("name", "")).to_upper()
+	$ModeScreen/SoloButton.grab_focus()
+
+
+## MULTIPLAYER: host or join.
 func show_play_screen() -> void:
-	show()
-	main_screen.hide()
-	play_screen.show()
+	_show_only(play_screen)
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.grab_focus()
 
 
-## Esc on the play screen = back.
+## Hide every screen (another menu, e.g. CHOOSE YOUR CAT, is on top). The title stays.
+func hide_screens() -> void:
+	_show_only(null)
+
+
+func _show_only(screen: Control) -> void:
+	show()
+	for each in [main_screen, mode_screen, play_screen]:
+		each.visible = each == screen
+	status_label.text = ""
+
+
+## Esc = one step back.
 func _input(event: InputEvent) -> void:
-	if visible and play_screen.visible and event.is_action_pressed("ui_cancel"):
-		show_main_screen()
-		get_viewport().set_input_as_handled()
+	if not visible or not event.is_action_pressed("ui_cancel"):
+		return
+	if play_screen.visible:
+		show_mode_screen()
+	elif mode_screen.visible:
+		_on_play_pressed()
+	else:
+		return
+	get_viewport().set_input_as_handled()
 
 
 ## The number typed in the city # box, or a random one if it's empty.
@@ -105,12 +129,17 @@ func chosen_seed() -> int:
 	return typed.to_int() if typed.is_valid_int() else randi_range(1, 99999)
 
 
+func _on_play_pressed() -> void:
+	hide_screens()  # CHOOSE YOUR CAT takes their place
+	play_pressed.emit()
+
+
 func _on_host_pressed() -> void:
 	host_pressed.emit(chosen_seed())
 
 
 func _on_settings_pressed() -> void:
-	main_screen.hide()  # the settings menu takes its place; it calls show_main_screen() after
+	hide_screens()  # the settings menu takes their place; it calls show_main_screen() after
 	settings_pressed.emit()
 
 

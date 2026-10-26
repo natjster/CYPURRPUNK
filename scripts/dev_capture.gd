@@ -6,7 +6,7 @@ extends Node
 ##   C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shots/street.png --pos=0,0,6 --yaw=0 --pitch=-12
 ## Options (everything after the lone "--"):
 ##   --capture=PATH    where to save the PNG (relative to the project folder)
-##   --host / --join   start a game (otherwise you get the lobby menu)
+##   --solo / --host / --join   start a game (otherwise you get the start menu)
 ##   --wait=N          wait N frames after our cat appears before doing anything else
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
@@ -38,7 +38,7 @@ extends Node
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --scale=N         upscale factor for the saved image (default 4)
-##   --menu=NAME       open a menu first: play, settings, pause or cat (MY CAT) (--settings_tab=N picks the tab)
+##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
@@ -58,7 +58,7 @@ func _ready() -> void:
 	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
 	var player: CatPlayer = null
-	if args.has("host") or args.has("join"):
+	if args.has("host") or args.has("join") or args.has("solo"):
 		var give_up_at := Time.get_ticks_msec() + 10000  # seconds, not frames: fps varies a lot
 		while Time.get_ticks_msec() < give_up_at:
 			player = scene.get_node_or_null("Players/%d" % multiplayer.get_unique_id()) as CatPlayer
@@ -241,7 +241,7 @@ func _ready() -> void:
 		# (our cat wears it and shares it; test runs never save it).
 		var rng := RandomNumberGenerator.new()
 		rng.seed = int(args["look"])
-		Settings.set_value("cat_look", CatLook.random_look(rng))
+		Settings.update_current_cat({"look": CatLook.random_look(rng)})
 		for i in 10:
 			await get_tree().process_frame
 	if args.has("inventory"):
@@ -251,9 +251,10 @@ func _ready() -> void:
 	if args.has("menu") and scene is Game:
 		match args["menu"]:
 			"play": scene.main_menu.show_play_screen()
+			"mode": scene.main_menu.show_mode_screen()
 			"settings": scene.settings_menu.open()
 			"pause": scene.pause_menu.open()
-			"cat": scene.cat_creator.open()
+			"cat": scene.cat_creator.open(scene.pause_menu.enabled)
 		if args.has("settings_tab"):
 			scene.settings_menu._show_tab(int(args["settings_tab"]))
 		# --rebind=ACTION,SLOT,KEY   click a box on the KEYS tab and press KEY (e.g. jump,1,J)
