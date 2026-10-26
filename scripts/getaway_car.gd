@@ -277,8 +277,8 @@ func _update_look_around(delta: float) -> void:
 		var stick := Seats.get_vector(PlayerId.slot_of(driver_id), "look_left", "look_right", "look_up", "look_down")
 		if stick != Vector2.ZERO:
 			stick *= stick.length()  # gentle near the middle, fast at full tilt (like on foot)
-			var turn := stick_turn_speed * Settings.stick_speed * delta
-			var pitch_sign := -1.0 if Settings.invert_stick_y else 1.0
+			var turn := stick_turn_speed * Seats.stick_speed(PlayerId.slot_of(driver_id)) * delta
+			var pitch_sign := -1.0 if Seats.invert_stick_y(PlayerId.slot_of(driver_id)) else 1.0
 			_turn_camera(-stick.x * turn, -stick.y * turn * 0.6 * pitch_sign)
 	_since_look += delta
 	# Done looking and driving forward: ease back to the normal view behind the car.

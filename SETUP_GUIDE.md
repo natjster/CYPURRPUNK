@@ -1056,6 +1056,17 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   **DROP OUT** (only they leave: what they carry drops where they stand, their stash is safe).
   Player 1's LEAVE GAME ends the game for this whole computer. Alone, START opens the normal
   big pause menu as always. (`scripts/ui/player_pause.gd`, in every player's HUD.)
+- **Each player's own controller settings:** in their pause menu, **STICK SPEED**, **INVERT
+  STICK Y** and **RUMBLE** (left / right changes them). A couch player's are saved with the cat
+  they play, so they follow that player next time; player 1's are the same ones as SETTINGS >
+  CONTROLS.
+- **Player colours:** in split screen each player's screen has a thin frame and a "P2" tag in
+  their colour: P1 pink, P2 cyan, P3 yellow, P4 green (their pause menu title too). Change the
+  colours in `scripts/seats.gd` > **SEAT_COLORS**.
+- **Unplugged controller (or flat battery):** that player's game pauses ("CONTROLLER UNPLUGGED")
+  and only theirs; plug it back in and it carries on by itself. Lost it for good? Press START on
+  any free controller: it takes over that player's seat (same cat, same stuff). Playing alone,
+  the normal pause menu opens.
 - **Who uses what:** player 1 always has the keyboard + mouse, plus one controller. Everyone
   else has one controller. While player 1 plays alone, ANY controller drives them; the first one
   they use becomes theirs. (A controller used in the start menu counts as player 1's, so its

@@ -30,6 +30,8 @@ signal changed
 
 ## pads[0] value for "player 1 is on the keyboard; the other controllers belong to others".
 const KEYBOARD_ONLY: int = -2
+## Each player's colour: the frame + "P2" tag around their split screen. Change them here.
+const SEAT_COLORS: Array[Color] = [Color(1, 0.35, 0.8), Color(0.3, 0.9, 1), Color(1, 0.85, 0.3), Color(0.45, 1, 0.45)]
 
 ## The controller (Godot device number) of each seat, -1 = none yet.
 var pads: Array[int] = []
@@ -43,6 +45,9 @@ var _joining: int = -1
 ## The couch lobby (start menu): seat -> the saved cat id they picked ("" = a NEW CAT, made
 ## when the game starts).
 var lobby_cats := {}
+## Seats whose controller is unplugged right now (seat -> true). Their pause menu is up until it's
+## back (or until START on another free controller takes over the seat).
+var _unplugged := {}
 ## What the per-seat controls were last built from, so they're only rebuilt when something
 ## really changed (rebuilding lets go of every button being held, e.g. the gas trigger).
 var _built_from: String = ""
@@ -60,6 +65,7 @@ func reset() -> void:
 	pads.clear()
 	taken.clear()
 	lobby_cats.clear()
+	_unplugged.clear()
 	for seat in PlayerId.MAX_LOCAL:
 		pads.append(-1)
 		taken.append(seat == 0)
@@ -117,14 +123,68 @@ func count() -> int:
 	return taken.count(true)
 
 
+# --- Each player's colour and own settings ---
+
+## This player's colour (the frame around their split screen).
+func color(seat: int) -> Color:
+	return SEAT_COLORS[seat % SEAT_COLORS.size()]
+
+
+## Right-stick camera speed for this player (1.0 = normal). Player 1's is SETTINGS > CONTROLS >
+## STICK SPEED; couch players set theirs in their own pause menu, saved with their cat.
+func stick_speed(seat: int) -> float:
+	return Settings.stick_speed if seat == 0 else float(_player_settings(seat).get("stick_speed", 1.0))
+
+
+## Does this player push the right stick up to look down?
+func invert_stick_y(seat: int) -> bool:
+	return Settings.invert_stick_y if seat == 0 else bool(_player_settings(seat).get("invert_stick_y", false))
+
+
+## Does this player's controller rumble?
+func rumble_on(seat: int) -> bool:
+	return Settings.rumble if seat == 0 else bool(_player_settings(seat).get("rumble", true))
+
+
+## Change one of a player's own settings ("stick_speed", "invert_stick_y", "rumble") and save it:
+## player 1's into Settings, a couch player's onto the saved cat they play (so it follows them).
+func set_player_setting(seat: int, key: String, value: Variant) -> void:
+	if seat == 0:
+		Settings.set_value(key, value)
+		return
+	var cat := _saved_cat(seat)
+	if cat.is_empty():
+		return
+	var own: Dictionary = cat.get("controls", {})
+	own[key] = value
+	cat["controls"] = own  # (changes the cat inside Settings.cats)
+	Settings.save_settings()
+
+
+## A couch player's own settings ({} = all normal), kept on their saved cat.
+func _player_settings(seat: int) -> Dictionary:
+	return _saved_cat(seat).get("controls", {})
+
+
+## The saved cat (in Settings.cats) the player in this seat plays, or {}.
+func _saved_cat(seat: int) -> Dictionary:
+	if Game.instance == null:
+		return {}
+	var cat_id := str(Game.instance.local_player_info(seat).get("cat_id", ""))
+	for cat in Settings.cats:
+		if cat.get("id", "") == cat_id:
+			return cat
+	return {}
+
+
 # --- Rumble ---
 
 ## Shake the controller of the player with this player ID (if they're on this computer, on a
 ## controller, and RUMBLE is ON). Same numbers as Controls.rumble.
 func rumble(player_id: int, weak: float, strong: float, seconds: float) -> void:
-	if not PlayerId.is_local(player_id) or not Settings.rumble:
-		return
 	var seat := PlayerId.slot_of(player_id)
+	if not PlayerId.is_local(player_id) or not rumble_on(seat):
+		return
 	if seat == 0:
 		if Controls.using_pad:
 			Input.start_joy_vibration(pads[0] if pads[0] >= 0 else Controls.pad_device, weak, strong, seconds)
@@ -181,6 +241,16 @@ func _join(device: int) -> void:
 	_joining = -1
 	if pads.has(device) or not _in_game():
 		return
+	# Someone's controller is unplugged? This new one takes over their seat (and cat).
+	for lost in _unplugged.keys():
+		pads[lost] = device
+		_unplugged.erase(lost)
+		_rebuild_actions()
+		_resume_after_unplug(lost)
+		Hud.show_message("PLAYER %d IS BACK (NEW CONTROLLER)" % (lost + 1), 3.0)
+		print("[Seats] Controller %d took over player %d's seat" % [device, lost + 1])
+		changed.emit()
+		return
 	var seat := -1
 	for free in range(1, PlayerId.MAX_LOCAL):
 		if not taken[free] and not Game.instance.extra_local_players.has(free):
@@ -196,7 +266,7 @@ func _join(device: int) -> void:
 	taken[seat] = true
 	_rebuild_actions()
 	Game.instance.add_local_player(seat, {"name": cat.get("name", ""), "look": cat.get("look", {}), "cat_id": cat.get("id", "")})
-	Hud.show_message("PLAYER %d JOINED AS %s!  (%s > LEAVE GAME to drop out)" % [seat + 1, cat.get("name", ""), Controls.display_name("Pad Start")], 4.0)
+	Hud.show_message("PLAYER %d JOINED AS %s!  (%s > DROP OUT to leave)" % [seat + 1, cat.get("name", ""), Controls.display_name("Pad Start")], 4.0)
 	print("[Seats] Controller %d joined as player %d (%s)" % [device, seat + 1, cat.get("name", "")])
 	changed.emit()
 
@@ -334,11 +404,42 @@ func _cat_for_new_player(seat: int) -> Dictionary:
 	return Settings.new_cat(false, "PLAYER %d" % (seat + 1), CatLook.random_look(rng))
 
 
+## A controller was unplugged / plugged in (or ran out of battery). Its player's game pauses
+## (only theirs, in split screen) until it's back. They keep their seat: the same controller
+## plugged back in carries on, or START on another free controller takes the seat over (_join).
 func _on_joy_connection_changed(device: int, connected: bool) -> void:
+	if not _in_game():
+		return
 	var seat := pads.find(device)
-	if seat != -1 and _in_game():
-		# The player keeps their seat: plugging the same controller back in carries on.
-		Hud.show_message("PLAYER %d'S CONTROLLER %s" % [seat + 1, "IS BACK" if connected else "DISCONNECTED"], 3.0)
+	if seat == -1 and _seat0_takes_any_pad() and Controls.using_pad and device == Controls.pad_device:
+		seat = 0  # player 1 alone, on the controller they were using
+	if seat == -1:
+		return
+	if not connected:
+		_unplugged[seat] = true
+		Hud.show_message("PLAYER %d'S CONTROLLER IS UNPLUGGED" % (seat + 1), 3.0, seat)
+		if PlayerPause.split_active():
+			PlayerPause.for_seat(seat).open("PLAYER %d: CONTROLLER UNPLUGGED\nplug it back in, or press %s on another one" % [seat + 1, Controls.display_name("Pad Start")])
+		elif not PauseMenu.is_open:
+			Game.instance.pause_menu.opened_by = seat
+			Game.instance.pause_menu.open()
+	elif _unplugged.has(seat):
+		_unplugged.erase(seat)
+		Hud.show_message("PLAYER %d'S CONTROLLER IS BACK" % (seat + 1), 3.0, seat)
+		_resume_after_unplug(seat)
+	print("[Seats] Controller %d (player %d) %s" % [device, seat + 1, "plugged back in" if connected else "unplugged"])
+
+
+## Close the pause menu that opened because this player's controller was unplugged.
+func _resume_after_unplug(seat: int) -> void:
+	var menu := PlayerPause.for_seat(seat)
+	if menu != null:
+		menu.close_unplug_pause()
+
+
+## Is this player's controller unplugged right now?
+func is_unplugged(seat: int) -> bool:
+	return _unplugged.has(seat)
 
 
 # --- Inner workings ---

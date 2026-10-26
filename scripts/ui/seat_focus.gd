@@ -15,6 +15,8 @@ extends RefCounted
 ##
 ## The highlighted button looks like the mouse is over it (its theme's "hover" box). The mouse
 ## still works as normal for player 1. Buttons get focus_mode = NONE so Godot's focus stays out of it.
+## A SETTING ROW is a button with an "adjust" meta (a Callable taking -1 / +1): left / right on it
+## changes the value instead of moving the highlight (e.g. STICK SPEED < 100% > in the pause menu).
 
 ## The highlight moved to this button (e.g. to show what an inventory item is).
 signal highlighted(button: Button)
@@ -68,6 +70,9 @@ func handle(event: InputEvent) -> bool:
 			current.pressed.emit()
 			return true
 		return false
+	if current.has_meta("adjust") and (event.is_action_pressed("ui_left", true) or event.is_action_pressed("ui_right", true)):
+		(current.get_meta("adjust") as Callable).call(-1 if event.is_action_pressed("ui_left", true) else 1)
+		return true
 	var directions := {"ui_up": Vector2.UP, "ui_down": Vector2.DOWN, "ui_left": Vector2.LEFT, "ui_right": Vector2.RIGHT}
 	for action in directions:
 		if event.is_action_pressed(action, true):

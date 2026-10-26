@@ -65,6 +65,10 @@ static var instance: GameScreen
 ## "seat": which seat it shows (-1 = hidden)}.
 var _extra_panes: Array[Dictionary] = []
 var _join_hint: Label
+## Split screen: a frame in each player's colour around their screen, and their "P2" tag
+## (one per screen, in screen order; colours: Seats.SEAT_COLORS).
+var _frames: Array[Panel] = []
+var _tags: Array[Label] = []
 ## Players 2-4's HUDs, by seat (index 1-3; index 0 unused): {"view": TextureRect,
 ## "viewport": SubViewport, "hud": Hud}.
 var _seat_huds: Array = [null]
@@ -165,12 +169,30 @@ func _build_extra_panes() -> void:
 		hud_viewport.add_child(seat_hud)
 		_seat_huds.append({"view": hud_view, "viewport": hud_viewport, "hud": seat_hud})
 
+	# Split screen: each player's coloured frame and "P1".."P4" tag (shown with 2+ players).
+	for i in PlayerId.MAX_LOCAL:
+		var frame := Panel.new()
+		frame.name = "PlayerFrame%d" % (i + 1)
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.hide()
+		add_child(frame)
+		_frames.append(frame)
+		var tag := Label.new()
+		tag.name = "PlayerTag%d" % (i + 1)
+		tag.add_theme_font_size_override("font_size", 22)
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		tag.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tag.hide()
+		add_child(tag)
+		_tags.append(tag)
+
 	_join_hint = Label.new()
 	_join_hint.name = "JoinHint"
 	_join_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_join_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_join_hint.add_theme_font_size_override("font_size", 28)
-	_join_hint.add_theme_color_override("font_color", Color(1, 0.4, 0.8))
+	_join_hint.add_theme_color_override("font_color", Seats.color(3))  # player 4's colour
 	_join_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_join_hint.hide()
 	add_child(_join_hint)
@@ -280,6 +302,27 @@ func _fit() -> void:
 		_join_hint.text = "PRESS %s\nTO JOIN" % Controls.display_name("Pad Start")
 		_join_hint.position = (corner + Vector2(rects[3].position) * zoom) * units_per_pixel
 		_join_hint.size = Vector2(rects[3].size) * zoom * units_per_pixel
+
+	# Split screen: a frame in each player's colour, and their tag in the bottom-right corner.
+	for i in _frames.size():
+		var shown := seats.size() > 1 and i < seats.size()
+		_frames[i].visible = shown
+		_tags[i].visible = shown
+		if not shown:
+			continue
+		var view: TextureRect = game_view if i == 0 else _extra_panes[i - 1].view
+		var colour := Seats.color(seats[i])
+		var style := StyleBoxFlat.new()
+		style.draw_center = false
+		style.border_color = colour
+		style.set_border_width_all(3)
+		_frames[i].add_theme_stylebox_override("panel", style)
+		_frames[i].position = view.position
+		_frames[i].size = view.size
+		_tags[i].text = "P%d" % (seats[i] + 1)
+		_tags[i].add_theme_color_override("font_color", colour)
+		_tags[i].position = view.position
+		_tags[i].size = view.size - Vector2(10, 6)
 
 	# Every player's HUD sits on their own screen, shrunk to fit.
 	hud.fit_to(Rect2(game_view.position, game_view.size), hud_scale_for(game_view.size))

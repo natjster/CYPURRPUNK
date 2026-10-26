@@ -311,8 +311,8 @@ func _stick_look(delta: float) -> void:
 	if stick == Vector2.ZERO:
 		return
 	stick *= stick.length()  # response curve: half tilt = quarter speed
-	var turn := stick_turn_speed * Settings.stick_speed * delta
-	var pitch_sign := -1.0 if Settings.invert_stick_y else 1.0
+	var turn := stick_turn_speed * Seats.stick_speed(slot) * delta  # this player's own STICK SPEED
+	var pitch_sign := -1.0 if Seats.invert_stick_y(slot) else 1.0
 	camera_pivot.rotate_y(-stick.x * turn)
 	spring_arm.rotation.x = clamp(
 		spring_arm.rotation.x - stick.y * turn * stick_pitch_ratio * pitch_sign,

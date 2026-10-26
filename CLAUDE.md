@@ -37,6 +37,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   runs after `start_patrol` (the start menu counts as "server": it used to spawn Roombas that broke joining).
   A real controller on this PC can disturb `--hold` tests (its events mix into actions). Test: `--net_stats=N`,
   `--pad_press_delay=N`.
+- Phase 8: `Seats.color(seat)` (SEAT_COLORS) = split-screen frame + "Pn" tag (GameScreen `_frames/_tags`).
+  Per-player stick settings: `Seats.stick_speed/invert_stick_y/rumble_on(seat)` (seat 0 = Settings; others =
+  saved cat's "controls" dict) set via `Seats.set_player_setting`; rows in PlayerPause (`_add_setting`; SeatFocus
+  "adjust" meta = left/right changes a row). Unplugged pad: `Seats._on_joy_connection_changed` opens that
+  player's PlayerPause(reason) (or the big pause solo), replug closes it; START on a free pad takes over an
+  unplugged seat. Test: `--unplug=D [--replug]`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
   via the game camera. Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.

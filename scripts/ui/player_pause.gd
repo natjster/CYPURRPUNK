@@ -8,9 +8,15 @@ extends Control
 ## that player's own screen only: their cat stops, everyone else keeps playing. Alone, the normal
 ## full-screen pause menu opens instead (scripts/ui/pause_menu.gd).
 ##
-##   Player 1:    RESUME / SETTINGS + MY CAT / LEAVE GAME / QUIT TO DESKTOP
+##   Everyone:    RESUME, then their OWN STICK SPEED / INVERT STICK Y / RUMBLE (left / right
+##                changes them; a couch player's are saved with their cat, player 1's are the
+##                same as SETTINGS > CONTROLS)
+##   Player 1:    SETTINGS + MY CAT / LEAVE GAME / QUIT TO DESKTOP
 ##                (SETTINGS + MY CAT opens the big pause menu: those screens are shared)
-##   Players 2-4: RESUME / DROP OUT (just them: scripts/seats.gd)
+##   Players 2-4: DROP OUT (just them: scripts/seats.gd)
+##
+## It also opens by itself when that player's controller is unplugged (open(reason)), and closes
+## by itself when it's back.
 ##
 ## Controller: d-pad + A, B or START = back to the game.
 
@@ -24,6 +30,8 @@ var is_open: bool = false
 
 var _title: Label
 var _buttons: VBoxContainer
+## True while it's open because the controller was unplugged (it closes itself when it's back).
+var _for_unplug: bool = false
 ## This player's highlighted button (scripts/ui/seat_focus.gd), moved by their own d-pad.
 var _focus := SeatFocus.new()
 
@@ -93,13 +101,24 @@ func _input(event: InputEvent) -> void:
 		open()
 
 
-func open() -> void:
+## reason = a title to show instead of "PAUSED" (e.g. the controller was unplugged).
+func open(reason: String = "") -> void:
 	var game := Game.instance
-	_title.text = "PLAYER %d - PAUSED" % (seat + 1)
+	_for_unplug = reason != ""
+	_title.text = reason if reason != "" else "PLAYER %d - PAUSED" % (seat + 1)
+	_title.add_theme_color_override("font_color", Seats.color(seat))  # their split-screen colour
 	for old in _buttons.get_children():
 		_buttons.remove_child(old)
 		old.queue_free()
 	_add_button("RESUME", close)
+	# Their own controller settings (left / right on the row changes it, A steps it up).
+	_add_setting("STICK SPEED", func(): return "%d%%" % roundi(Seats.stick_speed(seat) * 100.0),
+		func(direction: int): Seats.set_player_setting(seat, "stick_speed",
+			snappedf(clampf(Seats.stick_speed(seat) + 0.1 * direction, 0.2, 3.0), 0.1)))
+	_add_setting("INVERT STICK Y", func(): return "ON" if Seats.invert_stick_y(seat) else "OFF",
+		func(_direction: int): Seats.set_player_setting(seat, "invert_stick_y", not Seats.invert_stick_y(seat)))
+	_add_setting("RUMBLE", func(): return "ON" if Seats.rumble_on(seat) else "OFF",
+		func(_direction: int): Seats.set_player_setting(seat, "rumble", not Seats.rumble_on(seat)))
 	if seat == 0:
 		_add_button("SETTINGS + MY CAT", func():
 			close()
@@ -120,14 +139,38 @@ func open() -> void:
 	_focus.set_buttons(_buttons.get_children())  # RESUME highlighted
 
 
+## The controller is back: close the pause that opened when it was unplugged (not a normal one).
+func close_unplug_pause() -> void:
+	if is_open and _for_unplug:
+		close()
+
+
 func close() -> void:
 	if not is_open:
 		return
 	is_open = false
+	_for_unplug = false
 	hide()
 	_focus.clear()
 	if seat == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## A setting row: "STICK SPEED  < 100% >". value_text() gives the value's text; adjust(-1 / +1)
+## changes it (left / right on a controller or keyboard; A or a click = +1).
+func _add_setting(label: String, value_text: Callable, adjust: Callable) -> void:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(320, 40)
+	button.add_theme_font_size_override("font_size", font_size - 4)
+	var refresh := func(): button.text = "%s   < %s >" % [label, value_text.call()]
+	refresh.call()
+	button.set_meta("adjust", func(direction: int):
+		adjust.call(direction)
+		refresh.call())
+	button.pressed.connect(func():
+		adjust.call(1)
+		refresh.call())
+	_buttons.add_child(button)
 
 
 func _add_button(text: String, action: Callable) -> void:

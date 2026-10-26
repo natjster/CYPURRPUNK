@@ -17,6 +17,8 @@ extends Node
 ##                     appears = a new player drops in on it (scripts/seats.gd). Repeat: --join_pad=1,2
 ##   --pad_device=N    which fake controller --pad and --pad_press use (default 0)
 ##   --net_stats=N     measure network data sent / received per second over N frames (before the snap)
+##   --unplug=D        (after --join_pad) controller D is unplugged; add --replug to plug it back in
+##                     after the --pad_press presses (prints each player's pause state)
 ##   --pad_press_delay=N  wait N frames before the --pad_press presses (e.g. for the network game list)
 ##   --pos=X,Y,Z       move the cat here first
 ##   --yaw=DEG         turn the camera left/right
@@ -432,6 +434,12 @@ func _ready() -> void:
 			for entry in Controls.ACTIONS:
 				print("DevCapture key %s = %s" % [entry.action, Controls.bindings[entry.action]])
 
+	if args.has("unplug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), false)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture unplug %s: own_pause=%s big_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), PauseMenu.is_open, Seats._unplugged])
 	if args.has("pad_press"):
 		# --pad_press=Start,D-Pad_Down,A : real controller presses, one every few frames.
 		# "1:Start" = START on fake controller 1 (otherwise --pad_device, default 0).
@@ -456,6 +464,13 @@ func _ready() -> void:
 	if args.has("remove_local") and Game.instance != null:
 		Game.instance.remove_local_player(int(args["remove_local"]))
 		print("DevCapture remove_local: slot %s dropped out" % args["remove_local"])
+
+	if args.has("replug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), true)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture replug %s: own_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats._unplugged])
 
 	for i in int(args.get("frames", "90")):
 		await get_tree().process_frame
