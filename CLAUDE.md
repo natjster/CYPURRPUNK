@@ -12,6 +12,11 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   the transport; Steam swaps in here), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999`; test runs with `--capture` use
   defaults and never save), `Controls`, `DevCapture` (debug builds only).
+- Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by
+  name (`meow_1/_2` = random variants of "meow"); `play` (2D, local), `play_at` (3D, local: use where
+  every peer already runs the code), `play_everywhere` (3D, RPC to all), `attach_loop`, `play_music` /
+  `play_ambience` (crossfade; hub.gd picks per area). Missing files are silent. Never hand-build
+  AudioStreamPlayers elsewhere. Sound table in SETUP_GUIDE.md section 12. Test: `--sound_log`.
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `Inventory`,

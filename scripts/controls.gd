@@ -41,6 +41,7 @@ const ACTIONS: Array = [
 	{"action": "shoot", "label": "USE RIGHT PAW", "context": "foot", "keys": ["Mouse Left"]},
 	{"action": "use_left", "label": "USE LEFT PAW", "context": "foot", "keys": ["Mouse Right"]},
 	{"action": "inventory", "label": "INVENTORY", "context": "any", "keys": ["Tab", "I"]},
+	{"action": "meow", "label": "MEOW", "context": "foot", "keys": ["M"]},
 	{"action": "handbrake", "label": "HANDBRAKE", "context": "car", "keys": ["Space"]},
 ]
 

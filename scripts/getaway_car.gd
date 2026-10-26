@@ -52,6 +52,14 @@ extends RigidBody3D
 ## Where the cat pops out, relative to the car (-X = driver's side / left).
 @export var exit_offset: Vector3 = Vector3(-2.2, 0.2, 0.0)
 
+@export_group("Engine Sound")
+## Engine pitch when idling, and at top speed (1.0 = the file's own pitch).
+## The sound is sounds/sfx/engine_loop.wav (it loops).
+@export var engine_idle_pitch: float = 0.7
+@export var engine_top_pitch: float = 2.2
+## Engine loudness in decibels while someone is in the car. Empty + parked = silent.
+@export var engine_volume_db: float = -6.0
+
 @export_group("Network Smoothing")
 ## How quickly other players' copies of the car catch up. Higher = snappier.
 @export var network_smoothing: float = 12.0
@@ -84,6 +92,12 @@ var handbrake: bool = false
 var sync_position: Vector3
 var sync_rotation: Vector3
 
+## Engine sound (every computer). Speed is measured from how far the car moved, because
+## other players' copies are frozen and have no real velocity.
+var _engine: AudioStreamPlayer3D
+var _sound_last_position: Vector3
+var _sound_speed: float = 0.0
+
 
 # --- MULTIPLAYER ---
 # Whoever is driving is the car's "authority": their computer runs the physics
@@ -100,6 +114,8 @@ func _ready() -> void:
 	add_to_group("cars")  # lets late-joining cats check if they're inside a car
 	sync_position = global_position
 	sync_rotation = global_rotation
+	_engine = Sound.attach_loop("engine_loop", self, -80.0)
+	_sound_last_position = global_position
 	# Our network ID changes when we join a game, so re-check who simulates the car.
 	multiplayer.connected_to_server.connect(_update_freeze)
 	_update_freeze()
@@ -174,6 +190,8 @@ func set_driver(peer_id: int) -> void:
 	set_multiplayer_authority(peer_id if peer_id != 0 else 1)
 	_update_freeze()
 
+	if peer_id != 0 or previous_driver != null:
+		Sound.play_at("car_door", global_position)
 	if peer_id == 0 and previous_driver != null:
 		previous_driver.exit_car(to_global(exit_offset))
 	var new_driver := Game.instance.cat_for(peer_id)
@@ -193,6 +211,22 @@ func _process(delta: float) -> void:
 	# We drag it along ourselves and let its turning lag a little behind — a nice chase cam.
 	camera_rig.global_position = global_position
 	camera_rig.rotation.y = lerp_angle(camera_rig.rotation.y, global_rotation.y, 1.0 - exp(-camera_follow_speed * delta))
+	_update_engine_sound(delta)
+
+
+## Engine revs up with speed; silent when nobody's in it and it's standing still.
+func _update_engine_sound(delta: float) -> void:
+	var moved := global_position.distance_to(_sound_last_position) / maxf(delta, 0.0001)
+	_sound_last_position = global_position
+	if moved > 60.0:
+		moved = _sound_speed  # a teleport (parked back at the start): ignore that frame
+	_sound_speed = lerpf(_sound_speed, moved, 1.0 - exp(-6.0 * delta))
+	if _engine == null:
+		return
+	var running := driver_id != 0 or _sound_speed > 0.5
+	var target_db := engine_volume_db if running else -80.0
+	_engine.volume_db = lerpf(_engine.volume_db, target_db, 1.0 - exp(-4.0 * delta))
+	_engine.pitch_scale = lerpf(engine_idle_pitch, engine_top_pitch, clampf(_sound_speed / max_speed, 0.0, 1.0))
 
 
 ## Runs every physics step. "state" lets us read/write the car's velocity safely.

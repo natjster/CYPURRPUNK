@@ -61,6 +61,14 @@ const DEPTH_LINE: float = -100.0
 @export var sewer_ambient_color: Color = Color(0.35, 0.55, 0.45)
 @export var sewer_ambient_energy: float = 0.6
 
+@export_group("Music")
+## Music down here and up top: file names in res://sounds/music/ (without .wav). "" = silence.
+@export var hub_music: String = "hub"
+@export var city_music: String = "city"
+## Background loops: file names in res://sounds/ambience/. "" = silence.
+@export var hub_ambience: String = "sewer"
+@export var city_ambience: String = "rain"
+
 ## Don Catleone: only used here to decorate his corner (lights, crates).
 @onready var npc: Npc = $DonCatleone
 ## Comrade Whiskers: only used here to build his shop, the Black Markitten, around him.
@@ -141,6 +149,10 @@ func _process(_delta: float) -> void:
 	if in_hub != _in_hub_view:
 		_in_hub_view = in_hub
 		_update_mood(in_hub)
+	# Music + background sound for where the camera is (sounds/music/hub.wav or city.wav,
+	# sounds/ambience/sewer.wav or rain.wav). Same track as before = nothing happens.
+	Sound.play_music(hub_music if in_hub else city_music)
+	Sound.play_ambience(hub_ambience if in_hub else city_ambience)
 
 
 ## Underground: no moon, no rain, green fog. Up top: the night city as it was.

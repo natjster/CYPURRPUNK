@@ -68,8 +68,9 @@ const SAVED: Array = [
 	["effects", "volumetric_fog"],
 ]
 
-## Sound buses. Future sounds should pick "Music" or "SFX" on their AudioStreamPlayer
-## (Inspector > Bus) so the volume sliders work for them.
+## Sound buses. Sounds played through the Sound autoload (scripts/sound.gd) pick the right one
+## by themselves; a hand-placed AudioStreamPlayer should pick "Music" or "SFX" (Inspector > Bus)
+## so the volume sliders work for it.
 const BUSES: Array[String] = ["Music", "SFX"]
 
 ## Window sizes offered in SETTINGS > DISPLAY > RESOLUTION (only the ones that fit your monitor

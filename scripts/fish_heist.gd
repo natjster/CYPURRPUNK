@@ -216,6 +216,7 @@ func _extracted(peer_id: int, earned: int, count: int, quest_bonus: int = 0) -> 
 		if quest_bonus > 0:
 			popup_label.text += "\nQUEST DONE +$%d" % quest_bonus
 		_popup_time = 2.5
+		Sound.play("extract")
 		UndergroundHub.instance.return_cat(Game.instance.my_cat())  # down the drain we go
 
 

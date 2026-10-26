@@ -84,6 +84,10 @@ var _stuck_time: float = 0.0
 var _last_car_position: Vector3
 var _clock: float = 0.0
 var _flash_time: float = 0.0
+## Sounds (every computer): the vacuum hum, and what we were doing last frame (to hear the siren
+## start the moment a chase begins).
+var _hum: AudioStreamPlayer3D
+var _last_state: State = State.PATROL
 var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city's RNG
 
 @onready var model: Node3D = $Model
@@ -100,6 +104,7 @@ func _ready() -> void:
 	sync_position = global_position
 	_stuck_check_at = global_position
 	_rng.randomize()
+	_hum = Sound.attach_loop("roomba_hum", self, -12.0)  # sounds/sfx/roomba_hum.wav
 	if is_multiplayer_authority():
 		_last_car_position = Game.instance.car.global_position
 		_pick_patrol_target()
@@ -182,6 +187,7 @@ func _bonk(cat: CatPlayer) -> void:
 	var peer_id := cat.name.to_int()
 	var push := _flat(cat.global_position - global_position).normalized() * bump_push + Vector3.UP * bump_hop
 	cat.get_zapped.rpc_id(peer_id, push)  # the cat's owner moves it
+	Sound.play_everywhere("bonk", cat.global_position)
 	if steals_loot:
 		var item_id := ItemManager.instance.take_one_loot(peer_id)
 		if item_id != "":
@@ -256,6 +262,7 @@ func explode() -> void:
 	for i in stomach.size():
 		ItemManager.instance.drop_on_street(stomach[i], global_position + Vector3(cos(i * 2.1), 0, sin(i * 2.1)) * 1.2)
 	stomach.clear()
+	Sound.play_everywhere("explode", global_position)
 	print("[Roomba] %s exploded" % name)
 	(get_parent() as RoombaPatrol).roomba_destroyed(global_position)
 	queue_free()  # the spawner removes it on everyone's screen
@@ -266,6 +273,7 @@ func explode() -> void:
 @rpc("authority", "call_local", "unreliable")
 func _hit_flash() -> void:
 	_flash_time = 0.15
+	Sound.play_at("roomba_hit", global_position)
 
 
 ## Host -> the bonked cat's owner: tell them what got vacuumed.
@@ -287,6 +295,12 @@ func _process(delta: float) -> void:
 
 	brush.rotate_y(delta * 14.0)
 	var chasing := state == State.CHASE
+	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
+	if chasing and _last_state != State.CHASE:
+		Sound.play_at("alert", global_position, -2.0)
+	_last_state = state
+	if _hum != null:
+		_hum.pitch_scale = 1.4 if chasing else 1.0
 	var blink := fmod(Time.get_ticks_msec() / 1000.0, 0.4) < 0.2
 	var off := Color(0.08, 0.08, 0.1)
 	siren_red.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.15) if chasing and blink else off)

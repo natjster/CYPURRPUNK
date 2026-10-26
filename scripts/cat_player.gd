@@ -105,6 +105,19 @@ var sync_position: Vector3
 ## How the owner's cat model is turned/leaning. Sent over the network.
 var sync_model_rotation: Vector3
 
+@export_group("Sounds")
+## Seconds between footsteps at walking speed (faster running = quicker steps).
+## The sound is any sounds/sfx/footstep_N.wav file.
+@export var footstep_interval: float = 0.32
+## Footstep loudness in decibels (0 = the file's own volume, -6 = about half).
+@export var footstep_volume_db: float = -8.0
+## Shortest time between two meows (seconds), so holding M doesn't spam everyone.
+@export var meow_cooldown: float = 0.5
+
+var _step_timer: float = 0.0
+var _step_last_position: Vector3
+var _next_meow_at: float = 0.0
+
 @export_group("Network Smoothing")
 ## How quickly other players' cats catch up to their real position.
 ## Higher = snappier but choppier, lower = smoother but slightly behind.
@@ -162,6 +175,7 @@ func _process(delta: float) -> void:
 	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
 	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
 	cat_model.rotation.z = lerp_angle(cat_model.rotation.z, sync_model_rotation.z, weight)  # knocked-out flop
+	_update_footsteps(delta, false)
 
 
 ## Owner only: go faster for a while (catnip). Counts as zoomies for the camera effects.
@@ -239,6 +253,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("drop"):
 		ItemManager.instance.drop_from(self)
+	elif event.is_action_pressed("meow") and Time.get_ticks_msec() / 1000.0 >= _next_meow_at:
+		# Everyone nearby hears it (sounds/sfx/meow_1.wav, meow_2.wav... a random one each time).
+		_next_meow_at = Time.get_ticks_msec() / 1000.0 + meow_cooldown
+		Sound.play_everywhere("meow", global_position)
 	elif event.is_action_pressed("interact") and Npc.try_talk(self):
 		# Standing next to an NPC (e.g. Don Catleone in the hub): the talk box opens.
 		get_viewport().set_input_as_handled()
@@ -272,9 +290,11 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("jump") and not _input_blocked():
 		if is_on_floor():
 			velocity.y = jump_velocity
+			Sound.play_everywhere("jump", global_position, -6.0)
 		elif _air_jumps_left > 0:
 			velocity.y = jump_velocity
 			_air_jumps_left -= 1
+			Sound.play_everywhere("jump", global_position, -6.0)
 
 	# Read WASD as a 2D direction (x = left/right, y = forward/back).
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -320,6 +340,26 @@ func _physics_process(delta: float) -> void:
 	# Publish where we are for the other players.
 	sync_position = position
 	sync_model_rotation = cat_model.rotation
+	_update_footsteps(delta, is_on_floor())
+
+
+## Pitter-patter. Every computer does this for every cat it can see (our own cat from
+## _physics_process, other players' cats from _process), working out how fast the cat moves
+## from how far it went - so footsteps need no network messages at all.
+## on_floor: our own cat knows for sure; for other cats we guess "not going up or down".
+func _update_footsteps(delta: float, on_floor: bool) -> void:
+	var moved := position - _step_last_position
+	_step_last_position = position
+	var speed := Vector2(moved.x, moved.z).length() / maxf(delta, 0.0001)
+	var grounded := on_floor if is_multiplayer_authority() else absf(moved.y / maxf(delta, 0.0001)) < 1.0
+	# Standing still, in the air, in the car, or a teleport (a huge one-frame "speed"): no steps.
+	if not grounded or not visible or knocked_out or speed < 1.0 or speed > 30.0:
+		_step_timer = 0.0  # so the first step comes straight away when walking starts
+		return
+	_step_timer -= delta * speed / walk_speed
+	if _step_timer <= 0.0:
+		_step_timer = footstep_interval
+		Sound.play_at("footstep", global_position, footstep_volume_db)
 
 
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.

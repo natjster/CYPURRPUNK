@@ -50,6 +50,8 @@ extends HeldItem
 @export var bolt_width: float = 0.12
 ## The name shown on the heat bar.
 @export var hud_name: String = "GUN"
+## The sound each shot makes: a file name in res://sounds/sfx/ (without .wav), e.g. "shoot".
+@export var shot_sound: String = "shoot"
 
 ## 0 = cool, 1 = overheated. Only meaningful on the holder's computer.
 var heat: float = 0.0
@@ -177,6 +179,7 @@ func show_shot(end: Vector3, shot_heat: float) -> void:
 	if _muzzle_flash != null:
 		_muzzle_flash.light_color = color
 	_flash_time = 0.05
+	Sound.play_at(shot_sound, start, -4.0)  # every computer runs this, so play it just here
 
 
 ## Coil glow: cool colour normally, red-hot as it heats (blinks while overheated).

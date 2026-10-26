@@ -21,11 +21,13 @@ Meow-City/
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
+├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
 ├── scripts/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
 │   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
 │   ├── controls.gd            <- autoload "Controls": every key, rebinding, saved to controls.cfg
+│   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -853,9 +855,9 @@ Delete those files to get a fresh start.
   JUMP (foot) and HANDBRAKE (car) can both be Space.
 - **Esc can't be rebound** — it always opens/closes menus.
 - **Adding a control:** add one line to **ACTIONS** in `scripts/controls.gd`, e.g.
-  `{"action": "meow", "label": "MEOW", "context": "foot", "keys": ["M"]},`
-  It appears in the KEYS menu by itself. In your script use `Input.is_action_pressed("meow")`
-  (or `event.is_action_pressed("meow")` in `_unhandled_input`).
+  `{"action": "wave", "label": "WAVE", "context": "foot", "keys": ["V"]},`
+  It appears in the KEYS menu by itself. In your script use `Input.is_action_pressed("wave")`
+  (or `event.is_action_pressed("wave")` in `_unhandled_input`, like MEOW in `cat_player.gd`).
 - **Changing a default key:** edit `"keys"` on that line (names like `"F"`, `"Space"`, `"Shift"`,
   `"Up"`, `"Mouse Left"`, `"Wheel Up"`, `"Mouse 4"`). Players who already rebound keep theirs
   until they press RESET KEYS.
@@ -913,8 +915,9 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
   Double-click it in the FileSystem dock to change colours in the Theme editor.
 - **PS1 wobble** is a *global shader parameter*: Project Settings > **Shader Globals** >
   `psx_wobble` (1 = on). Every `psx_lit` material reads it.
-- **Sound buses:** the game creates **Music** and **SFX** buses (under Master). When you add a
-  sound, set its AudioStreamPlayer's **Bus** in the Inspector to Music or SFX so the sliders work.
+- **Sound buses:** the game creates **Music** and **SFX** buses (under Master). Sounds played by
+  the **Sound** autoload (§12) pick the right one themselves. Only if you place an
+  AudioStreamPlayer by hand, set its **Bus** in the Inspector to Music or SFX so the sliders work.
 
 ### Adding a new setting
 1. `scripts/settings.gd`: add `var my_setting: bool = true`, add `["effects", "my_setting"]` to
@@ -1010,7 +1013,94 @@ cat's look is printed, e.g. `DevCapture look 1: fur=#383342 hat=neon_halo face=s
 
 ---
 
-## 12. Backups and undo (git + GitHub Desktop)
+## 12. Sound & music
+
+Every sound goes through one Autoload, **Sound** (`scripts/sound.gd`). The sounds themselves
+are just files in the `sounds/` folder — **adding or replacing a sound needs no code.**
+
+```
+sounds/
+├── sfx/          <- one-off effects        (SOUND FX slider)
+├── ambience/     <- background loops        (SOUND FX slider)
+└── music/        <- music loops, one per area (MUSIC slider)
+```
+
+The files there now are **placeholder bleeps** made by Claude. Replace them with real ones.
+
+### Replacing or adding a sound (no code)
+1. Get a sound file: `.wav` for short effects, `.ogg` for music and long loops (`.mp3` also works).
+2. Name it exactly like the one it replaces (e.g. `shoot.wav`) and drop it into the right folder,
+   overwriting the old one. (In Godot: drag it from Explorer into the **FileSystem** dock.)
+3. Press Play. It's picked up by its name the next time the game starts.
+- **Several versions of one sound:** number them: `meow_1.wav`, `meow_2.wav`, `meow_3.wav`...
+  They're all "meow", and a random one plays each time. Great for footsteps and meows.
+- Every play is also nudged a little higher or lower at random, so repeats don't sound robotic.
+- A sound name the game asks for but has no file yet just stays silent (the Output panel says
+  `[Sound] No file for 'x' yet` once).
+
+### The sounds the game uses
+| File name (in `sfx/`) | When it plays | Who hears it |
+|---|---|---|
+| `footstep` (`_1`, `_2`, `_3`) | every cat's steps, quicker when running | everyone nearby |
+| `jump` | jumping (and catdip double jumps) | everyone nearby |
+| `meow` (`_1`, `_2`) | pressing **M** (MEOW, rebindable in SETTINGS > KEYS) | everyone nearby |
+| `shoot` | each gun shot (per gun: **Shot Sound** on the gun scene's root) | everyone nearby |
+| `pickup` | grabbing an item / fish | everyone nearby |
+| `roomba_hum` (loops) | every VAC-COP, revs up while chasing | everyone nearby |
+| `alert` | a VAC-COP starts chasing | everyone nearby |
+| `bonk` | a VAC-COP bonks a cat | everyone nearby |
+| `roomba_hit` | a bolt hits a VAC-COP | everyone nearby |
+| `explode` | a VAC-COP explodes | everyone nearby |
+| `engine_loop` (loops) | the getaway car; pitch follows the speed | everyone nearby |
+| `car_door` | getting in / out of the car | everyone nearby |
+| `hurt` / `knockout` | you lose HP / hit 0 HP | just you |
+| `extract` | you reach the extraction beam | just you |
+| `buy` / `error` | the Black Markitten sells you something / says no | just you |
+| `click` | any menu button | just you |
+
+Music and background loops change by area (they fade into each other): in the sewers
+`music/hub` + `ambience/sewer`, up top (and on the start menu) `music/city` + `ambience/rain`.
+To use other files, select **Hub** in `main.tscn` > Inspector > **Music** group (Hub Music,
+City Music, Hub Ambience, City Ambience: file names without `.wav`; empty = silence).
+
+"Everyone nearby" sounds come from a spot in the 3D world: louder when your camera is close,
+left/right speaker by direction, silent beyond 45 m.
+
+### Where to find sounds
+- **jsfxr** (sfxr.me, in your browser): click "Pickup", "Laser", "Explosion"... and export a
+  `.wav`. Perfect for the retro feel.
+- **Freesound.org** (filter by the **CC0** licence = free for anything), **Kenney.nl** audio
+  packs, **OpenGameArt.org**. Check each sound's licence before you put it in the game.
+- Record your own: real meows from a phone are the best meows.
+- **PS1 crunch tip:** save effects at **22050 Hz mono** (Audacity: Tracks > Resample, and
+  Tracks > Mix > Mix Stereo Down to Mono). Loops must start and end smoothly or they click.
+
+### Tuning knobs
+- **`scripts/sound.gd`** (top of the file, change the number): `PITCH_VARIATION` (random pitch
+  nudge), `HEARING_RANGE` (metres), `LOUDNESS_SIZE` (bigger = loud further away), `FADE_SECONDS`
+  (music crossfade), `MUSIC_DB` / `AMBIENCE_DB` (music and ambience loudness),
+  `RETRO_CUTOFF_HZ` (the PS1 "cheap TV speaker" muffle on all sound; 0 = off).
+- **Cat** (`scenes/player.tscn`, root) > **Sounds**: Footstep Interval, Footstep Volume Db, Meow Cooldown.
+- **GetawayCar** (`scenes/getaway_car.tscn`, root) > **Engine Sound**: Engine Idle Pitch,
+  Engine Top Pitch, Engine Volume Db.
+- **Guns** (e.g. `scenes/items/pistol.tscn`, root) > **Look** > **Shot Sound**: which `sfx/` file it fires.
+
+### Making something new play a sound (one line of code)
+- `Sound.play("buy")` — plain sound, only you hear it (menus, "you got hurt").
+- `Sound.play_at("shoot", where)` — from a spot in the world, on this computer. Use it where
+  **every** computer already runs the code (like a shot that's drawn on every screen).
+- `Sound.play_everywhere("bonk", where)` — from a spot, sent to **every** player's computer.
+  Use it where only one computer knows it happened (usually the host).
+- `Sound.attach_loop("engine_loop", self)` — a looping sound that rides along on a node; keep the
+  returned player to change its `pitch_scale` / `volume_db`.
+- `Sound.play_music("city")` / `Sound.play_ambience("rain")` — fade over to another track.
+
+### Testing shortcut
+Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] footstep at (...)`).
+
+---
+
+## 13. Backups and undo (git + GitHub Desktop)
 
 The project is a **git repository**: every "commit" is a saved snapshot of the whole project that
 you can look at or go back to. Claude commits after each finished piece of work.

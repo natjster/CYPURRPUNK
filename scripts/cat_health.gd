@@ -89,6 +89,8 @@ func _physics_process(_delta: float) -> void:
 func _set_health(peer_id: int, hp: int) -> void:
 	if peer_id == multiplayer.get_unique_id() and hp < get_health(peer_id):
 		_flash_time = 0.6  # we got hurt: flash the HP line
+		if hp > 0:
+			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
 	health[peer_id] = hp
 
 
@@ -99,6 +101,7 @@ func _knocked_out(cause: String) -> void:
 	if cat == null:
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
+	Sound.play("knockout")
 	Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):

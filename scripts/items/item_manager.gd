@@ -281,6 +281,7 @@ func _can_take(peer_id: int, data: ItemData) -> bool:
 
 ## Host: give the item lying at world ID to a player.
 func _give(peer_id: int, world_id: int) -> void:
+	Sound.play_everywhere("pickup", world[world_id].pos, -4.0)
 	_put_in_inventory(peer_id, world[world_id].item, world[world_id].pos)
 	_remove_world.rpc(world_id)
 	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
@@ -375,6 +376,7 @@ func request_buy(item_id: String) -> void:
 @rpc("authority", "call_local", "reliable")
 func _buy_result(ok: bool, text: String) -> void:
 	print("[Items] Shop says: %s" % text)
+	Sound.play("buy" if ok else "error")
 	Game.instance.show_message(("SOLD! " if ok else "") + text, 3.0)
 
 
