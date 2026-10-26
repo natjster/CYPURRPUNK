@@ -60,6 +60,9 @@ var _boost_time_left: float = 0.0
 var air_jumps: int = 0
 var _air_jumps_left: int = 0
 var _air_jump_time_left: float = 0.0
+## Owner only: true while knocked out (0 HP, see cat_health.gd). The cat flops onto its side
+## and ignores the keyboard until it wakes up in the sewers.
+var knocked_out: bool = false
 
 var _base_fov: float
 
@@ -148,6 +151,7 @@ func _process(delta: float) -> void:
 		position = position.lerp(sync_position, weight)
 	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
 	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
+	cat_model.rotation.z = lerp_angle(cat_model.rotation.z, sync_model_rotation.z, weight)  # knocked-out flop
 
 
 ## Owner only: go faster for a while (catnip). Counts as zoomies for the camera effects.
@@ -200,6 +204,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if not is_controlled:
 		return
+	if knocked_out and not event is InputEventMouseMotion:
+		return  # seeing stars: you can look around, but not grab, drop or talk
 
 	# Mouse look: left/right turns the pivot, up/down tilts the spring arm.
 	# MOUSE SPEED and INVERT MOUSE Y come from the Settings menu.
@@ -244,7 +250,7 @@ func _physics_process(delta: float) -> void:
 		_air_jumps_left = air_jumps
 
 	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
-	if Input.is_action_just_pressed("jump") and not _menu_open():
+	if Input.is_action_just_pressed("jump") and not _input_blocked():
 		if is_on_floor():
 			velocity.y = jump_velocity
 		elif _air_jumps_left > 0:
@@ -253,7 +259,7 @@ func _physics_process(delta: float) -> void:
 
 	# Read WASD as a 2D direction (x = left/right, y = forward/back).
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	if _menu_open():
+	if _input_blocked():
 		input_dir = Vector2.ZERO
 
 	# Convert it so "forward" means "where the camera is looking", flattened onto the ground.
@@ -289,6 +295,8 @@ func _physics_process(delta: float) -> void:
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
 
 	_update_zoomies_juice(is_zooming, input_dir.x, delta)
+	# Knocked out: flop over onto its side (and back up when it wakes).
+	cat_model.rotation.z = lerp(cat_model.rotation.z, PI / 2.0 if knocked_out else 0.0, 1.0 - exp(-10.0 * delta))
 
 	# Publish where we are for the other players.
 	sync_position = position
@@ -298,6 +306,11 @@ func _physics_process(delta: float) -> void:
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
 func _menu_open() -> bool:
 	return PauseMenu.is_open or NpcDialog.is_open
+
+
+## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
+func _input_blocked() -> bool:
+	return _menu_open() or knocked_out
 
 
 ## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".

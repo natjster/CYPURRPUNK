@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://scripts/quests/quest_manager.gd" id="21_quests"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/lil_mittens.tscn" id="22_mittens"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/comrade_whiskers.tscn" id="23_whiskers"]
+[ext_resource type="Script" path="res://scripts/cat_health.gd" id="24_health"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -137,6 +138,9 @@ script = ExtResource("21_quests")
 [node name="Heist" type="Node3D" parent="."]
 script = ExtResource("10_heist")
 
+[node name="Health" type="Node" parent="."]
+script = ExtResource("24_health")
+
 [node name="Roombas" type="Node3D" parent="."]
 script = ExtResource("20_roombas")
 
@@ -190,6 +194,15 @@ offset_bottom = 34.0
 theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 8
 text = "FISH 0/3"
+
+[node name="Health" type="Label" parent="PS1Overlay/HUD"]
+offset_left = 8.0
+offset_top = 33.0
+offset_right = 160.0
+offset_bottom = 45.0
+theme_override_colors/font_color = Color(1, 0.35, 0.45, 1)
+theme_override_font_sizes/font_size = 8
+text = "HP ###"
 
 [node name="DropOff" type="Label" parent="PS1Overlay/HUD"]
 offset_left = 100.0

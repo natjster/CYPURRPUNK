@@ -38,6 +38,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
   Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;
   explode drops stomach via `ItemManager.drop_on_street`. Test: `--bait_roomba=D|aim`, `--zap_roomba=N`.
+- Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD `HUD/Health`): host-only
+  `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
+  RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
+  Roombas/extraction ignore `is_down` cats. Test: `--give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3 --frames=1500`.
 - `scenes/player.tscn` + `scripts/cat_player.gd` (`CatPlayer`): owner-authoritative cat. Owner writes
   `sync_position` / `sync_model_rotation` / `player_name`; remote copies glide toward them in `_process`.
   Only `CatModel` rotates; body never does (camera is a child).

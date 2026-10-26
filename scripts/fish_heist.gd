@@ -186,6 +186,8 @@ func _physics_process(delta: float) -> void:
 		var where: Vector3 = car.global_position if driving else (node as Node3D).global_position
 		if UndergroundHub.is_in_hub(where) or _clock < _extract_wait.get(peer_id, 0.0):
 			continue
+		if CatHealth.instance.is_down(peer_id):
+			continue  # knocked out: no flopping into the beam to save your stuff
 		if Vector2(where.x - dropoff_position.x, where.z - dropoff_position.z).length() >= dropoff_radius:
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.

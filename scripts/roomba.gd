@@ -16,8 +16,9 @@ extends CharacterBody3D
 ##   PATROL  — drives slowly between random sidewalk spots.
 ##   CHASE   — spots a cat on foot within sight_range and drives at it (faster than a walking
 ##             cat, slower than zoomies — so SHIFT saves you).
-##   BONK    — touching a cat knocks it flying and VACUUMS UP one piece of loot from its bag.
-##             Then it backs off for a moment (STUNNED).
+##   BONK    — touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
+##             takes bonk_damage HP. A cat at 0 HP is knocked out and drops everything
+##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
 ##   Shoot it (max_health hits) or ram it with the car (faster than car_smash_speed) and it
 ##   explodes, spitting out everything it vacuumed.
 ## Cats in the car and cats down in the hub are ignored.
@@ -52,6 +53,9 @@ enum State { PATROL, CHASE, STUNNED }
 @export var stun_seconds: float = 2.5
 ## Does a bonk vacuum one piece of loot out of the cat's bag?
 @export var steals_loot: bool = true
+## HP a bonk takes off the cat (cats have 3, see the Health node). At 0 the cat is knocked out
+## and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
+@export var bonk_damage: int = 1
 
 @export_group("Toughness")
 ## Hits from any gun before it explodes.
@@ -166,9 +170,10 @@ func _find_cat_to_chase() -> CatPlayer:
 	return best
 
 
-## A cat on foot (visible = not in the car), up in the city, within "reach" metres.
+## A cat on foot (visible = not in the car), up in the city, not knocked out, within "reach" metres.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
 	return cat != null and cat.visible and not UndergroundHub.is_in_hub(cat.global_position) \
+		and not CatHealth.instance.is_down(cat.name.to_int()) \
 		and _flat(cat.global_position - global_position).length() < reach
 
 
@@ -182,6 +187,8 @@ func _bonk(cat: CatPlayer) -> void:
 		if item_id != "":
 			stomach.append(item_id)
 			_vacuumed.rpc_id(peer_id, (ItemManager.instance.catalog[item_id] as ItemData).display_name)
+	# After the vacuuming, so a knockout drops whatever is left (the stolen one stays inside us).
+	CatHealth.instance.damage(peer_id, bonk_damage, "A VAC-COP")
 	print("[Roomba] %s bonked player %d (stomach: %s)" % [name, peer_id, stomach])
 	state = State.STUNNED
 	_stun_left = stun_seconds

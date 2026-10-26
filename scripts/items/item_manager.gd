@@ -253,7 +253,7 @@ func _host_tick() -> void:
 ## The owner's computer: press the use buttons for whatever is in our paws.
 func _use_held_items(delta: float) -> void:
 	var cat := local_cat()
-	if cat == null or not cat.is_controlled:
+	if cat == null or not cat.is_controlled or cat.knocked_out:
 		return
 	var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
@@ -498,12 +498,21 @@ func drop_on_street(item_id: String, at: Vector3) -> void:
 	_spawn_dropped(item_id, at)
 
 
-## Host: a player quit. Everything they carried drops where they stood.
-func player_left(peer_id: int, at: Vector3) -> void:
+## Host: empty a player's paws, backpack and loot bag onto the ground around "at"
+## (a knocked-out cat, see cat_health.gd, or a player who quit).
+func drop_everything(peer_id: int, at: Vector3) -> void:
 	var inventory := get_inventory(peer_id)
 	var dropped := _held_ids(inventory.hands) + Array(inventory.bag) + Array(inventory.pack)
+	var ground := _ground_below(at)  # a bonked cat may still be flying through the air
 	for i in dropped.size():
-		_spawn_dropped(dropped[i], at + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
+		_spawn_dropped(dropped[i], ground + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
+	if not dropped.is_empty():
+		_set_inventory.rpc(peer_id, {"hands": ["", ""], "bag": [], "pack": []})
+
+
+## Host: a player quit. Everything they carried drops where they stood.
+func player_left(peer_id: int, at: Vector3) -> void:
+	drop_everything(peer_id, at)
 	_forget_player.rpc(peer_id)
 
 
@@ -648,6 +657,18 @@ func ground_in_front_of(cat: CatPlayer) -> Vector3:
 	query.exclude = [cat.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	return hit.position if hit else spot
+
+
+## The floor straight below a spot (ignoring cats), or the spot itself if there's no floor.
+func _ground_below(at: Vector3) -> Vector3:
+	var query := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.DOWN * 20.0)
+	query.collision_mask = 1  # the city and the hub only (Roombas are on layer 2)
+	var skip: Array[RID] = []
+	for cat in players.get_children():
+		skip.append((cat as CollisionObject3D).get_rid())
+	query.exclude = skip
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	return hit.position if hit else at
 
 
 ## How much loot-bag room a player is using.

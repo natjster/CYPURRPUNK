@@ -325,7 +325,7 @@ players' cats and the car **glide** toward the latest position every frame.
 
 ### Joining mid-game
 A player who joins late gets, in order: the city number, every item (on the street and in
-everyone's paws/bags), everyone's cash, their cat, and who is driving the car.
+everyone's paws/bags), everyone's cash, quests and HP, their cat, and who is driving the car.
 
 ### Known limitations (planned for later)
 1. **The host is trusted.** Fine for friends; a public game would need anti-cheat checks.
@@ -529,7 +529,8 @@ or by car. Each fish pays **$50** into **your own** cash, and you're sent **back
 hub** (with or without fish). If you drove in, the getaway car goes back to its parking spot,
 ready for the next trip up. Taken fish grow back after 20 seconds.
 
-**HUD:** top-left = your cash and loot carried (or your quest's progress, see **Quests**); top-middle = distance and direction to the
+**HUD:** top-left = your cash, loot carried (or your quest's progress, see **Quests**) and your HP
+(see **Health & knockouts**); top-middle = distance and direction to the
 extraction beam (`^` ahead, `<` `>` turn, `v` behind), or `THE SEWERS - SAFE ZONE` in the hub;
 top-right = everyone's cash, richest first.
 
@@ -554,9 +555,10 @@ sewers. (Before, a cat standing in the hub could pick up fish lying in the city 
 ### VAC-COPs (police Roombas — the enemy)
 Eight police Roombas patrol the city's sidewalks. When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
-slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying and
-**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!"). Then it backs off
-for a couple of seconds.
+slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying,
+**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **1 HP**.
+Then it backs off for a couple of seconds. Three bonks and you're **knocked out** (see
+**Health & knockouts** below).
 
 **Getting your fish back:** destroy it. **3 shots** from any gun, or **run it over** with the
 car at speed. It explodes and spits out everything it vacuumed — walk over the fish to grab them.
@@ -580,12 +582,48 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
   (never appears this close to a cat or the centre crossroads).
 - Open `scenes/roomba.tscn`, select the root **Roomba**: **Driving** (Patrol Speed, Chase Speed,
   Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
-  Steals Loot), **Toughness** (Max Health, Car Smash Speed).
+  Steals Loot, **Bonk Damage** = HP a bonk takes, 0 = harmless), **Toughness** (Max Health, Car
+  Smash Speed).
 - Roombas are on collision **Layer 2**, so cats and the car pass over them instead of getting
   stuck (Inspector > Collision > Layer). Guns still hit them.
 
 **Multiplayer:** the host runs every Roomba's brain; everyone else's copy glides to where the
 host says it is. Bonks, stolen fish and explosions are all decided by the host.
+
+### Health & knockouts (the risk in "extraction")
+Every cat has **3 HP**, shown top-left under your cash and loot: `HP ###` (it flashes when
+you're hurt). Each VAC-COP bonk takes one.
+
+At **0 HP you're KNOCKED OUT**:
+1. **Everything you carry drops on the street where you fell**: the gear in your paws, your
+   backpack, and the fish in your loot bag. Anyone can grab it: you on your next trip up, a
+   friend, or a rival.
+2. Your cat flops over on its side for 3 seconds ("KNOCKED OUT BY A VAC-COP!"). You can look
+   around but not move. Roombas leave knocked-out cats alone, and you can't extract while down.
+3. You wake up back in **the sewers**, with empty paws.
+
+**Healing:** back in the sewers you're healed to full straight away (after extracting or after
+a knockout). Cats in the car and in the hub can't be hurt. Your cash and quests are never lost.
+
+So gear you bought at the Black Markitten is now at risk every time you go up top. (There's no
+safe stash in the sewers yet, so everything you own rides along with you.)
+
+**Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the HP line
+is **PS1Overlay > HUD > Health**. The fall-over is `knocked_out` in `cat_player.gd`.
+
+**Tuning** (select **Health** in `main.tscn`): **Max Health**, **Knockout Seconds** (how long
+you lie there), **Hud Color**. How much a bonk hurts: **Bonk Damage** on the Roomba (above).
+
+**Something new that hurts cats** (a trap, a guard dog...): on the host, call
+`CatHealth.instance.damage(peer_id, 1, "A GUARD DOG")`. The last part is shown on the
+knocked-out screen. Guns don't hurt cats (no player-vs-player damage yet).
+
+**Multiplayer:** the host decides all damage and knockouts and tells everyone, like cash.
+
+**Test it without playing:** `--give=pistol,catnip --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3
+--frames=1500` gives you gear, grabs the fish at Meow-Mart, lets a VAC-COP beat you up and
+prints `[Health] Player 1 was knocked out`; afterwards the pistol and catnip are on the street
+and your cat is back in the hub with `hp=3`.
 
 ---
 

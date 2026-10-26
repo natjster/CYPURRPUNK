@@ -19,6 +19,7 @@ extends Node
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
+##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
 ##                     --cash=500 --talk=ComradeWhiskers --choose=0,3 buys the 4th item)
 ##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
@@ -84,6 +85,10 @@ func _ready() -> void:
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				FishHeist.instance._set_cash.rpc(peer_id, int(args["cash"])))
+		if args.has("give") and multiplayer.is_server():
+			# (host) put items straight into our paws/backpack, e.g. --give=pistol,catnip
+			for item_id in args["give"].split(","):
+				ItemManager.instance._put_in_inventory(multiplayer.get_unique_id(), item_id, player.global_position)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			(scene as Game).hub.deploy(player)
@@ -280,7 +285,7 @@ func _ready() -> void:
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():
-			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost])
+			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.name.to_int()), cat.knocked_out])
 
 	var image := get_viewport().get_texture().get_image()
 	var scale := int(args.get("scale", "4"))
