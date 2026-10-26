@@ -42,6 +42,8 @@ var pixel_perfect: bool = true
 ## false = 4:3: always exactly 320x240, with black bars at the sides on wide monitors.
 var widescreen: bool = true
 var vsync: bool = true
+## Split screen with 2 players on one computer: true = side by side, false = top + bottom.
+var split_side_by_side: bool = true
 # Audio (0.0 = silent, 1.0 = full)
 var master_volume: float = 0.8
 var music_volume: float = 0.8
@@ -68,7 +70,7 @@ var volumetric_fog: bool = true
 const SAVED: Array = [
 	["player", "cats"], ["player", "current_cat_id"],
 	["display", "fullscreen"], ["display", "resolution"], ["display", "pixel_perfect"], ["display", "widescreen"],
-	["display", "vsync"],
+	["display", "vsync"], ["display", "split_side_by_side"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
 	["controls", "stick_speed"], ["controls", "invert_stick_y"], ["controls", "rumble"],

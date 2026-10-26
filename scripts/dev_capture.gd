@@ -54,6 +54,7 @@ extends Node
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
+##   --setting=NAME:VALUE  change a setting for this run (never saved), e.g. --setting=split_side_by_side:false
 ##   --menu=NAME       open a menu first: cat (CHOOSE YOUR CAT; MY CAT in a game), mode (SOLO / MULTIPLAYER), play (host / join), settings or pause (--settings_tab=N picks the tab)
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
@@ -85,6 +86,11 @@ func _ready() -> void:
 	if args.has("window"):
 		var parts: PackedStringArray = args["window"].split("x")
 		Settings.set_value("resolution", Vector2i(int(parts[0]), int(parts[1])))
+
+	# --setting=split_side_by_side:false  (any variable in scripts/settings.gd; test runs never save)
+	if args.has("setting"):
+		var parts: PackedStringArray = args["setting"].split(":")
+		Settings.set_value(parts[0], str_to_var(parts[1]))
 
 	# Let the main scene finish loading.
 	await get_tree().process_frame

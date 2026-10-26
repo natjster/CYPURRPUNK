@@ -47,6 +47,8 @@ const TABS: Array = [
 			"hint": "WIDE fills widescreen + ultrawide monitors. Still 240 pixels tall."},
 		{"setting": "vsync", "label": "VSYNC", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "ON stops screen tearing. OFF can feel a tiny bit snappier."},
+		{"setting": "split_side_by_side", "label": "2-PLAYER SPLIT", "choices": [[true, "SIDE BY SIDE"], [false, "TOP + BOTTOM"]],
+			"hint": "How the screen is cut when 2 players share this PC (couch co-op)."},
 		{"setting": "field_of_view", "label": "FIELD OF VIEW", "min": 50.0, "max": 100.0, "step": 5.0, "format": "number",
 			"hint": "How wide the camera sees. Higher = more city, smaller cat."},
 	]],

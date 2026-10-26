@@ -7,6 +7,10 @@ shader_type canvas_item;
 
 // Everything already drawn on screen (the 3D world) — read with no smoothing.
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
+// Split screen (players 2-4, scripts/ui/game_screen.gd): read the picture from source_tex
+// (their camera's picture) instead of from the screen. Leave OFF everywhere else.
+uniform bool use_source_texture = false;
+uniform sampler2D source_tex : filter_nearest;
 
 group_uniforms PS1_Color;
 // Shades per color channel. 32 = authentic PS1. Try 16 or 8 for a grittier look.
@@ -35,6 +39,11 @@ const mat4 BAYER = mat4(
 	vec4(10.0,  6.0,  9.0,  5.0)
 );
 
+// The picture underneath, at uv (0..1).
+vec3 picture(vec2 uv) {
+	return use_source_texture ? texture(source_tex, uv).rgb : texture(screen_tex, uv).rgb;
+}
+
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -51,9 +60,9 @@ void fragment() {
 		// Colour fringing: red and blue sampled slightly apart, more toward the edges.
 		vec2 offset = centered * chromatic_aberration * SCREEN_PIXEL_SIZE;
 		vec3 color;
-		color.r = texture(screen_tex, uv + offset).r;
-		color.g = texture(screen_tex, uv).g;
-		color.b = texture(screen_tex, uv - offset).b;
+		color.r = picture(uv + offset).r;
+		color.g = picture(uv).g;
+		color.b = picture(uv - offset).b;
 
 		// Scanlines, dark corners and static.
 		ivec2 pixel = ivec2(FRAGCOORD.xy);

@@ -167,8 +167,10 @@ func _ready() -> void:
 		var info := Game.instance.local_player_info(slot)
 		player_name = info.get("name", "")
 		look = info.get("look", {})
-		if reads_input():
-			# The cat we steer: use its camera and grab the mouse.
+		if slot == 0:
+			# Our first player's cat: its camera is the main screen's, and it gets the mouse.
+			# (Couch players 2-4 see through a copy of their cat's camera on their own part of
+			# the screen: scripts/ui/game_screen.gd.)
 			camera.make_current()
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			$NameTag.hide()  # no need to see your own name
@@ -482,8 +484,8 @@ func enter_car(car: GetawayCar) -> void:
 	# Move the camera node under the car's camera arm.
 	camera.reparent(car.camera_arm, false)
 	camera.transform = Transform3D.IDENTITY
-	if reads_input():
-		camera.make_current()
+	if slot == 0:
+		camera.make_current()  # (players 2-4: game_screen.gd follows this camera wherever it is)
 
 
 ## Called by the car on EVERY computer when this cat gets out.
@@ -498,6 +500,6 @@ func exit_car(exit_position: Vector3) -> void:
 	# Take the camera back.
 	camera.reparent(spring_arm, false)
 	camera.transform = Transform3D.IDENTITY
-	if reads_input():
+	if slot == 0:
 		camera.make_current()
 	is_controlled = true

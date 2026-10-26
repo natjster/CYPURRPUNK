@@ -395,8 +395,8 @@ keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
   `PlayerId.first_local()`. A cat knows its own: `cat.player_id`, `cat.slot`.
   `Game.instance.add_local_player(seat, {"name", "look", "cat_id"})` /
   `remove_local_player(seat)` add or drop a couch player.
-- **Controllers:** couch players join with START on their own controller (§10, "Couch co-op").
-  They don't have a screen of their own yet; that comes with the next split-screen steps.
+- **Controllers:** couch players join with START on their own controller (§10, "Couch co-op"),
+  and each gets their own part of the screen (§13).
   Test them with DevCapture (these test players have no controller, so they stand still):
   `--add_local=1` (one more player joins in), `--as_local=1` (the test actions use that cat:
   `--grab`, `--goto_dropoff_after`, `--bait_roomba`...), `--remove_local=1` (they drop out).
@@ -966,7 +966,7 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 
 | Tab | Settings |
 |---|---|
-| DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), aspect (WIDE = fill wide/ultrawide monitors, still 240 tall / 4:3), VSync, field of view |
+| DISPLAY | Screen (window/fullscreen = monitor's max resolution), resolution (window sizes that fit your monitor, biggest = its max), scaling (SHARP = even pixels / FILL = as big as fits), aspect (WIDE = fill wide/ultrawide monitors, still 240 tall / 4:3), VSync, 2-player split (side by side / top + bottom), field of view |
 | SOUND | Master, music, sound FX volume |
 | CONTROLS | Mouse speed, invert mouse Y, stick speed (right-stick camera), invert stick Y, rumble on/off |
 | KEYS | Every control with two keyboard/mouse boxes + a **PAD** (controller) box (scrolls). **RESET KEYS** = default keys and buttons |
@@ -1024,10 +1024,11 @@ Up to **4 players per computer**, each with their own controller.
 - **Each player's buttons are their own:** their stick walks their cat, their A jumps it, their
   RT fires their gun, their Y opens the inventory with THEIR stuff in it, their rumble.
   The keys/buttons are the same for everyone (SETTINGS > KEYS, PAD column).
-- **Not yet (coming in the next split-screen steps):** the extra players have no screen of
-  their own yet: everyone watches player 1's camera, so player 2 steers "blind" (their stick
-  moves relative to their own invisible camera). The HUD (cash, HP, prompts) shows player 1.
-  Menus (pause, inventory, talk box) are shared: any controller can move the highlight.
+- **Split screen:** every player gets their own part of the screen (§13, "How the screen is put
+  together").
+- **Not yet (next split-screen step):** the HUD (cash, HP, prompts) only shows player 1's, on
+  player 1's screen. Menus (pause, inventory, talk box) are shared: any controller can move the
+  highlight, and a full-screen menu shows over everyone while it's open.
 - **In code:** a cat reads its own seat's buttons with `Seats.is_pressed(cat.slot, "jump")`,
   `Seats.is_just_pressed(...)`, `Seats.get_vector(cat.slot, "move_left", "move_right",
   "move_forward", "move_back")` or, for events, `Seats.event_is(cat.slot, event, "interact")`.
@@ -1323,13 +1324,28 @@ doesn't bend or dither it.
 GameScreen (Control)        script: ui/game_screen.gd  <- sizes everything when the window changes
 ├── HUD (CanvasLayer)       <- an instance of scenes/ui/hud.tscn, Layer 10 = always on top
 ├── Bars (ColorRect)        <- black, behind everything (the border in 4:3 / SHARP mode)
-└── GameView (TextureRect)  <- shows the game picture, blown up (Texture Filter: Nearest)
-    └── GameViewport (SubViewport)   <- the "PS1 screen", 320x240 (wider on wide monitors)
-        └── Main            <- scenes/main.tscn, the actual game
+├── GameView (TextureRect)  <- shows player 1's game picture, blown up (Texture Filter: Nearest)
+│   └── GameViewport (SubViewport)   <- the "PS1 screen", 320x240 (wider on wide monitors)
+│       └── Main            <- scenes/main.tscn, the actual game
+├── GameView2..4            <- made by the script when couch players join (split screen, below)
+│   ├── GameViewport > Camera3D      <- their 3D view (same world, their camera)
+│   └── Post > Dither                <- the CRT + dither look on their picture
+└── JoinHint (Label)        <- "PRESS START TO JOIN" in the empty corner with 3 players
 ```
 `game_screen.gd` works out the game picture's size from **SCALING** and **ASPECT** (§1, §10), and
-passes your mouse and keyboard through to the game. Its Inspector knobs: **Game Height** (240)
-and **Design Width** (320).
+passes your mouse and keyboard through to the game. Its Inspector knobs: **Game Height** (240),
+**Design Width** (320) and **Divider** (the black line between split screens, game pixels).
+
+**Split screen:** with 2-4 players on this computer (couch co-op, §10) the picture is cut up:
+2 players side by side (or top + bottom: SETTINGS > DISPLAY > 2-PLAYER SPLIT), 3-4 players in
+the four corners. The whole picture stays 240 game pixels tall, so each screen is a half or a
+quarter of it. Players 2-4's screens don't build a second city: they look at the same world
+through a camera that copies their cat's camera every frame (behind the cat, or behind the car),
+each with its own rain and the sewer/city fog of where it is (`hub.gd` `environment_for`).
+The moon shines and the city music plays while anyone on this computer is up top. Sound is
+heard from player 1's camera. Full-screen menus (pause, settings, MY CAT) go back to one big
+screen while open. Player 1's HUD sits on player 1's screen (the inventory and talk box use the
+whole picture so they fit).
 
 ### The HUD scene (`scenes/ui/hud.tscn`, script `scripts/ui/hud.gd`)
 ```

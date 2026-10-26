@@ -116,6 +116,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `PauseMenu.opened_by` seat: LEAVE = `Seats.leave(seat)` for seats > 0. `Seats.seat_of_event(e)` (-1 =
   unclaimed pad: menus ignore it). Rumble: `Seats.rumble(player_id, ...)`. `InventoryScreen.owner_cat`.
   Test: `--join_pad=1`, `--pad_device=1`, `--pad_press=1:Start`.
+- Split screen (`game_screen.gd`): pane 0 = GameView/GameViewport (player 1; only a slot-0 cat may
+  `make_current`). Panes 2-4 are built in code: SubViewport sharing `game_viewport.find_world_3d()` + a Camera3D
+  copying the cat's `camera` each frame (GameScreen process_priority 100), and a separate "Post" SubViewport
+  whose Dither reads it via psx_post `use_source_texture` (a hint_screen_texture ColorRect inside a shared-world
+  viewport showed player 1's picture). Layout from `shown_seats()` (cats with `reads_input`; [0] while
+  `Hud.menu_open()`), `Settings.split_side_by_side`. Per-pane fog: `hub.environment_for(in_hub)` (null = world's);
+  moon/music: anyone up top (`view_cameras()`). HUD frame = pane 0 (whole picture while `Hud.wants_input()`).
+  Test: `--join_pad=1,2,3`, `--setting=split_side_by_side:false`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 ## Character creator (MY CAT)

@@ -22,8 +22,10 @@ extends Node3D
 ## (scenes/npcs/don_catleone.tscn, built on the NPC framework in scripts/npcs/npc.gd),
 ## so you can move him in the editor. Talking and the "[E] TALK" prompt are handled there.
 ##
-## Mood: while YOUR camera is down here, the moon and rain switch off and the fog turns
-## sewer-green on your screen only (_update_mood). Back up top, the night city returns.
+## Mood: while YOUR camera is down here, the rain switches off and the fog turns sewer-green
+## on your screen only (_update_mood). Back up top, the night city returns.
+## Split screen: each player's screen gets the fog of where ITS camera is (environment_for),
+## the moon shines while anyone on this computer is up top, and the music follows them too.
 
 ## The one hub, so cats, items and the heist can find it (UndergroundHub.instance).
 static var instance: UndergroundHub
@@ -85,6 +87,9 @@ const SHOP_GOODS_COLORS: Array[Color] = [Color(1, 0.35, 0.7), Color(0.3, 1, 0.35
 var _box_meshes := {}
 var _in_hub_view: bool = false
 var _city_mood := {}  # the night-city fog/ambient values, to put back when you go up
+## Split screen: a copy of the world's look with the OTHER mood (sewer while player 1 is up top,
+## city while they're down here), for screens whose camera is somewhere else. Made when needed.
+var _other_mood: Environment = null
 
 var _concrete: ShaderMaterial
 var _wall: ShaderMaterial
@@ -109,6 +114,7 @@ func _ready() -> void:
 		"ambient_light_color": _environment.ambient_light_color,
 		"ambient_light_energy": _environment.ambient_light_energy,
 	}
+	Settings.changed.connect(func(): _other_mood = null)  # e.g. VOLUMETRIC FOG changed: copy it again
 
 
 ## True if this spot is down in the hub (the safe zone).
@@ -149,21 +155,44 @@ func _process(_delta: float) -> void:
 	if in_hub != _in_hub_view:
 		_in_hub_view = in_hub
 		_update_mood(in_hub)
-	# Music + background sound for where the camera is (sounds/music/hub.wav or city.wav,
-	# sounds/ambience/sewer.wav or rain.wav). Same track as before = nothing happens.
-	Sound.play_music(hub_music if in_hub else city_music)
-	Sound.play_ambience(hub_ambience if in_hub else city_ambience)
+	# Split screen: is ANY of this computer's players up top? Then the moon shines (it lights
+	# the whole world, so it can't be on for one screen only) and the city music plays.
+	var anyone_up := not in_hub
+	if GameScreen.instance != null:
+		for view_camera in GameScreen.instance.view_cameras():
+			anyone_up = anyone_up or not is_in_hub(view_camera.global_position)
+	_moonlight.visible = anyone_up
+	# Music + background sound (sounds/music/hub.wav or city.wav, sounds/ambience/sewer.wav or
+	# rain.wav). Same track as before = nothing happens.
+	Sound.play_music(city_music if anyone_up else hub_music)
+	Sound.play_ambience(city_ambience if anyone_up else hub_ambience)
 
 
-## Underground: no moon, no rain, green fog. Up top: the night city as it was.
+## Split screen: the look a screen whose camera is in the hub (or not) should use, or null for
+## "the world's own look" (when it matches player 1's screen). game_screen.gd asks every frame.
+func environment_for(in_hub: bool) -> Environment:
+	if in_hub == _in_hub_view:
+		return null
+	if _other_mood == null:
+		_other_mood = _environment.duplicate()
+		_set_mood(_other_mood, in_hub)
+	return _other_mood
+
+
+## Underground: no rain, green fog. Up top: the night city as it was.
 func _update_mood(in_hub: bool) -> void:
-	_moonlight.visible = not in_hub
+	_other_mood = null  # the other screens' copy flips too: make it again when needed
 	_rain.visible = not in_hub
 	_rain.emitting = not in_hub
-	_environment.fog_light_color = sewer_fog_color if in_hub else _city_mood.fog_light_color
-	_environment.volumetric_fog_albedo = sewer_fog_albedo if in_hub else _city_mood.volumetric_fog_albedo
-	_environment.ambient_light_color = sewer_ambient_color if in_hub else _city_mood.ambient_light_color
-	_environment.ambient_light_energy = sewer_ambient_energy if in_hub else _city_mood.ambient_light_energy
+	_set_mood(_environment, in_hub)
+
+
+## Put the sewer (or city) fog and light colours into an Environment.
+func _set_mood(environment: Environment, in_hub: bool) -> void:
+	environment.fog_light_color = sewer_fog_color if in_hub else _city_mood.fog_light_color
+	environment.volumetric_fog_albedo = sewer_fog_albedo if in_hub else _city_mood.volumetric_fog_albedo
+	environment.ambient_light_color = sewer_ambient_color if in_hub else _city_mood.ambient_light_color
+	environment.ambient_light_energy = sewer_ambient_energy if in_hub else _city_mood.ambient_light_energy
 
 
 # --- Building the tunnel ---
