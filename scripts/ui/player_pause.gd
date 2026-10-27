@@ -11,8 +11,10 @@ extends Control
 ##   Everyone:    RESUME, then their OWN STICK SPEED / INVERT STICK Y / RUMBLE (left / right
 ##                changes them; a couch player's are saved with their cat, player 1's are the
 ##                same as SETTINGS > CONTROLS)
-##   Player 1:    SETTINGS + MY CAT / LEAVE GAME / QUIT TO DESKTOP
-##                (SETTINGS + MY CAT opens the big pause menu: those screens are shared)
+##   Everyone:    MY CAT (restyle / rename THEIR cat: the full-screen cat screen, driven only by
+##                their controller; DONE comes back here)
+##   Player 1:    SETTINGS / LEAVE GAME / QUIT TO DESKTOP
+##                (SETTINGS opens the big pause menu: those screens are shared)
 ##   Players 2-4: DROP OUT (just them: scripts/seats.gd)
 ##
 ## It also opens by itself when that player's controller is unplugged (open(reason)), and closes
@@ -106,7 +108,7 @@ func open(reason: String = "") -> void:
 	var game := Game.instance
 	_for_unplug = reason != ""
 	_title.text = reason if reason != "" else "PLAYER %d - PAUSED" % (seat + 1)
-	_title.add_theme_color_override("font_color", Seats.color(seat))  # their split-screen colour
+	_title.add_theme_color_override("font_color", Seats.color(seat))  # their player colour
 	for old in _buttons.get_children():
 		_buttons.remove_child(old)
 		old.queue_free()
@@ -119,11 +121,15 @@ func open(reason: String = "") -> void:
 		func(_direction: int): Seats.set_player_setting(seat, "invert_stick_y", not Seats.invert_stick_y(seat)))
 	_add_setting("RUMBLE", func(): return "ON" if Seats.rumble_on(seat) else "OFF",
 		func(_direction: int): Seats.set_player_setting(seat, "rumble", not Seats.rumble_on(seat)))
+	_add_button("MY CAT", func():
+		close()
+		game.cat_creator.open(true, seat)
+		game.cat_creator.back_to_player_pause = true)  # DONE comes back to this menu (game.gd)
 	if seat == 0:
-		_add_button("SETTINGS + MY CAT", func():
+		_add_button("SETTINGS", func():
 			close()
 			game.pause_menu.opened_by = 0
-			game.pause_menu.open())  # the big pause menu: SETTINGS and MY CAT are in there
+			game.pause_menu.open())  # the big pause menu: SETTINGS is in there
 		_add_button("LEAVE GAME", func():
 			close()
 			game.pause_menu.leave_pressed.emit())  # this whole computer leaves (game.gd)

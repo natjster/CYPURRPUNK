@@ -62,8 +62,7 @@ func open() -> void:
 	is_open = true
 	# A couch player's pause menu drops only them out of the game.
 	$Panel/VBox/LeaveButton.text = "LEAVE GAME" if opened_by == 0 else "DROP OUT (PLAYER %d)" % (opened_by + 1)
-	# MY CAT restyles player 1's cat: couch players get their own cat screen later (split-screen lobby).
-	$Panel/VBox/CatButton.visible = opened_by == 0
+	# MY CAT restyles the cat of whoever opened the menu (game.gd passes opened_by on).
 	show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	$Panel/VBox/ResumeButton.grab_focus()

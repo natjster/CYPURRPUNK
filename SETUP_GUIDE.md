@@ -1197,18 +1197,20 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   FULL"; a whole computer that doesn't fit goes back to the start menu with "That game is full."
 - **Pausing (each player their own):** with 2+ players, **START** (Esc for player 1) opens a small
   pause menu on YOUR screen only: your cat stops, everyone else keeps playing.
-  Player 1's: RESUME / SETTINGS + MY CAT (opens the big pause menu: settings are shared, and take
-  the whole screen while open) / LEAVE GAME / QUIT TO DESKTOP. Players 2-4's: RESUME /
-  **DROP OUT** (only they leave: what they carry drops where they stand, their stash is safe).
+  Everyone's has **MY CAT**: restyle (colours, hat, shades...) the cat THEY play. It takes the
+  whole screen while open and only that player's controller drives it; DONE (or B) goes back to
+  their pause menu. Player 1's also has SETTINGS (the big pause menu: settings are shared) /
+  LEAVE GAME / QUIT TO DESKTOP. Players 2-4's: **DROP OUT** (only they leave: what they carry
+  drops where they stand, their stash is safe).
   Player 1's LEAVE GAME ends the game for this whole computer. Alone, START opens the normal
   big pause menu as always. (`scripts/ui/player_pause.gd`, in every player's HUD.)
 - **Each player's own controller settings:** in their pause menu, **STICK SPEED**, **INVERT
   STICK Y** and **RUMBLE** (left / right changes them). A couch player's are saved with the cat
   they play, so they follow that player next time; player 1's are the same ones as SETTINGS >
   CONTROLS.
-- **Player colours:** in split screen each player's screen has a thin frame and a "P2" tag in
-  their colour: P1 pink, P2 cyan, P3 yellow, P4 green (their pause menu title too). Change the
-  colours in `scripts/seats.gd` > **SEAT_COLORS**.
+- **Player colours:** P1 pink, P2 cyan, P3 yellow, P4 green: each player's pause menu title and
+  their row on the landing page. (Split screens have no frame or "P2" tag: just a thin black
+  line between them, **Divider** below.) Change the colours in `scripts/seats.gd` > **SEAT_COLORS**.
 - **Unplugged controller (or flat battery):** that player's game pauses ("CONTROLLER UNPLUGGED")
   and only theirs; plug it back in and it carries on by itself. Lost it for good? Press START on
   any free controller: it takes over that player's seat (same cat, same stuff). Playing alone,
@@ -1232,9 +1234,11 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   highlight with their own controller. Messages about one player (their purchase, their knockout,
   what an NPC says to them) only show on their screen; news for everyone (golden koi grabbed,
   someone joined) shows on all.
-- **Shared:** SETTINGS and MY CAT (player 1's), and the keys / buttons (SETTINGS > KEYS).
+- **Shared:** SETTINGS, and the keys / buttons (SETTINGS > KEYS). (MY CAT is each player's own.)
 - **Highlighted buttons:** each HUD window (talk box, inventory, pause) keeps its own highlight
-  (`scripts/ui/seat_focus.gd`), so four players can each be in a menu at once. (Godot's own
+  (`scripts/ui/seat_focus.gd`), so four players can each be in a menu at once. The stick moves it
+  ONE step per push (let the stick go back to the middle to move again), so a long talk box
+  doesn't race to the bottom; the d-pad moves one step per press. (Godot's own
   "focus" allows only one highlighted button in the whole window: don't use `grab_focus()` in
   HUD windows, use a SeatFocus.)
 - **In code:** a cat reads its own seat's buttons with `Seats.is_pressed(cat.slot, "jump")`,
@@ -1555,12 +1559,16 @@ GameScreen (Control)        script: ui/game_screen.gd  <- sizes everything when 
 ```
 `game_screen.gd` works out the game picture's size from **SCALING** and **ASPECT** (Â§1, Â§10), and
 passes your mouse and keyboard through to the game. Its Inspector knobs: **Game Height** (240),
-**Design Width** (320) and **Divider** (the black line between split screens, game pixels).
+**Design Width** (320), **Divider** (the black line between split screens, game pixels) and
+**Split Full Detail** (see below).
 
 **Split screen:** with 2-4 players on this computer (couch co-op, Â§10) the picture is cut up:
 2 players side by side (or top + bottom: SETTINGS > DISPLAY > 2-PLAYER SPLIT), 3-4 players in
-the four corners. The whole picture stays 240 game pixels tall, so each screen is a half or a
-quarter of it. Players 2-4's screens don't build a second city: they look at the same world
+the four corners. **Every screen gets the same detail as one full screen:** a half-height
+screen is drawn with 240 pixel rows (double resolution) and shrunk to fit, so splitting doesn't
+make the picture blurrier. (Turn **Split Full Detail** off in the Inspector of GameScreen in
+`scenes/game_screen.tscn` for the old chunky look, where each screen is just its half or
+quarter of one 240-row picture.) Players 2-4's screens don't build a second city: they look at the same world
 through a camera that copies their cat's camera every frame (behind the cat, or behind the car),
 each with its own rain and the sewer/city fog of where it is (`hub.gd` `environment_for`).
 The moon shines and the city music plays while anyone on this computer is up top. Sound is

@@ -37,7 +37,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   runs after `start_patrol` (the start menu counts as "server": it used to spawn Roombas that broke joining).
   A real controller on this PC can disturb `--hold` tests (its events mix into actions). Test: `--net_stats=N`,
   `--pad_press_delay=N`.
-- Phase 8: `Seats.color(seat)` (SEAT_COLORS) = split-screen frame + "Pn" tag (GameScreen `_frames/_tags`).
+- Phase 8: `Seats.color(seat)` (SEAT_COLORS) = pause title / lobby row colour (no split-screen frames or tags).
+  Split panes render at full detail: `GameScreen._place` scales a pane's viewport by round(240/pane height)
+  (`split_full_detail`), so viewport sizes != rect sizes (use `screen_size_for_seat`).
+  MY CAT per player: `CatCreator.open(true, seat)` edits `Seats.saved_cat(seat)` for seat>0 (`_editing_cat/_update_cat`),
+  `GameScreen._menu_driver()` = only that seat's events reach it; `back_to_player_pause` reopens their PlayerPause.
+  SeatFocus: stick (JoypadMotion) moves one step per push (`_stick_pushed` edge detect).
   Per-player stick settings: `Seats.stick_speed/invert_stick_y/rumble_on(seat)` (seat 0 = Settings; others =
   saved cat's "controls" dict) set via `Seats.set_player_setting`; rows in PlayerPause (`_add_setting`; SeatFocus
   "adjust" meta = left/right changes a row). Unplugged pad: `Seats._on_joy_connection_changed` opens that

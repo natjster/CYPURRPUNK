@@ -278,13 +278,21 @@ func _on_settings_changed() -> void:
 	if not is_controlled:
 		camera.fov = _base_fov
 	# Changed our cat in the MY CAT screen (from the pause menu): wear it, and share it.
-	if is_multiplayer_authority() and slot == 0:
-		var my_cat := Settings.current_cat()
+	# (Player 1 plays Settings' current cat; couch players 2-4 their own saved cat.)
+	if is_multiplayer_authority():
+		var my_cat := Settings.current_cat() if slot == 0 else Seats.saved_cat(slot)
+		if my_cat.is_empty():
+			return
 		if look != CatLook.clean(my_cat.get("look", {})):
 			look = my_cat.get("look", {})
 		if player_name != str(my_cat.get("name", player_name)).strip_edges().left(12):
-			Game.local_player_name = my_cat.get("name", "")
-			player_name = Game.local_player_name
+			player_name = str(my_cat.get("name", "")).strip_edges().left(12)
+			if slot == 0:
+				Game.local_player_name = my_cat.get("name", "")
+		if slot > 0 and Game.instance.extra_local_players.has(slot):
+			# Keep game.gd's note of this couch player up to date too.
+			Game.instance.extra_local_players[slot]["look"] = my_cat.get("look", {})
+			Game.instance.extra_local_players[slot]["name"] = player_name
 
 
 ## Show the chosen name, or a stand-in if the player left the name box empty.

@@ -19,8 +19,9 @@ extends Control
 ##   2 players: side by side (or top + bottom: SETTINGS > DISPLAY > 2-PLAYER SPLIT)
 ##   3-4 players: four corners (an empty corner says "PRESS START TO JOIN")
 ## Full-screen menus (pause, settings, MY CAT) go back to one big screen while they're open.
-## The whole picture stays 240 game pixels tall, so each player's screen is half or a quarter
-## of it: chunky, like a real PS1 split screen.
+## Each player's screen is drawn with as many pixel ROWS as one full screen (240), so it isn't
+## blurrier than playing alone: a half-height screen is drawn at double detail, then shrunk to
+## fit (split_full_detail; turn it off for chunky PS1-style half-resolution screens).
 ## Every player also gets their OWN HUD (cash, HP, prompts, inventory, talk box) on their own
 ## screen, shrunk to fit (hud_scale_for). Player 1's is the HUD node; players 2-4's are copies of
 ## scenes/ui/hud.tscn made here, each in its own SubViewport ("Hud2".."Hud4") so each player
@@ -52,6 +53,10 @@ static var instance: GameScreen
 @export var design_width: int = 320
 ## Split screen: the black line between players' screens, in game pixels (0 = none).
 @export var divider: int = 1
+## Split screen: ON = every player's screen gets the same detail as one full screen (240 pixel
+## rows: a half-height screen is drawn at double resolution). OFF = each screen is just its part
+## of the 240-row picture (chunkier, a bit faster).
+@export var split_full_detail: bool = true
 ## Split screen: how big a player's HUD is on a smaller screen, compared to "just shrink it to
 ## fit" (1.0). Higher = bigger text (crowded), lower = smaller. Never bigger than full size.
 @export var split_hud_boost: float = 1.25
@@ -65,10 +70,6 @@ static var instance: GameScreen
 ## "seat": which seat it shows (-1 = hidden)}.
 var _extra_panes: Array[Dictionary] = []
 var _join_hint: Label
-## Split screen: a frame in each player's colour around their screen, and their "P2" tag
-## (one per screen, in screen order; colours: Seats.SEAT_COLORS).
-var _frames: Array[Panel] = []
-var _tags: Array[Label] = []
 ## Players 2-4's HUDs, by seat (index 1-3; index 0 unused): {"view": TextureRect,
 ## "viewport": SubViewport, "hud": Hud}.
 var _seat_huds: Array = [null]
@@ -168,24 +169,6 @@ func _build_extra_panes() -> void:
 		seat_hud.seat = seat  # before it enters the tree: it registers as that player's HUD
 		hud_viewport.add_child(seat_hud)
 		_seat_huds.append({"view": hud_view, "viewport": hud_viewport, "hud": seat_hud})
-
-	# Split screen: each player's coloured frame and "P1".."P4" tag (shown with 2+ players).
-	for i in PlayerId.MAX_LOCAL:
-		var frame := Panel.new()
-		frame.name = "PlayerFrame%d" % (i + 1)
-		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		frame.hide()
-		add_child(frame)
-		_frames.append(frame)
-		var tag := Label.new()
-		tag.name = "PlayerTag%d" % (i + 1)
-		tag.add_theme_font_size_override("font_size", 22)
-		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		tag.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		tag.hide()
-		add_child(tag)
-		_tags.append(tag)
 
 	_join_hint = Label.new()
 	_join_hint.name = "JoinHint"
@@ -303,27 +286,6 @@ func _fit() -> void:
 		_join_hint.position = (corner + Vector2(rects[3].position) * zoom) * units_per_pixel
 		_join_hint.size = Vector2(rects[3].size) * zoom * units_per_pixel
 
-	# Split screen: a frame in each player's colour, and their tag in the bottom-right corner.
-	for i in _frames.size():
-		var shown := seats.size() > 1 and i < seats.size()
-		_frames[i].visible = shown
-		_tags[i].visible = shown
-		if not shown:
-			continue
-		var view: TextureRect = game_view if i == 0 else _extra_panes[i - 1].view
-		var colour := Seats.color(seats[i])
-		var style := StyleBoxFlat.new()
-		style.draw_center = false
-		style.border_color = colour
-		style.set_border_width_all(3)
-		_frames[i].add_theme_stylebox_override("panel", style)
-		_frames[i].position = view.position
-		_frames[i].size = view.size
-		_tags[i].text = "P%d" % (seats[i] + 1)
-		_tags[i].add_theme_color_override("font_color", colour)
-		_tags[i].position = view.position
-		_tags[i].size = view.size - Vector2(10, 6)
-
 	# Every player's HUD sits on their own screen, shrunk to fit.
 	hud.fit_to(Rect2(game_view.position, game_view.size), hud_scale_for(game_view.size))
 	for seat in range(1, PlayerId.MAX_LOCAL):
@@ -365,10 +327,22 @@ func _pane_rects(count: int, whole: Vector2i) -> Array[Rect2i]:
 		Rect2i(0, h - half_h, half_w, half_h), Rect2i(w - half_w, h - half_h, half_w, half_h)]
 
 
-## Size one screen's viewport (game pixels) and put its picture on the monitor.
+## Size one screen's viewport and put its picture on the monitor. rect = where it goes in the
+## whole 240-tall picture (game pixels).
 func _place(view: TextureRect, viewport: SubViewport, rect: Rect2i, corner: Vector2, zoom: float, units_per_pixel: float) -> void:
-	if viewport.size != rect.size:
-		viewport.size = rect.size
+	# How much more detail this screen gets: 1 = normal; 2 = a half-height split screen drawn at
+	# double resolution, so it has as many pixel rows as one full screen.
+	var detail := 1.0
+	if split_full_detail:
+		detail = maxf(1.0, roundf(float(game_height) / rect.size.y))
+	# How many monitor pixels one of its pixels becomes. SHARP (pixel perfect) keeps that a whole
+	# number, so every pixel stays the same size.
+	var pixel := zoom / detail
+	if Settings.pixel_perfect:
+		pixel = maxf(1.0, floorf(pixel))
+	var render_size := Vector2i((Vector2(rect.size) * zoom / pixel).round())
+	if viewport.size != render_size:
+		viewport.size = render_size
 	view.position = (corner + Vector2(rect.position) * zoom) * units_per_pixel
 	view.size = Vector2(rect.size) * zoom * units_per_pixel
 
@@ -426,11 +400,18 @@ func _input(event: InputEvent) -> void:
 			return
 	elif seat == 0 and Hud.wants_input(0):
 		return
-	elif seat > 0 and Hud.menu_open() and Game.instance.pause_menu.enabled:
-		get_viewport().set_input_as_handled()  # player 1's pause / settings: only player 1 drives them
+	elif Hud.menu_open() and Game.instance.pause_menu.enabled and seat != _menu_driver():
+		get_viewport().set_input_as_handled()  # a full-screen menu: only the player who opened it drives it
 		return
 	var scale_to_game := Vector2(game_viewport.size) / game_view.size
 	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),
 		-game_view.position * scale_to_game)
 	game_viewport.push_input(event.xformed_by(to_game), true)
 	get_viewport().set_input_as_handled()  # the HUD doesn't need them right now
+
+
+## Which player drives the full-screen menus right now: player 1 (the pause menu and settings),
+## or the couch player whose MY CAT screen is open (scripts/ui/cat_creator.gd).
+func _menu_driver() -> int:
+	var creator := Game.instance.cat_creator
+	return creator.seat if creator.visible else 0

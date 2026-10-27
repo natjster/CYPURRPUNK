@@ -17,6 +17,11 @@ extends RefCounted
 ## still works as normal for player 1. Buttons get focus_mode = NONE so Godot's focus stays out of it.
 ## A SETTING ROW is a button with an "adjust" meta (a Callable taking -1 / +1): left / right on it
 ## changes the value instead of moving the highlight (e.g. STICK SPEED < 100% > in the pause menu).
+##
+## THE STICK moves the highlight ONE step per push: push it, the highlight moves once; let it
+## go back to the middle before it moves again. (A stick sends a stream of "still pushed"
+## messages while it's held, which used to race the highlight to the bottom of a talk box.)
+## The d-pad moves one step per press too (holding an arrow KEY repeats, like typing).
 
 ## The highlight moved to this button (e.g. to show what an inventory item is).
 signal highlighted(button: Button)
@@ -28,6 +33,9 @@ var press_on_accept: bool = true
 var current: Button = null
 
 var _buttons: Array[Button] = []
+## The stick: which way each stick axis is pushed right now ("ui_down"..., or "" = middle), so
+## one push counts once. Key = "device:axis".
+var _stick_pushed: Dictionary = {}
 
 
 ## The buttons the highlight can move between. Highlights the first one (or "first").
@@ -70,17 +78,35 @@ func handle(event: InputEvent) -> bool:
 			current.pressed.emit()
 			return true
 		return false
-	if current.has_meta("adjust") and (event.is_action_pressed("ui_left", true) or event.is_action_pressed("ui_right", true)):
-		(current.get_meta("adjust") as Callable).call(-1 if event.is_action_pressed("ui_left", true) else 1)
-		return true
 	var directions := {"ui_up": Vector2.UP, "ui_down": Vector2.DOWN, "ui_left": Vector2.LEFT, "ui_right": Vector2.RIGHT}
-	for action in directions:
-		if event.is_action_pressed(action, true):
-			var next := _neighbour(directions[action])
-			if next != null:
-				highlight(next)
-			return true
-	return false
+	# Which direction this press is ("" = none).
+	var pushed := ""
+	if event is InputEventJoypadMotion:
+		# The stick: only the moment it's pushed counts, not the stream while it's held.
+		var key := "%d:%d" % [event.device, event.axis]
+		var now := ""
+		for action in directions:
+			if event.is_action_pressed(action):
+				now = action
+		var before: String = _stick_pushed.get(key, "")
+		_stick_pushed[key] = now
+		if now == "" or now == before:
+			return now != "" or before != ""  # held, or let go: nothing to do (but it's ours)
+		pushed = now
+	else:
+		for action in directions:
+			if event.is_action_pressed(action, true):  # (true = a held arrow key repeats)
+				pushed = action
+				break
+	if pushed == "":
+		return false
+	if current.has_meta("adjust") and (pushed == "ui_left" or pushed == "ui_right"):
+		(current.get_meta("adjust") as Callable).call(-1 if pushed == "ui_left" else 1)
+		return true
+	var next := _neighbour(directions[pushed])
+	if next != null:
+		highlight(next)
+	return true
 
 
 ## The closest visible button in that direction (by where the buttons are on screen).

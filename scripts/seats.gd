@@ -174,7 +174,7 @@ func set_player_setting(seat: int, key: String, value: Variant) -> void:
 	if seat == 0:
 		Settings.set_value(key, value)
 		return
-	var cat := _saved_cat(seat)
+	var cat := saved_cat(seat)
 	if cat.is_empty():
 		return
 	var own: Dictionary = cat.get("controls", {})
@@ -185,11 +185,11 @@ func set_player_setting(seat: int, key: String, value: Variant) -> void:
 
 ## A couch player's own settings ({} = all normal), kept on their saved cat.
 func _player_settings(seat: int) -> Dictionary:
-	return _saved_cat(seat).get("controls", {})
+	return saved_cat(seat).get("controls", {})
 
 
 ## The saved cat (in Settings.cats) the player in this seat plays, or {}.
-func _saved_cat(seat: int) -> Dictionary:
+func saved_cat(seat: int) -> Dictionary:
 	if Game.instance == null:
 		return {}
 	var cat_id := str(Game.instance.local_player_info(seat).get("cat_id", ""))

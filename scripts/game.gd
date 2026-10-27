@@ -74,7 +74,7 @@ func _ready() -> void:
 	main_menu.join_pressed.connect(join_game)
 	main_menu.settings_pressed.connect(settings_menu.open)
 	pause_menu.settings_pressed.connect(settings_menu.open)
-	pause_menu.cat_pressed.connect(cat_creator.open.bind(true))  # restyle your cat mid-game
+	pause_menu.cat_pressed.connect(func(): cat_creator.open(true, pause_menu.opened_by))  # restyle your cat mid-game
 	pause_menu.leave_pressed.connect(_back_to_menu.bind(true))
 	settings_menu.closed.connect(_on_settings_closed)
 	cat_creator.closed.connect(_on_cat_creator_closed)  # back to whichever menu opened it
@@ -187,7 +187,9 @@ func _back_to_menu(we_left: bool) -> void:
 
 ## CHOOSE YOUR CAT / MY CAT closed (BACK / DONE): back to whichever menu opened it.
 func _on_cat_creator_closed() -> void:
-	if pause_menu.enabled:
+	if cat_creator.back_to_player_pause:
+		PlayerPause.for_seat(cat_creator.seat).open()  # opened from a player's own small pause menu
+	elif pause_menu.enabled:
 		pause_menu.open()
 	else:
 		main_menu.cat_closed()

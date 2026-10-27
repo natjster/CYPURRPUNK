@@ -7,8 +7,11 @@ extends Control
 ## Two ways in:
 ##   - START MENU > PLAY (open(false)): pick one of your cats or make a new one, name it,
 ##     dress it, then NEXT (on to SOLO / MULTIPLAYER, main_menu.gd). BACK = the start menu.
-##   - PAUSE MENU > MY CAT (open(true)), during a game: restyle / rename the cat you're
+##   - PAUSE MENU > MY CAT (open(true, seat)), during a game: restyle / rename the cat you're
 ##     playing. No switching cats mid-game. DONE = back to the pause menu.
+##     Couch players 2-4 get it too (from their own pause menu, scripts/ui/player_pause.gd):
+##     it then edits THEIR saved cat, and only their controller drives the screen
+##     (scripts/ui/game_screen.gd _menu_driver).
 ##
 ##   CHOOSE YOUR CAT
 ##   <  [ WHISKERS     ]  >  2/3  [NEW] [DELETE]   <- your cats (Settings.cats); type the name
@@ -53,6 +56,10 @@ const PAD_NAMES: Array[String] = [
 	"CHAIRMEOW","PURRSIA", "SMUDGE", "GIZMO", "NACHO", "PEPPER", "ZIGGY", "MOCHI",
 ]
 
+## Which player on this computer it's open for (0 = player 1, 1-3 = couch players 2-4).
+var seat: int = 0
+## Couch player's MY CAT: reopen their own small pause menu when it closes (game.gd).
+var back_to_player_pause: bool = false
 ## The look being edited (a CatLook dictionary).
 var _look: Dictionary = {}
 ## key -> the value Label (accessory rows) or ColorRect swatch (colour rows).
@@ -114,11 +121,17 @@ func _ready() -> void:
 
 
 ## Show the screen. in_game = opened from the pause menu (restyle only, no switching cats).
-func open(in_game: bool = false) -> void:
+## for_seat = which player's cat (0 = player 1; 1-3 = a couch player, in a game only).
+func open(in_game: bool = false, for_seat: int = 0) -> void:
 	_in_game = in_game
+	seat = for_seat if in_game else 0
+	if seat > 0 and Seats.saved_cat(seat).is_empty():
+		seat = 0  # (shouldn't happen: every couch player plays a saved cat)
 	if Settings.current_cat().is_empty():
 		Settings.new_cat()  # first time playing: start a cat for them to name
-	_title.text = "MY CAT" if in_game else "CHOOSE YOUR CAT"
+	_title.text = ("MY CAT - PLAYER %d" % (seat + 1) if seat > 0 else "MY CAT") if in_game else "CHOOSE YOUR CAT"
+	if in_game:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	for button in _switch_buttons:
 		button.visible = not in_game
 	_count_label.visible = not in_game
@@ -133,6 +146,8 @@ func open(in_game: bool = false) -> void:
 func close() -> void:
 	hide()
 	closed.emit()
+	seat = 0
+	back_to_player_pause = false
 
 
 func _input(event: InputEvent) -> void:
@@ -152,9 +167,25 @@ func _process(delta: float) -> void:
 
 # --- Your cats: switching, naming, new, delete ---
 
+## The saved cat this screen is editing: player 1's current cat, or a couch player's own.
+func _editing_cat() -> Dictionary:
+	return Seats.saved_cat(seat) if seat > 0 else Settings.current_cat()
+
+
+## Save changes ({"name": ..} / {"look": ..}) onto the cat being edited. Settings.changed then
+## tells that player's cat in the game to wear them (cat_player.gd).
+func _update_cat(changes: Dictionary) -> void:
+	if seat == 0:
+		Settings.update_current_cat(changes)
+		return
+	_editing_cat().merge(changes, true)  # (changes the cat inside Settings.cats)
+	Settings.apply()
+	Settings.save_settings()
+
+
 ## Fill the screen from the cat we're playing as.
 func _load_current_cat() -> void:
-	var cat := Settings.current_cat()
+	var cat := _editing_cat()
 	_look = CatLook.default_look().merged(CatLook.clean(cat.get("look", {})), true)
 	_name_edit.text = cat.get("name", "")
 	var index := Settings.cats.find(cat)
@@ -207,7 +238,7 @@ func _disarm_delete() -> void:
 
 ## Typing in the name box: save it as you type.
 func _on_name_changed(new_text: String) -> void:
-	Settings.update_current_cat({"name": new_text.strip_edges()})
+	_update_cat({"name": new_text.strip_edges()})
 
 
 ## NEXT needs a name. (DONE in a game just closes.)
@@ -252,7 +283,7 @@ func _randomize() -> void:
 
 ## Save, and redraw the rows and the preview.
 func _changed() -> void:
-	Settings.update_current_cat({"look": _look.duplicate()})
+	_update_cat({"look": _look.duplicate()})
 	_refresh()
 
 
