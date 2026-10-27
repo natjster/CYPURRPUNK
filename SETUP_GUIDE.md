@@ -1591,6 +1591,12 @@ The finished videos land in `shots\trailer\out\`:
 - `python trailer/contact.py` makes a picture per shot (`shots\trailer\contact\`) with a frame every
   half second, handy for picking start points.
 
+**Thumbnail:** `python trailer/thumbnail.py` turns stills in `shots\thumb\` (`raw_a.png`, `raw_b.png`) into
+1280x720 YouTube thumbnails (`thumbnail_red.jpg`, `thumbnail_blue.jpg`): logo top-left, "REVEAL TRAILER"
+bottom-left (change `TAG` in the script). The stills are the hero cat with the MEGA VAC-COP behind it,
+taken with DevCapture `--heat=100 --roomba=boss --bait_roomba=-7 --portrait=me --portrait_side=0.5`
+(`raw_b` = after 80 frames, red siren; `raw_a` = after 40 frames, blue siren).
+
 **Uploading:** TikTok / Reels / Shorts take the vertical files as they are. Add your store link
 (Steam / itch.io) in the post text; the trailers end on "COMING SOON" — change that card in `edit.py`
 once there's a wishlist page.
