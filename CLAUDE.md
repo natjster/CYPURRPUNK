@@ -45,11 +45,15 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   SeatFocus: stick (JoypadMotion) moves one step per push (`_stick_pushed` edge detect); the same for the
   game-viewport menus: GameScreen `_stick_pushed_again` drops held-stick motion while `_in_menus()`.
   Lobby: A on a couch row = `Seats.lobby_cat_for_editing` + `MainMenu.lobby_cat_pressed(seat)` -> `CatCreator.open(false, seat)`
-  (seat>0 is always restyle mode; `Seats.saved_cat` reads `lobby_cats` in the lobby). CatCreator: stick/d-pad only moves the
-  highlight (left/right hop between a row's own < and >, via focus_neighbor); A presses the button to step the row.
+  (seat>0 is always restyle mode; `Seats.saved_cat` reads `lobby_cats` in the lobby). RULE: stick/d-pad NEVER change a value,
+  only move the highlight (rows are separate < > buttons with explicit focus_neighbor links; A presses). CatCreator
+  `_link_focus` wires every row's up/down by hand (Godot's guess fails there). TEXT BOXES: Godot 4.7 never d-pad-focuses
+  a LineEdit, so `OnScreenKeyboard.hook(line_edit, menu[, DIGITS|ADDRESS])` hides it behind a Button (`keyboard.field`;
+  point focus neighbours at that) that opens an on-screen keyboard (also takes real typing). Used by the cat name and
+  the ONLINE city #/address boxes.
   Per-player stick settings: `Seats.stick_speed/invert_stick_y/rumble_on(seat)` (seat 0 = Settings; others =
-  saved cat's "controls" dict) set via `Seats.set_player_setting`; rows in PlayerPause (`_add_setting`; SeatFocus
-  "adjust" meta = left/right changes a row). Unplugged pad: `Seats._on_joy_connection_changed` opens that
+  saved cat's "controls" dict) set via `Seats.set_player_setting`; rows in PlayerPause (`_add_setting` = < value >
+  buttons; SeatFocus only moves/presses, no adjust). Unplugged pad: `Seats._on_joy_connection_changed` opens that
   player's PlayerPause(reason) (or the big pause solo), replug closes it; START on a free pad takes over an
   unplugged seat. Test: `--unplug=D [--replug]`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use

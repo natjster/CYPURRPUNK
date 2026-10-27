@@ -478,8 +478,8 @@ everyone's paws/bags), everyone's cash, quests and HP, their cat, and who is dri
 number, the **city seed**. Same number = exact same city.
 
 - **In the lobby:** type a number in the blue **city #** box before HOST to pick a city, or leave
-  it blank for a random one. The number is shown at the bottom of the screen while playing
-  ("CITY #4821") â€” share it to replay a city you liked. Players who JOIN get the host's city.
+  it blank for a random one. Players who JOIN get the host's city. (The number is no longer
+  shown during a game.)
 - **Multiplayer:** the host only sends the number; every computer builds the identical city
   itself (the test tool prints a city "fingerprint"; host and joined player always match).
 - **What it builds:** a 6x6 grid of blocks with streets between. Each block has 4 lots: a building
@@ -1120,8 +1120,9 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   ```
   The landing page:
   ```
-  P1   < WHISKERS >          <- player 1: left / right = pick your cat, A (Enter) = make / edit cats
-  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat,
+  [<] P1  WHISKERS [>]       <- player 1: A on < / > = pick your cat, A on the name = make / edit cats
+  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat
+                                (players 2-4 have no highlight on this page, so their stick picks),
                                 A = edit it (MY CAT), B = leave
   P3   PRESS START TO JOIN
   P4   PRESS START TO JOIN
@@ -1174,12 +1175,21 @@ Just plug it in (or pair it) and press a button: no setting needed.
 
 **In every menu:** d-pad or left stick = move the highlight (the stick moves ONE step per push:
 let it go back to the middle to move again), **A** = press, **B** = back,
-**START** = pause / unpause. In SETTINGS, **left/right** on a row changes its value and
-**LB / RB** switch tabs. In the inventory, **A** = what a left-click does, **X** = drop,
-**B** or **Y** = close. CHOOSE YOUR CAT: a controller can't type, so pressing NEXT without a
-name gives the cat a random one (rename it with a keyboard any time). On a look row, **left /
-right** only moves the highlight between that row's **<** and **>** (up / down picks the row);
-press **A** on **<** or **>** to change it. (Code: `scripts/ui/cat_creator.gd`, `_add_row`.)
+**START** = pause / unpause. **The d-pad / stick NEVER change a value by themselves**: on a
+"NAME  <  VALUE  >" row, left / right only move the highlight between its **<** and **>**, and
+**A** on one changes the value (SETTINGS, CHOOSE YOUR CAT, a player's own split-screen pause,
+P1's row on the landing page). In SETTINGS, **LB / RB** switch tabs. In the inventory, **A** =
+what a left-click does, **X** = drop, **B** or **Y** = close.
+
+**Typing with a controller - the ON-SCREEN KEYBOARD** (`scripts/ui/on_screen_keyboard.gd`):
+the cat name box (CHOOSE YOUR CAT) and the **city #** / address boxes (ONLINE screen) are
+buttons: **A** (or Enter / a click) on one opens a little keyboard. D-pad / stick = pick a key,
+**A** = type it, **B** = delete a letter, **START** (or DONE) = finished. A real keyboard types
+straight into it too (Backspace deletes, Enter = done). NEW (a new cat) and NEXT without a name
+open it by themselves. To use it on another text box in code:
+`OnScreenKeyboard.hook(my_line_edit, my_menu)` (add `, OnScreenKeyboard.DIGITS` for numbers only);
+the letters on each layout are the `LETTERS` / `DIGITS` / `ADDRESS` lists at the top of that script.
+(Why buttons and not normal text boxes? Godot 4.7 never lets the d-pad highlight a text box.)
 
 Rumble: getting hit, getting knocked out, every shot, extracting. Turn it off in
 SETTINGS > CONTROLS > RUMBLE. To change how strong one is, find `Controls.rumble(` in the script
@@ -1218,7 +1228,7 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   Player 1's LEAVE GAME ends the game for this whole computer. Alone, START opens the normal
   big pause menu as always. (`scripts/ui/player_pause.gd`, in every player's HUD.)
 - **Each player's own controller settings:** in their pause menu, **STICK SPEED**, **INVERT
-  STICK Y** and **RUMBLE** (left / right changes them). A couch player's are saved with the cat
+  STICK Y** and **RUMBLE** (A on a row's **<** or **>** changes them). A couch player's are saved with the cat
   they play, so they follow that player next time; player 1's are the same ones as SETTINGS >
   CONTROLS.
 - **Player colours:** P1 pink, P2 cyan, P3 yellow, P4 green: each player's pause menu title and

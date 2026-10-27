@@ -8,8 +8,8 @@ extends Control
 ## that player's own screen only: their cat stops, everyone else keeps playing. Alone, the normal
 ## full-screen pause menu opens instead (scripts/ui/pause_menu.gd).
 ##
-##   Everyone:    RESUME, then their OWN STICK SPEED / INVERT STICK Y / RUMBLE (left / right
-##                changes them; a couch player's are saved with their cat, player 1's are the
+##   Everyone:    RESUME, then their OWN STICK SPEED / INVERT STICK Y / RUMBLE (A on a row's
+##                < or > changes it; a couch player's are saved with their cat, player 1's are the
 ##                same as SETTINGS > CONTROLS)
 ##   Everyone:    MY CAT (restyle / rename THEIR cat: the full-screen cat screen, driven only by
 ##                their controller; DONE comes back here)
@@ -36,6 +36,8 @@ var _buttons: VBoxContainer
 var _for_unplug: bool = false
 ## This player's highlighted button (scripts/ui/seat_focus.gd), moved by their own d-pad.
 var _focus := SeatFocus.new()
+## Every button the highlight can move to (the setting rows' < and > too).
+var _focus_buttons: Array[Button] = []
 
 
 func _enter_tree() -> void:
@@ -112,8 +114,9 @@ func open(reason: String = "") -> void:
 	for old in _buttons.get_children():
 		_buttons.remove_child(old)
 		old.queue_free()
+	_focus_buttons.clear()
 	_add_button("RESUME", close)
-	# Their own controller settings (left / right on the row changes it, A steps it up).
+	# Their own controller settings (A on the row's < or > changes it).
 	_add_setting("STICK SPEED", func(): return "%d%%" % roundi(Seats.stick_speed(seat) * 100.0),
 		func(direction: int): Seats.set_player_setting(seat, "stick_speed",
 			snappedf(clampf(Seats.stick_speed(seat) + 0.1 * direction, 0.2, 3.0), 0.1)))
@@ -142,7 +145,7 @@ func open(reason: String = "") -> void:
 	show()
 	if seat == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
-	_focus.set_buttons(_buttons.get_children())  # RESUME highlighted
+	_focus.set_buttons(_focus_buttons)  # RESUME highlighted
 
 
 ## The controller is back: close the pause that opened when it was unplugged (not a normal one).
@@ -162,21 +165,37 @@ func close() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-## A setting row: "STICK SPEED  < 100% >". value_text() gives the value's text; adjust(-1 / +1)
-## changes it (left / right on a controller or keyboard; A or a click = +1).
+## A setting row: "STICK SPEED  [<] 100% [>]". value_text() gives the value's text; adjust(-1 / +1)
+## changes it. The d-pad moves the highlight onto < or >, and A (or a click) presses it.
 func _add_setting(label: String, value_text: Callable, adjust: Callable) -> void:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(320, 40)
-	button.add_theme_font_size_override("font_size", font_size - 4)
-	var refresh := func(): button.text = "%s   < %s >" % [label, value_text.call()]
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(320, 40)
+	row.add_theme_constant_override("separation", 6)
+	_buttons.add_child(row)
+	var name_label := Label.new()
+	name_label.text = label
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.add_theme_font_size_override("font_size", font_size - 4)
+	row.add_child(name_label)
+	var value := Label.new()
+	var refresh := func(): value.text = value_text.call()
+	for direction in [-1, 1]:
+		var button := Button.new()
+		button.text = "<" if direction < 0 else ">"
+		button.custom_minimum_size = Vector2(40, 40)
+		button.add_theme_font_size_override("font_size", font_size - 4)
+		button.pressed.connect(func():
+			adjust.call(direction)
+			refresh.call())
+		row.add_child(button)
+		_focus_buttons.append(button)
+		if direction < 0:
+			value.custom_minimum_size = Vector2(80, 0)
+			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			value.add_theme_font_size_override("font_size", font_size - 4)
+			value.add_theme_color_override("font_color", Color(0.4, 1, 1))
+			row.add_child(value)
 	refresh.call()
-	button.set_meta("adjust", func(direction: int):
-		adjust.call(direction)
-		refresh.call())
-	button.pressed.connect(func():
-		adjust.call(1)
-		refresh.call())
-	_buttons.add_child(button)
 
 
 func _add_button(text: String, action: Callable) -> void:
@@ -186,3 +205,4 @@ func _add_button(text: String, action: Callable) -> void:
 	button.add_theme_font_size_override("font_size", font_size)
 	button.pressed.connect(action)
 	_buttons.add_child(button)
+	_focus_buttons.append(button)

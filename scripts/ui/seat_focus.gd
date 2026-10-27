@@ -15,8 +15,8 @@ extends RefCounted
 ##
 ## The highlighted button looks like the mouse is over it (its theme's "hover" box). The mouse
 ## still works as normal for player 1. Buttons get focus_mode = NONE so Godot's focus stays out of it.
-## A SETTING ROW is a button with an "adjust" meta (a Callable taking -1 / +1): left / right on it
-## changes the value instead of moving the highlight (e.g. STICK SPEED < 100% > in the pause menu).
+## The d-pad / stick only ever MOVE the highlight; A presses. (A setting row like
+## STICK SPEED [<] 100% [>] is two buttons: highlight < or > and press A.)
 ##
 ## THE STICK moves the highlight ONE step per push: push it, the highlight moves once; let it
 ## go back to the middle before it moves again. (A stick sends a stream of "still pushed"
@@ -100,9 +100,6 @@ func handle(event: InputEvent) -> bool:
 				break
 	if pushed == "":
 		return false
-	if current.has_meta("adjust") and (pushed == "ui_left" or pushed == "ui_right"):
-		(current.get_meta("adjust") as Callable).call(-1 if pushed == "ui_left" else 1)
-		return true
 	var next := _neighbour(directions[pushed])
 	if next != null:
 		highlight(next)

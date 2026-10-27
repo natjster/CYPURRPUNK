@@ -13,8 +13,9 @@ extends Control
 ##     A on their row of the landing page): it then edits THEIR saved cat, and only their
 ##     controller drives the screen (scripts/ui/game_screen.gd _menu_driver).
 ##
-## Controller: up / down picks a row, LEFT / RIGHT changes it (or A on its < >), DONE / NEXT at
-## the bottom. B = back.
+## Controller: the d-pad / stick only move the highlight; A presses the highlighted button
+## (A on a row's < or > changes it). A on the name box opens an on-screen keyboard
+## (scripts/ui/on_screen_keyboard.gd) to type the name. B = back.
 ##
 ##   CHOOSE YOUR CAT
 ##   <  [ WHISKERS     ]  >  2/3  [NEW] [DELETE]   <- your cats (Settings.cats); type the name
@@ -53,11 +54,6 @@ const WARN_COLOR := Color(1, 0.8, 0.45)
 const SPIN_SPEED: float = 0.8
 ## Longest cat name (it floats over your cat).
 const MAX_NAME_LENGTH: int = 12
-## Names handed out when someone on a controller presses NEXT without typing one (max 12 letters).
-const PAD_NAMES: Array[String] = [
-	"WHISKERS", "MITTENS", "SOCKS", "PICKLES", "NOODLE", "BISCUIT", "SARDINE", "TUNA",
-	"CHAIRMEOW","PURRSIA", "SMUDGE", "GIZMO", "NACHO", "PEPPER", "ZIGGY", "MOCHI",
-]
 
 ## Which player on this computer it's open for (0 = player 1, 1-3 = couch players 2-4).
 var seat: int = 0
@@ -71,12 +67,16 @@ var _preview_cat: Node3D
 var _in_game: bool = false
 var _title: Label
 var _name_edit: LineEdit
+var _keyboard: OnScreenKeyboard  # the on-screen keyboard for typing the name with a controller
 var _count_label: Label
 var _switch_buttons: Array[Button] = []  # <, >, NEW, DELETE: hidden during a game
 var _delete_button: Button
 var _delete_armed_until: float = 0.0  # DELETE asks "SURE?" first; this is when that runs out
 var _back_button: Button
+var _random_button: Button
 var _next_button: Button
+## Every look row's [<, >] buttons, top to bottom (for moving the highlight up / down).
+var _look_rows: Array = []
 var _note: Label
 var _rng := RandomNumberGenerator.new()
 
@@ -115,8 +115,8 @@ func _ready() -> void:
 
 	_back_button = _button("BACK", Vector2(24, 198), Vector2(70, 16))
 	_back_button.pressed.connect(close)
-	var random := _button("RANDOM", Vector2(125, 198), Vector2(70, 16))
-	random.pressed.connect(_randomize)
+	_random_button = _button("RANDOM", Vector2(125, 198), Vector2(70, 16))
+	_random_button.pressed.connect(_randomize)
 	_next_button = _button("NEXT", Vector2(226, 198), Vector2(70, 16))
 	_next_button.pressed.connect(_on_next_pressed)
 	_note = _label("", Vector2(14, 216), 292, 8, NOTE_COLOR)
@@ -143,8 +143,53 @@ func open(in_game: bool = false, for_seat: int = 0) -> void:
 	_next_button.text = "DONE" if in_game else "NEXT"
 	_disarm_delete()
 	_load_current_cat()
+	_keyboard.hide()
+	_link_focus()
 	show()
 	_next_button.grab_focus()
+
+
+## Where up / down go from each button (a controller's d-pad / stick), so the highlight walks
+## the screen in order: the name row, every look row, then BACK / RANDOM / NEXT.
+## (Godot's own guess couldn't get from FUR up to the name row.) Depends on what's showing:
+## in a game there's no NEW / DELETE / BACK.
+func _link_focus() -> void:
+	var top_left: Control = _keyboard.field if _in_game else _switch_buttons[0]  # < (previous cat)
+	var top_right: Control = _keyboard.field if _in_game else _switch_buttons[2]  # NEW
+	var bottom_left: Control = _random_button if _in_game else _back_button
+	var above: Array = [top_left, top_right]
+	for row in _look_rows:
+		for side in 2:
+			_link(above[side], SIDE_BOTTOM, row[side])
+			_link(row[side], SIDE_TOP, above[side])
+		above = row
+	# The name row, left / right: < [name] > NEW DELETE (just the name box in a game).
+	_link(_keyboard.field, SIDE_LEFT, _keyboard.field if _in_game else _switch_buttons[0])
+	_link(_keyboard.field, SIDE_RIGHT, _keyboard.field if _in_game else _switch_buttons[1])
+	_link(_switch_buttons[0], SIDE_RIGHT, _keyboard.field)
+	_link(_switch_buttons[1], SIDE_LEFT, _keyboard.field)
+	_link(_switch_buttons[1], SIDE_RIGHT, _switch_buttons[2])  # > -> NEW
+	_link(_switch_buttons[2], SIDE_LEFT, _switch_buttons[1])
+	_link(_switch_buttons[2], SIDE_RIGHT, _switch_buttons[3])  # NEW -> DELETE
+	_link(_switch_buttons[3], SIDE_LEFT, _switch_buttons[2])
+	for button in [_keyboard.field] + _switch_buttons:
+		_link(button, SIDE_TOP, button)  # nothing above the name row
+	# The name row: everything goes down to FUR (left half to its <, right half to its >).
+	for button in [_switch_buttons[0], _keyboard.field]:
+		_link(button, SIDE_BOTTOM, _look_rows[0][0])
+	for button in [_switch_buttons[1], _switch_buttons[2], _switch_buttons[3]]:
+		_link(button, SIDE_BOTTOM, _look_rows[0][1])
+	# The last look row and the bottom buttons.
+	var last: Array = _look_rows[_look_rows.size() - 1]
+	_link(last[0], SIDE_BOTTOM, bottom_left)
+	_link(last[1], SIDE_BOTTOM, _next_button)
+	_link(_back_button, SIDE_TOP, last[0])
+	_link(_random_button, SIDE_TOP, last[1])
+	_link(_next_button, SIDE_TOP, last[1])
+
+
+func _link(from: Control, side: Side, to: Control) -> void:
+	from.set_focus_neighbor(side, from.get_path_to(to))
 
 
 func close() -> void:
@@ -157,6 +202,8 @@ func close() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
+	if _keyboard.visible:
+		return  # the on-screen keyboard has the buttons
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		close()
@@ -199,7 +246,7 @@ func _load_current_cat() -> void:
 	_name_edit.text = cat.get("name", "")
 	var index := Settings.cats.find(cat)
 	_count_label.text = "%d/%d" % [index + 1, Settings.cats.size()]
-	_set_note("Your cats are saved automatically", NOTE_COLOR)
+	_set_note("", NOTE_COLOR)
 	_refresh()
 
 
@@ -217,8 +264,9 @@ func _new_cat() -> void:
 	Settings.new_cat()
 	_disarm_delete()
 	_load_current_cat()
-	_name_edit.grab_focus()
+	_keyboard.field.grab_focus()
 	_set_note("A new cat! Give it a name.", WARN_COLOR)
+	_keyboard.open()  # straight to the on-screen keyboard
 
 
 ## DELETE: the first click asks "SURE?", the second (within 3 seconds) deletes the cat AND its
@@ -228,7 +276,7 @@ func _on_delete_pressed() -> void:
 	if now > _delete_armed_until:
 		_delete_armed_until = now + 3.0
 		_delete_button.text = "SURE?"
-		_set_note("Click again to delete this cat, its cash and its stash.", WARN_COLOR)
+		_set_note("Press again to delete this cat, its cash and its stash.", WARN_COLOR)
 		return
 	var cat_id: String = Settings.current_cat_id
 	PlayerProfile.forget_cat(cat_id)
@@ -256,14 +304,9 @@ func _on_next_pressed() -> void:
 		close()
 		return
 	if str(Settings.current_cat().get("name", "")).is_empty():
-		if Controls.using_pad:
-			# A controller can't type: pick a name for them (they can retype it on a keyboard later).
-			_name_edit.text = PAD_NAMES[_rng.randi_range(0, PAD_NAMES.size() - 1)]
-			_on_name_changed(_name_edit.text)
-		else:
-			_set_note("Name your cat first!", WARN_COLOR)
-			_name_edit.grab_focus()
-			return
+		_set_note("Name your cat first!", WARN_COLOR)
+		_keyboard.open()  # type it with the on-screen keyboard
+		return
 	hide()
 	next_pressed.emit()
 
@@ -324,6 +367,7 @@ func _build_cat_row(y: float) -> void:
 	var left := _row_button("<", 14, row)
 	left.pressed.connect(_switch_cat.bind(-1))
 	_name_edit = LineEdit.new()
+	_name_edit.name = "NameEdit"
 	_name_edit.custom_minimum_size = Vector2(112, 0)
 	_name_edit.placeholder_text = "NAME YOUR CAT"
 	_name_edit.max_length = MAX_NAME_LENGTH
@@ -341,6 +385,11 @@ func _build_cat_row(y: float) -> void:
 	_delete_button = _row_button("DELETE", 50, row)
 	_delete_button.pressed.connect(_on_delete_pressed)
 	_switch_buttons.assign([left, right, new_button, _delete_button])
+	# The highlight stops at the ends of the row instead of wandering off.
+	left.focus_neighbor_left = left.get_path_to(left)
+	_delete_button.focus_neighbor_right = _delete_button.get_path_to(_delete_button)
+	# The name box becomes a button that opens the on-screen keyboard (controller or keyboard).
+	_keyboard = OnScreenKeyboard.hook(_name_edit, self)
 
 
 func _row_button(text: String, width: float, row: HBoxContainer) -> Button:
@@ -390,6 +439,7 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	left.focus_neighbor_right = left.get_path_to(right)
 	right.focus_neighbor_left = right.get_path_to(left)
 	right.focus_neighbor_right = right.get_path_to(right)
+	_look_rows.append([left, right])  # (up / down between rows: _link_focus)
 
 
 ## A label for inside a row: fixed width, vertically centred.

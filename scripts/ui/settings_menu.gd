@@ -21,8 +21,8 @@ extends Control
 ## then press the new key (or controller button, in the PAD box). Those rows come from
 ## Controls.ACTIONS (scripts/controls.gd).
 ##
-## With a controller: up / down picks a row, left / right changes its value, A presses,
-## B goes back, LB / RB switch tabs.
+## With a controller: the d-pad / stick move the highlight (left / right between a row's < and >),
+## A presses (A on < or > changes the value), B goes back, LB / RB switch tabs.
 
 ## Fired when the player presses BACK (or Esc), so whoever opened us can show itself again.
 signal closed
@@ -122,6 +122,7 @@ func _ready() -> void:
 		_tab_buttons.append(tab)
 	Settings.changed.connect(_refresh_values)
 	Controls.changed.connect(_refresh_keys)
+	scroll.follow_focus = true  # a controller moving down a long tab (KEYS) scrolls with it
 	hide()
 
 
@@ -155,12 +156,7 @@ func _input(event: InputEvent) -> void:
 		var direction := -1 if event.is_action_pressed("ui_tab_left") else 1
 		_show_tab(posmod(_current_tab + direction, TABS.size()))
 		_tab_buttons[_current_tab].grab_focus()
-	elif event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right"):
-		# Left / right on a "<  VALUE  >" row changes the value (instead of hopping between < and >).
-		var focused := get_viewport().gui_get_focus_owner()
-		if focused != null and focused.has_meta("row"):
-			get_viewport().set_input_as_handled()
-			_step(focused.get_meta("row"), -1 if event.is_action_pressed("ui_left") else 1)
+	# (Left / right only move the highlight between a row's < and >: press A on one to change it.)
 
 
 func _show_tab(index: int) -> void:
@@ -202,7 +198,6 @@ func _make_row(row: Dictionary) -> HBoxContainer:
 	less.text = "<"
 	less.custom_minimum_size.x = 14
 	less.pressed.connect(_step.bind(row, -1))
-	less.set_meta("row", row)  # so left / right on a controller can change this row
 	less.focus_entered.connect(func(): hint_label.text = row.hint)
 	line.add_child(less)
 
@@ -217,9 +212,13 @@ func _make_row(row: Dictionary) -> HBoxContainer:
 	more.text = ">"
 	more.custom_minimum_size.x = 14
 	more.pressed.connect(_step.bind(row, 1))
-	more.set_meta("row", row)
 	more.focus_entered.connect(func(): hint_label.text = row.hint)
 	line.add_child(more)
+	# Left / right hop between this row's own < and > and stop there (no jumping to the scrollbar).
+	less.focus_neighbor_left = less.get_path_to(less)
+	less.focus_neighbor_right = less.get_path_to(more)
+	more.focus_neighbor_left = more.get_path_to(less)
+	more.focus_neighbor_right = more.get_path_to(more)
 	return line
 
 

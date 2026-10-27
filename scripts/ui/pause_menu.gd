@@ -6,8 +6,7 @@ extends Control
 ##   ├── Dim (ColorRect)
 ##   └── Panel (PanelContainer) > VBox
 ##       ├── Title (Label)
-##       ├── ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton
-##       └── Note (Label)
+##       └── ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton
 ##
 ## The game does NOT stop while it's open (it's online), but your cat and car ignore the
 ## keyboard: they check PauseMenu.is_open.

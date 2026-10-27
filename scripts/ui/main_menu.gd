@@ -22,7 +22,7 @@ extends Control
 ##       SOLO        -> CHOOSE YOUR CAT (scripts/ui/cat_creator.gd) -> NEXT = a game just for you
 ##       MULTIPLAYER -> LOCAL CO-OP / ONLINE CO-OP (CoopScreen)
 ##         either one -> the LANDING PAGE (LandingScreen): everyone on this computer gathers
-##           P1  < WHISKERS >          <- player 1: left / right = pick cat, A = make / edit cats
+##           [<] P1  WHISKERS [>]      <- player 1: A on < / > = pick cat, A on the name = make / edit cats
 ##           P2  < MITTENS >           <- joined with START on their controller (left / right = cat,
 ##                                        A = edit it in MY CAT, B = leave)
 ##           P3  PRESS START TO JOIN
@@ -79,7 +79,10 @@ var coop_screen: VBoxContainer
 ## The landing page: who's playing on this computer, and with which cat.
 var landing_screen: VBoxContainer
 var _landing_title: Label
-var _p1_button: Button          # "P1  < WHISKERS >": left / right = cat, A = make / edit cats
+var _p1_button: Button          # "P1  WHISKERS" (A = make / edit cats), with < > buttons beside it
+## On-screen keyboards for the city # and address boxes (controller typing: on_screen_keyboard.gd).
+var _seed_keyboard: OnScreenKeyboard
+var _address_keyboard: OnScreenKeyboard
 var _seat_labels: Array[Label] = []  # P2..P4
 var _landing_hint: Label
 var _start_button: Button       # START GAME (local) / NEXT (online)
@@ -108,6 +111,9 @@ func _ready() -> void:
 	var join_button: Button = $PlayScreen/VBox/Columns/JoinColumn/JoinButton
 	host_button.focus_neighbor_right = host_button.get_path_to(join_button)
 	join_button.focus_neighbor_left = join_button.get_path_to(host_button)
+	# A controller can't type: A on the city # / address box opens an on-screen keyboard.
+	_seed_keyboard = OnScreenKeyboard.hook(seed_input, self, OnScreenKeyboard.DIGITS)
+	_address_keyboard = OnScreenKeyboard.hook(address_input, self, OnScreenKeyboard.ADDRESS)
 	$Version.text = "v%s  LAN" % ProjectSettings.get_setting("application/config/version", "0")
 	if menu_camera != null:
 		_camera_yaw = menu_camera.rotation.y
@@ -239,12 +245,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if not visible:
 		return
-	# Player 1's row on the landing page: left / right picks their cat.
-	if landing_screen.visible and _p1_button.has_focus() \
-			and (event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")):
-		get_viewport().set_input_as_handled()
-		Seats.cycle_p1_cat(-1 if event.is_action_pressed("ui_left") else 1)
-		return
+	if _seed_keyboard.visible or _address_keyboard.visible:
+		return  # the on-screen keyboard has the buttons
 	if not event.is_action_pressed("ui_cancel"):
 		return
 	if play_screen.visible:
@@ -281,8 +283,19 @@ func _build_landing_screen() -> void:
 	_landing_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_landing_title.add_theme_color_override("font_color", Color(1, 0.35, 0.8))
 	landing_screen.add_child(_landing_title)
-	_p1_button = _menu_button(landing_screen, "P1", _on_p1_cat_pressed, 14)
+	# Player 1's row: [<]  [P1  WHISKERS]  [>]  (d-pad moves between them, A presses).
+	var p1_row := HBoxContainer.new()
+	p1_row.add_theme_constant_override("separation", 3)
+	landing_screen.add_child(p1_row)
+	var p1_left := _menu_button(p1_row, "<", Seats.cycle_p1_cat.bind(-1), 14)
+	p1_left.custom_minimum_size.x = 16
+	_p1_button = _menu_button(p1_row, "P1", _on_p1_cat_pressed, 14)
+	_p1_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_p1_button.add_theme_color_override("font_color", Seats.color(0))
+	var p1_right := _menu_button(p1_row, ">", Seats.cycle_p1_cat.bind(1), 14)
+	p1_right.custom_minimum_size.x = 16
+	p1_left.focus_neighbor_left = p1_left.get_path_to(p1_left)
+	p1_right.focus_neighbor_right = p1_right.get_path_to(p1_right)
 	for seat in range(1, PlayerId.MAX_LOCAL):
 		var row := Label.new()
 		row.custom_minimum_size = Vector2(0, 13)
@@ -310,14 +323,15 @@ func _refresh_landing() -> void:
 	if landing_screen == null or not landing_screen.visible:
 		return
 	var my_name := str(Settings.current_cat().get("name", ""))
-	_p1_button.text = "P1   < %s >" % (my_name.to_upper() if my_name != "" else "MAKE YOUR CAT")
+	_p1_button.text = "P1   %s" % (my_name.to_upper() if my_name != "" else "MAKE YOUR CAT")
 	for i in _seat_labels.size():
 		var seat := i + 1
 		var cat := Seats.lobby_cat_name(seat)
 		_seat_labels[i].text = "P%d   < %s >" % [seat + 1, cat] if cat != "" \
 			else "P%d   PRESS %s TO JOIN" % [seat + 1, Controls.display_name("Pad Start")]
 		_seat_labels[i].modulate.a = 1.0 if cat != "" else 0.55
-	_landing_hint.text = "LEFT / RIGHT = PICK CAT   %s = EDIT   %s = LEAVE" % [
+	# (Players 2-4 have no highlight on this page, so their left / right picks their cat.)
+	_landing_hint.text = "P2-4: LEFT / RIGHT = PICK CAT   %s = EDIT   %s = LEAVE" % [
 		Controls.display_name("Pad A"), Controls.display_name("Pad B")]
 
 

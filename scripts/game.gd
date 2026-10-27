@@ -170,7 +170,6 @@ func _start_playing() -> void:
 	main_menu.hide()
 	Hud.set_in_game(true)
 	pause_menu.enabled = true
-	_show_city_number()
 	# Bring back our first player's saved cash + stash (player_profile.gd).
 	$Profile.restore(PlayerId.first_local(), str(Settings.current_cat().get("id", "")), local_player_name)
 	# Couch players from the start menu's lobby come along (scripts/seats.gd).
@@ -212,7 +211,6 @@ func new_district() -> void:
 	print("[Game] New district: city #%d" % new_seed)
 	_receive_city_seed.rpc(new_seed)  # everyone else builds it...
 	city.generate(new_seed)  # ...and so do we
-	_show_city_number()
 	park_car()
 	$Heat.reset()
 	$Roombas.start_patrol()
@@ -229,7 +227,6 @@ func _district_news() -> void:
 @rpc("authority", "call_remote", "reliable")
 func _receive_city_seed(city_seed: int) -> void:
 	city.generate(city_seed)
-	_show_city_number()
 
 
 ## Hosting: what the network hears about our game (Net.advert, the MULTIPLAYER screen's list).
@@ -239,9 +236,6 @@ func _process(_delta: float) -> void:
 			"players": player_count(), "max": Net.MAX_PLAYERS}
 
 
-func _show_city_number() -> void:
-	# Shown in the pause menu, so the bottom of the screen stays clear (keys: SETTINGS > KEYS).
-	pause_menu.get_node("Panel/VBox/Note").text = "CITY #%d\nthe city keeps going - it's online!" % city.city_seed
 
 
 ## A line of text in the middle of the screen for a few seconds (e.g. what Don says).

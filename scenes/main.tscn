@@ -428,13 +428,6 @@ custom_minimum_size = Vector2(0, 15)
 layout_mode = 2
 text = "QUIT TO DESKTOP"
 
-[node name="Note" type="Label" parent="PS1Overlay/PauseMenu/Panel/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.55, 0.7, 1)
-text = "the city keeps going - it's online!"
-horizontal_alignment = 1
-autowrap_mode = 3
-
 [node name="SettingsMenu" parent="PS1Overlay" instance=ExtResource("12_settings")]
 
 [node name="CatCreator" type="Control" parent="PS1Overlay"]
