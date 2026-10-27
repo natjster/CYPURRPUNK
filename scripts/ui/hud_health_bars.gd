@@ -8,8 +8,8 @@ extends Control
 ##   ██████░░░░      <- thin plain red bar; the bit just lost is white-yellow and drains away
 ##   - It appears once the thing is HURT or is CHASING someone, and fades out further than
 ##     max_distance or behind walls.
-##   - BOSSES (the MEGA VAC-COP) get a big bar pinned to the top-middle of the screen instead,
-##     with its name above it, while they're within boss_distance.
+##   - BOSSES (the MEGA VAC-COP) get the same kind of bar floating over them, just bigger
+##     (boss_size), with a gold name, and seen from further away (boss_distance).
 ##   - Other players' cats show a slim bar under their name once they're hurt.
 ##
 ## GIVE SOMETHING NEW A HEALTH BAR (e.g. a future guard dog): add its root node to the group
@@ -32,12 +32,10 @@ const GROUP := "hud_health_bars"
 ## ...but never narrower / wider than these (HUD units: the screen is 720 tall).
 @export var min_width: float = 70.0
 @export var max_width: float = 150.0
-## Boss bars (top-middle of the screen): shown while the boss is closer than this (metres)...
-@export var boss_distance: float = 120.0
-## ...this wide (HUD units; never more than half the screen)...
-@export var boss_bar_width: float = 440.0
-## ...and this far down from the top of the screen (under your own health bar).
-@export var boss_bar_top: float = 152.0
+## Boss bars float over the boss like the others, but are seen from this far away (metres)...
+@export var boss_distance: float = 60.0
+## ...and are this many times bigger (width and thickness).
+@export var boss_size: float = 2.0
 ## Bar thickness (HUD units).
 @export var bar_height: float = 4.5
 @export var name_font_size: int = 15
@@ -87,13 +85,10 @@ func _process(delta: float) -> void:
 				_anim[id] = anim
 			_animate(anim, info, delta)
 			var boss: bool = info.get("boss", false)
-			var visible_now := _wanted_boss(info, node, camera) if boss else _wanted(info, node, camera, me)
+			var visible_now := _wanted(info, node, camera, me, boss_distance if boss else max_distance)
 			anim.alpha = move_toward(anim.alpha, 1.0 if visible_now else 0.0, delta * 5.0)
 			if anim.alpha > 0.0 and not info.is_empty():
-				if boss:
-					_add_boss_bar(info, anim)
-				else:
-					_add_to_draw_list(info, anim, camera, game_size, node is CatPlayer)
+				_add_to_draw_list(info, anim, camera, game_size, node is CatPlayer, boss)
 	for id in _anim.keys():
 		if not seen.has(id):
 			_anim.erase(id)
@@ -118,53 +113,35 @@ func _animate(anim: Dictionary, info: Dictionary, delta: float) -> void:
 
 
 ## Should this bar show right now (wants to, in range, in front of the camera, not behind a wall)?
-func _wanted(info: Dictionary, node: Node, camera: Camera3D, me: CatPlayer) -> bool:
+func _wanted(info: Dictionary, node: Node, camera: Camera3D, me: CatPlayer, too_far: float) -> bool:
 	if info.is_empty() or not info.get("show", false) or not (node as Node3D).is_visible_in_tree():
 		return false
 	var where: Vector3 = info.position
 	if camera.is_position_behind(where):
 		return false
-	if camera.global_position.distance_to(where) > max_distance:
+	if camera.global_position.distance_to(where) > too_far:
 		return false
 	if hide_behind_walls and _behind_wall(camera, where, node, me):
 		return false
 	return true
 
 
-## Boss bars don't need to be on screen: just near enough (it always knows where you are).
-func _wanted_boss(info: Dictionary, node: Node, camera: Camera3D) -> bool:
-	return info.get("show", false) and (node as Node3D).is_visible_in_tree() 		and camera.global_position.distance_to(info.position) < boss_distance
-
-
-## A boss bar pinned to the top-middle of the screen (a second boss stacks under the first).
-func _add_boss_bar(info: Dictionary, anim: Dictionary) -> void:
-	var stacked := 0
-	for bar in _draw_list:
-		if bar.boss:
-			stacked += 1
-	var width := minf(boss_bar_width, size.x * 0.5)
-	var height := bar_height * 1.6
-	var top := boss_bar_top + stacked * (height + 34.0)
-	_draw_list.append({
-		"rect": Rect2(Vector2(round((size.x - width) * 0.5), top), Vector2(width, height)),
-		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha,
-		"name": info.get("name", ""), "boss": true, "friend": false})
-
-
-func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, game_size: Vector2, friend: bool) -> void:
+## A bar floating over the thing (bosses: boss_size times bigger, seen out to boss_distance).
+func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, game_size: Vector2, friend: bool, boss: bool = false) -> void:
 	var where: Vector3 = info.position
 	if camera.is_position_behind(where):
 		return
 	var distance := camera.global_position.distance_to(where)
 	var units_per_metre := size.y / (2.0 * maxf(distance, 0.1) * tan(deg_to_rad(camera.fov) / 2.0))
-	var width := clampf(world_width * units_per_metre, min_width, max_width)
-	var height := bar_height * (0.7 if friend else 1.0)
+	var big := boss_size if boss else 1.0
+	var width := clampf(world_width * big * units_per_metre, min_width * big, max_width * big)
+	var height := bar_height * (0.7 if friend else big)
 	var on_screen := camera.unproject_position(where) * (size / game_size)
-	var fade := clampf((max_distance - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
+	var fade := clampf(((boss_distance if boss else max_distance) - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
 	_draw_list.append({
 		"rect": Rect2((on_screen - Vector2(width * 0.5, height)).round(), Vector2(width, height)),
 		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha * fade,
-		"name": info.get("name", ""), "boss": false, "friend": friend})
+		"name": info.get("name", ""), "boss": boss, "friend": friend})
 
 
 func _draw() -> void:

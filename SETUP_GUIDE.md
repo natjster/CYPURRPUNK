@@ -839,8 +839,8 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
 host says it is. Bonks, stolen fish and explosions are all decided by the host.
 
 ### HEAT and the MEGA VAC-COP (the pressure)
-The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-middle, under the
-extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**:
+The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-right, flashing
+red and blue) is **shared by every player**:
 
 - It's the **district's clock**: it creeps up **0.167 per second** while any cat is in the city
   (about **10 minutes** from 0 to 100 if you cause no trouble; the exit opens at about 7.5).
@@ -872,8 +872,8 @@ collision **layer 3** and the car's **Mask** includes layer 3 (Inspector > Colli
 Collision). Everyone hears its
 siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
-bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to
-the top-middle of your screen once it's been shot). Destroy it and it spits out a **golden koi**
+bonks = knocked out), can't be run over, and has **600 health** (once it's been shot, a big health bar
+floats over it, like the little ones' but twice the size). Destroy it and it spits out a **golden koi**
 (so 4 bosses = 4 koi... if you survive). In the DEEP CLEAN, destroying it doesn't stop the swarm.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
@@ -938,12 +938,11 @@ Everything here is drawn by the HUD layer (sharp at your real resolution, not pi
   Transform**.
 - **Enemy health bars** float over a VAC-COP only once a player has shot it: its name (`VAC-COP`) over a
   thin plain red bar, with the same white-yellow chip. They shrink with distance, fade out far
-  away and hide behind walls. The **MEGA VAC-COP** gets a big bar pinned to the **top-middle** of
-  the screen instead, with its name above it, like a Cyberpunk boss (so it has no floating sign
-  over it any more).
+  away and hide behind walls. The **MEGA VAC-COP** gets the same floating bar, just **twice as big**
+  (Boss Size) with a gold name, and visible from further away (Boss Distance, 60 m).
 - **Other players' cats** get a slim **cyan** bar under their name once they're hurt (handy in co-op).
   Tuning: select **Frame > Bars**: Max Distance, Fade Distance, World Width, Min / Max Width, Bar
-  Height, Name Font Size, **Boss Distance / Boss Bar Width / Boss Bar Top**, Chip Delay, Drain
+  Height, Name Font Size, **Boss Distance / Boss Size**, Chip Delay, Drain
   Speed, Hide Behind Walls, and the **Colours** (Friend Color = other cats' bars).
 - **Damage numbers:** every bolt that hits a VAC-COP pops its damage off the spot you hit
   (white, e.g. `27`), floating up and fading. **Critical hits** are bigger and yellow with a `!`

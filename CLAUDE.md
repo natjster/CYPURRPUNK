@@ -128,7 +128,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   HP is 100 (Roomba 100, boss 600, bonk 34/67). Cyberpunk-style bars, all on the HUD: own bar = `HudHealthBar`
   (`Frame/Top/Health`, fed by cat_health `_process`); floating bars = `HudHealthBars` (`Frame/Bars`) for nodes in
   group `hud_health_bars` with `health_bar_info() -> {hp, max, position, show, name, boss}` (Roomba, other cats;
-  boss = pinned top-middle); damage numbers = `Hud.damage_number(pos, amount, crit, seat)` (`Frame/Damage`).
+  boss = same floating bar, `boss_size` x bigger, out to `boss_distance`); damage numbers = `Hud.damage_number(pos, amount, crit, seat)` (`Frame/Damage`).
   Weapon rolls `damage`/`crit_chance` on the shooter and sends it in `roomba.take_hit(shooter_id, amount)`;
   Roomba `health` is synced (synchronizer, on change).
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
