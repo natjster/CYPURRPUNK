@@ -21,7 +21,7 @@ extends CharacterBody3D
 ##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
 ##   Shoot it (each bolt takes the gun's Damage off its max_health) or ram it with the car
 ##   (faster than car_smash_speed) and it explodes, spitting out everything it vacuumed.
-##   Its HEALTH BAR floats over it once it's hurt or chasing (scripts/ui/hud_health_bars.gd,
+##   Its HEALTH BAR floats over it only once a player has SHOT it (scripts/ui/hud_health_bars.gd,
 ##   via health_bar_info() below), and the shooter sees damage numbers (weapon.gd).
 ## Cats in the car and cats down in the hub are ignored.
 ## The HEAT (scripts/heat_meter.gd) makes it chase faster and spot cats from further away, and a
@@ -34,6 +34,11 @@ extends CharacterBody3D
 ## MULTIPLAYER: the HOST runs every Roomba's brain (this script's _physics_process). Everyone
 ## else's copy just glides to the synced position, like other players' cats. Roombas are
 ## created by the host (roomba_patrol.gd) and copied to everyone by a MultiplayerSpawner.
+##
+## PERFORMANCE (there can be 70+ of them): a Roomba far from every cat thinks only every few
+## frames (far_think_every), a chasing one re-plans its route a few times a second, its model
+## isn't drawn beyond draw_distance (the fog hides it anyway), its siren light fades out with
+## distance, and its hum only plays when it's near a player on this computer.
 
 enum State { PATROL, CHASE, STUNNED }
 
@@ -85,6 +90,18 @@ enum State { PATROL, CHASE, STUNNED }
 @export_group("Network Smoothing")
 @export var network_smoothing: float = 12.0
 
+@export_group("Performance")
+## Further than this (metres) from every cat, a patrolling Roomba only thinks every
+## far_think_every frames (it still drives just as far: each think covers the skipped time).
+@export var far_distance: float = 60.0
+@export var far_think_every: int = 4
+## While chasing, the route to the cat is re-planned this many times a second (not every frame).
+@export var replans_per_second: float = 10.0
+## The model isn't drawn further away than this (metres). The fog hides it by then anyway.
+@export var draw_distance: float = 75.0
+## The vacuum hum only plays within this distance (metres) of a player on this computer.
+@export var hum_distance: float = 35.0
+
 ## Synced to everyone: where the host says it is, which way it faces, and what it's doing.
 var sync_position: Vector3
 var sync_yaw: float
@@ -108,6 +125,11 @@ var _flash_time: float = 0.0
 ## start the moment a chase begins).
 var _hum: AudioStreamPlayer3D
 var _last_state: State = State.PATROL
+var _skipped_time: float = 0.0  # host: time saved up while thinking less often (far away)
+var _frame: int = 0  # host: counts physics frames, for thinking less often
+var _route_point: Vector3  # host: where the chase is headed (re-planned replans_per_second)
+var _replan_left: float = 0.0
+var _hum_check_left: float = 0.0  # every computer: time until we check if anyone can hear us
 var _rng := RandomNumberGenerator.new()  # patrol choices only â€” NOT the city's RNG
 
 @onready var model: Node3D = $Model
@@ -126,7 +148,15 @@ func _ready() -> void:
 	sync_position = global_position
 	_stuck_check_at = global_position
 	_rng.randomize()
+	_frame = _rng.randi_range(0, 99)  # so far-away Roombas don't all think on the same frame
 	_hum = Sound.attach_loop("roomba_hum", self, -12.0)  # sounds/sfx/roomba_hum.wav
+	# Don't draw the model beyond draw_distance (each part is a separate draw for the GPU).
+	for part in model.find_children("*", "MeshInstance3D"):
+		(part as MeshInstance3D).visibility_range_end = draw_distance
+	# The siren light fades out with distance (lights are the expensive part of a swarm).
+	siren_light.distance_fade_enabled = true
+	siren_light.distance_fade_begin = 25.0
+	siren_light.distance_fade_length = 10.0
 	if is_multiplayer_authority():
 		_last_car_position = Game.instance.car.global_position
 		_pick_patrol_target()
@@ -137,6 +167,14 @@ func _ready() -> void:
 # --- The host's brain ---
 
 func _physics_process(delta: float) -> void:
+	# Far from every cat and just patrolling: only think every far_think_every frames, with
+	# the saved-up time, so it drives the same distance for a fraction of the cost.
+	_frame += 1
+	_skipped_time += delta
+	if state == State.PATROL and far_think_every > 1 and _frame % far_think_every != 0 and _far_from_cats():
+		return
+	delta = _skipped_time
+	_skipped_time = 0.0
 	_clock += delta
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -170,7 +208,12 @@ func _physics_process(delta: float) -> void:
 				_pick_patrol_target()
 			else:
 				# Drive at the cat if nothing is in the way, otherwise around the block (streets).
-				move = _flat(_chase_point(cat) - global_position)
+				# (Re-planned a few times a second: it casts a ray, so not every frame.)
+				_replan_left -= delta
+				if _replan_left <= 0.0:
+					_replan_left = 1.0 / replans_per_second
+					_route_point = _chase_point(cat)
+				move = _flat(_route_point - global_position)
 				# Hotter city = faster Roombas (heat_meter.gd).
 				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
 				if _flat(cat.global_position - global_position).length() < bump_range:
@@ -183,10 +226,22 @@ func _physics_process(delta: float) -> void:
 	velocity.z = lerpf(velocity.z, wanted.z, weight)
 	if wanted.length() > 0.1:
 		model.rotation.y = lerp_angle(model.rotation.y, atan2(-wanted.x, -wanted.z), 1.0 - exp(-turn_speed * delta))
+	# move_and_slide() always moves one frame's worth: after skipped frames, move further.
+	var catch_up := delta / get_physics_process_delta_time()
+	velocity *= catch_up
 	move_and_slide()
+	velocity /= catch_up
 
 	sync_position = global_position
 	sync_yaw = model.rotation.y
+
+
+## True if no cat is within far_distance (then nothing up close can see us thinking slowly).
+func _far_from_cats() -> bool:
+	for node in Game.instance.players.get_children():
+		if _flat((node as Node3D).global_position - global_position).length() < far_distance:
+			return false
+	return true
 
 
 ## The nearest cat worth chasing, or null.
@@ -333,6 +388,7 @@ func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
 	if _can_chase(shooter, lose_range):
 		_chase_id = shooter.player_id
 		state = State.CHASE
+		_replan_left = 0.0
 
 
 ## Host: boom. Spit out everything we vacuumed, tell the patrol to send a new one later.
@@ -356,11 +412,12 @@ func explode() -> void:
 	queue_free()  # the spawner removes it on everyone's screen
 
 
-## For the floating health bar (scripts/ui/hud_health_bars.gd): shown once hurt or chasing.
+## For the floating health bar (scripts/ui/hud_health_bars.gd): hidden until a player SHOOTS it
+## (health is synced, so everyone's HUD shows it once anybody has hit it).
 func health_bar_info() -> Dictionary:
 	return {"hp": maxi(health, 0), "max": max_health, "name": display_name, "boss": is_boss,
 		"position": global_position + Vector3.UP * health_bar_height,
-		"show": health < max_health or state == State.CHASE}
+		"show": health < max_health}
 
 
 # --- Messages from the host ---
@@ -399,6 +456,15 @@ func _process(delta: float) -> void:
 	_last_state = state
 	if _hum != null:
 		_hum.pitch_scale = 1.4 if chasing else 1.0
+		# Only hum when a player on this computer is near (dozens of far-away hums cost CPU
+		# and you couldn't hear them through the rain anyway). Checked 4 times a second.
+		_hum_check_left -= delta
+		if _hum_check_left <= 0.0 and GameScreen.instance != null:
+			_hum_check_left = 0.25
+			var near := false
+			for camera in GameScreen.instance.view_cameras():
+				near = near or camera.global_position.distance_to(global_position) < hum_distance
+			_hum.stream_paused = not near
 	var blink := fmod(Time.get_ticks_msec() / 1000.0, 0.4) < 0.2
 	var off := Color(0.08, 0.08, 0.1)
 	siren_red.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.15) if chasing and blink else off)

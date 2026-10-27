@@ -31,16 +31,16 @@ const MAX_LEVEL: int = 5
 
 @export_group("Heating up")
 ## Heat added every second while at least one cat is up in the city.
-## 0.11 = about 15 minutes up top from a fresh district to the DEEP CLEAN, if you cause no
-## trouble at all (the exit opens after about 11).
-@export var heat_per_second: float = 0.11
+## 0.167 = about 10 minutes up top from a fresh district to the DEEP CLEAN, if you cause no
+## trouble at all (the exit opens after about 7.5).
+@export var heat_per_second: float = 0.167
 ## More cats up top heat the city faster: +this much (0.1 = +10%) for every cat up there beyond
 ## the first. (8 cats up top with 0.1 = 1.7x as fast.)
 @export var heat_per_extra_cat: float = 0.1
 ## Heat added each time a gun hits a Roomba.
-@export var heat_per_roomba_hit: float = 1.0
+@export var heat_per_roomba_hit: float = 0.5
 ## Heat added each time a Roomba is destroyed.
-@export var heat_per_roomba_destroyed: float = 6.0
+@export var heat_per_roomba_destroyed: float = 3.0
 
 @export_group("Cooling down")
 ## Heat taken away when a cat extracts ("the cops lose your trail").
@@ -53,7 +53,7 @@ const MAX_LEVEL: int = 5
 
 @export_group("What each level does")
 ## Extra Roombas on patrol per level above 1 (level 3 = 2 x this extra).
-@export var extra_roombas_per_level: int = 2
+@export var extra_roombas_per_level: int = 5
 ## Roomba chase speed goes up by this much per level above 1 (0.07 = +7% per level).
 @export var speed_per_level: float = 0.07
 ## Roomba spotting distance goes up by this much per level above 1.
@@ -146,9 +146,7 @@ func _process(_delta: float) -> void:
 	var lvl := level()
 	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:
-		if lvl == MAX_LEVEL:
-			Sound.play("boss_siren")  # sounds/sfx/boss_siren.wav
-		else:
+		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)
 			Sound.play("heat_up")  # sounds/sfx/heat_up.wav
 	_last_level = lvl
 

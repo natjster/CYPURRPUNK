@@ -102,9 +102,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Greed + pressure: loot tiers sardine $20 / fish $50 / `golden_koi` $400 (ItemData `carry_speed`,
   `noise`, `heat_on_pickup`, `pickup_announcement`; `ItemManager.carry_speed/loot_noise`). HEAT =
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
-  levels 1-5, NOT shown on the HUD: level-ups are sounds only): `RoombaPatrol._follow_the_heat` adds Roombas per level and spawns
-  the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`, drops a koi) at 100.
-  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~15 min up top to 100).
+  levels 1-5, NOT shown on the HUD: level-ups are sounds only): `RoombaPatrol._follow_the_heat` adds Roombas per level
+  (20 base, +5/level, +40 DEEP CLEAN) and spawns the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`,
+  drops a koi) every `boss_every_kills` (3) regular kills, max `bosses_per_district` (4), plus at max heat.
+  Roomba perf: far (>60 m from all cats) patrollers think every 4th frame (velocity scaled for move_and_slide),
+  chase route replanned 10/s, mesh `visibility_range_end`, siren light distance fade, hum paused when far;
+  sync_position/yaw are ON_CHANGE (`delta_interval` 0.05). Health bars show only once shot (`health < max`).
+  Test: `--kill_roombas=N [--kill_bosses]`.
+  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100).
 - Districts (`fish_heist.gd`): ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   the centre (one-way), EXIT manhole at `FishHeist.exit_position` (street spot from the heist rng), open while
   `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,

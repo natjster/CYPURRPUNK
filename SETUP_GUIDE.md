@@ -286,7 +286,8 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
   `--mouse_test` (checks mouse-look still reaches the game through the HUD screen),
   `--click_choice=N` (a real mouse click on a talk-box button), `--press_key=Tab` (a real key),
-  `--heat=100` (max HEAT: the MEGA VAC-COP comes out), `--grab=golden_koi`,
+  `--heat=100` (max HEAT: the DEEP CLEAN), `--kill_roombas=3` (destroys 3 VAC-COPs: the MEGA
+  VAC-COP is called in; add `--kill_bosses` to destroy bosses too), `--grab=golden_koi`,
   `--roomba=boss --bait_roomba=7` (put the boss 7 m in front of you) or `--zap_roomba=18` (kill it).
   The full list is at the top of `dev_capture.gd`.
 - Test runs **use the default settings and never save**, so they can't change your settings or
@@ -368,7 +369,7 @@ The more players, the busier the city (counted on the host, players on every com
 
 | What | Where (select the node in `main.tscn`, Inspector) | Default |
 |---|---|---|
-| Extra VAC-COPs for every player beyond the 2nd | **Roombas** > Extra Roombas Per Player | 1 (8 players = +6) |
+| Extra VAC-COPs for every player beyond the 2nd | **Roombas** > Extra Roombas Per Player | 2 (8 players = +12) |
 | Heat rises faster per extra cat up top | **Heat** > Heat Per Extra Cat | 0.1 (+10% each) |
 | Loot grows back faster per extra player | **Items** > Regrow Faster Per Player | 0.15 (8 players = about 2x) |
 
@@ -697,7 +698,7 @@ code that just means a new city seed: the whole city is generated again.
 **How a district plays:**
 1. Talk to Don > **SEND ME UP TOP**: you climb out of the **entry manhole** in the centre
    crossroads. It's **one-way**: there's no going back down it.
-2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **15 minutes** from a
+2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **10 minutes** from a
    fresh district to max if you cause no trouble; the golden koi and gunfights speed it up).
 3. At **75 heat** the **exit manhole** opens somewhere random in the city: the lid slides off and
    a green glow comes out of the hole. At the same moment every **payphone** in the district
@@ -709,7 +710,7 @@ code that just means a new city seed: the whole city is generated again.
    go up again into the **same district at the same heat** as many times as you like.
 6. At **90 heat** Don warns you on the radio ("sealin' the hatch soon!").
 7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
-   swarm of **24 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
+   swarm of **40 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
    away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
    what (everything they carry is lost). Don won't send anyone up while it's sealed.
 8. A few seconds later a **new district** is built (new city, heat back to 0, fresh patrol) and
@@ -750,7 +751,7 @@ called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = 
   - **Manholes**: Exit Opens At Heat (75), Seal Warning At Heat (90), Exit Radius (how close you
     must get), Exit Min Distance (from the centre).
   - **Payphones**: Payphones (how many), Payphone Spacing, Payphone Min Distance.
-  - **The DEEP CLEAN**: Deep Clean Seconds (30), Deep Clean Roombas (24), New District Delay.
+  - **The DEEP CLEAN**: Deep Clean Seconds (30), Deep Clean Roombas (40), New District Delay.
 - Select **Roombas** > **DEEP CLEAN swarm**: Swarm Min/Max Distance (how close to you they
   appear), Swarm Sight Multiplier.
 - How long a district lasts: **Heat** > Heat Per Second (see **HEAT** below).
@@ -786,10 +787,10 @@ Then it backs off for a couple of seconds. Three bonks and you're **knocked out*
 **Health & knockouts** below).
 
 **Getting your fish back:** destroy it. It has **100 health**: about **3 pistol shots** (40 each)
-or **4 tommy-gun bolts** (25 each), or **run it over** with the car at speed. Once it's hurt or
-chasing, a red **health bar** floats over it, and every hit pops a **damage number** off it
+or **4 tommy-gun bolts** (25 each), or **run it over** with the car at speed. Once you (or any
+other player) have **shot** it, a red **health bar** floats over it, and every hit pops a **damage number** off it
 (see **Health bars & damage numbers** below). It explodes and spits out everything it vacuumed â€” walk over the fish to grab them.
-A new Roomba rolls out somewhere else 25 seconds later. Cats in the car and cats in the hub are
+A new Roomba rolls out somewhere else 15 seconds later. Cats in the car and cats in the hub are
 safe. Shoot a Roomba and it gets angry and chases *you*.
 
 **Where it lives:** `scenes/roomba.tscn` (script `scripts/roomba.gd`). The **Roombas** node in
@@ -805,8 +806,17 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
 ```
 
 **Tuning:**
-- Select **Roombas** in `main.tscn`: **Roomba Count**, **Respawn Seconds**, **Min Spawn Distance**
-  (never appears this close to a cat or the centre crossroads).
+- Select **Roombas** in `main.tscn`: **Roomba Count** (20 patrolling a calm district),
+  **Respawn Seconds**, **Min Spawn Distance** (never appears this close to a cat or the centre
+  crossroads).
+- **How many at once:** 20 calm, +5 per heat level (35 at level 4), +2 per player beyond the 2nd,
+  and +40 more in the DEEP CLEAN. Tested: 80 VAC-COPs + the boss still ran at ~400 fps (uncapped)
+  on this PC, and a calm district only ~10% slower than the old 8-Roomba game.
+- **Performance** (select the root of `scenes/roomba.tscn`, group **Performance**): Far Distance +
+  Far Think Every (Roombas further than 60 m from every cat think every 4th frame), Replans Per
+  Second (a chasing Roomba re-plans its route 10 times a second), Draw Distance (75 m: the fog hides
+  them beyond that; the boss uses 250), Hum Distance (35 m). Their siren lights fade out past 25 m,
+  and their positions are only sent over the network when they change.
 - Open `scenes/roomba.tscn`, select the root **Roomba**: **Driving** (Patrol Speed, Chase Speed,
   Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
   Steals Loot, **Bonk Damage** = HP a bonk takes off a cat, 0 = harmless), **Toughness** (**Max
@@ -823,9 +833,9 @@ host says it is. Bonks, stolen fish and explosions are all decided by the host.
 The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-middle, under the
 extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**:
 
-- It's the **district's clock**: it creeps up **0.11 per second** while any cat is in the city
-  (about 15 minutes from 0 to 100 if you cause no trouble).
-- Trouble adds more: **+20** for grabbing the golden koi, **+1** per gun hit on a Roomba, **+6**
+- It's the **district's clock**: it creeps up **0.167 per second** while any cat is in the city
+  (about **10 minutes** from 0 to 100 if you cause no trouble; the exit opens at about 7.5).
+- Trouble adds more: **+20** for grabbing the golden koi, **+0.5** per gun hit on a Roomba, **+3**
   per Roomba destroyed.
 - It **never cools down** by itself (extracting and going home don't lower it). Only a new
   district resets it to 0. (The Cooling Down numbers on the Heat node are 0; raise them if you
@@ -834,16 +844,18 @@ extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**
   **DEEP CLEAN** starts (see Fish Heist above).
 
 Every 25 heat is one **HEAT LEVEL** (an alarm sound; there is no heat bar or popup on the HUD). Each level above 1 brings
-**+2 Roombas** (they roll in one every 4 seconds), and all Roombas chase **7% faster** and spot
+**+5 Roombas** (they roll in one every 2 seconds), and all Roombas chase **7% faster** and spot
 you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
 carrying the koi...
 
-At **100 heat**: `MEGA VAC-COP DEPLOYED!`. A giant Roomba (`scenes/roomba_boss.tscn`) drives in
-from across town, following the streets around buildings until it can see you (every Roomba
+**The MEGA VAC-COP is called in every time the crew destroys 3 VAC-COPs**, up to **4 times per
+district** (only one is out at a time; it stays until destroyed or the district ends), and it
+always comes out for the DEEP CLEAN at 100 heat (that one doesn't count). Everyone hears its
+siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to
-the top-middle of your screen while it's near). Destroy it and it spits out a **golden koi**,
-but the DEEP CLEAN goes on. It goes home when the new district starts.
+the top-middle of your screen once it's been shot). Destroy it and it spits out a **golden koi**
+(so 4 bosses = 4 koi... if you survive). In the DEEP CLEAN, destroying it doesn't stop the swarm.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
 levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas and the boss).
@@ -854,7 +866,8 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Boss Destroyed), **What Each Level Does** (Extra Roombas Per Level, Speed Per Level, Sight Per
   Level).
 - Select **Roombas**: **Reinforce Seconds**, and under **MEGA VAC-COP**: Boss Spawn Distance,
-  Boss Leaves Below Heat.
+  **Boss Every Kills** (3), **Bosses Per District** (4); under **DEEP CLEAN swarm**: Swarm Min/Max
+  Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
 - The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
   with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On
   Destroy** (`golden_koi`), Heat Scaling (off: the boss doesn't get faster with heat).
@@ -903,7 +916,7 @@ Everything here is drawn by the HUD layer (sharp at your real resolution, not pi
   Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
   Heal, Back, Frame), **Shape** (Bar Thickness, Number Box Width, Number Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
   Transform**.
-- **Enemy health bars** float over a VAC-COP once it's hurt or chasing: its name (`VAC-COP`) over a
+- **Enemy health bars** float over a VAC-COP only once a player has shot it: its name (`VAC-COP`) over a
   thin plain red bar, with the same white-yellow chip. They shrink with distance, fade out far
   away and hide behind walls. The **MEGA VAC-COP** gets a big bar pinned to the **top-middle** of
   the screen instead, with its name above it, like a Cyberpunk boss (so it has no floating sign

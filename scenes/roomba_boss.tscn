@@ -24,6 +24,7 @@ car_smash_speed = 999.0
 is_boss = true
 drop_on_destroy = "golden_koi"
 heat_scaling = false
+draw_distance = 250.0
 
 [node name="CollisionShape3D" parent="."]
 position = Vector3(0, 0.4, 0)

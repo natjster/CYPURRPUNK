@@ -76,7 +76,7 @@ extends Node3D
 ## Then anyone still standing is knocked out anyway (loot lost), and a new district is built.
 @export var deep_clean_seconds: float = 30.0
 ## Extra VAC-COPs that swarm in for the DEEP CLEAN.
-@export var deep_clean_roombas: int = 24
+@export var deep_clean_roombas: int = 40
 ## After the DEEP CLEAN, wait this long (seconds) before building the next district, so
 ## knocked-out cats are back in the sewers first.
 @export var new_district_delay: float = 6.0

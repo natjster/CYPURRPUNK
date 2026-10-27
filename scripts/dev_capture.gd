@@ -39,6 +39,8 @@ extends Node
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
+##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
+##                     add --kill_bosses to destroy bosses too
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
@@ -353,6 +355,15 @@ func _ready() -> void:
 			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
 			for i in int(args["zap_roomba"]):
 				roomba.take_hit()
+		if args.has("kill_roombas") and multiplayer.is_server():
+			# (host) destroy N regular Roombas as if shot to death (every 3 calls in the MEGA VAC-COP).
+			for i in int(args["kill_roombas"]):
+				for node in scene.get_node("Roombas").get_children():
+					var victim := node as Roomba
+					if victim != null and (not victim.is_boss or args.has("kill_bosses")) and not victim.is_queued_for_deletion():
+						victim.take_hit(0, 500)
+						break
+				await get_tree().physics_frame
 		if args.has("hold"):
 			# Pretend a key is held down, e.g. --hold=move_forward --hold_frames=60
 			for i in int(args.get("hold_delay", "30")):

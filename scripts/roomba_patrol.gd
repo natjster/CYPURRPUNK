@@ -7,7 +7,8 @@ extends Node3D
 ## including players who join later.
 ##
 ## How many are out follows the HEAT (scripts/heat_meter.gd): every heat level adds a few, and
-## at max heat the MEGA VAC-COP (scenes/roomba_boss.tscn) comes out until the heat cools down.
+## The MEGA VAC-COP (scenes/roomba_boss.tscn) is called in every boss_every_kills VAC-COPs the
+## crew destroys (up to bosses_per_district times), and always comes out for the DEEP CLEAN.
 ## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN: it sets
 ## deep_clean_extra, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
@@ -20,24 +21,26 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 
 ## How many Roombas patrol the city at once when the city is calm (HEAT level 1).
 ## Hotter levels add more (HeatMeter.extra_roombas_per_level, on the Heat node).
-@export var roomba_count: int = 8
+@export var roomba_count: int = 20
 ## More players = more VAC-COPs: this many extra for every player beyond the second
-## (8 players with 1.0 = 6 extra). Decimals are fine (0.5 = one extra per two players).
-@export var extra_roombas_per_player: float = 1.0
+## (8 players with 2.0 = 12 extra). Decimals are fine (0.5 = one extra per two players).
+@export var extra_roombas_per_player: float = 2.0
 ## Seconds before a destroyed Roomba is replaced.
-@export var respawn_seconds: float = 25.0
+@export var respawn_seconds: float = 15.0
 ## New Roombas never appear closer than this to a cat, or to the centre crossroads where
 ## cats arrive from the hub.
 @export var min_spawn_distance: float = 25.0
 ## When the heat goes UP a level, one reinforcement Roomba arrives every this many seconds
 ## until there are enough. (When it cools down, spare Roombas far from cats go home just as slowly.)
-@export var reinforce_seconds: float = 4.0
+@export var reinforce_seconds: float = 2.0
 
 @export_group("MEGA VAC-COP (boss)")
 ## The boss appears at least this far from every cat (it drives in from across town).
 @export var boss_spawn_distance: float = 45.0
-## The boss goes home once the heat cools below this (out of 100).
-@export var boss_leaves_below_heat: float = 60.0
+## Every this many regular VAC-COPs the crew destroys, the MEGA VAC-COP is called in...
+@export var boss_every_kills: int = 3
+## ...but no more than this many times per district. (The DEEP CLEAN's boss doesn't count.)
+@export var bosses_per_district: int = 4
 
 @export_group("DEEP CLEAN swarm")
 ## During the DEEP CLEAN, swarm Roombas appear between these distances (metres) from a cat up top.
@@ -45,6 +48,8 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 @export var swarm_max_distance: float = 40.0
 ## During the DEEP CLEAN every Roomba spots cats this many times further away than normal.
 @export var swarm_sight_multiplier: float = 6.0
+## Extra swarm Roombas spawned per physics frame while the DEEP CLEAN fills up.
+@export var swarm_spawns_per_frame: int = 2
 
 ## The one patrol (RoombaPatrol.instance).
 static var instance: RoombaPatrol
@@ -58,6 +63,9 @@ var _clock: float = 0.0
 var _next_number: int = 0
 var _next_change_at: float = 0.0  # host: when the next reinforcement may arrive / leave
 var _boss: Roomba = null
+## Host: regular Roombas destroyed since the last boss call, and bosses called this district.
+var _kills_toward_boss: int = 0
+var _bosses_called: int = 0
 ## True once this computer hosts a game (start_patrol). Before that - in the start menu the
 ## game counts as its own "host" - no Roombas may be sent out: they'd clash with the real
 ## host's when we join someone.
@@ -81,12 +89,14 @@ func start_patrol() -> void:
 	_respawn_at.clear()
 	_boss = null
 	deep_clean_extra = 0
+	_kills_toward_boss = 0
+	_bosses_called = 0
 	for i in roomba_count:
 		_spawn_one()
 
 
 ## Host: a Roomba blew up. Show the explosion everywhere and queue its replacement
-## (the boss has no replacement: the heat decides if another one comes).
+## (the boss has no replacement). Every boss_every_kills regulars destroyed calls the boss in.
 func roomba_destroyed(roomba: Roomba) -> void:
 	_show_explosion.rpc(roomba.global_position)
 	if roomba == _boss:
@@ -94,6 +104,7 @@ func roomba_destroyed(roomba: Roomba) -> void:
 		_announce.rpc("THE MEGA VAC-COP IS DOWN!")
 	else:
 		_respawn_at.append(_clock + respawn_seconds)
+		_kills_toward_boss += 1
 
 
 func _physics_process(delta: float) -> void:
@@ -107,21 +118,25 @@ func _physics_process(delta: float) -> void:
 	_follow_the_heat()
 
 
-## Host: more Roombas when the city is hot, fewer when it cools, and the boss at max heat.
+## Host: more Roombas when the city is hot, and the MEGA VAC-COP when it's called in.
 func _follow_the_heat() -> void:
 	var heat := HeatMeter.instance
-	# The boss: out at max heat, home again once it cools.
-	if _boss == null and heat.level() == HeatMeter.MAX_LEVEL:
-		_boss = BOSS_SCENE.instantiate() as Roomba
-		_boss.name = "RoombaBoss%d" % _next_number
-		_next_number += 1
-		_boss.position = _spawn_spot(boss_spawn_distance)
-		add_child(_boss, true)
-		print("[Roombas] MEGA VAC-COP deployed at %s" % _boss.position)
-	elif _boss != null and is_instance_valid(_boss) and heat.heat < boss_leaves_below_heat:
-		_boss.queue_free()  # it drives off (the spawner removes it everywhere)
-		_boss = null
-		_announce.rpc("THE MEGA VAC-COP WENT HOME.")
+	# The boss (one at a time; it stays until it's destroyed or the district ends):
+	#   - called in after every boss_every_kills VAC-COPs destroyed, up to bosses_per_district,
+	#   - and always out for the DEEP CLEAN (max heat).
+	if _boss == null:
+		var called := _kills_toward_boss >= boss_every_kills and _bosses_called < bosses_per_district
+		if called or deep_clean_extra > 0 or heat.level() == HeatMeter.MAX_LEVEL:
+			if called:
+				_kills_toward_boss -= boss_every_kills
+				_bosses_called += 1
+			_boss = BOSS_SCENE.instantiate() as Roomba
+			_boss.name = "RoombaBoss%d" % _next_number
+			_next_number += 1
+			_boss.position = _spawn_spot(boss_spawn_distance)
+			add_child(_boss, true)
+			_announce.rpc("MEGA VAC-COP DEPLOYED (%d/%d this district)" % [_bosses_called, bosses_per_district])
+			_boss_siren.rpc()  # everyone hears it coming
 
 	# Regular Roombas: how many are out (or on their way back after being smashed)?
 	# (During the DEEP CLEAN there's no waiting: the swarm pours in, one every frame.)
@@ -135,7 +150,8 @@ func _follow_the_heat() -> void:
 	var wanted := roomba_count + heat.extra_roombas() + deep_clean_extra \
 		+ floori(extra_roombas_per_player * maxi(Game.instance.player_count() - 2, 0))
 	if regulars.size() + _respawn_at.size() < wanted:
-		_spawn_one(deep_clean_extra > 0)
+		for i in (swarm_spawns_per_frame if deep_clean_extra > 0 else 1):
+			_spawn_one(deep_clean_extra > 0)
 		_next_change_at = _clock + reinforce_seconds
 	elif regulars.size() + _respawn_at.size() > wanted:
 		# Too many for this heat: send one home, but only one nobody is looking at.
@@ -196,6 +212,12 @@ func _far_from_cats(spot: Vector3, distance: float) -> bool:
 @rpc("authority", "call_local", "reliable")
 func _announce(text: String) -> void:
 	print("[Roombas] " + text)
+
+
+## Host -> everyone: the MEGA VAC-COP's siren (everywhere at once: it's on its way).
+@rpc("authority", "call_local", "reliable")
+func _boss_siren() -> void:
+	Sound.play("boss_siren")  # sounds/sfx/boss_siren.wav
 
 
 ## Everyone: a flash of orange light and bits of Roomba flying everywhere.
