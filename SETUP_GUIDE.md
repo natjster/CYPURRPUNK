@@ -1,4 +1,4 @@
-﻿# CYPURRPUNK â€” Setup & How-It-Works Guide
+# CYPURRPUNK â€” Setup & How-It-Works Guide
 
 Everything below is **already built as files in this folder**. You don't have to paste code â€”
 open the project and press Play. The sections explain what each piece is, so you can tweak it
@@ -1596,6 +1596,10 @@ The finished videos land in `shots\trailer\out\`:
 bottom-left (change `TAG` in the script). The stills are the hero cat with the MEGA VAC-COP behind it,
 taken with DevCapture `--heat=100 --roomba=boss --no_boss_sign --bait_roomba=-7 --portrait=me --portrait_side=0.5`
 (`raw_b` = after 80 frames, red siren; `raw_a` = after 40 frames, blue siren).
+`thumbnail_gunfight.jpg` uses `gun_40.png`: the cat firing the PURR-TOMMY from the side as a VAC-COP explodes
+(`--give=tommy_gun --pos=0,0,-20 --bait_roomba=aim --hold=shoot --hold_frames=40 --keep_holding --frames=1`
+`--cam_from=-3.2,0.45,-21.6 --look_from=0.2,0.55,-21.8 --no_hud`). Each thumbnail's still, framing, logo spot and tag
+are listed in `THUMBNAILS` at the top of the script.
 
 **Uploading:** TikTok / Reels / Shorts take the vertical files as they are. Add your store link
 (Steam / itch.io) in the post text; the trailers end on "COMING SOON" â€” change that card in `edit.py`
