@@ -302,6 +302,9 @@ func _physics_process(delta: float) -> void:
 ## Host, while sealed: when time's up, whoever is still up top goes down (loot and all), then a
 ## new district is built.
 func _run_deep_clean() -> void:
+	# Nobody up top (everyone extracted / knocked out)? No point waiting: end it now.
+	if _deep_clean_ends_at >= 0.0 and not _anyone_up_top():
+		_deep_clean_ends_at = _clock
 	if _deep_clean_ends_at >= 0.0 and _clock >= _deep_clean_ends_at:
 		_deep_clean_ends_at = -1.0
 		if car.driver_id != 0:
@@ -315,6 +318,16 @@ func _run_deep_clean() -> void:
 		_new_district_at = -1.0
 		RoombaPatrol.instance.deep_clean_extra = 0
 		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
+
+
+## Host: is any cat (or the car's driver) up in the city right now?
+func _anyone_up_top() -> bool:
+	for node in players.get_children():
+		var cat := node as CatPlayer
+		var where: Vector3 = car.global_position if car.driver_id == cat.player_id else cat.global_position
+		if not UndergroundHub.is_in_hub(where):
+			return true
+	return false
 
 
 ## A payphone call (any computer -> host): switch the exit arrow on for the whole crew.

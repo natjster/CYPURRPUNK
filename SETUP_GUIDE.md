@@ -715,6 +715,9 @@ code that just means a new city seed: the whole city is generated again.
 5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. You can
    go up again into the **same district at the same heat** as many times as you like.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
+   **Everyone home?** Once the exit is open and every cat is back in the hub (extracted or knocked
+   out), the heat races to 100 (**Heat Per Second When All Home** on the Heat node, 5/s) and the
+   DEEP CLEAN skips its 30-second wait, so the next district comes in a few seconds.
 7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
    swarm of **40 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
    away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
@@ -862,7 +865,11 @@ carrying the koi...
 at heat 25, 50 and 75 (even if another is still out; they stay until destroyed or the district
 ends). On top of that, **one is called in every time the crew destroys 3 VAC-COPs**, up to **4 times
 per district** (only when no boss is out), and one always comes out for the DEEP CLEAN at 100 heat
-(level bosses and the DEEP CLEAN one don't count toward the 4). Everyone hears its
+(level bosses and the DEEP CLEAN one don't count toward the 4). The car can't run it over: driving into
+it is a crash, like hitting a wall (the car stops dead and bounces back a little; tune
+**Boss Crash Bounce** on the GetawayCar). That works because `roomba_boss.tscn` is also on
+collision **layer 3** and the car's **Mask** includes layer 3 (Inspector > CollisionObject3D >
+Collision). Everyone hears its
 siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to

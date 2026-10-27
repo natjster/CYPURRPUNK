@@ -109,7 +109,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   chase route replanned 10/s, mesh `visibility_range_end`, siren light distance fade, hum paused when far;
   sync_position/yaw are ON_CHANGE (`delta_interval` 0.05). Health bars show only once shot (`health < max`).
   Test: `--kill_roombas=N [--kill_bosses]`.
-  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100).
+  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100). Exit open + every cat in the hub
+  = `heat_per_second_when_all_home` (5/s) and `_run_deep_clean` ends at once when `_anyone_up_top()` is false.
+  Boss is also on collision layer 3; the car's mask = 1+3 and `_integrate_forces` stops it dead on boss contact.
 - Districts (`fish_heist.gd`): ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   the centre (one-way), EXIT manhole at `FishHeist.exit_position` (street spot from the heist rng), open while
   `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,

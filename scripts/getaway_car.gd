@@ -48,6 +48,12 @@ extends RigidBody3D
 ## How much the handbrake slows you down.
 @export var handbrake_drag: float = 1.2
 
+@export_group("Crashing into the MEGA VAC-COP")
+## Driving into the boss is a crash: the car stops dead and bounces back at this speed (m/s).
+## (The boss is on collision layer 3, which the car's Mask includes; small Roombas are only on
+## layer 2, so the car still drives over / smashes those.)
+@export var boss_crash_bounce: float = 1.5
+
 @export_group("Camera & Exit")
 @export var camera_follow_speed: float = 5.0
 ## Mouse look while driving (same feel as on foot; MOUSE SPEED in Settings multiplies it).
@@ -132,6 +138,9 @@ var _sound_speed: float = 0.0
 
 func _ready() -> void:
 	camera_arm.add_excluded_object(get_rid())
+	# Report what we touch, so _integrate_forces can notice crashing into the MEGA VAC-COP.
+	contact_monitor = true
+	max_contacts_reported = 4
 	door_zone.body_entered.connect(_on_door_zone_body_entered)
 	door_zone.body_exited.connect(_on_door_zone_body_exited)
 	camera_rig.global_position = global_position
@@ -353,6 +362,18 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		var angular := state.angular_velocity
 		angular.y = lerp(angular.y, target_turn, min(steer_response * dt, 1.0))
 		state.angular_velocity = angular
+
+	# --- Crashed into the MEGA VAC-COP: stop dead (like hitting a wall), bounce back a little ---
+	for i in state.get_contact_count():
+		var boss := state.get_contact_collider_object(i) as Roomba
+		if boss == null or not boss.is_boss:
+			continue
+		var away := global_position - boss.global_position
+		away.y = 0.0
+		away = away.normalized()
+		if velocity.dot(-away) > 0.0:  # only while driving INTO it (you can still back away)
+			velocity = Vector3(away.x * boss_crash_bounce, velocity.y, away.z * boss_crash_bounce)
+			state.angular_velocity.y = 0.0
 
 	state.linear_velocity = velocity
 

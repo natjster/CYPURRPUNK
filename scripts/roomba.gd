@@ -30,6 +30,9 @@ extends CharacterBody3D
 ## Roombas sit on collision LAYER 2 (Inspector > CollisionObject3D > Collision > Layer) and
 ## only bump into layer 1 (the city). So cats and the car pass over them instead of getting
 ## stuck on them, and guns still hit them (bolts check every layer).
+## EXCEPT the MEGA VAC-COP: roomba_boss.tscn is ALSO on layer 3, and the getaway car's Mask
+## includes layer 3 (getaway_car.tscn: Collision > Mask = layers 1 + 3). So driving into the boss
+## is a crash, like hitting a wall: the car stops dead and the boss isn't hurt.
 ##
 ## MULTIPLAYER: the HOST runs every Roomba's brain (this script's _physics_process). Everyone
 ## else's copy just glides to the synced position, like other players' cats. Roombas are

@@ -7,6 +7,7 @@ height = 0.8
 radius = 1.3
 
 [node name="RoombaBoss" instance=ExtResource("1_roomba")]
+collision_layer = 6
 patrol_speed = 3.0
 chase_speed = 6.0
 turn_speed = 3.0
