@@ -45,8 +45,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   SeatFocus: stick (JoypadMotion) moves one step per push (`_stick_pushed` edge detect); the same for the
   game-viewport menus: GameScreen `_stick_pushed_again` drops held-stick motion while `_in_menus()`.
   Lobby: A on a couch row = `Seats.lobby_cat_for_editing` + `MainMenu.lobby_cat_pressed(seat)` -> `CatCreator.open(false, seat)`
-  (seat>0 is always restyle mode; `Seats.saved_cat` reads `lobby_cats` in the lobby). CatCreator: left/right on a row's
-  < > (meta `row_key`) steps it.
+  (seat>0 is always restyle mode; `Seats.saved_cat` reads `lobby_cats` in the lobby). CatCreator: stick/d-pad only moves the
+  highlight (left/right hop between a row's own < and >, via focus_neighbor); A presses the button to step the row.
   Per-player stick settings: `Seats.stick_speed/invert_stick_y/rumble_on(seat)` (seat 0 = Settings; others =
   saved cat's "controls" dict) set via `Seats.set_player_setting`; rows in PlayerPause (`_add_setting`; SeatFocus
   "adjust" meta = left/right changes a row). Unplugged pad: `Seats._on_joy_connection_changed` opens that

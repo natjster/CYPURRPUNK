@@ -161,12 +161,8 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		close()
 		return
-	# On a row's < or > button, left / right changes that row (the highlight stays on the row).
-	var focused := get_viewport().gui_get_focus_owner()
-	if focused != null and focused.has_meta("row_key") \
-			and (event.is_action_pressed("ui_left", true) or event.is_action_pressed("ui_right", true)):
-		get_viewport().set_input_as_handled()
-		_step(focused.get_meta("row_key"), -1 if event.is_action_pressed("ui_left", true) else 1)
+	# (Stick / d-pad / arrow keys only move the highlight between buttons, like any menu. A row
+	# changes when you PRESS its < or > button: A on a controller, Enter / click on keyboard.)
 
 
 func _process(delta: float) -> void:
@@ -370,8 +366,7 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	var left := _button("<", Vector2.ZERO, Vector2(14, 15))
 	remove_child(left)
 	row.add_child(left)
-	left.pressed.connect(_step.bind(key, -1))
-	left.set_meta("row_key", key)  # (left / right on it changes the row: _input)
+	left.pressed.connect(_step.bind(key, -1))  # pressed (A / Enter / click) = previous option
 	if is_color:
 		var swatch := ColorRect.new()
 		swatch.custom_minimum_size = Vector2(52, 9)
@@ -388,8 +383,13 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	var right := _button(">", Vector2.ZERO, Vector2(14, 15))
 	remove_child(right)
 	row.add_child(right)
-	right.pressed.connect(_step.bind(key, 1))
-	right.set_meta("row_key", key)
+	right.pressed.connect(_step.bind(key, 1))  # pressed = next option
+	# Left / right on a row hops between its own < and > (and stops at the ends), so the
+	# highlight never jumps off to a far-away button. Up / down still go to the rows above / below.
+	left.focus_neighbor_left = left.get_path_to(left)
+	left.focus_neighbor_right = left.get_path_to(right)
+	right.focus_neighbor_left = right.get_path_to(left)
+	right.focus_neighbor_right = right.get_path_to(right)
 
 
 ## A label for inside a row: fixed width, vertically centred.
