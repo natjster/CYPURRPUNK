@@ -187,7 +187,13 @@ camera (its child) would whip around every time the cat turned.
 - **While the pause menu is open** the cat ignores the keyboard (`PauseMenu.is_open`).
 
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
-(groups: Movement / Camera / Zoomies Juice / Network Smoothing) â€” no code editing needed.
+(groups: Movement / Camera / Zoomies Juice / Running Animation / Network Smoothing) â€” no code editing needed.
+
+**Running Animation**: the cat's `LegL`/`LegR` (in `scenes/cat_model.tscn`) swing back and forth
+while it runs, and its `Tail` sways side to side all the time, faster the faster it runs.
+Knobs: Leg Swing (how far), Leg Swing Speed (steps per second at walking speed), Tail Swish
+(how far), Tail Idle Speed (sway speed standing still), Tail Speed Per Mps (extra sway speed per
+unit of running speed). Other players' cats animate the same way on your screen automatically.
 
 Keys are handled by the **Controls** framework (`scripts/controls.gd`) â€” players rebind them in
 **SETTINGS > KEYS**. See section 10, "Controls & key binding".

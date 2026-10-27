@@ -129,6 +129,28 @@ var _step_timer: float = 0.0
 var _step_last_position: Vector3
 var _next_meow_at: float = 0.0
 
+@export_group("Running Animation")
+## How far the legs swing forward/back at full running speed (radians, 0.6 = about 35 degrees).
+@export var leg_swing: float = 0.6
+## Leg swings per second at walking speed (running faster = quicker steps).
+@export var leg_swing_speed: float = 2.2
+## How far the tail sways side to side (radians). Same idea as an NPC's Tail Swish.
+@export var tail_swish: float = 0.35
+## Tail sways per second while standing still (NPC cats use 1.6).
+@export var tail_idle_speed: float = 1.6
+## Extra tail sway speed per metre-per-second of running: the faster you go, the faster it swishes.
+@export var tail_speed_per_mps: float = 0.9
+
+var _leg_l: Node3D
+var _leg_r: Node3D
+var _tail: Node3D
+var _leg_l_home: Vector3  # where each leg sits in cat_model.tscn (we swing them from the hip)
+var _leg_r_home: Vector3
+var _tail_home_z: float
+var _leg_phase: float = 0.0
+var _tail_phase: float = 0.0
+var _leg_amount: float = 0.0  # 0 = legs still, 1 = full swing (eases in and out)
+
 @export_group("Network Smoothing")
 ## How quickly other players' cats catch up to their real position.
 ## Higher = snappier but choppier, lower = smoother but slightly behind.
@@ -172,6 +194,16 @@ func _ready() -> void:
 	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
 	spring_arm.add_excluded_object(get_rid())
 	_apply_look()
+	# The leg and tail meshes from scenes/cat_model.tscn (animated in _animate_legs_and_tail).
+	_leg_l = cat_model.get_node_or_null("LegL")
+	_leg_r = cat_model.get_node_or_null("LegR")
+	_tail = cat_model.get_node_or_null("Tail")
+	if _leg_l != null:
+		_leg_l_home = _leg_l.position
+	if _leg_r != null:
+		_leg_r_home = _leg_r.position
+	if _tail != null:
+		_tail_home_z = _tail.rotation.z
 	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
 
 	if is_multiplayer_authority():
@@ -418,6 +450,7 @@ func _update_footsteps(delta: float, on_floor: bool) -> void:
 	_step_last_position = position
 	var speed := Vector2(moved.x, moved.z).length() / maxf(delta, 0.0001)
 	var grounded := on_floor if is_multiplayer_authority() else absf(moved.y / maxf(delta, 0.0001)) < 1.0
+	_animate_legs_and_tail(delta, speed if speed <= 30.0 else 0.0, grounded)
 	# Standing still, in the air, in the car, or a teleport (a huge one-frame "speed"): no steps.
 	if not grounded or not visible or knocked_out or speed < 1.0 or speed > 30.0:
 		_step_timer = 0.0  # so the first step comes straight away when walking starts
@@ -426,6 +459,36 @@ func _update_footsteps(delta: float, on_floor: bool) -> void:
 	if _step_timer <= 0.0:
 		_step_timer = footstep_interval
 		Sound.play_at("footstep", global_position, footstep_volume_db)
+
+
+## Legs swing back and forth while running (left and right opposite, like walking), and the
+## tail sways side to side all the time - slowly when standing, faster the faster the cat runs.
+## Worked out from speed alone, so every computer animates every cat with no network messages.
+## Tuning: the "Running Animation" group in the Player's Inspector.
+func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
+	# Legs: ease the swing in when running on the ground, out when stopped or in the air.
+	var running := grounded and speed > 0.5 and not knocked_out
+	_leg_amount = move_toward(_leg_amount, clampf(speed / walk_speed, 0.0, 1.0) if running else 0.0,
+		delta * 6.0)
+	_leg_phase += delta * TAU * leg_swing_speed * maxf(speed / walk_speed, 0.6)
+	var swing := sin(_leg_phase) * leg_swing * _leg_amount
+	_swing_leg(_leg_l, _leg_l_home, swing)
+	_swing_leg(_leg_r, _leg_r_home, -swing)
+	# Tail: always swaying, faster with speed.
+	_tail_phase += delta * (tail_idle_speed + speed * tail_speed_per_mps)
+	if _tail != null:
+		_tail.rotation.z = _tail_home_z + sin(_tail_phase) * tail_swish
+
+
+## Turn one leg by `angle`, hinging at its top (the hip) instead of its middle, so the paw
+## swings forward and back while the top stays tucked under the body.
+func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
+	if leg == null:
+		return
+	var half := 0.1  # half the leg's height (Mesh_leg is 0.2 tall in cat_model.tscn)
+	var hip := home + Vector3.UP * half
+	leg.position = hip + Vector3.DOWN.rotated(Vector3.RIGHT, angle) * half
+	leg.rotation.x = angle
 
 
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
