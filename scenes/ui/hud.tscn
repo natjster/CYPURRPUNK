@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scripts/ui/hud_health_bar.gd" id="8_hpbar"]
 [ext_resource type="Script" path="res://scripts/ui/hud_health_bars.gd" id="9_bars"]
 [ext_resource type="Script" path="res://scripts/ui/hud_damage_numbers.gd" id="10_damage"]
+[ext_resource type="Script" path="res://scripts/ui/hud_heat_bar.gd" id="11_heat"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -85,6 +86,19 @@ theme_override_font_sizes/font_size = 22
 text = "EXTRACT ^ 0m"
 horizontal_alignment = 1
 
+[node name="Heat" type="Control" parent="Frame/Top"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -384.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 52.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("11_heat")
+
 [node name="Scoreboard" type="Label" parent="Frame/Top"]
 modulate = Color(1, 1, 1, 0.85)
 layout_mode = 1
@@ -92,9 +106,9 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -364.0
-offset_top = 16.0
+offset_top = 64.0
 offset_right = -24.0
-offset_bottom = 220.0
+offset_bottom = 268.0
 grow_horizontal = 0
 theme_override_font_sizes/font_size = 18
 text = "YOU $0"

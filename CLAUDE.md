@@ -11,7 +11,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Root window = stretch `canvas_items`, keep_height, 960x720 base ("HUD units").
 - HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport,
   so it's sharp at real resolution and not CRT'd. Use the statics: `Hud.set_text/show_element/set_color/
-  show_message/popup/set_in_game/element` by label name (Health, DropOff, Scoreboard [sewers only] |
+  show_message/popup/set_in_game/element` by label name (Health, Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
@@ -102,7 +102,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Greed + pressure: loot tiers sardine $20 / fish $50 / `golden_koi` $400 (ItemData `carry_speed`,
   `noise`, `heat_on_pickup`, `pickup_announcement`; `ItemManager.carry_speed/loot_noise`). HEAT =
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
-  levels 1-5, NOT shown on the HUD: level-ups are sounds only): `RoombaPatrol._follow_the_heat` adds Roombas per level
+  levels 1-5, HUD `Heat` bar top-right flashes red/blue; level-ups also play a sound): `RoombaPatrol._follow_the_heat` adds Roombas per level
   (20 base, +5/level, +40 DEEP CLEAN) and spawns the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`,
   drops a koi) every `boss_every_kills` (3) regular kills, max `bosses_per_district` (4), plus at max heat.
   Roomba perf: far (>60 m from all cats) patrollers think every 4th frame (velocity scaled for move_and_slide),

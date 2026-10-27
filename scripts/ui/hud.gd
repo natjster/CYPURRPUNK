@@ -17,8 +17,9 @@ extends CanvasLayer
 ##       ├── Bars         <- health bars over enemies / hurt cats (scripts/ui/hud_health_bars.gd)
 ##       ├── Damage       <- damage numbers off things you shoot (scripts/ui/hud_damage_numbers.gd)
 ##       ├── Top          <- stays up while you talk / shop: Health (your health bar, top-left,
-##       │                   scripts/ui/hud_health_bar.gd), DropOff (top-middle), Scoreboard
-##       │                   (top-right, everyone's cash: only shown in the sewers, fish_heist.gd)
+##       │                   scripts/ui/hud_health_bar.gd), Heat (the red/blue heat bar, top-right,
+##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
+##       │                   (under Heat, everyone's cash: only shown in the sewers, fish_heist.gd)
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse

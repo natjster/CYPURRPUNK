@@ -15,8 +15,8 @@ extends Node
 ##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
 ##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
 ##     district's clock. Going home doesn't reset it - only a new district does.
-##   - There is NO heat bar on the HUD (kept simple on purpose): players only HEAR it go up
-##     (the heat_up / boss_siren sounds) and feel it in how many Roombas come.
+##   - The HUD shows it as the red/blue flashing HEAT bar, top-right (scripts/ui/hud_heat_bar.gd,
+##     fed from _process below). Players also HEAR it go up (the heat_up / boss_siren sounds).
 ##
 ## MULTIPLAYER: only the HOST changes the heat. It sends the number to everyone a few times a
 ## second (for the HUD); Roombas run on the host, so they read it directly.
@@ -140,10 +140,15 @@ func send_state_to(peer_id: int) -> void:
 	_set_heat.rpc_id(peer_id, heat)
 
 
-# --- Level-up sounds (every computer; no heat bar on the HUD) ---
+# --- HUD heat bar + level-up sounds (every computer) ---
 
 func _process(_delta: float) -> void:
 	var lvl := level()
+	# Every player on this computer gets the heat bar (top-right of their HUD).
+	for cat in Game.instance.playing_cats():
+		var bar := Hud.element("Heat", cat.slot) as HudHeatBar
+		if bar != null:
+			bar.set_heat(heat, MAX_HEAT, lvl)
 	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:
 		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)
