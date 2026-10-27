@@ -32,7 +32,9 @@ extends Node
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
 ##   --click_choice=N  (with --talk) a REAL mouse click on button N (tests clicks reach the HUD)
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
-##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone); tweak with
+##   --wear=A:B,...    (with or without --look) wear exact parts / colours, e.g.
+##                     --wear=hat:mohawk,neck:bandolier,fur:#808080
+##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone; "me" = our own cat); tweak with
 ##                     --portrait_dist / --portrait_height / --portrait_side (metres), --portrait_fov
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
@@ -396,12 +398,20 @@ func _ready() -> void:
 			args.erase("choose")
 			await _talk(player, args)
 
-	if args.has("look"):
+	if args.has("look") or args.has("wear"):
 		# --look=N: a random cat look from seed N, as if picked in the MY CAT screen
 		# (our cat wears it and shares it; test runs never save it).
-		var rng := RandomNumberGenerator.new()
-		rng.seed = int(args["look"])
-		Settings.update_current_cat({"look": CatLook.random_look(rng)})
+		# --wear=hat:mohawk,neck:bandolier,fur:#808080 then sets exact parts / colours on top.
+		var look := CatLook.default_look()
+		if args.has("look"):
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(args["look"])
+			look = CatLook.random_look(rng)
+		if args.has("wear"):
+			for pair in args["wear"].split(","):
+				var bits: PackedStringArray = pair.split(":")
+				look[bits[0]] = Color(bits[1]) if bits[0] in CatLook.COLOR_KEYS else bits[1]
+		Settings.update_current_cat({"look": CatLook.clean(look)})
 		for i in 10:
 			await get_tree().process_frame
 	if args.has("inventory"):
@@ -658,22 +668,29 @@ func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
 ## own cat, and points a new camera at the NPC from the front. --portrait_dist / --portrait_height
 ## / --portrait_side (metres) move the camera; --portrait_fov sets the zoom.
 func _portrait(player: CatPlayer, args: Dictionary) -> void:
-	var npc: Npc = Game.instance.hub.npc
-	for node in get_tree().get_nodes_in_group(Npc.GROUP):
-		if node.name == args["portrait"]:
-			npc = node
-	player.visible = false
 	for seat in 4:
 		var hud := Hud.of(seat)
 		if hud != null:
 			hud.visible = false
 	var camera := Camera3D.new()
 	camera.fov = float(args.get("portrait_fov", "40"))
-	npc.add_child(camera)
-	# NPCs face their +Z (the way a cat walks up to talk to them).
 	var face := Vector3(0, float(args.get("portrait_height", "0.95")), 0)
-	camera.position = face + Vector3(float(args.get("portrait_side", "0")), 0.05, float(args.get("portrait_dist", "1.6")))
-	camera.look_at(npc.to_global(face))
+	var offset := Vector3(float(args.get("portrait_side", "0")), 0.05, float(args.get("portrait_dist", "1.6")))
+	var target: Node3D
+	if args["portrait"] == "me":
+		# Our own cat: its model faces -Z (nose first), so the camera goes on that side.
+		target = player.cat_model
+		offset.z = -offset.z
+	else:
+		target = Game.instance.hub.npc
+		for node in get_tree().get_nodes_in_group(Npc.GROUP):
+			if node.name == args["portrait"]:
+				target = node
+		player.visible = false
+		# NPCs face their +Z (the way a cat walks up to talk to them).
+	target.add_child(camera)
+	camera.position = face + offset
+	camera.look_at(target.to_global(face))
 	camera.make_current()
 
 

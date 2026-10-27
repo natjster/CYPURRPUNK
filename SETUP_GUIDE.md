@@ -1228,9 +1228,9 @@ FUR       <  [colour]  >        main coat
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
 NOSE      <  [colour]  >
-HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / NEON HALO
-FACE      <  SHADES    >        NONE / CYBER VISOR / SHADES
-NECK      <  NONE      >        NONE / BANDANA / BELL COLLAR
+HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / MOHAWK / NEON HALO
+FACE      <  SHADES    >        NONE / CYBER VISOR / HEADBAND / SHADES
+NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
 [ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
 ```
 - **Your cats:** you can have as many as you like. **NEW** starts a fresh one (type its name in the
@@ -1292,7 +1292,10 @@ For a fourth kind of accessory (e.g. **back** for capes and jetpacks): in `cat_l
 ### Testing shortcut
 `--menu=cat` opens CHOOSE YOUR CAT (MY CAT with `--host`/`--solo`), `--menu=mode` the SOLO /
 MULTIPLAYER screen, before the screenshot. `--solo` starts a solo game. `--look=N` wears a random look made from the
-number N (both on the start menu and with `--host` / `--join`); test runs never save it. Every
+number N (both on the start menu and with `--host` / `--join`); test runs never save it.
+`--wear=hat:mohawk,face:headband,neck:bandolier` wears exact parts (colours too: `fur:#808080`), and
+`--portrait=me` (or an NPC's node name, e.g. `--portrait=DonCatleone`) takes a HUD-free close-up of
+the face; nudge the camera with `--portrait_dist`, `--portrait_height`, `--portrait_side`. Every
 cat's look is printed, e.g. `DevCapture look 1: fur=#383342 hat=neon_halo face=shades neck=-`.
 
 ---

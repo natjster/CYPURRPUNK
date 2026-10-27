@@ -1,0 +1,67 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_leather"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.3, 0.22, 0.12, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_brass"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.95, 0.72, 0.2, 1)
+
+[sub_resource type="TorusMesh" id="Mesh_strap"]
+inner_radius = 0.16
+outer_radius = 0.225
+rings = 12
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_bullet"]
+top_radius = 0.012
+bottom_radius = 0.026
+height = 0.11
+radial_segments = 5
+rings = 1
+
+[node name="Bandolier" type="Node3D"]
+
+[node name="Strap" type="Node3D" parent="."]
+position = Vector3(0, -0.18, 0)
+rotation = Vector3(0, 0, -0.75)
+
+[node name="Belt" type="MeshInstance3D" parent="Strap"]
+scale = Vector3(1.25, 1, 1)
+mesh = SubResource("Mesh_strap")
+surface_material_override/0 = SubResource("Mat_leather")
+
+[node name="Bullet1" type="MeshInstance3D" parent="Strap"]
+position = Vector3(-0.223, 0, -0.105)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet2" type="MeshInstance3D" parent="Strap"]
+position = Vector3(-0.148, 0, -0.172)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet3" type="MeshInstance3D" parent="Strap"]
+position = Vector3(-0.045, 0, -0.207)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet4" type="MeshInstance3D" parent="Strap"]
+position = Vector3(0.067, 0, -0.203)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet5" type="MeshInstance3D" parent="Strap"]
+position = Vector3(0.165, 0, -0.161)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
+
+[node name="Bullet6" type="MeshInstance3D" parent="Strap"]
+position = Vector3(0.233, 0, -0.089)
+mesh = SubResource("Mesh_bullet")
+surface_material_override/0 = SubResource("Mat_brass")
