@@ -32,6 +32,8 @@ extends Node
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
 ##   --click_choice=N  (with --talk) a REAL mouse click on button N (tests clicks reach the HUD)
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
+##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone); tweak with
+##                     --portrait_dist / --portrait_height / --portrait_side (metres), --portrait_fov
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
@@ -235,6 +237,8 @@ func _ready() -> void:
 			print("DevCapture mouse: 100 screen px = %.2f game px (expected %.2f)" % [moved, 100.0 * 240.0 / get_window().size.y])
 		if args.has("talk"):
 			await _talk(player, args)
+		if args.has("portrait"):
+			_portrait(player, args)
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -650,6 +654,29 @@ func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
 ## Turns ["--capture=a.png", "--drive"] into {"capture": "a.png", "drive": "true"}.
 ## --talk[=NODE_NAME]: stand in front of that NPC (default Don) and press E,
 ## then click the --choose buttons in order (0 = top button), as if the player did.
+## --portrait[=NAME]: a close-up of an NPC's face (for icons / posters). Hides the HUD and our
+## own cat, and points a new camera at the NPC from the front. --portrait_dist / --portrait_height
+## / --portrait_side (metres) move the camera; --portrait_fov sets the zoom.
+func _portrait(player: CatPlayer, args: Dictionary) -> void:
+	var npc: Npc = Game.instance.hub.npc
+	for node in get_tree().get_nodes_in_group(Npc.GROUP):
+		if node.name == args["portrait"]:
+			npc = node
+	player.visible = false
+	for seat in 4:
+		var hud := Hud.of(seat)
+		if hud != null:
+			hud.visible = false
+	var camera := Camera3D.new()
+	camera.fov = float(args.get("portrait_fov", "40"))
+	npc.add_child(camera)
+	# NPCs face their +Z (the way a cat walks up to talk to them).
+	var face := Vector3(0, float(args.get("portrait_height", "0.95")), 0)
+	camera.position = face + Vector3(float(args.get("portrait_side", "0")), 0.05, float(args.get("portrait_dist", "1.6")))
+	camera.look_at(npc.to_global(face))
+	camera.make_current()
+
+
 func _talk(player: CatPlayer, args: Dictionary) -> void:
 	var npc: Npc = Game.instance.hub.npc
 	for node in get_tree().get_nodes_in_group(Npc.GROUP):

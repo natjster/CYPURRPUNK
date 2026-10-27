@@ -206,8 +206,9 @@ Easy wins:
 ---
 
 ## 9. Icon, banner, emojis
-- **Icon**: square, at least 512×512. Easiest: crop the cat from `shots/city.png`. Better: a front-on
-  close-up of your cat in a hat — ask Claude for a `--capture` with the camera facing the cat.
+- **Icon**: `discord/server_icon_don_catleone.png` (960×960, Don Catleone himself).
+  **Server Settings → Overview → Upload Image**; Discord crops it to a circle — his face stays centred.
+  Made with `--portrait=DonCatleone --portrait_dist=2.6 --portrait_side=0.5` (any NPC name works).
 - **Banner** needs boost level 2 — skip for now. **Invite background** needs level 1.
 - **Emojis** (Server Settings → Emoji → Upload; 128×128 PNG): crop from game screenshots —
   `:roomba:`, `:goldenkoi:`, `:sardine:`, `:catleone:`, `:heat5:`, `:beam:`.
