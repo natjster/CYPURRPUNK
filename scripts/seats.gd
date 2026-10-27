@@ -4,19 +4,24 @@ extends Node
 ##
 ## A computer has up to 4 SEATS (PlayerId.MAX_LOCAL). Seat number = the player's slot
 ## (scripts/player_id.gd): seat 0 is the first player, seat 1 the second...
-##   - Seat 0 always has the KEYBOARD + MOUSE, plus one controller.
-##   - Every other seat has exactly one controller.
-## While seat 0 plays alone, ANY controller drives it (like a normal single-player game); the
-## first controller they use becomes theirs ("claimed").
 ##
-## JOINING: press START on a controller nobody has claimed
+## PLAYER 1 OWNS THIS COMPUTER. They always have the KEYBOARD + MOUSE, and the first controller
+## they touch in the start menu becomes theirs for the whole session (pads[0]; until they go back
+## to the title screen). Nobody else's controller can ever press player 1's menu buttons.
+## (No guessing from "whoever touched something last": that caused a friend's A press to start
+## the game, and player 2's stick to change player 1's prompts.)
+##   - SOLO game: there's only one player, so EVERY controller drives player 1. No joining.
+##   - LOCAL / ONLINE CO-OP (coop = true): every other seat has exactly one controller.
+##
+## JOINING (co-op only): press START on a controller that has no seat
 ##   - on the start menu's LANDING PAGE (MULTIPLAYER > LOCAL / ONLINE CO-OP; also still on the
 ##     HOST / JOIN screen after it) = the COUCH LOBBY: the new player picks one of your saved cats
 ##     with left / right (or NEW CAT), B = leave again. When the game starts (local, host or join)
-##     they all come along (start_lobby_players).
-##   - during a game = drop in straight away, playing your next saved cat nobody is using (a new
-##     one called "PLAYER 2" is made if there isn't one). They leave again with their own pause
-##     menu's DROP OUT (that drops only them, not the whole computer).
+##     they all come along (start_lobby_players). On the landing page a controller WITHOUT a seat
+##     does nothing but START (so it can't press player 1's buttons).
+##   - during a co-op game = drop in straight away, playing your next saved cat nobody is using
+##     (a new one called "PLAYER 2" is made if there isn't one). They leave again with their own
+##     pause menu's DROP OUT (that drops only them, not the whole computer).
 ## Two players never play the same cat (each cat has its own cash and stash).
 ##
 ## HOW SCRIPTS READ A SEAT'S BUTTONS: every control in Controls.ACTIONS also exists once per seat,
@@ -29,18 +34,18 @@ extends Node
 ## Fired when a player joins in or leaves, or a controller is claimed.
 signal changed
 
-## pads[0] value for "player 1 is on the keyboard; the other controllers belong to others".
-const KEYBOARD_ONLY: int = -2
 ## Each player's colour: the frame + "P2" tag around their split screen. Change them here.
 const SEAT_COLORS: Array[Color] = [Color(1, 0.35, 0.8), Color(0.3, 0.9, 1), Color(1, 0.85, 0.3), Color(0.45, 1, 0.45)]
 
-## The controller (Godot device number) of each seat, -1 = none yet.
+## The controller (Godot device number) of each seat, -1 = none (player 1: keyboard only).
 var pads: Array[int] = []
 ## Which seats have a player right now. Seat 0 is always taken during a game.
 var taken: Array[bool] = []
-## The controller last used in the start menu (that's player 1 holding it): START on it in the
-## game means "pause", not "a new player joins".
-var _menu_pad: int = -1
+## Is this a co-op game / are we setting one up (LOCAL / ONLINE CO-OP)? false = SOLO: every
+## controller is player 1's and nobody can join. Set by the start menu (main_menu.gd).
+var coop: bool = false
+## True once a game has started (game_started), until we're back at the title (reset).
+var _playing: bool = false
 ## A controller whose START is joining a new player right now (its press opens no menu).
 var _joining: int = -1
 ## The couch lobby (start menu): seat -> the saved cat id they picked ("" = a NEW CAT, made
@@ -67,6 +72,7 @@ func reset() -> void:
 	taken.clear()
 	lobby_cats.clear()
 	_unplugged.clear()
+	_playing = false
 	for seat in PlayerId.MAX_LOCAL:
 		pads.append(-1)
 		taken.append(seat == 0)
@@ -102,7 +108,7 @@ func event_is(seat: int, event: InputEvent, action_name: String) -> bool:
 
 
 ## Which seat an input event belongs to: 0 for keyboard / mouse, the seat whose controller it is,
-## or -1 for a controller nobody has claimed (while more than one player is in).
+## or -1 for a controller with no seat (game_screen.gd ignores those: they never reach a menu).
 func seat_of_event(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		return 0
@@ -111,12 +117,27 @@ func seat_of_event(event: InputEvent) -> int:
 	var seat := pads.find(event.device)
 	if seat != -1:
 		return seat
-	return 0 if _seat0_takes_any_pad() else -1
+	return 0 if _any_pad_is_p1() else -1
 
 
-## Is this seat on a controller right now? (Seat 0 only when its player last touched one.)
+## Is this seat on a controller right now? (Player 1: when they last touched their own controller
+## rather than the keyboard / mouse. Controls.using_pad only listens to player 1.)
 func uses_pad(seat: int) -> bool:
 	return seat > 0 or Controls.using_pad
+
+
+## game.gd: a game has started. SOLO: every controller is player 1's from now on.
+func game_started() -> void:
+	_playing = true
+	_rebuild_actions()
+
+
+## Test runs (DevCapture) that skip the start menu: this controller is player 1's.
+func claim_for_p1(device: int) -> void:
+	if pads[0] == -1 and not pads.has(device):
+		pads[0] = device
+		_rebuild_actions()
+		changed.emit()
 
 
 ## How many players this computer has right now.
@@ -187,7 +208,7 @@ func rumble(player_id: int, weak: float, strong: float, seconds: float) -> void:
 	if not PlayerId.is_local(player_id) or not rumble_on(seat):
 		return
 	if seat == 0:
-		if Controls.using_pad:
+		if Controls.using_pad:  # (player 1 on a controller: their own, or in SOLO the one they last used)
 			Input.start_joy_vibration(pads[0] if pads[0] >= 0 else Controls.pad_device, weak, strong, seconds)
 	elif pads[seat] >= 0:
 		Input.start_joy_vibration(pads[seat], weak, strong, seconds)
@@ -203,44 +224,51 @@ func leave(seat: int) -> void:
 	Game.instance.remove_local_player(seat)
 	taken[seat] = false
 	pads[seat] = -1
-	if count() == 1 and pads[0] == KEYBOARD_ONLY:
-		pads[0] = -1  # alone again: any controller drives player 1 once more
 	_rebuild_actions()
 	Hud.show_message("PLAYER %d (%s) LEFT" % [seat + 1, who], 3.0)
 	changed.emit()
 
 
-## Every controller press passes through here first (before menus and cats).
-## START on a controller nobody has = join in. Anything else on it, while player 1 has no
-## controller yet and plays alone = it becomes player 1's.
+## Every key / click / controller press passes through here first (before menus and cats).
+## A controller with no seat: in the start menu (before the landing page) its first press makes it
+## player 1's; on the landing page / in a co-op game only its START does something (join);
+## in a SOLO game it's player 1's anyway.
 func _on_window_input(event: InputEvent) -> void:
-	var pressed_button: bool = event is InputEventJoypadButton and event.pressed
-	var pushed_stick: bool = event is InputEventJoypadMotion and absf(event.axis_value) >= 0.5
-	if not (pressed_button or pushed_stick) or pads.has(event.device):
-		return
-	if not _in_game():
-		if _in_lobby() and pressed_button and event.button_index == JOY_BUTTON_START and event.device != _menu_pad:
-			_join_lobby(event.device)  # the couch lobby: a new player sits down
-			return
-		_menu_pad = event.device
-		return  # in the start menu every other controller just works the menus
-	var players_own: bool = _seat0_takes_any_pad() and event.device == _menu_pad
-	if pressed_button and event.button_index == JOY_BUTTON_START and not players_own:
-		# Deferred: this START must not also open the pause menu (the pause menu ignores
-		# controllers nobody has claimed, and this one isn't claimed until after this event).
-		_joining = event.device
-		_join.call_deferred(event.device)
-	elif _seat0_takes_any_pad():
-		# Player 1 picked up a controller: it's theirs now. (No rebuild needed: while they play
-		# alone their controls already listen to every controller.)
-		pads[0] = event.device
-		changed.emit()
+	var is_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
+	if is_pad and not pads.has(event.device):
+		var pressed_button: bool = event is InputEventJoypadButton and event.pressed
+		var pushed_stick: bool = event is InputEventJoypadMotion and absf(event.axis_value) >= 0.5
+		if pressed_button or pushed_stick:
+			_seatless_press(event.device, pressed_button and event.button_index == JOY_BUTTON_START)
+	# Player 1's prompts ("[E]" or "[X]") and rumble follow only player 1's own devices.
+	if seat_of_event(event) == 0:
+		Controls.notice_device(event)
+
+
+## A controller with no seat was pressed (START or not).
+func _seatless_press(device: int, is_start: bool) -> void:
+	if _in_lobby():
+		if is_start:
+			_join_lobby(device)  # the couch lobby: a new player sits down
+		return  # anything else from a seatless controller does nothing here
+	if not _playing:
+		if pads[0] == -1:
+			pads[0] = device  # the first controller player 1 uses in the start menu is theirs
+			_rebuild_actions()
+			print("[Seats] Controller %d is player 1's" % device)
+			changed.emit()
+		return  # (any other controller in the start menu is ignored)
+	if coop and is_start:
+		# Deferred: this START must not also open a pause menu (pause menus ignore controllers
+		# with no seat, and this one doesn't have one until after this event).
+		_joining = device
+		_join.call_deferred(device)
 
 
 ## A new player drops in on controller "device".
 func _join(device: int) -> void:
 	_joining = -1
-	if pads.has(device) or not _in_game():
+	if pads.has(device) or not _in_game() or not coop:
 		return
 	# Someone's controller is unplugged? This new one takes over their seat (and cat).
 	for lost in _unplugged.keys():
@@ -260,8 +288,6 @@ func _join(device: int) -> void:
 	if seat == -1:
 		Hud.show_message("%d PLAYERS IS THE MOST ON ONE COMPUTER" % PlayerId.MAX_LOCAL, 3.0)
 		return
-	if pads[0] == -1:
-		pads[0] = KEYBOARD_ONLY  # player 1 never picked up a controller: other ones aren't theirs now
 	var cat := _cat_for_new_player(seat)
 	pads[seat] = device
 	taken[seat] = true
@@ -313,8 +339,6 @@ func _join_lobby(device: int) -> void:
 	var seat := taken.find(false)
 	if seat == -1:
 		return  # 4 already
-	if pads[0] == -1:
-		pads[0] = _menu_pad if _menu_pad >= 0 else KEYBOARD_ONLY  # player 1 keeps the controller they used
 	pads[seat] = device
 	taken[seat] = true
 	lobby_cats[seat] = ""
@@ -342,8 +366,6 @@ func leave_lobby(seat: int) -> void:
 	lobby_cats.erase(seat)
 	taken[seat] = false
 	pads[seat] = -1
-	if count() == 1 and pads[0] == KEYBOARD_ONLY:
-		pads[0] = -1
 	_rebuild_actions()
 	changed.emit()
 
@@ -408,8 +430,6 @@ func start_lobby_players() -> void:
 func refused(seat: int) -> void:
 	taken[seat] = false
 	pads[seat] = -1
-	if count() == 1 and pads[0] == KEYBOARD_ONLY:
-		pads[0] = -1
 	_rebuild_actions()
 	Hud.show_message("THE GAME IS FULL (%d PLAYERS): PLAYER %d CAN'T JOIN" % [Net.MAX_PLAYERS, seat + 1], 4.0)
 	changed.emit()
@@ -439,8 +459,8 @@ func _on_joy_connection_changed(device: int, connected: bool) -> void:
 	if not _in_game():
 		return
 	var seat := pads.find(device)
-	if seat == -1 and _seat0_takes_any_pad() and Controls.using_pad and device == Controls.pad_device:
-		seat = 0  # player 1 alone, on the controller they were using
+	if seat == -1 and _any_pad_is_p1() and Controls.using_pad and device == Controls.pad_device:
+		seat = 0  # SOLO: player 1 on the controller they were using
 	if seat == -1:
 		return
 	if not connected:
@@ -472,9 +492,9 @@ func is_unplugged(seat: int) -> bool:
 
 # --- Inner workings ---
 
-## Player 1 alone and without a controller of their own: any controller drives them.
-func _seat0_takes_any_pad() -> bool:
-	return pads[0] == -1 and count() <= 1
+## SOLO game: every controller drives player 1 (nobody else can join).
+func _any_pad_is_p1() -> bool:
+	return _playing and not coop
 
 
 func _in_game() -> bool:
@@ -487,9 +507,9 @@ func _in_game() -> bool:
 func _rebuild_actions() -> void:
 	if pads.is_empty():
 		return  # not set up yet
-	var devices: Array[int] = []
+	var devices: Array[int] = []  # each seat's controller: -1 = none, -9 = EVERY controller (SOLO player 1)
 	for seat in PlayerId.MAX_LOCAL:
-		devices.append(-1 if seat == 0 and (count() <= 1 or pads[0] == -1) else pads[seat])  # -1 = every controller
+		devices.append(-9 if seat == 0 and _any_pad_is_p1() else pads[seat])
 	var recipe := str(Controls.bindings) + str(devices)
 	if recipe == _built_from:
 		return  # nothing changed (e.g. Controls.changed because they switched keyboard <-> controller)
@@ -507,7 +527,7 @@ func _rebuild_actions() -> void:
 					var key := Controls.event_for(names[slot])
 					if key != null:
 						InputMap.action_add_event(seat_action, key)
-			if device >= 0 or device == -1 and seat == 0:
-				var pad := Controls.event_for(names[Controls.PAD_SLOT], device)
+			if device >= 0 or device == -9:
+				var pad := Controls.event_for(names[Controls.PAD_SLOT], -1 if device == -9 else device)
 				if pad != null:
 					InputMap.action_add_event(seat_action, pad)

@@ -109,10 +109,13 @@ func _handle_test_shortcuts() -> void:
 		if arg.begins_with("--seed="):  # e.g. --seed=42
 			main_menu.seed_input.text = arg.trim_prefix("--seed=")
 	if "--solo" in args:
+		Seats.coop = false
 		solo_game(main_menu.chosen_seed())
 	elif "--host" in args:
+		Seats.coop = true  # (online co-op)
 		host_game(main_menu.chosen_seed())
 	elif "--join" in args:
+		Seats.coop = true
 		join_game(main_menu.address_input.text.strip_edges())
 
 
@@ -170,6 +173,7 @@ func _start_playing() -> void:
 	# Bring back our first player's saved cash + stash (player_profile.gd).
 	$Profile.restore(PlayerId.first_local(), str(Settings.current_cat().get("id", "")), local_player_name)
 	# Couch players from the start menu's lobby come along (scripts/seats.gd).
+	Seats.game_started()
 	Seats.start_lobby_players()
 
 

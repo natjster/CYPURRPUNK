@@ -133,6 +133,9 @@ func _ready() -> void:
 				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
 		if player != null and args.has("join_pad"):
 			# Couch co-op: START on another controller = a new player drops in (scripts/seats.gd).
+			# (Only in co-op games: a test started with --solo is turned into a local co-op one.)
+			Seats.coop = true
+			Seats.game_started()
 			for i in 20:
 				await get_tree().process_frame
 			for device in args["join_pad"].split(","):
@@ -329,6 +332,8 @@ func _ready() -> void:
 			for cat in scene.local_cats():
 				all_before[cat] = cat.global_position
 			var pads: PackedStringArray = args["pad"].replace("_", " ").split(",")
+			if player.slot == 0:
+				Seats.claim_for_p1(int(args.get("pad_device", "0")))  # (as if used in the start menu)
 			for pad in pads:
 				Input.parse_input_event(_pad_event(pad, true))
 			for i in int(args.get("hold_frames", "60")):

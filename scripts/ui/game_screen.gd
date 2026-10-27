@@ -413,6 +413,11 @@ func _follow_cameras() -> void:
 ## talk box), and only on to the game if their HUD didn't want them.
 func _input(event: InputEvent) -> void:
 	var seat := Seats.seat_of_event(event)
+	if seat == -1:
+		# A controller with no seat (co-op): it can't press anyone's buttons. (Its START to join
+		# was already handled by scripts/seats.gd.)
+		get_viewport().set_input_as_handled()
+		return
 	if seat > 0 and _seat_huds[seat].view.visible:
 		var hud_viewport: SubViewport = _seat_huds[seat].viewport
 		hud_viewport.push_input(event)

@@ -148,9 +148,9 @@ func _ready() -> void:
 		_load()
 	_add_fixed_actions()
 	apply()
-	# Every key press / mouse move / button press in the game window passes through here
-	# first, so we always know whether the player is on the keyboard or a controller.
-	get_tree().root.window_input.connect(_notice_device)
+	# (Seats passes player 1's key presses / mouse moves / controller presses to notice_device, so
+	# we always know whether PLAYER 1 is on the keyboard or a controller. Other players' controllers
+	# don't count: they never change player 1's prompts.)
 
 
 # --- Reading the keys (for prompts and the KEYS menu) ---
@@ -298,8 +298,9 @@ func apply() -> void:
 
 # --- Inner workings ---
 
-## Keyboard / mouse = using_pad off, a controller press or a real stick push = on.
-func _notice_device(event: InputEvent) -> void:
+## Player 1 touched something (scripts/seats.gd sends only player 1's events here):
+## keyboard / mouse = using_pad off, a controller press or a real stick push = on.
+func notice_device(event: InputEvent) -> void:
 	var pad := false
 	if event is InputEventJoypadButton:
 		pad = true

@@ -135,12 +135,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   out on `ui_cancel` (B). `Controls.using_pad` (last device touched; key_text follows it),
   `Controls.rumble(weak, strong, s)`. Every menu must work by focus (grab_focus on open).
   Test: `--pad=Right_Stick_Right`, `--pad_press=Start,D-Pad_Down,A`.
-- `scripts/seats.gd` autoload `Seats` (after Settings): couch seats 0-3 = player slots. Seat 0 = keyboard+mouse
-  + one pad (any pad while alone); others one pad each (`pads[]`, `taken[]`). Per-seat copies of every action
+- `scripts/seats.gd` autoload `Seats` (after Settings): couch seats 0-3 = player slots. PLAYER 1 OWNS THE PC: seat 0 =
+  keyboard+mouse + `pads[0]` = the first pad touched in the start menu (claimed in `_seatless_press`; -1 = keyboard
+  only); others one pad each (`pads[]`, `taken[]`). `Seats.coop` (set by main_menu: SOLO false, landing true;
+  --host/--join true): SOLO game = every pad is player 1's (`_any_pad_is_p1`), no joining. Seatless pads:
+  `seat_of_event` -1 -> GameScreen._input swallows them (never reach menus); only START does something (lobby
+  join / co-op drop-in). `Controls.notice_device` is fed ONLY player 1's events by Seats (prompts/rumble/mouse rule
+  follow player 1). `Seats.game_started()` from `_start_playing`; tests skipping menus: `Seats.claim_for_p1`. Per-seat copies of every action
   (`jump@1`) are built from Controls.bindings; gameplay input MUST go through `Seats.is_pressed/is_just_pressed/
   get_axis/get_vector(cat.slot, ...)` / `Seats.event_is(slot, event, ...)` (plain actions = any device, menus only).
   Rebuilding seat actions releases held buttons: only rebuild when bindings/pads change (`_built_from`).
-  START on an unclaimed pad in a game = join (next unused saved cat, else `Settings.new_cat(false, "PLAYER N")`);
+  START on an unclaimed pad in a CO-OP game = join (next unused saved cat, else `Settings.new_cat(false, "PLAYER N")`);
   `PauseMenu.opened_by` seat: LEAVE = `Seats.leave(seat)` for seats > 0. `Seats.seat_of_event(e)` (-1 =
   unclaimed pad: menus ignore it). Rumble: `Seats.rumble(player_id, ...)`. `InventoryScreen.owner_cat`.
   Test: `--join_pad=1`, `--pad_device=1`, `--pad_press=1:Start`.

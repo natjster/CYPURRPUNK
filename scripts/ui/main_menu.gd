@@ -152,6 +152,7 @@ func show_coop_screen() -> void:
 ## The landing page: friends press START on their controllers to join, everyone picks a cat.
 func show_landing(online: bool) -> void:
 	_online = online
+	Seats.coop = true  # co-op: other controllers can join (scripts/seats.gd)
 	_show_only(landing_screen)
 	_landing_title.text = "ONLINE CO-OP: WHO'S ON THIS COMPUTER?" if online else "LOCAL CO-OP: WHO'S PLAYING?"
 	_start_button.text = "NEXT" if online else "START GAME"
@@ -330,6 +331,7 @@ func _on_landing_start() -> void:
 ## SOLO: just you. Pick (or make) your cat first.
 func _on_solo_pressed() -> void:
 	Seats.clear_lobby()
+	Seats.coop = false  # SOLO: every controller is player 1's, nobody joins
 	_cat_from = "solo"
 	hide_screens()
 	cat_pressed.emit()

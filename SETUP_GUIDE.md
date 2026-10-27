@@ -1058,8 +1058,9 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
   JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone
   up. Two players never play the same cat: each cat has its own cash and stash.
-- **Joining mid-game:** press **START** on a controller nobody is using: a new player drops in
-  (in the sewers) with your next saved cat nobody is using (or a new "PLAYER 2").
+- **Joining mid-game (LOCAL / ONLINE CO-OP games only):** press **START** on a controller
+  nobody is using: a new player drops in (in the sewers) with your next saved cat nobody is
+  using (or a new "PLAYER 2"). In a SOLO game nobody can join: every controller is player 1's.
 - **Full games:** a game holds 8 players. A couch player who doesn't fit is told "THE GAME IS
   FULL"; a whole computer that doesn't fit goes back to the start menu with "That game is full."
 - **Pausing (each player their own):** with 2+ players, **START** (Esc for player 1) opens a small
@@ -1080,10 +1081,14 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   and only theirs; plug it back in and it carries on by itself. Lost it for good? Press START on
   any free controller: it takes over that player's seat (same cat, same stuff). Playing alone,
   the normal pause menu opens.
-- **Who uses what:** player 1 always has the keyboard + mouse, plus one controller. Everyone
-  else has one controller. While player 1 plays alone, ANY controller drives them; the first one
-  they use becomes theirs. (A controller used in the start menu counts as player 1's, so its
-  START pauses instead of adding a player.)
+- **Player 1 owns the computer:** player 1 always has the keyboard + mouse, and the first
+  controller they touch in the start menu becomes theirs for the session (until they go back to
+  the title screen). Every other player has exactly one controller. A controller without a seat
+  can't press player 1's buttons: on the landing page and in a co-op game it only does something
+  when its START is pressed (= join). Player 1's button prompts ("[E]" or "[X]") and rumble follow
+  only player 1's own keyboard / controller, never someone else's. In a SOLO game there's only
+  player 1, so every controller drives them. (Want to switch player 1 to a different controller?
+  Go back to the title screen and use it there.)
 - **Each player's buttons are their own:** their stick walks their cat, their A jumps it, their
   RT fires their gun, their Y opens the inventory with THEIR stuff in it, their rumble.
   The keys/buttons are the same for everyone (SETTINGS > KEYS, PAD column).
