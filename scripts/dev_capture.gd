@@ -517,7 +517,7 @@ func _ready() -> void:
 				for i in 4:
 					await get_tree().process_frame
 			await get_tree().process_frame  # (a join happens a moment later)
-			var game_focus := GameScreen.instance.game_viewport.gui_get_focus_owner()
+			var game_focus := GameScreen.instance.menu_viewport.gui_get_focus_owner()  # the menus' viewport
 			var hud_focus := get_viewport().gui_get_focus_owner()
 			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s own_pause=%s lobby=%s" % [
 				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.for_seat(0).visible,

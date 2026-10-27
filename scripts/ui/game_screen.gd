@@ -1,12 +1,15 @@
 class_name GameScreen
 extends Control
-## CYPURRPUNK — the very top scene (scenes/game_screen.tscn, the one Godot starts).
+## CYPURRPUNK â€” the very top scene (scenes/game_screen.tscn, the one Godot starts).
 ## It puts two pictures on your monitor:
 ##
-##   1. The GAME: the whole of scenes/main.tscn (the 3D city, the pixel menus, the CRT + dither
-##      look) is drawn inside GameView/GameViewport at PS1 size, 240 pixels tall, then blown up
-##      to fill the window with sharp, blocky pixels.
-##   2. The HUD (scenes/ui/hud.tscn, scripts/ui/hud.gd): cash, HP, prompts, crosshair... drawn
+##   1. The GAME: the whole of scenes/main.tscn (the 3D city and the CRT + dither look) is
+##      drawn inside GameView/GameViewport at PS1 size, 240 pixels tall, then blown up to fill
+##      the window with sharp, blocky pixels.
+##   2. The MENUS (start menu, pause, settings, MY CAT: the PS1Overlay node in main.tscn) are
+##      lifted out of the game picture when the game starts and drawn ON TOP in MenuView at your
+##      monitor's REAL resolution: the same 320x240 layout, but crisp (scripts/ui/ps1_overlay.gd).
+##   3. The HUD (scenes/ui/hud.tscn, scripts/ui/hud.gd): cash, HP, prompts, crosshair... drawn
 ##      ON TOP at your monitor's REAL resolution, so its text stays crisp instead of being
 ##      squashed into 240 pixel rows.
 ##
@@ -29,20 +32,24 @@ extends Control
 ##
 ## Node tree:
 ##   GameScreen (this script)
-##   ├── HUD                 <- the sharp overlay (a CanvasLayer, always drawn on top)
-##   ├── Bars                <- black behind everything (the border you see in 4:3 / SHARP mode)
-##   ├── GameView            <- shows player 1's game picture, blown up
-##   │   └── GameViewport    <- the 320x240-ish "PS1 screen" the game is drawn into
-##   │       └── Main        <- scenes/main.tscn (the actual game)
-##   ├── GameView2..4        <- made by this script: players 2-4 (hidden until they join)
-##   │   ├── GameViewport > Camera3D       <- their 3D view
-##   │   └── Post > Dither                 <- the CRT look on top (what you see)
-##   ├── Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
-##   │   └── Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
-##   └── JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
+##   â”œâ”€â”€ HUD                 <- the sharp overlay (a CanvasLayer, always drawn on top)
+##   â”œâ”€â”€ Bars                <- black behind everything (the border you see in 4:3 / SHARP mode)
+##   â”œâ”€â”€ GameView            <- shows player 1's game picture, blown up
+##   â”‚   â””â”€â”€ GameViewport    <- the 320x240-ish "PS1 screen" the game is drawn into
+##   â”‚       â””â”€â”€ Main        <- scenes/main.tscn (the actual game)
+##   â”‚           â””â”€â”€ CRT     <- made by this script: the CRT + dither effect (ColorDepthDither),
+##   â”‚                          moved here out of PS1Overlay
+##   â”œâ”€â”€ GameView2..4        <- made by this script: players 2-4 (hidden until they join)
+##   â”‚   â”œâ”€â”€ GameViewport > Camera3D       <- their 3D view
+##   â”‚   â””â”€â”€ Post > Dither                 <- the CRT look on top (what you see)
+##   â”œâ”€â”€ Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
+##   â”‚   â””â”€â”€ Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
+##   â”œâ”€â”€ JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
+##   â””â”€â”€ MenuView            <- made by this script: the sharp menus, over the whole game picture
+##       â””â”€â”€ MenuViewport > PS1Overlay   <- moved here from main.tscn (Lobby, PauseMenu, ...)
 ##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
-## This script also passes your mouse and keyboard on to the game inside GameViewport.
+## This script also passes your mouse and keyboard on to the menus, then the game inside GameViewport.
 
 ## The one game screen (GameScreen.instance).
 static var instance: GameScreen
@@ -78,6 +85,11 @@ var _menu_stick: Dictionary = {}
 var _seat_huds: Array = [null]
 ## What the screen was last laid out for, so it's only re-done when something changes.
 var _layout_key: String = ""
+## The sharp menus (_build_menu_view): the picture on screen, the viewport they're drawn in,
+## and the PS1Overlay node (from main.tscn) that holds them.
+var menu_view: TextureRect
+var menu_viewport: SubViewport
+var _menus  # PS1Overlay (scripts/ui/ps1_overlay.gd)
 
 
 func _enter_tree() -> void:
@@ -88,6 +100,7 @@ func _ready() -> void:
 	process_priority = 100  # run after the cats have moved their cameras this frame
 	game_view.texture = game_viewport.get_texture()
 	_build_extra_panes()
+	_build_menu_view()
 	get_viewport().size_changed.connect(_fit)
 	Settings.changed.connect(_fit)
 	_fit()
@@ -184,6 +197,35 @@ func _build_extra_panes() -> void:
 	add_child(_join_hint)
 
 
+## The sharp menus: take PS1Overlay (start menu, pause, settings, MY CAT) out of the pixel game
+## picture and draw it in its own viewport on top, at real resolution. It keeps its 320x240-ish
+## layout (size_2d_override), so nothing in the menus has to change: they're just crisp.
+## The CRT + dither effect is left behind in the game picture (a new "CRT" CanvasLayer) so the
+## 3D city still gets it, but the menus don't.
+func _build_menu_view() -> void:
+	var main := Game.instance
+	_menus = main.get_node("PS1Overlay")
+	var crt := CanvasLayer.new()
+	crt.name = "CRT"
+	crt.layer = _menus.layer
+	main.add_child(crt)
+	main.get_node("PS1Overlay/ColorDepthDither").reparent(crt, false)
+
+	menu_view = TextureRect.new()
+	menu_view.name = "MenuView"
+	menu_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	menu_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(menu_view)
+	menu_viewport = SubViewport.new()
+	menu_viewport.name = "MenuViewport"
+	menu_viewport.transparent_bg = true  # see the game through it
+	menu_viewport.size_2d_override_stretch = true  # laid out in game pixels, drawn at real resolution
+	menu_viewport.gui_embed_subwindows = true
+	menu_view.add_child(menu_viewport)
+	menu_view.texture = menu_viewport.get_texture()
+	_menus.reparent(menu_viewport, false)
+
+
 ## Every frame: re-cut the screen if players joined / left or a menu opened, and point the
 ## extra screens' cameras where their players' cats are looking.
 func _process(_delta: float) -> void:
@@ -192,6 +234,11 @@ func _process(_delta: float) -> void:
 	if key != _layout_key:
 		_fit()
 	_follow_cameras()
+	# The menu layer is only drawn while a menu is showing (it still hears keys when hidden,
+	# so Esc can open the pause menu).
+	var menus_shown: bool = _menus.any_menu_visible()
+	menu_view.visible = menus_shown
+	menu_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if menus_shown else SubViewport.UPDATE_DISABLED
 
 
 ## The seats (players on this computer, scripts/seats.gd) that get a screen right now:
@@ -288,6 +335,14 @@ func _fit() -> void:
 		_join_hint.text = "PRESS %s\nTO JOIN" % Controls.display_name("Pad Start")
 		_join_hint.position = (corner + Vector2(rects[3].position) * zoom) * units_per_pixel
 		_join_hint.size = Vector2(rects[3].size) * zoom * units_per_pixel
+
+	# The sharp menus cover the whole game picture (all players' screens): laid out in game
+	# pixels like before (e.g. 320x240), drawn with as many real pixels as it covers.
+	menu_view.position = corner * units_per_pixel
+	menu_view.size = whole * zoom * units_per_pixel
+	menu_viewport.size = Vector2i((whole * zoom).round())  # real pixels: sharp
+	menu_viewport.size_2d_override = Vector2i(whole)  # laid out in game pixels
+	_menus.fit_columns()
 
 	# Every player's HUD sits on their own screen, shrunk to fit.
 	hud.fit_to(Rect2(game_view.position, game_view.size), hud_scale_for(game_view.size))
@@ -412,11 +467,19 @@ func _input(event: InputEvent) -> void:
 		# the moment it's pushed. (Walking and looking read the stick directly: not affected.)
 		get_viewport().set_input_as_handled()
 		return
-	var scale_to_game := Vector2(game_viewport.size) / game_view.size
-	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),
-		-game_view.position * scale_to_game)
-	game_viewport.push_input(event.xformed_by(to_game), true)
+	# The menus first (start menu, pause, settings, MY CAT): if one of them used the press
+	# (a button, Esc...), the game doesn't get it too.
+	menu_viewport.push_input(event.xformed_by(_to_local(menu_view, Vector2(menu_viewport.size_2d_override))), true)
+	if not menu_viewport.is_input_handled():
+		game_viewport.push_input(event.xformed_by(_to_local(game_view, Vector2(game_viewport.size))), true)
 	get_viewport().set_input_as_handled()  # the HUD doesn't need them right now
+
+
+## Turns a mouse position on the monitor into a position inside a picture (a TextureRect)
+## that shows a viewport laid out this big.
+func _to_local(view: TextureRect, laid_out_size: Vector2) -> Transform2D:
+	var scale_to := laid_out_size / view.size
+	return Transform2D(Vector2(scale_to.x, 0), Vector2(0, scale_to.y), -view.position * scale_to)
 
 
 ## Which player drives the full-screen menus right now: player 1 (the pause menu and settings),

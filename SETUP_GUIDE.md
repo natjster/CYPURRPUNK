@@ -103,6 +103,12 @@ puts back exact 320x240 with side bars. How it works:
   column in the middle of the screen (they were designed for 320x240), and stretches their dark
   background ColorRects edge to edge. Children named in its **Full Width Children** list (Inspector)
   are skipped: `ColorDepthDither`.
+- **The menus are SHARP** (like the HUD): you still edit them in `main.tscn` under `PS1Overlay`,
+  laid out for 320x240, but when the game starts `game_screen.gd` moves the whole `PS1Overlay`
+  out of the pixel picture into its own layer on top (`MenuView` > `MenuViewport`), drawn at your
+  monitor's real resolution. Same layout and sizes, crisp text, no CRT over them. (The MY CAT
+  preview cat is still drawn at PS1 resolution, so it stays blocky.) While the game runs, look for
+  them in the Remote tree under `GameScreen/MenuView/MenuViewport/PS1Overlay`.
 - The HUD (Â§13) covers the game picture, whatever its shape; its labels are anchored (select one
   in `scenes/ui/hud.tscn` > Inspector > **Layout > Anchors Preset**). **When you add a HUD label,
   give it an anchor** (top-left, centre-top, etc.) or it will sit at the left on wide screens.
@@ -131,12 +137,14 @@ move. Defaults 3 / 9; raise both to calm it more.
 
 ### Color-depth + dither overlay â€” `shaders/psx_post.gdshader`
 A **ColorRect overlay** at the end of `PS1Overlay` in `main.tscn`. Everything drawn before it
-(the 3D world and the menus) gets the PS1 colours and CRT look. The HUD does NOT: it's drawn
-sharp on top of the finished picture (Â§13).
+(the 3D world) gets the PS1 colours and CRT look. The menus and the HUD do NOT: they're drawn
+sharp on top of the finished picture (Â§13). When the game starts, `game_screen.gd` moves
+`ColorDepthDither` into a new CanvasLayer called `CRT` inside the game picture (and the menus out
+to the sharp layer), so it only covers the city. You still edit it here.
 
 ```
 PS1Overlay (CanvasLayer)
-â”œâ”€â”€ Lobby, PauseMenu, SettingsMenu, Inventory...   <- drawn first, so they get dithered too
+â”œâ”€â”€ Lobby, PauseMenu, SettingsMenu, CatCreator   <- moved to the sharp menu layer at start
 â””â”€â”€ ColorDepthDither (ColorRect)  <- Anchors: Full Rect, Mouse > Filter: Ignore
                                      Material: ShaderMaterial with psx_post.gdshader
 ```

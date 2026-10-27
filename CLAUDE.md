@@ -81,7 +81,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,
-  then `ColorDepthDither` LAST. (`NpcDialog.is_open_for(seat)` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
+  then `ColorDepthDither` LAST. SHARP MENUS: at start `GameScreen._build_menu_view` reparents `ColorDepthDither`
+  into a new `Main/CRT` CanvasLayer and the whole `PS1Overlay` into `GameScreen/MenuView/MenuViewport`
+  (size_2d_override = game pixels, drawn at real res, no CRT); `_input` pushes events there first, then to the game
+  viewport if unhandled. Menu focus lives in `GameScreen.menu_viewport` (not game_viewport). (`NpcDialog.is_open_for(seat)` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. (The HUD is not here: see `Hud` above.)
   Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
   `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
