@@ -47,6 +47,12 @@ uniform float roughness : hint_range(0.0, 1.0) = 1.0;
 uniform vec2 snap_resolution = vec2(160.0, 120.0);
 // Turn the texture-warping effect on/off.
 uniform bool affine_mapping = true;
+// Up close, one triangle can stretch from right under the camera to several metres away, and the
+// affine warp then gets wild (ground near your feet bends and slides as you move). So the warp
+// FADES OUT near the camera: none closer than affine_fade_start metres, full strength from
+// affine_fade_end metres. Raise both to calm it further, lower them for more wobble up close.
+uniform float affine_fade_start : hint_range(0.0, 20.0) = 3.0;
+uniform float affine_fade_end : hint_range(0.0, 40.0) = 9.0;
 // One flat shade per triangle (RuneScape look). Off = smooth shading.
 uniform bool flat_shading = true;
 // Game-wide switch from the Settings menu ("PS1 WOBBLE"): 1 = wobble + warp on, 0 = both off.
@@ -92,7 +98,12 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 uv = (affine_mapping && psx_wobble > 0.5) ? affine_uv.xy / affine_uv.z : UV;
+	vec2 uv = UV;
+	if (affine_mapping && psx_wobble > 0.5) {
+		// affine_uv.z comes out as this pixel's true distance from the camera.
+		float strength = smoothstep(affine_fade_start, affine_fade_end, affine_uv.z);
+		uv = mix(UV, affine_uv.xy / affine_uv.z, strength);
+	}
 	vec4 tex = texture(albedo_texture, uv);
 	ALBEDO = albedo_color.rgb * tex.rgb * instance_tint.rgb;
 	EMISSION = emission_color.rgb * emission_energy * instance_tint.rgb;

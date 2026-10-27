@@ -122,6 +122,9 @@ To put it on a **new** object:
 Knobs: **Snap Resolution** â€” lower = more wobble (`160x120` default, `80x60` = drunk mode).
 **Affine Mapping** â€” on/off for the texture warp. The player's **PS1 WOBBLE** setting switches
 both off for every material at once (via the `psx_wobble` shader global, Â§10).
+**Affine Fade Start / End** (metres) - the warp fades out near the camera (none closer than
+Start, full strength past End), so ground right under the camera doesn't bend and slide as you
+move. Defaults 3 / 9; raise both to calm it more.
 
 > Tip: affine warping gets extreme on big flat surfaces. PS1 games fixed that by cutting floors
 > into many small triangles â€” the city generator does the same (Â§7).
