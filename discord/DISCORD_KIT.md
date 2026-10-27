@@ -209,9 +209,9 @@ Easy wins:
 - **Icon**: `discord/server_icon_don_catleone.png` (960×960, Don Catleone himself).
   **Server Settings → Overview → Upload Image**; Discord crops it to a circle — his face stays centred.
   Made with `--portrait=DonCatleone --portrait_dist=2.6 --portrait_side=0.5` (any NPC name works).
-  Alternative: `discord/server_icon_rambo_cat.png` (1280×1280) — a player cat in the MOHAWK, HEADBAND and
-  BANDOLIER (real MY CAT accessories), lit by Don's pink lamp. Made with
-  `--wear=hat:mohawk,neck:bandolier,face:headband --pos=6.3,-200,-14.2 --portrait=me --portrait_dist=1.8 --portrait_height=0.8 --portrait_side=0.6`.
+  Alternative: `discord/server_icon_rambo_cat.png` (1280×1280) — a hot-pink player cat in the MOHAWK, CIGAR
+  and BANDOLIER (real MY CAT accessories), lit by Don's pink lamp. Made with
+  `"--wear=hat:mohawk,neck:bandolier,face:cigar,fur:#ff2699" --pos=6.3,-200,-14.2 --portrait=me --portrait_dist=1.8 --portrait_height=0.8 --portrait_side=0.6`.
 - **Banner** needs boost level 2 — skip for now. **Invite background** needs level 1.
 - **Emojis** (Server Settings → Emoji → Upload; 128×128 PNG): crop from game screenshots —
   `:roomba:`, `:goldenkoi:`, `:sardine:`, `:catleone:`, `:heat5:`, `:beam:`.

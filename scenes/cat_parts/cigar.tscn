@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_cigar"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.4, 0.22, 0.1, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_ember"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(1, 0.4, 0.1, 1)
+shader_parameter/emission_color = Color(1, 0.35, 0.05, 1)
+shader_parameter/emission_energy = 6.0
+
+[sub_resource type="CylinderMesh" id="Mesh_cigar"]
+top_radius = 0.022
+bottom_radius = 0.022
+height = 0.22
+radial_segments = 5
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_ember"]
+size = Vector3(0.05, 0.05, 0.03)
+
+[node name="Cigar" type="Node3D"]
+
+[node name="Cigar" type="MeshInstance3D" parent="."]
+position = Vector3(-0.147, -0.172, -0.075)
+rotation = Vector3(-1.77, 0.8, 0)
+mesh = SubResource("Mesh_cigar")
+surface_material_override/0 = SubResource("Mat_cigar")
+
+[node name="Ember" type="MeshInstance3D" parent="."]
+position = Vector3(-0.231, -0.196, -0.156)
+rotation = Vector3(0, 0.8, 0)
+mesh = SubResource("Mesh_ember")
+surface_material_override/0 = SubResource("Mat_ember")
