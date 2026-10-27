@@ -79,6 +79,20 @@ extends Node
 ##   --pad_press=A,B   press + release controller buttons one by one (after --menu), printing
 ##                     which menu is open and which button is highlighted after each,
 ##                     e.g. --pad_press=Start,D-Pad_Down,A
+##
+## TRAILER CAMERA (film with Godot's Movie Maker: put --write-movie shots/clip.avi --fixed-fps 30
+## BEFORE the lone "--"; the clip ends when the snap is taken, so --frames sets its length):
+##   --no_hud          hide every player's HUD (clean shots)
+##   --cam_from=X,Y,Z  a film camera starts here...       --cam_to=X,Y,Z    ...and glides to here
+##   --look_from=X,Y,Z it looks at this point...          --look_to=X,Y,Z   ...turning to this one
+##                     (no --look_* = it looks at our cat's head)
+##   --cam_follow      the --cam_* points are offsets from our cat instead (a tracking shot)
+##   --cam_orbit=CX,CY,CZ,RADIUS,HEIGHT,DEG_FROM,DEG_TO   circle round a point instead, looking at it
+##   --cam_frames=N    how long the glide takes (default: --frames)   --cam_delay=N  wait first
+##   --cam_fov=DEG     zoom (default 60)   --cam_ease=false  glide at an even speed (default eases in/out)
+##   --hold_all        (with --join_pad) every player on this PC holds the --hold controls, and
+##                     --deploy sends them all up top (split-screen shots)
+## The shot list and the editing script live in trailer/ (record.py, edit.py).
 
 
 ## The command line options (so helper functions can read them too).
@@ -173,6 +187,7 @@ func _ready() -> void:
 	if player != null:
 		for i in int(args.get("wait", 0)):
 			await get_tree().process_frame
+		await _apply_look(args)  # dressed before anything else happens (trailer clips film it all)
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
@@ -215,15 +230,38 @@ func _ready() -> void:
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			(scene as Game).hub.deploy(player)
+			if args.has("hold_all"):  # split-screen trailer shots: the couch players go up too
+				for cat in scene.local_cats():
+					if cat != player:
+						(scene as Game).hub.deploy(cat)
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
 		if args.has("pos"):
 			var p: PackedFloat64Array = args["pos"].split_floats(",")
 			player.global_position = Vector3(p[0], p[1], p[2])
+		if args.has("near_beam"):
+			# --near_beam=D: stand D metres south of the nearest OPEN extraction beam, facing it
+			# (then --hold=move_forward walks into it).
+			var heist := scene.get_node("Heist") as FishHeist
+			for i in 300:  # (beams open a moment after the game starts)
+				if heist.nearest_open_beam(player.global_position) >= 0:
+					break
+				await get_tree().physics_frame
+			var beam := heist.beam_positions[heist.nearest_open_beam(player.global_position)]
+			player.global_position = beam + Vector3(0, 0, float(args["near_beam"]))
+			player.camera_pivot.rotation.y = 0.0
+			print("DevCapture near_beam: beam at %s" % beam)
 		if args.has("yaw"):
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
 			player.spring_arm.rotation.x = deg_to_rad(float(args["pitch"]))
+		if args.has("no_hud"):
+			for seat in 4:
+				var hud := Hud.of(seat)
+				if hud != null:
+					hud.visible = false
+		if args.has("cam_from") or args.has("cam_orbit"):
+			_film_camera(player, args)  # runs alongside everything below (not awaited)
 		if args.has("mouse_test"):
 			# Move the mouse 100 real screen pixels to the right (as if the player did) and print
 			# how far that is in game pixels (should be 100 x 240 / window height).
@@ -321,13 +359,19 @@ func _ready() -> void:
 			for i in int(args.get("hold_delay", "30")):
 				await get_tree().process_frame
 			# Several at once with a comma list, e.g. --hold=shoot,use_left (fire both pistols).
+			# --hold_all = every player on this computer holds them (split-screen trailer shots).
+			var slots: Array = [player.slot]
+			if args.has("hold_all"):
+				slots = scene.local_cats().map(func(c): return c.slot)
 			for action in args["hold"].split(","):
-				Input.action_press(Seats.action(player.slot, action))  # the test player's own controls
+				for slot in slots:
+					Input.action_press(Seats.action(slot, action))  # the test player's own controls
 			for i in int(args.get("hold_frames", "60")):
 				await get_tree().process_frame
 			if not args.has("keep_holding"):  # --keep_holding = still held when the snap is taken
 				for action in args["hold"].split(","):
-					Input.action_release(Seats.action(player.slot, action))
+					for slot in slots:
+						Input.action_release(Seats.action(slot, action))
 		if args.has("pad"):
 			# Push the controller like a player would, e.g. --pad=Right_Stick_Right --hold_frames=30
 			for i in int(args.get("hold_delay", "30")):
@@ -398,22 +442,8 @@ func _ready() -> void:
 			args.erase("choose")
 			await _talk(player, args)
 
-	if args.has("look") or args.has("wear"):
-		# --look=N: a random cat look from seed N, as if picked in the MY CAT screen
-		# (our cat wears it and shares it; test runs never save it).
-		# --wear=hat:mohawk,neck:bandolier,fur:#808080 then sets exact parts / colours on top.
-		var look := CatLook.default_look()
-		if args.has("look"):
-			var rng := RandomNumberGenerator.new()
-			rng.seed = int(args["look"])
-			look = CatLook.random_look(rng)
-		if args.has("wear"):
-			for pair in args["wear"].split(","):
-				var bits: PackedStringArray = pair.split(":")
-				look[bits[0]] = Color(bits[1]) if bits[0] in CatLook.COLOR_KEYS else bits[1]
-		Settings.update_current_cat({"look": CatLook.clean(look)})
-		for i in 10:
-			await get_tree().process_frame
+	if player == null:
+		await _apply_look(args)  # (no game: e.g. the start menu's cat preview)
 	if args.has("inventory"):
 		InventoryScreen.for_seat(0)._set_open(true)  # same as pressing Tab
 	if args.has("press_key"):
@@ -692,6 +722,79 @@ func _portrait(player: CatPlayer, args: Dictionary) -> void:
 	camera.position = face + offset
 	camera.look_at(target.to_global(face))
 	camera.make_current()
+
+
+## --look=N: a random cat look from seed N, as if picked in the MY CAT screen
+## (our cat wears it and shares it; test runs never save it).
+## --wear=hat:mohawk,neck:bandolier,fur:#808080 then sets exact parts / colours on top.
+func _apply_look(args: Dictionary) -> void:
+	if not (args.has("look") or args.has("wear")):
+		return
+	var look := CatLook.default_look()
+	if args.has("look"):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(args["look"])
+		look = CatLook.random_look(rng)
+	if args.has("wear"):
+		for pair in args["wear"].split(","):
+			var bits: PackedStringArray = pair.split(":")
+			look[bits[0]] = Color(bits[1]) if bits[0] in CatLook.COLOR_KEYS else bits[1]
+	Settings.update_current_cat({"look": CatLook.clean(look)})
+	for i in 10:
+		await get_tree().process_frame
+
+
+## Trailer camera (--cam_from / --cam_to / --look_* / --cam_follow / --cam_orbit): a new camera
+## in the game world that glides between two spots (or circles a point) over --cam_frames.
+func _film_camera(player: CatPlayer, args: Dictionary) -> void:
+	var camera := Camera3D.new()
+	camera.fov = float(args.get("cam_fov", "60"))
+	Game.instance.add_child(camera)
+	var vec := func(key: String, fallback: Vector3) -> Vector3:
+		if not args.has(key):
+			return fallback
+		var p: PackedFloat64Array = args[key].split_floats(",")
+		return Vector3(p[0], p[1], p[2])
+	var cam_from: Vector3 = vec.call("cam_from", Vector3.ZERO)
+	var cam_to: Vector3 = vec.call("cam_to", cam_from)
+	var look_from: Vector3 = vec.call("look_from", Vector3.ZERO)
+	var look_to: Vector3 = vec.call("look_to", look_from)
+	var frames := maxi(1, int(args.get("cam_frames", args.get("frames", "90"))))
+	var delay := int(args.get("cam_delay", "0"))
+	var ease_on: bool = args.get("cam_ease", "true") != "false"
+	var i := -delay
+	var car := Game.instance.get_node("GetawayCar") as GetawayCar
+	var anchor := player.global_position  # what --cam_follow follows
+	while is_instance_valid(camera):
+		var t := clampf(float(i) / frames, 0.0, 1.0)
+		if ease_on:
+			t = smoothstep(0.0, 1.0, t)
+		# Follow the cat, or the car while the cat drives it. A sudden jump of 30 m+ (extracted
+		# down to the hub, say) is ignored, so the camera stays where the action was.
+		var followed := car.global_position if car.driver_id == player.player_id else player.global_position
+		if followed.distance_to(anchor) < 30.0:
+			anchor = followed
+		var head := anchor + Vector3(0, 0.6, 0)  # roughly the cat's head
+		var at: Vector3
+		var target: Vector3
+		if args.has("cam_orbit"):
+			var o: PackedFloat64Array = args["cam_orbit"].split_floats(",")
+			var angle := deg_to_rad(lerpf(o[5], o[6], t))
+			target = Vector3(o[0], o[1], o[2])
+			at = target + Vector3(sin(angle) * o[3], o[4], cos(angle) * o[3])
+		else:
+			at = cam_from.lerp(cam_to, t)
+			target = look_from.lerp(look_to, t) if args.has("look_from") else head
+			if args.has("cam_follow"):
+				at += anchor
+				if args.has("look_from"):
+					target += anchor
+		camera.global_position = at
+		if not at.is_equal_approx(target):
+			camera.look_at(target)
+		camera.make_current()  # (the cat's own camera may grab it back when it spawns)
+		i += 1
+		await get_tree().process_frame
 
 
 func _talk(player: CatPlayer, args: Dictionary) -> void:

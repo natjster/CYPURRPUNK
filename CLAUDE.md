@@ -228,6 +228,10 @@ Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from th
 - Captures print car/cat state (`DevCapture ...` lines) — prefer checking those over viewing images;
   view screenshots only when judging visuals, and use `--scale=2` to keep them small.
 - `shots/` has a `.gdignore`, so Godot ignores it.
+- Trailers (`trailer/`, gdignored, SETUP_GUIDE §15): `record.py` = shot list run through Movie Maker
+  (`--write-movie`, temp `override.cfg` for 16:9, music muted, `--seed=1999`) using DevCapture's film camera
+  (`--no_hud --cam_from/to --look_from/to --cam_follow --cam_orbit --near_beam --hold_all`); `music.py` = numpy
+  synthwave (bars of 2 s); `edit.py` = ffmpeg edits -> `shots/trailer/out/`; `contact.py` = contact sheets.
 
 ## Style references
 `C:\Users\Nathaniel\Desktop\Game Styling` — fog, glowing light pools in darkness, OSRS flat-shaded

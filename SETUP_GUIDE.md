@@ -50,6 +50,7 @@ Meow-City/
 ├── shaders/
 │   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
 │   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
+├── trailer/                   <- TRAILER MAKER: shot list, music, captions, editing (Python, §15)
 ├── textures/                  <- tiny placeholder pixel textures
 ├── ui/menu_theme.tres         <- the look of every menu (colours, borders)
 ├── ui/hud_theme.tres          <- the look of the HUD text (font, outline, shadow) (§13)
@@ -1553,3 +1554,43 @@ small `.uid` and `.import` files Godot makes next to scripts and images. Keep th
 - **Go back to an old version:** History tab, right-click a commit > **Revert changes in commit**
   (this adds a new "undo" snapshot, so nothing is lost). Ask Claude if unsure.
 - A plain zip copy also exists from before git: `C:\Users\Nathaniel\Meow-City-backup-2026-10-24.zip`.
+
+---
+
+## 15. Making trailers (the `trailer/` folder)
+
+The trailers are made by scripts, so you can re-make them any time the game changes (new
+outfits, a new enemy...). Nothing here touches the game itself. You need **Python** and **ffmpeg**
+(both already installed on this PC). Open a terminal in the project folder and run, in order:
+
+```
+python trailer/record.py      <- films every shot by playing the game (about 10 minutes)
+python trailer/music.py       <- makes the soundtrack (a few seconds)
+python trailer/edit.py        <- cuts the trailers together (a few minutes)
+```
+
+The finished videos land in `shots\trailer\out\`:
+- `cypurrpunk_long.mp4` — the 92-second trailer, 1920x1080 (YouTube, Steam, itch.io)
+- `cypurrpunk_short_*.mp4` — 20-26-second vertical (1080x1920) cuts for TikTok, Instagram Reels and
+  YouTube Shorts: `heist` (the whole game in one go), `boss` (the MEGA VAC-COP), `cats` (dressing up),
+  `coop` (split screen), `loop` (how a run goes, step by step).
+
+**How it works**
+- `trailer/record.py` = the **shot list**. Each line is one shot: the game starts with test options
+  (where the cat stands, what it holds, what it does) and Godot's **Movie Maker** films it at a
+  steady 30 fps, with the game's sound. The film camera options (`--cam_from`, `--cam_to`,
+  `--cam_orbit`, `--cam_follow`, `--no_hud`...) are listed at the top of `scripts/dev_capture.gd`.
+  Run one shot again with e.g. `python trailer/record.py boss_reveal`. The in-game music is muted
+  while filming (the trailer has its own). Every shot happens in city #1999 so they match.
+- `trailer/music.py` = the soundtrack: an original 120 BPM synthwave track made from maths (no
+  samples, so no copyright problems). 1 bar = 2 seconds. `SECTIONS` says which instruments play when.
+- `trailer/cards.py` = the captions and the CYPURRPUNK title, as chunky pixel letters.
+- `trailer/edit.py` = the **edits**. Each trailer is a list of `(shot, start second, length, caption)`.
+  Change a caption's words, swap a shot, or move its start point, then run `edit.py` again. The
+  lengths must add up to the music's length (it warns you if not).
+- `python trailer/contact.py` makes a picture per shot (`shots\trailer\contact\`) with a frame every
+  half second, handy for picking start points.
+
+**Uploading:** TikTok / Reels / Shorts take the vertical files as they are. Add your store link
+(Steam / itch.io) in the post text; the trailers end on "COMING SOON" — change that card in `edit.py`
+once there's a wishlist page.
