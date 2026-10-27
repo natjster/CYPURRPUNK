@@ -5,7 +5,9 @@
 [sub_resource type="ShaderMaterial" id="Mat_leather"]
 render_priority = 0
 shader = ExtResource("1_psx")
-shader_parameter/albedo_color = Color(0.3, 0.22, 0.12, 1)
+shader_parameter/albedo_color = Color(0.2, 0.9, 1, 1)
+shader_parameter/emission_color = Color(0.2, 0.95, 1, 1)
+shader_parameter/emission_energy = 3.0
 
 [sub_resource type="ShaderMaterial" id="Mat_brass"]
 render_priority = 0
