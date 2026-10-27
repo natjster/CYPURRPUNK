@@ -9,9 +9,12 @@ extends Control
 ##     dress it, then NEXT (on to SOLO / MULTIPLAYER, main_menu.gd). BACK = the start menu.
 ##   - PAUSE MENU > MY CAT (open(true, seat)), during a game: restyle / rename the cat you're
 ##     playing. No switching cats mid-game. DONE = back to the pause menu.
-##     Couch players 2-4 get it too (from their own pause menu, scripts/ui/player_pause.gd):
-##     it then edits THEIR saved cat, and only their controller drives the screen
-##     (scripts/ui/game_screen.gd _menu_driver).
+##     Couch players 2-4 get it too (from their own pause menu, scripts/ui/player_pause.gd, or
+##     A on their row of the landing page): it then edits THEIR saved cat, and only their
+##     controller drives the screen (scripts/ui/game_screen.gd _menu_driver).
+##
+## Controller: up / down picks a row, LEFT / RIGHT changes it (or A on its < >), DONE / NEXT at
+## the bottom. B = back.
 ##
 ##   CHOOSE YOUR CAT
 ##   <  [ WHISKERS     ]  >  2/3  [NEW] [DELETE]   <- your cats (Settings.cats); type the name
@@ -121,10 +124,11 @@ func _ready() -> void:
 
 
 ## Show the screen. in_game = opened from the pause menu (restyle only, no switching cats).
-## for_seat = which player's cat (0 = player 1; 1-3 = a couch player, in a game only).
+## for_seat = which player's cat (0 = player 1; 1-3 = a couch player: restyle only, like in_game).
 func open(in_game: bool = false, for_seat: int = 0) -> void:
+	seat = for_seat
+	in_game = in_game or seat > 0  # (a couch player's cat: no switching cats here either)
 	_in_game = in_game
-	seat = for_seat if in_game else 0
 	if seat > 0 and Seats.saved_cat(seat).is_empty():
 		seat = 0  # (shouldn't happen: every couch player plays a saved cat)
 	if Settings.current_cat().is_empty():
@@ -151,9 +155,18 @@ func close() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if visible and event.is_action_pressed("ui_cancel"):
+	if not visible:
+		return
+	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		close()
+		return
+	# On a row's < or > button, left / right changes that row (the highlight stays on the row).
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused != null and focused.has_meta("row_key") \
+			and (event.is_action_pressed("ui_left", true) or event.is_action_pressed("ui_right", true)):
+		get_viewport().set_input_as_handled()
+		_step(focused.get_meta("row_key"), -1 if event.is_action_pressed("ui_left", true) else 1)
 
 
 func _process(delta: float) -> void:
@@ -358,6 +371,7 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	remove_child(left)
 	row.add_child(left)
 	left.pressed.connect(_step.bind(key, -1))
+	left.set_meta("row_key", key)  # (left / right on it changes the row: _input)
 	if is_color:
 		var swatch := ColorRect.new()
 		swatch.custom_minimum_size = Vector2(52, 9)
@@ -375,6 +389,7 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	remove_child(right)
 	row.add_child(right)
 	right.pressed.connect(_step.bind(key, 1))
+	right.set_meta("row_key", key)
 
 
 ## A label for inside a row: fixed width, vertically centred.

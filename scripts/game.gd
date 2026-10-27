@@ -74,6 +74,7 @@ func _ready() -> void:
 	main_menu.join_pressed.connect(join_game)
 	main_menu.settings_pressed.connect(settings_menu.open)
 	pause_menu.settings_pressed.connect(settings_menu.open)
+	main_menu.lobby_cat_pressed.connect(func(seat: int): cat_creator.open(false, seat))  # couch player's cat
 	pause_menu.cat_pressed.connect(func(): cat_creator.open(true, pause_menu.opened_by))  # restyle your cat mid-game
 	pause_menu.leave_pressed.connect(_back_to_menu.bind(true))
 	settings_menu.closed.connect(_on_settings_closed)

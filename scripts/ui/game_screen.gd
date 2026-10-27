@@ -70,6 +70,9 @@ static var instance: GameScreen
 ## "seat": which seat it shows (-1 = hidden)}.
 var _extra_panes: Array[Dictionary] = []
 var _join_hint: Label
+## Menus and the stick: which way each stick is pushed right now ("ui_down"..., "" = middle), so
+## one push moves a menu highlight ONE step. Key = "device:axis". (_stick_pushed_again)
+var _menu_stick: Dictionary = {}
 ## Players 2-4's HUDs, by seat (index 1-3; index 0 unused): {"view": TextureRect,
 ## "viewport": SubViewport, "hud": Hud}.
 var _seat_huds: Array = [null]
@@ -400,8 +403,14 @@ func _input(event: InputEvent) -> void:
 			return
 	elif seat == 0 and Hud.wants_input(0):
 		return
-	elif Hud.menu_open() and Game.instance.pause_menu.enabled and seat != _menu_driver():
+	elif Hud.menu_open() and seat != _menu_driver():
 		get_viewport().set_input_as_handled()  # a full-screen menu: only the player who opened it drives it
+		return
+	if event is InputEventJoypadMotion and _in_menus() and not _stick_pushed_again(event):
+		# A held stick sends a stream of "still pushed" messages; Godot's menus would treat each
+		# one as a new press and race the highlight (or a cat's colour) along. Menus get only
+		# the moment it's pushed. (Walking and looking read the stick directly: not affected.)
+		get_viewport().set_input_as_handled()
 		return
 	var scale_to_game := Vector2(game_viewport.size) / game_view.size
 	var to_game := Transform2D(Vector2(scale_to_game.x, 0), Vector2(0, scale_to_game.y),
@@ -415,3 +424,22 @@ func _input(event: InputEvent) -> void:
 func _menu_driver() -> int:
 	var creator := Game.instance.cat_creator
 	return creator.seat if creator.visible else 0
+
+
+## Is a menu up in the game picture (the start menu, or pause / settings / MY CAT)?
+func _in_menus() -> bool:
+	var game := Game.instance
+	return game == null or not is_instance_valid(game) or not game.pause_menu.enabled or Hud.menu_open()
+
+
+## A stick message for the menus: true only at the moment the stick is pushed a new way
+## (up / down / left / right), not while it's held there.
+func _stick_pushed_again(event: InputEventJoypadMotion) -> bool:
+	var key := "%d:%d" % [event.device, event.axis]
+	var now := ""
+	for action in ["ui_up", "ui_down", "ui_left", "ui_right"]:
+		if event.is_action_pressed(action):
+			now = action
+	var before: String = _menu_stick.get(key, "")
+	_menu_stick[key] = now
+	return now != "" and now != before

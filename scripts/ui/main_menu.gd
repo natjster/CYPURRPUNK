@@ -23,7 +23,8 @@ extends Control
 ##       MULTIPLAYER -> LOCAL CO-OP / ONLINE CO-OP (CoopScreen)
 ##         either one -> the LANDING PAGE (LandingScreen): everyone on this computer gathers
 ##           P1  < WHISKERS >          <- player 1: left / right = pick cat, A = make / edit cats
-##           P2  < MITTENS >           <- joined with START on their controller (left / right = cat, B = leave)
+##           P2  < MITTENS >           <- joined with START on their controller (left / right = cat,
+##                                        A = edit it in MY CAT, B = leave)
 ##           P3  PRESS START TO JOIN
 ##           [START GAME] / [NEXT]  [BACK]
 ##           LOCAL:  START GAME = everyone into the sewers on this computer (no network)
@@ -36,6 +37,9 @@ extends Control
 ## Open CHOOSE YOUR CAT (game.gd does): for SOLO, or player 1 editing their cat on the landing page.
 ## Its NEXT comes back to cat_done(), its BACK to cat_closed().
 signal cat_pressed
+## A couch player pressed A on their landing-page row: edit their cat (game.gd opens MY CAT for
+## that seat). Its DONE comes back to cat_closed().
+signal lobby_cat_pressed(seat: int)
 ## SOLO was clicked. city_seed = a random city.
 signal solo_pressed(city_seed: int)
 ## HOST was clicked. city_seed = the number typed, or a random one.
@@ -218,11 +222,18 @@ func _refresh_game_list() -> void:
 func _input(event: InputEvent) -> void:
 	var seat := Seats.seat_of_event(event)
 	if visible and seat > 0:
+		if Game.instance.cat_creator.visible:
+			return  # their MY CAT screen is open: it gets their buttons
 		get_viewport().set_input_as_handled()
 		if event.is_action_pressed("ui_left"):
 			Seats.cycle_lobby_cat(seat, -1)
 		elif event.is_action_pressed("ui_right"):
 			Seats.cycle_lobby_cat(seat, 1)
+		elif event.is_action_pressed("ui_accept") and landing_screen.visible:
+			Seats.lobby_cat_for_editing(seat)  # (makes a NEW CAT first if that's what they picked)
+			_cat_from = "landing"
+			hide_screens()
+			lobby_cat_pressed.emit(seat)
 		elif event.is_action_pressed("ui_cancel"):
 			Seats.leave_lobby(seat)
 		return

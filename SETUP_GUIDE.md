@@ -1113,7 +1113,8 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   The landing page:
   ```
   P1   < WHISKERS >          <- player 1: left / right = pick your cat, A (Enter) = make / edit cats
-  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat, B = leave
+  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat,
+                                A = edit it (MY CAT), B = leave
   P3   PRESS START TO JOIN
   P4   PRESS START TO JOIN
   [START GAME]  [BACK]       (ONLINE CO-OP: [NEXT])
@@ -1163,11 +1164,13 @@ Just plug it in (or pair it) and press a button: no setting needed.
 | D-pad down | drop | | |
 | START | pause menu | | |
 
-**In every menu:** d-pad or left stick = move the highlight, **A** = press, **B** = back,
+**In every menu:** d-pad or left stick = move the highlight (the stick moves ONE step per push:
+let it go back to the middle to move again), **A** = press, **B** = back,
 **START** = pause / unpause. In SETTINGS, **left/right** on a row changes its value and
 **LB / RB** switch tabs. In the inventory, **A** = what a left-click does, **X** = drop,
 **B** or **Y** = close. CHOOSE YOUR CAT: a controller can't type, so pressing NEXT without a
-name gives the cat a random one (rename it with a keyboard any time).
+name gives the cat a random one (rename it with a keyboard any time). On a look row, **left /
+right** changes it (up / down picks the row).
 
 Rumble: getting hit, getting knocked out, every shot, extracting. Turn it off in
 SETTINGS > CONTROLS > RUMBLE. To change how strong one is, find `Controls.rumble(` in the script
@@ -1184,8 +1187,9 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   where everyone gathers BEFORE anyone goes down into the sewers. Friends press **START** on their
   controllers to take a seat (P2, P3, P4, in their player colour). Each picks a cat with
   **left / right** on their own controller: one of your saved cats (MY CAT) that nobody else
-  picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.: rename / restyle it
-  later in MY CAT). **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
+  picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.). **A** = edit their cat
+  in MY CAT (colours, hat, shades...; a NEW CAT is made right then so there's one to dress); only
+  their controller drives that screen, DONE or B comes back. **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
   right), or presses A on it to make / edit cats. Their controllers don't move player 1's menu.
   LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
   JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone
@@ -1354,7 +1358,9 @@ prints which menu is open and which button is highlighted after each).
 ### What the player sees
 **PLAY** on the start menu opens **CHOOSE YOUR CAT**: your cats along the top, the look rows on
 the left, and the cat slowly turning on the right. (During a game, **MY CAT** in the pause menu
-opens the same screen to restyle or rename the cat you're playing; no switching cats mid-game.)
+opens the same screen to restyle or rename the cat you're playing; no switching cats mid-game.
+Couch players 2-4 get it for THEIR cat: A on their row of the landing page, or MY CAT in their
+own pause menu.)
 ```
 <  [ WHISKERS ]  >  2/3  [NEW] [DELETE]     your cats: < > switch, type to rename
 FUR       <  [colour]  >        main coat

@@ -188,11 +188,14 @@ func _player_settings(seat: int) -> Dictionary:
 	return saved_cat(seat).get("controls", {})
 
 
-## The saved cat (in Settings.cats) the player in this seat plays, or {}.
+## The saved cat (in Settings.cats) the player in this seat plays (in the lobby: the one they
+## picked), or {}.
 func saved_cat(seat: int) -> Dictionary:
 	if Game.instance == null:
 		return {}
 	var cat_id := str(Game.instance.local_player_info(seat).get("cat_id", ""))
+	if lobby_cats.has(seat):
+		cat_id = lobby_cats[seat]
 	for cat in Settings.cats:
 		if cat.get("id", "") == cat_id:
 			return cat
@@ -357,6 +360,19 @@ func cycle_lobby_cat(seat: int, direction: int) -> void:
 	var index := choices.find(lobby_cats[seat])
 	lobby_cats[seat] = choices[posmod(index + direction, choices.size())]
 	changed.emit()
+
+
+## A lobby player pressed A = edit their cat (MY CAT). Picked NEW CAT? Then it's made now
+## ("PLAYER 2", random look) so there's something to edit. Returns the cat.
+func lobby_cat_for_editing(seat: int) -> Dictionary:
+	if not lobby_cats.has(seat):
+		return {}
+	if saved_cat(seat).is_empty():
+		var rng := RandomNumberGenerator.new()
+		rng.randomize()
+		lobby_cats[seat] = Settings.new_cat(false, "PLAYER %d" % (seat + 1), CatLook.random_look(rng)).get("id", "")
+		changed.emit()
+	return saved_cat(seat)
 
 
 ## A lobby player stands up again (B).
