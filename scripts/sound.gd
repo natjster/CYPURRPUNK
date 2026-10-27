@@ -53,6 +53,9 @@ var _channels: Dictionary = {}
 var _voices: int = 0
 var _log: bool = false
 var _rng := RandomNumberGenerator.new()  # pitch nudges only — NOT the city's RNG
+## Looping sounds made by attach_loop (e.g. the car engine): placed every frame for the nearest
+## player's ears (_process).
+var _loops: Array[AudioStreamPlayer3D] = []
 ## What every button runs when pressed (see _on_node_added).
 var _click: Callable = play.bind("click", -4.0)
 
@@ -84,6 +87,9 @@ func play(id: String, volume_db: float = 0.0) -> AudioStreamPlayer:
 
 ## Play a sound coming from a spot in the world, on THIS computer only. Louder when the camera
 ## is close, quieter far away, and from the left/right speaker depending on where it is.
+## Split screen: the game can only listen from ONE camera (player 1's), so a sound that's closer
+## to another player on this computer is moved to where it would be for player 1's ears if they
+## stood where that player stands (hearing_position): player 2 hears their own fish pickup.
 ## Use this when every computer already runs the code that makes the sound (e.g. a gunshot
 ## that's drawn on every screen). Otherwise use play_everywhere.
 func play_at(id: String, where: Vector3, volume_db: float = 0.0) -> AudioStreamPlayer3D:
@@ -93,9 +99,9 @@ func play_at(id: String, where: Vector3, volume_db: float = 0.0) -> AudioStreamP
 	var player := _make_3d_player(stream, volume_db)
 	_setup_one_shot(player, stream, volume_db)
 	add_child(player)
-	player.global_position = where
+	player.global_position = hearing_position(where)
 	player.play()
-	_say("%s at %s" % [id, where.snapped(Vector3.ONE * 0.1)])
+	_say("%s at %s%s" % [id, where.snapped(Vector3.ONE * 0.1), _heard_by_note(where)])
 	return player
 
 
@@ -123,8 +129,55 @@ func attach_loop(id: String, on: Node3D, volume_db: float = 0.0) -> AudioStreamP
 	var player := _make_3d_player(_looping(stream), volume_db)
 	player.name = "Sound_" + id
 	on.add_child(player)
+	# It rides along with "on", placed every frame where the nearest player on this computer
+	# would hear it (split screen: see hearing_position / _process).
+	player.top_level = true
+	player.global_position = hearing_position(on.global_position)
+	_loops.append(player)
 	player.play()
 	return player
+
+
+## Every frame: looping sounds follow what they're attached to, placed for the nearest
+## player's ears (split screen). Ones whose owner is gone are forgotten.
+func _process(_delta: float) -> void:
+	for i in range(_loops.size() - 1, -1, -1):
+		var player := _loops[i]
+		if not is_instance_valid(player) or not player.is_inside_tree():
+			_loops.remove_at(i)
+			continue
+		player.global_position = hearing_position((player.get_parent() as Node3D).global_position)
+
+
+## Where a sound at "where" should play so the nearest player on THIS computer hears it right.
+## Normally just "where". Split screen: if another player's camera is closer to it than player
+## 1's (whose camera is the game's only pair of ears), the sound is moved to the same distance
+## and direction from player 1's camera as it really is from that player's camera.
+func hearing_position(where: Vector3) -> Vector3:
+	var screen := GameScreen.instance
+	if screen == null or not is_instance_valid(screen) or not screen.is_node_ready():
+		return where  # (still starting up)
+	var cameras := screen.view_cameras()  # [player 1's (the ears), then players 2-4's]
+	if cameras.size() < 2:
+		return where
+	var nearest: Camera3D = cameras[0]
+	for camera in cameras:
+		if camera.global_position.distance_to(where) < nearest.global_position.distance_to(where):
+			nearest = camera
+	if nearest == cameras[0]:
+		return where
+	return cameras[0].global_transform * (nearest.global_transform.affine_inverse() * where)
+
+
+## For --sound_log: "(heard from another player's spot, 3 m away)" when hearing_position moved it.
+func _heard_by_note(where: Vector3) -> String:
+	if not _log:
+		return ""
+	var moved := hearing_position(where)
+	if moved.is_equal_approx(where):
+		return ""
+	var ears := GameScreen.instance.view_cameras()[0]
+	return " (moved to another player's ears: %.1f m away)" % ears.global_position.distance_to(moved)
 
 
 ## Fade over to this music track (a file in sounds/music/). "" = fade to silence.

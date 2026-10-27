@@ -201,12 +201,14 @@ func fit_to(rect: Rect2, hud_scale: float = 1.0) -> void:
 # --- Every frame: timers, and hiding behind menus ---
 
 func _process(delta: float) -> void:
+	# (Each player's HUD hides its OWN message / popup: "seat". Leaving it out used to hide
+	# player 1's instead, so player 2's messages never went away.)
 	if _message_time > 0.0:
 		_message_time -= delta
-		show_element("Message", _message_time > 0.0)
+		show_element("Message", _message_time > 0.0, seat)
 	if _popup_time > 0.0:
 		_popup_time -= delta
-		var popup_label := element("Popup")
+		var popup_label := element("Popup", seat)
 		popup_label.visible = _popup_time > 0.0
 		popup_label.modulate.a = clampf(_popup_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
 

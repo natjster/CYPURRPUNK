@@ -1359,6 +1359,15 @@ left/right speaker by direction, silent beyond 45 m.
 - **PS1 crunch tip:** save effects at **22050 Hz mono** (Audacity: Tracks > Resample, and
   Tracks > Mix > Mix Stereo Down to Mono). Loops must start and end smoothly or they click.
 
+### Split screen and sound
+The game can only listen from ONE spot (Godot can't mix sound for several cameras): player 1's
+camera. So a sound that's closer to another player on this computer (player 2's fish pickup,
+their gunshot, the car engine while player 2 drives) is played as if player 1's ears were where
+that player is: same distance, same direction. Everyone on the couch shares the speakers, so
+you hear what's happening to whoever it's happening to. (`Sound.hearing_position`, automatic
+for `play_at` / `play_everywhere` / `attach_loop`. `--sound_log` says "moved to another player's
+ears" when it does it.)
+
 ### Tuning knobs
 - **`scripts/sound.gd`** (top of the file, change the number): `PITCH_VARIATION` (random pitch
   nudge), `HEARING_RANGE` (metres), `LOUDNESS_SIZE` (bigger = loud further away), `FADE_SECONDS`

@@ -506,6 +506,13 @@ func _ready() -> void:
 			sent / 1024.0 / seconds, received / 1024.0 / seconds, seconds, Game.instance.player_count(),
 			Game.instance.get_node("Roombas").get_child_count(), multiplayer.get_peers().size() + 1])
 	print("DevCapture fps=%d" % Engine.get_frames_per_second())
+	# Which players' HUDs still show a middle-of-screen message / popup (split screen).
+	var showing: Array = []
+	for seat in PlayerId.MAX_LOCAL:
+		var message := Hud.element("Message", seat)
+		if message != null:
+			showing.append("P%d message=%s popup=%s" % [seat + 1, message.visible, Hud.element("Popup", seat).visible])
+	print("DevCapture hud: %s" % [showing])
 	if scene.main_menu.visible and scene.main_menu.status_label.text != "":
 		print("DevCapture menu status: %s" % scene.main_menu.status_label.text)
 	if scene.main_menu.visible and scene.main_menu.play_screen.visible:
