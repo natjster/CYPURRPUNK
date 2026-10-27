@@ -1,60 +1,60 @@
-# CYPURRPUNK — Setup & How-It-Works Guide
+﻿# CYPURRPUNK â€” Setup & How-It-Works Guide
 
-Everything below is **already built as files in this folder**. You don't have to paste code —
+Everything below is **already built as files in this folder**. You don't have to paste code â€”
 open the project and press Play. The sections explain what each piece is, so you can tweak it
 (or rebuild it by hand) in the Godot editor.
 
 ```
 Meow-City/
-├── project.godot              <- project settings (low-res, crunchy pixels, autoloads, version)
-├── scenes/
-│   ├── game_screen.tscn       <- the top scene F5 runs: the low-res game + the sharp HUD over it (§13)
-│   ├── main.tscn              <- THE game (city, cats, menus), shown inside game_screen.tscn
-│   ├── player.tscn            <- the cat
-│   ├── cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, §11)
-│   ├── cat_parts/             <- accessory models: fedora, beanie, neon_halo, shades... (§11)
-│   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
-│   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
-│   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
-│   ├── npcs/                  <- characters you talk to: don_catleone, lil_mittens, npc_template (§8)
-│   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
-│   └── ui/                    <- settings_menu.tscn (the Settings screen), hud.tscn (the HUD, §13)
-├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
-├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
-├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
-├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
-├── scripts/
-│   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
-│   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
-│   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
-│   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
-│   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
-│   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
-│   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
-│   ├── getaway_car.gd         <- driving, drifting, who's driving
-│   ├── city_generator.gd      <- builds the whole city from one number
-│   ├── fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
-│   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
-│   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
-│   ├── quests/                <- the quest system: quest_data.gd, quest_manager.gd (§8)
-│   ├── roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
-│   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
-│   ├── rain_follow.gd         <- keeps the rain above the active camera
-│   ├── items/                 <- the item system (§9)
-│   ├── cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (§11)
-│   ├── cat_health.gd          <- HP and knockouts (§8)
-│   ├── player_profile.gd      <- saves your cash + stash between games (§8)
-│   ├── player_id.gd           <- PlayerId: player numbers vs computer numbers, for split screen (§6)
-│   ├── seats.gd               <- autoload "Seats": which controller belongs to which couch player (§10)
-│   └── ui/                    <- game_screen + hud (§13), main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
-├── shaders/
-│   ├── psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
-│   └── psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
-├── trailer/                   <- TRAILER MAKER: shot list, music, captions, editing (Python, §15)
-├── textures/                  <- tiny placeholder pixel textures
-├── ui/menu_theme.tres         <- the look of every menu (colours, borders)
-├── ui/hud_theme.tres          <- the look of the HUD text (font, outline, shadow) (§13)
-└── shots/                     <- screenshots from the capture tool (Godot ignores this folder)
+â”œâ”€â”€ project.godot              <- project settings (low-res, crunchy pixels, autoloads, version)
+â”œâ”€â”€ scenes/
+â”‚   â”œâ”€â”€ game_screen.tscn       <- the top scene F5 runs: the low-res game + the sharp HUD over it (Â§13)
+â”‚   â”œâ”€â”€ main.tscn              <- THE game (city, cats, menus), shown inside game_screen.tscn
+â”‚   â”œâ”€â”€ player.tscn            <- the cat
+â”‚   â”œâ”€â”€ cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, Â§11)
+â”‚   â”œâ”€â”€ cat_parts/             <- accessory models: fedora, beanie, neon_halo, shades... (Â§11)
+â”‚   â”œâ”€â”€ getaway_car.tscn       <- the car (with headlight beam + taillights)
+â”‚   â”œâ”€â”€ roomba.tscn            <- the VAC-COP police Roomba (the enemy)
+â”‚   â”œâ”€â”€ items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
+â”‚   â”œâ”€â”€ npcs/                  <- characters you talk to: don_catleone, lil_mittens, npc_template (Â§8)
+â”‚   â”œâ”€â”€ props/                 <- street_lamp (warm light cone), rain (follows the camera)
+â”‚   â””â”€â”€ ui/                    <- settings_menu.tscn (the Settings screen), hud.tscn (the HUD, Â§13)
+â”œâ”€â”€ items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (Â§9)
+â”œâ”€â”€ quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (Â§8)
+â”œâ”€â”€ cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (Â§11)
+â”œâ”€â”€ sounds/                    <- SOUND FILES: sfx/, ambience/, music/ â€” drop files in, no code (Â§12)
+â”œâ”€â”€ scripts/
+â”‚   â”œâ”€â”€ game.gd                <- main scene: start a game, spawn cats, late joiners
+â”‚   â”œâ”€â”€ net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
+â”‚   â”œâ”€â”€ settings.gd            <- autoload "Settings": every player setting, saved to disk
+â”‚   â”œâ”€â”€ controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
+â”‚   â”œâ”€â”€ sound.gd               <- autoload "Sound": plays every sound and the music (Â§12)
+â”‚   â”œâ”€â”€ dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
+â”‚   â”œâ”€â”€ cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
+â”‚   â”œâ”€â”€ getaway_car.gd         <- driving, drifting, who's driving
+â”‚   â”œâ”€â”€ city_generator.gd      <- builds the whole city from one number
+â”‚   â”œâ”€â”€ fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
+â”‚   â”œâ”€â”€ hub.gd                 <- THE SEWERS: the underground hub where cats start (Â§8)
+â”‚   â”œâ”€â”€ npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (Â§8)
+â”‚   â”œâ”€â”€ quests/                <- the quest system: quest_data.gd, quest_manager.gd (Â§8)
+â”‚   â”œâ”€â”€ roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
+â”‚   â”œâ”€â”€ roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
+â”‚   â”œâ”€â”€ rain_follow.gd         <- keeps the rain above the active camera
+â”‚   â”œâ”€â”€ items/                 <- the item system (Â§9)
+â”‚   â”œâ”€â”€ cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (Â§11)
+â”‚   â”œâ”€â”€ cat_health.gd          <- HP and knockouts (Â§8)
+â”‚   â”œâ”€â”€ player_profile.gd      <- saves your cash + stash between games (Â§8)
+â”‚   â”œâ”€â”€ player_id.gd           <- PlayerId: player numbers vs computer numbers, for split screen (Â§6)
+â”‚   â”œâ”€â”€ seats.gd               <- autoload "Seats": which controller belongs to which couch player (Â§10)
+â”‚   â””â”€â”€ ui/                    <- game_screen + hud (Â§13), main_menu, pause_menu, settings_menu, inventory_ui, npc_dialog, cat_creator
+â”œâ”€â”€ shaders/
+â”‚   â”œâ”€â”€ psx_lit.gdshader       <- wobble, warpy textures, flat shading, glow (3D objects)
+â”‚   â””â”€â”€ psx_post.gdshader      <- CRT + 15-bit color + dithering (full-screen overlay)
+â”œâ”€â”€ trailer/                   <- TRAILER MAKER: shot list, music, captions, editing (Python, Â§15)
+â”œâ”€â”€ textures/                  <- tiny placeholder pixel textures
+â”œâ”€â”€ ui/menu_theme.tres         <- the look of every menu (colours, borders)
+â”œâ”€â”€ ui/hud_theme.tres          <- the look of the HUD text (font, outline, shadow) (Â§13)
+â””â”€â”€ shots/                     <- screenshots from the capture tool (Godot ignores this folder)
 ```
 
 **Opening it:** install **Godot 4.7.2** (standard edition, not .NET). In the Project Manager
@@ -86,16 +86,16 @@ Already set in `project.godot`. To see/change by hand: **Project > Project Setti
 
 **The 320x240 game picture is NOT a project setting any more:** the game (`main.tscn`) is drawn
 into a 320x240 **SubViewport** inside `scenes/game_screen.tscn`, which blows it up with chunky
-pixels, and the HUD is drawn sharp on top (§13). `scripts/ui/game_screen.gd` does the sizing.
+pixels, and the HUD is drawn sharp on top (Â§13). `scripts/ui/game_screen.gd` does the sizing.
 
-(Players can change the resolution, fullscreen and scaling in the in-game Settings, §10. The game
+(Players can change the resolution, fullscreen and scaling in the in-game Settings, Â§10. The game
 is still *drawn* at 320x240 whatever the resolution; a bigger resolution just shows it bigger.
 **SCALING > SHARP** zooms by whole numbers only (square pixels, maybe a black border);
 **SCALING > FILL** zooms as big as fits. The resolution list lives in `scripts/settings.gd`
-→ `COMMON_RESOLUTIONS`; your monitor's own size is always added as the biggest option.)
+â†’ `COMMON_RESOLUTIONS`; your monitor's own size is always added as the biggest option.)
 
 **Widescreen / ultrawide (ASPECT = WIDE, the default):** the game stays **240 pixels tall** but
-gets wider to match the monitor (16:9 → ~427x240, 21:9 ultrawide → ~573x240), so the city fills
+gets wider to match the monitor (16:9 â†’ ~427x240, 21:9 ultrawide â†’ ~573x240), so the city fills
 the whole screen and you see more to the sides. Same chunky pixels, no black bars. ASPECT = 4:3
 puts back exact 320x240 with side bars. How it works:
 - `scripts/ui/game_screen.gd` makes the game picture wider (WIDE) or keeps it 320 wide (4:3).
@@ -103,14 +103,14 @@ puts back exact 320x240 with side bars. How it works:
   column in the middle of the screen (they were designed for 320x240), and stretches their dark
   background ColorRects edge to edge. Children named in its **Full Width Children** list (Inspector)
   are skipped: `ColorDepthDither`.
-- The HUD (§13) covers the game picture, whatever its shape; its labels are anchored (select one
+- The HUD (Â§13) covers the game picture, whatever its shape; its labels are anchored (select one
   in `scenes/ui/hud.tscn` > Inspector > **Layout > Anchors Preset**). **When you add a HUD label,
   give it an anchor** (top-left, centre-top, etc.) or it will sit at the left on wide screens.
 - The PS1 wobble grid in `psx_lit.gdshader` widens with the screen, so the wobble is the same size
   on every monitor.
 - Test without an ultrawide: add `--window=1720x720` to a DevCapture run.
 
-### Vertex jitter + affine textures — `shaders/psx_lit.gdshader`
+### Vertex jitter + affine textures â€” `shaders/psx_lit.gdshader`
 This replaces the normal material on 3D objects. Every mesh in the game already uses it.
 
 To put it on a **new** object:
@@ -119,22 +119,22 @@ To put it on a **new** object:
 3. Expand **Shader Parameters**: set **Albedo Color**, drag a texture into **Albedo Texture**,
    adjust **Uv Scale** (texture repeats).
 
-Knobs: **Snap Resolution** — lower = more wobble (`160x120` default, `80x60` = drunk mode).
-**Affine Mapping** — on/off for the texture warp. The player's **PS1 WOBBLE** setting switches
-both off for every material at once (via the `psx_wobble` shader global, §10).
+Knobs: **Snap Resolution** â€” lower = more wobble (`160x120` default, `80x60` = drunk mode).
+**Affine Mapping** â€” on/off for the texture warp. The player's **PS1 WOBBLE** setting switches
+both off for every material at once (via the `psx_wobble` shader global, Â§10).
 
 > Tip: affine warping gets extreme on big flat surfaces. PS1 games fixed that by cutting floors
-> into many small triangles — the city generator does the same (§7).
+> into many small triangles â€” the city generator does the same (Â§7).
 
-### Color-depth + dither overlay — `shaders/psx_post.gdshader`
+### Color-depth + dither overlay â€” `shaders/psx_post.gdshader`
 A **ColorRect overlay** at the end of `PS1Overlay` in `main.tscn`. Everything drawn before it
 (the 3D world and the menus) gets the PS1 colours and CRT look. The HUD does NOT: it's drawn
-sharp on top of the finished picture (§13).
+sharp on top of the finished picture (Â§13).
 
 ```
 PS1Overlay (CanvasLayer)
-├── Lobby, PauseMenu, SettingsMenu, Inventory...   <- drawn first, so they get dithered too
-└── ColorDepthDither (ColorRect)  <- Anchors: Full Rect, Mouse > Filter: Ignore
+â”œâ”€â”€ Lobby, PauseMenu, SettingsMenu, Inventory...   <- drawn first, so they get dithered too
+â””â”€â”€ ColorDepthDither (ColorRect)  <- Anchors: Full Rect, Mouse > Filter: Ignore
                                      Material: ShaderMaterial with psx_post.gdshader
 ```
 
@@ -148,45 +148,45 @@ group. To see the game without it, click the eye icon next to `ColorDepthDither`
 ### Node tree (`scenes/player.tscn`)
 ```
 Player (CharacterBody3D)            script: cat_player.gd
-├── CollisionShape3D                 CapsuleShape3D r=0.3 h=0.9, position y=0.45
-├── CatModel                         <- an instance of scenes/cat_model.tscn (the cat's body);
-│   │                                   turns to face movement; leans during zoomies
-│   ├── Body, Belly, LegL, LegR, Head, EarL, EarR, Muzzle, Nose, EyeL, EyeR, Tail
-│   │   (upright "villager" style: big round head, no arms; low-poly spheres/cylinders.
-│   │    Colours and hats/shades/collars come from the player's MY CAT look, §11.)
-├── CameraPivot (Node3D)             position y=0.6 — mouse left/right turns this
-│   └── SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 — mouse up/down tilts this
-│       └── Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
-├── NameTag (Label3D)                the player's name, shown to everyone else. Group "hud_name_tags":
-│                                    the HUD draws it sharp (§13); this Label3D is just the marker
-└── MultiplayerSynchronizer          shares sync_position, sync_model_rotation, player_name, look
+â”œâ”€â”€ CollisionShape3D                 CapsuleShape3D r=0.3 h=0.9, position y=0.45
+â”œâ”€â”€ CatModel                         <- an instance of scenes/cat_model.tscn (the cat's body);
+â”‚   â”‚                                   turns to face movement; leans during zoomies
+â”‚   â”œâ”€â”€ Body, Belly, LegL, LegR, Head, EarL, EarR, Muzzle, Nose, EyeL, EyeR, Tail
+â”‚   â”‚   (upright "villager" style: big round head, no arms; low-poly spheres/cylinders.
+â”‚   â”‚    Colours and hats/shades/collars come from the player's MY CAT look, Â§11.)
+â”œâ”€â”€ CameraPivot (Node3D)             position y=0.6 â€” mouse left/right turns this
+â”‚   â””â”€â”€ SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 â€” mouse up/down tilts this
+â”‚       â””â”€â”€ Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
+â”œâ”€â”€ NameTag (Label3D)                the player's name, shown to everyone else. Group "hud_name_tags":
+â”‚                                    the HUD draws it sharp (Â§13); this Label3D is just the marker
+â””â”€â”€ MultiplayerSynchronizer          shares sync_position, sync_model_rotation, player_name, look
 ```
 To change the cat's body shape, open `scenes/cat_model.tscn` (every player cat and the MY CAT
-preview use it). Keep the mesh names: the colour options paint meshes by name (§11).
+preview use it). Keep the mesh names: the colour options paint meshes by name (Â§11).
 
 **Key design choice:** only `CatModel` rotates, never the `Player` body. If the body rotated, the
 camera (its child) would whip around every time the cat turned.
 
 ### What `scripts/cat_player.gd` does
-- **WASD relative to camera** — reads input, converts it using `CameraPivot`'s facing, flattens it to the ground.
-- **Smooth turning** — `lerp_angle` eases `CatModel` toward the run direction.
-- **Gravity + jump** — Space, only when on the floor (catdip adds mid-air jumps, §9).
-- **Zoomies (Shift)** — higher top speed, cat leans nose-forward, camera rolls when strafing, FOV widens.
-- **Mouse look** — speed and invert-Y come from the Settings menu (§10). Esc opens the pause menu
+- **WASD relative to camera** â€” reads input, converts it using `CameraPivot`'s facing, flattens it to the ground.
+- **Smooth turning** â€” `lerp_angle` eases `CatModel` toward the run direction.
+- **Gravity + jump** â€” Space, only when on the floor (catdip adds mid-air jumps, Â§9).
+- **Zoomies (Shift)** â€” higher top speed, cat leans nose-forward, camera rolls when strafing, FOV widens.
+- **Mouse look** â€” speed and invert-Y come from the Settings menu (Â§10). Esc opens the pause menu
   (which frees the mouse); if the mouse gets freed another way, click the game to grab it again.
-- **Controller** — right stick turns the camera (`_stick_look`, knobs **Stick Turn Speed** /
-  **Stick Pitch Ratio**), the left stick is analog (half push = walk at half speed). See §10,
+- **Controller** â€” right stick turns the camera (`_stick_look`, knobs **Stick Turn Speed** /
+  **Stick Pitch Ratio**), the left stick is analog (half push = walk at half speed). See Â§10,
   "Playing with a controller".
-- **Items** — E grabs the nearest item, G drops what's in your paws, Left/Right Mouse use them
-  (§9). With a gun, the cat turns to face where the camera looks, and the camera slides over the
+- **Items** â€” E grabs the nearest item, G drops what's in your paws, Left/Right Mouse use them
+  (Â§9). With a gun, the cat turns to face where the camera looks, and the camera slides over the
   right shoulder (**Gun Shoulder Offset**, in the Camera group).
-- **Car** — E while standing by the car asks to get in (§3).
+- **Car** â€” E while standing by the car asks to get in (Â§3).
 - **While the pause menu is open** the cat ignores the keyboard (`PauseMenu.is_open`).
 
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
-(groups: Movement / Camera / Zoomies Juice / Network Smoothing) — no code editing needed.
+(groups: Movement / Camera / Zoomies Juice / Network Smoothing) â€” no code editing needed.
 
-Keys are handled by the **Controls** framework (`scripts/controls.gd`) — players rebind them in
+Keys are handled by the **Controls** framework (`scripts/controls.gd`) â€” players rebind them in
 **SETTINGS > KEYS**. See section 10, "Controls & key binding".
 
 ---
@@ -196,27 +196,27 @@ Keys are handled by the **Controls** framework (`scripts/controls.gd`) — playe
 ### Node tree (`scenes/getaway_car.tscn`)
 ```
 GetawayCar (RigidBody3D)            script: getaway_car.gd
-│   Mass 800, Can Sleep OFF, Axis Lock > Angular X + Z ON, Physics Material: friction 0
-├── CollisionShape3D                 BoxShape3D 1.8 x 0.8 x 3.6
-├── Model (Node3D)                   Body, Cabin, 4 wheels, 2 headlights (MeshInstance3D)
-├── GroundRay (RayCast3D)            Target Position (0, -0.8, 0)
-├── DoorZone (Area3D)                "press E" range
-│   └── CollisionShape3D             BoxShape3D 5 x 2 x 6
-├── CameraRig (Node3D)               Top Level ON  <- follows the car with lag
-│   └── SpringArm3D                  position y=1.2, rotation x=-0.3, Spring Length 7
-│                                    (the cat's Camera3D gets moved here while driving)
-└── MultiplayerSynchronizer          shares sync_position, sync_rotation
+â”‚   Mass 800, Can Sleep OFF, Axis Lock > Angular X + Z ON, Physics Material: friction 0
+â”œâ”€â”€ CollisionShape3D                 BoxShape3D 1.8 x 0.8 x 3.6
+â”œâ”€â”€ Model (Node3D)                   Body, Cabin, 4 wheels, 2 headlights (MeshInstance3D)
+â”œâ”€â”€ GroundRay (RayCast3D)            Target Position (0, -0.8, 0)
+â”œâ”€â”€ DoorZone (Area3D)                "press E" range
+â”‚   â””â”€â”€ CollisionShape3D             BoxShape3D 5 x 2 x 6
+â”œâ”€â”€ CameraRig (Node3D)               Top Level ON  <- follows the car with lag
+â”‚   â””â”€â”€ SpringArm3D                  position y=1.2, rotation x=-0.3, Spring Length 7
+â”‚                                    (the cat's Camera3D gets moved here while driving)
+â””â”€â”€ MultiplayerSynchronizer          shares sync_position, sync_rotation
 ```
 
 Why those settings:
-- **Can Sleep OFF** — a sleeping body ignores our driving code.
-- **Angular X/Z locked** — the car can only turn left/right, so it can never flip. (Ramps will come later.)
-- **Friction 0** — our script handles grip; real friction would fight it.
+- **Can Sleep OFF** â€” a sleeping body ignores our driving code.
+- **Angular X/Z locked** â€” the car can only turn left/right, so it can never flip. (Ramps will come later.)
+- **Friction 0** â€” our script handles grip; real friction would fight it.
 
 ### What `scripts/getaway_car.gd` does
 Arcade-style: each physics step it nudges velocity directly instead of simulating tyres.
-- **W** accelerate · **S** brake, then reverse · **A/D** steer (weaker at low speed, flips in reverse)
-- **Space = handbrake** — sideways grip drops from 10 to 1.2 and turning gets 1.5x stronger → drift.
+- **W** accelerate Â· **S** brake, then reverse Â· **A/D** steer (weaker at low speed, flips in reverse)
+- **Space = handbrake** â€” sideways grip drops from 10 to 1.2 and turning gets 1.5x stronger â†’ drift.
 - `is_drifting` turns true during slides (hook tyre smoke/sounds to it later).
 - **Drive input is separate from the physics:** the keyboard fills in three variables
   (`throttle`, `steer`, `handbrake`) in `_read_driver_keys()`, and the physics only reads those.
@@ -231,12 +231,12 @@ Arcade-style: each physics step it nudges velocity directly instead of simulatin
   `_update_look_around()` and `_turn_camera()` (offsets `look_yaw` / `look_pitch`).
 
 ### The interaction (E to enter/exit)
-1. `DoorZone` notices a cat walking in → sets that cat's `nearby_car`.
-2. The cat presses E → it asks the **host** (`request_enter`). The host checks that the car is
+1. `DoorZone` notices a cat walking in â†’ sets that cat's `nearby_car`.
+2. The cat presses E â†’ it asks the **host** (`request_enter`). The host checks that the car is
    empty and the cat is within 5 m, then tells everyone who the driver is (`set_driver`).
 3. Every computer hides that cat (`enter_car`); the driver's computer moves its Camera3D onto the
    car's `CameraRig/SpringArm3D` and starts simulating the car.
-4. While driving, E → `request_exit` → the host sets the driver to nobody → `exit_car` puts the
+4. While driving, E â†’ `request_exit` â†’ the host sets the driver to nobody â†’ `exit_car` puts the
    cat 2.2 m to the car's left (**Exit Offset**) and gives it its camera back.
 
 The E press is marked "handled" so the same key press can't enter and exit in one frame.
@@ -246,27 +246,27 @@ The E press is marked "handled" so the same key press can't enter and exit in on
 ## 4. Testing and fixing errors
 
 **Quick check after any change** (press F5):
-1. **Start menu** — the neon title over the rainy city; PLAY / SETTINGS / QUIT work, and PLAY
+1. **Start menu** â€” the neon title over the rainy city; PLAY / SETTINGS / QUIT work, and PLAY
    leads to CHOOSE YOUR CAT, then SOLO / MULTIPLAYER.
-2. **PLAY > HOST** — your cat appears down in **THE SEWERS** (the hub). Walk to Don Catleone
-   (north end, under the pink sign), press E, pick **SEND ME UP TOP** — you're in the city.
-3. **Walk, jump, zoomies** (WASD, Space, Shift) — W always goes where the camera faces.
-4. **Car** — walk to the car, E to get in, drive, hold Space while turning to drift, E to get out.
-5. **Items** — extract some fish for cash, then buy gear from Comrade Whiskers at the **Black Markitten**
+2. **PLAY > HOST** â€” your cat appears down in **THE SEWERS** (the hub). Walk to Don Catleone
+   (north end, under the pink sign), press E, pick **SEND ME UP TOP** â€” you're in the city.
+3. **Walk, jump, zoomies** (WASD, Space, Shift) â€” W always goes where the camera faces.
+4. **Car** â€” walk to the car, E to get in, drive, hold Space while turning to drift, E to get out.
+5. **Items** â€” extract some fish for cash, then buy gear from Comrade Whiskers at the **Black Markitten**
    (west wall of the sewers). Hold Left Mouse to fire, G to drop, Tab for the inventory.
-6. **Esc** — pause menu; SETTINGS changes apply immediately; RESUME grabs the mouse again.
+6. **Esc** â€” pause menu; SETTINGS changes apply immediately; RESUME grabs the mouse again.
 
 **When you see red errors** (bottom panel, **Debugger > Errors** tab, or red text in **Output**):
 1. **Read the first one only.** Later errors are usually caused by the first.
 2. Note the **file name and line number** (e.g. `cat_player.gd:84`). Double-click the error to jump there.
 3. The most common causes in this project:
-   - `Node not found: "CameraPivot/SpringArm3D"` → a node was renamed or moved. Names are case-sensitive and must match the trees in this guide exactly.
-   - `Invalid action name "sprint"` → the `Controls` autoload is missing; re-add `scripts/controls.gd` in Project Settings > Globals > Autoload with the name `Controls` (keep it at the top of the list).
-   - `Identifier "Settings"` / `"Net"` `not declared` → that autoload is missing; re-add it the same way (`scripts/settings.gd` as `Settings`, `scripts/net.gd` as `Net`).
-   - `Parse Error` / `Mixed use of tabs and spaces` → copy-paste damage. Godot scripts must indent with **tabs**. Use **Edit > Convert Indent to Tabs** in the script editor.
-   - Shader errors (red text in the shader editor, objects turn pink/missing) → the error names the line; send it to me.
-   - `Identifier "CatPlayer" not declared` → the editor hasn't scanned scripts yet. Close and reopen the project.
-4. **Yellow warnings** are not errors — the game still runs. Ignore them for now.
+   - `Node not found: "CameraPivot/SpringArm3D"` â†’ a node was renamed or moved. Names are case-sensitive and must match the trees in this guide exactly.
+   - `Invalid action name "sprint"` â†’ the `Controls` autoload is missing; re-add `scripts/controls.gd` in Project Settings > Globals > Autoload with the name `Controls` (keep it at the top of the list).
+   - `Identifier "Settings"` / `"Net"` `not declared` â†’ that autoload is missing; re-add it the same way (`scripts/settings.gd` as `Settings`, `scripts/net.gd` as `Net`).
+   - `Parse Error` / `Mixed use of tabs and spaces` â†’ copy-paste damage. Godot scripts must indent with **tabs**. Use **Edit > Convert Indent to Tabs** in the script editor.
+   - Shader errors (red text in the shader editor, objects turn pink/missing) â†’ the error names the line; send it to me.
+   - `Identifier "CatPlayer" not declared` â†’ the editor hasn't scanned scripts yet. Close and reopen the project.
+4. **Yellow warnings** are not errors â€” the game still runs. Ignore them for now.
 5. Still stuck? Copy the **full** error text (right-click > Copy Error) plus the file/line it points to and send it to me.
 
 ### The test tool (`scripts/dev_capture.gd`)
@@ -277,7 +277,7 @@ screenshot, then quit. Run from inside the `Meow-City` folder:
 C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shots/test.png --pos=0,0,6 --yaw=0 --pitch=-12
 ```
 
-- Useful extras: `--deploy` (go up to the city first — without it you're in the hub),
+- Useful extras: `--deploy` (go up to the city first â€” without it you're in the hub),
   `--talk` (open Don's talk box), `--drive` (car view), `--grab=fish`, `--hold=shoot`,
   `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
@@ -320,8 +320,8 @@ scene so the CRT runs at full window size. Doable later if you want it.
 
 ## 6. Multiplayer
 
-The game starts on the **start menu** (PLAY / SETTINGS / QUIT, see §10). **PLAY** goes to
-**CHOOSE YOUR CAT** (§11), then **NEXT** to **SOLO / MULTIPLAYER**. **SOLO** starts a game just
+The game starts on the **start menu** (PLAY / SETTINGS / QUIT, see Â§10). **PLAY** goes to
+**CHOOSE YOUR CAT** (Â§11), then **NEXT** to **SOLO / MULTIPLAYER**. **SOLO** starts a game just
 for you (no network, nobody can join). **MULTIPLAYER** shows **HOST** (with an optional city #)
 and **JOIN** (with the host's address).
 
@@ -356,7 +356,7 @@ argument `--host` and instance 2 `--join` to skip the menu (`--name=Whiskers` na
 3. Not listed (a picky router or firewall)? On the host PC run `ipconfig`, note the **IPv4
    Address** (e.g. `192.168.1.23`), type it into the JOIN box and click **JOIN**.
 
-Up to 8 players in total: e.g. 8 computers, or 2 computers with 4 couch players each (§10).
+Up to 8 players in total: e.g. 8 computers, or 2 computers with 4 couch players each (Â§10).
 Playing over the internet needs port forwarding (UDP port 7777) or Steam's relay. Steam is planned
 and will only change `scripts/net.gd`.
 
@@ -386,10 +386,10 @@ players' cats move on screen.
 ```
 Net (autoload, scripts/net.gd)    <- host(), join(address), leave(); signals joined / join_failed / host_left
 Main (Node3D)                     script: game.gd  <- starts games, spawns cats, catches up late joiners
-├── Players (Node3D)               <- every cat lives here, named by PLAYER ID ("1" = host's first player)
-├── PlayerSpawner (MultiplayerSpawner)   Spawn Path: ../Players, spawnable: player.tscn
-├── LobbyCamera (Camera3D)         <- shows the city behind the start menu
-└── PS1Overlay > Lobby (Control)   <- the start menu (§10)
+â”œâ”€â”€ Players (Node3D)               <- every cat lives here, named by PLAYER ID ("1" = host's first player)
+â”œâ”€â”€ PlayerSpawner (MultiplayerSpawner)   Spawn Path: ../Players, spawnable: player.tscn
+â”œâ”€â”€ LobbyCamera (Camera3D)         <- shows the city behind the start menu
+â””â”€â”€ PS1Overlay > Lobby (Control)   <- the start menu (Â§10)
 ```
 
 - **Who controls what:** each computer moves only its own cat and sends the position to others.
@@ -417,7 +417,7 @@ keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
   inventories, stashes, who's driving. Each `request_...` sent to the host says which player it's
   for, and the host checks that player belongs to the computer that asked
   (`PlayerId.sender_owns(id)`), so nobody can move someone else's stuff.
-- **Each couch player plays their own saved cat**, with its own cash and stash file (§8, "The stash
+- **Each couch player plays their own saved cat**, with its own cash and stash file (Â§8, "The stash
   & saved progress"). A couch player can drop out on their own; the computer stays in the game
   until it quits, which removes all of its players.
 - **In code:** `PlayerId.make(network_id, seat)`, `PlayerId.peer_of(id)` (which computer),
@@ -425,8 +425,8 @@ keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
   `PlayerId.first_local()`. A cat knows its own: `cat.player_id`, `cat.slot`.
   `Game.instance.add_local_player(seat, {"name", "look", "cat_id"})` /
   `remove_local_player(seat)` add or drop a couch player.
-- **Controllers:** couch players join with START on their own controller (§10, "Couch co-op"),
-  and each gets their own part of the screen (§13).
+- **Controllers:** couch players join with START on their own controller (Â§10, "Couch co-op"),
+  and each gets their own part of the screen (Â§13).
   Test them with DevCapture (these test players have no controller, so they stand still):
   `--add_local=1` (one more player joins in), `--as_local=1` (the test actions use that cat:
   `--grab`, `--goto_dropoff_after`, `--bait_roomba`...), `--remove_local=1` (they drop out).
@@ -462,7 +462,7 @@ number, the **city seed**. Same number = exact same city.
 
 - **In the lobby:** type a number in the blue **city #** box before HOST to pick a city, or leave
   it blank for a random one. The number is shown at the bottom of the screen while playing
-  ("CITY #4821") — share it to replay a city you liked. Players who JOIN get the host's city.
+  ("CITY #4821") â€” share it to replay a city you liked. Players who JOIN get the host's city.
 - **Multiplayer:** the host only sends the number; every computer builds the identical city
   itself (the test tool prints a city "fingerprint"; host and joined player always match).
 - **What it builds:** a 6x6 grid of blocks with streets between. Each block has 4 lots: a building
@@ -502,20 +502,20 @@ THE SEWERS (hub, safe)  --talk to Don Catleone-->  THE CITY (grab fish)
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN. It's a sewer tunnel with a murky channel down the
 middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
-west wall; decoration for now — later it's where scrap buys server-wide buffs) and a ladder up
+west wall; decoration for now â€” later it's where scrap buys server-wide buffs) and a ladder up
 to the surface. The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
 sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
 
-**Don Catleone** — the boss cat in the fedora with the cigar, at the north end under a pink
+**Don Catleone** â€” the boss cat in the fedora with the cigar, at the north end under a pink
 glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives four choices:
 **SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **HOW DOES
 THIS WORK?** and **NEVER MIND** (or Esc).
 
-**Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
+**Lil' Mittens** â€” a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
 by the cardboard shanties on the east wall. Extremely needy. She gives you the **MITTENS' FISH**
 quest (see **Quests** below): bring 3 fish down at once for a **$100 bonus**.
 
-**Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
+**Comrade Whiskers** â€” a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
 counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
 the ladder. It's **the only place to get gear**: nothing but fish lies around the city any more.
 Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** button per item, and
@@ -578,23 +578,23 @@ Test runs save to `test_profiles\` instead, so they never touch your real saves.
 
 **Where it lives:**
 - The tunnel: `scripts/hub.gd` on the **Hub** node in `main.tscn`. It's built from code when the
-  game starts (like the city), but it's always the same — no seed, no randomness. The Hub node sits
+  game starts (like the city), but it's always the same â€” no seed, no randomness. The Hub node sits
   at **position (0, -200, 0)**: 200 m *under* the city. Everything below -100 m counts as "in the
   hub". Going up or down is just moving your cat between the two.
 - Don: `scenes/npcs/don_catleone.tscn`, an NPC (see **NPCs** below), placed under **Hub** in
   `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
-- The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, §13),
+- The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, Â§13),
   drawn sharp at full resolution. It also shows the "[E] TALK TO ..." prompt whenever your cat
   is near any NPC.
 - NPC names over their heads: each NPC's **NameTag** (Label3D) sets where the name floats and
-  its colour (**Modulate**); the HUD draws it sharp (§13). Its text comes from **Npc Name**.
+  its colour (**Modulate**); the HUD draws it sharp (Â§13). Its text comes from **Npc Name**.
 
 **Change what Don says:** open `scenes/npcs/don_catleone.tscn`, click the root **DonCatleone**,
 and in the Inspector open **Pages** (how pages work is just below).
 
 ### NPCs: characters you can talk to
 Every talking character uses one script, `scripts/npcs/npc.gd`. Their whole conversation is
-data in the Inspector — no code needed:
+data in the Inspector â€” no code needed:
 
 ```
 Npc Name        "DON CATLEONE"  (also used for the floating name tag and the [E] prompt)
@@ -618,13 +618,13 @@ Idle Animation  Look At Players, Look Range, Turn Speed, Tail Swish, Tail Speed
 2. Double-click it. Click the root node, rename it, and set **Npc Name**.
 3. Edit **Pages**: click a page to open it; click **Lines** / **Choices** to edit them. To add a
    page or a choice: click the list's **+ Add Element**, then on the new `<empty>` slot pick
-   **New NpcPage** / **New NpcChoice**. (Tip: right-click an existing page > **Duplicate** —
-   or **Make Unique** after copying — so edits don't change the original.)
+   **New NpcPage** / **New NpcChoice**. (Tip: right-click an existing page > **Duplicate** â€”
+   or **Make Unique** after copying â€” so edits don't change the original.)
 4. Change the look: recolour the meshes under **Model** (select a mesh > Surface Material
    Override > albedo_color), or swap in your own meshes. Keep anything that should face the
    player under **Model**; a node called **Tail** under Model swishes by itself.
 5. Place it: open `main.tscn`, drag your .tscn from the FileSystem onto **Hub** (in the sewers)
-   or onto the root **Main** node (in the city, then move it to a fixed spot — the city is
+   or onto the root **Main** node (in the city, then move it to a fixed spot â€” the city is
    generated, so pick a spot on a pavement near the centre or Meow-Mart). Save and press F5.
 
 **Special actions (needs a little code):** type your own word into a choice's **Action**, e.g.
@@ -646,10 +646,10 @@ A quest is a job an NPC gives you, with a cash reward. The first one is **MITTEN
    shows your loot bag, `LOOT 1/3`, as before.)
 3. Step into the extraction beam with **all 3 fish in your bag at once**: you get the fish's
    normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
-   and you just get the fish money — the quest stays active for your next trip.
+   and you just get the fish money â€” the quest stays active for your next trip.
 4. Talk to her again afterwards: she thanks you and offers it again (it's repeatable).
 Her lines change with the quest (offer / waiting / "you HAVE them, go extract!" / thank you) using
-each page's **Only If Quest** settings — open `scenes/npcs/lil_mittens.tscn` to see how.
+each page's **Only If Quest** settings â€” open `scenes/npcs/lil_mittens.tscn` to see how.
 
 **Where it lives:** quest cards are `.tres` files in the `quests/` folder (like item cards, loaded
 automatically). `scripts/quests/quest_data.gd` is the card; `scripts/quests/quest_manager.gd` on
@@ -657,7 +657,7 @@ the **Quests** node in `main.tscn` keeps track of who has which quest. In multip
 decides (like cash), and every player has their own quests.
 
 **Change the Mittens quest:** double-click `quests/mittens_fish.tres`: **Title** (HUD name),
-**Item** + **Count** (what to bring — any item card's id), **Reward Cash**, **Repeatable**.
+**Item** + **Count** (what to bring â€” any item card's id), **Reward Cash**, **Repeatable**.
 
 **Add a new quest:**
 1. In the FileSystem, right-click `quests/mittens_fish.tres` > **Duplicate...**, name it
@@ -678,7 +678,7 @@ Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
 **Mood** (the sewer fog colour, fog glow and ambient light).
 
 **The mood switch:** while *your* camera is in the hub, the moon and rain switch off and the fog
-turns green — on your screen only. Go back up and the rainy night city returns.
+turns green â€” on your screen only. Go back up and the rainy night city returns.
 
 ### Fish Heist: loot, greed and moving beams
 
@@ -708,7 +708,7 @@ ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about to shut), or
 `THE SEWERS - SAFE ZONE` in the hub; under it the **HEAT** bar; top-right = everyone's cash.
 
 **Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Loot is normal
-loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres` (models in
+loot items (Â§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres` (models in
 `scenes/items/`).
 
 **Tuning:**
@@ -717,29 +717,29 @@ loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tre
     Sardines, Golden Koi (how many), Respawn Seconds, Koi Respawn Seconds, Koi Min Distance.
   - **Extraction Beams**: Dropoff Radius, Beam Spots, Open At Once, Beam Open Min/Max Seconds,
     Beam Warning Seconds, Min Dropoff Distance (from Meow-Mart), Beam Spacing, Beam Color.
-- What loot pays, how heavy / noisy it is: open its card in `items/` (see §9, **Loot settings**).
+- What loot pays, how heavy / noisy it is: open its card in `items/` (see Â§9, **Loot settings**).
 - How much you can carry: **Bag Size** on the **Items** node.
 
 **Multiplayer:** the host referees every pickup and extraction. Loot spots and beam spots come
 from the city number, so the same city always has the same heist; the host alone decides which
 beams are open and tells everyone. The hub and Don aren't networked at
-all — everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
+all â€” everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
 player who leaves takes their cash with them (their carried fish drop where they stood).
 
 **Items stay on their own level:** a cat can only grab things within 3 m above or below it
 (`MAX_REACH_HEIGHT` in `item_manager.gd`), and something dropped in the sewers stays in the
 sewers. (Before, a cat standing in the hub could pick up fish lying in the city right above it.)
 
-### VAC-COPs (police Roombas — the enemy)
+### VAC-COPs (police Roombas â€” the enemy)
 Eight police Roombas patrol the city's sidewalks (more as the HEAT rises, see below). When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
-slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying,
+slower than **zoomies** (Shift) â€” so run! If it touches you it **bonks** you flying,
 **vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **1 HP**.
 Then it backs off for a couple of seconds. Three bonks and you're **knocked out** (see
 **Health & knockouts** below).
 
 **Getting your fish back:** destroy it. **3 shots** from any gun, or **run it over** with the
-car at speed. It explodes and spits out everything it vacuumed — walk over the fish to grab them.
+car at speed. It explodes and spits out everything it vacuumed â€” walk over the fish to grab them.
 A new Roomba rolls out somewhere else 25 seconds later. Cats in the car and cats in the hub are
 safe. Shoot a Roomba and it gets angry and chases *you*.
 
@@ -749,10 +749,10 @@ sibling **RoombaSpawner** (a MultiplayerSpawner) copies them to every player.
 
 ```
 Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
-├── CollisionShape3D
-├── Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
-├── SirenLight (OmniLight3D)       <- red/blue on the street while chasing
-└── MultiplayerSynchronizer        <- sync_position, sync_yaw, state
+â”œâ”€â”€ CollisionShape3D
+â”œâ”€â”€ Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
+â”œâ”€â”€ SirenLight (OmniLight3D)       <- red/blue on the street while chasing
+â””â”€â”€ MultiplayerSynchronizer        <- sync_position, sync_yaw, state
 ```
 
 **Tuning:**
@@ -824,7 +824,7 @@ a knockout). Cats in the car and in the hub can't be hurt. Your cash and quests 
 So gear you take up top is at risk every time. Gear left in **the stash** (below) is safe.
 
 **Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the HP line
-is the **Health** label in `scenes/ui/hud.tscn` (§13). The fall-over is `knocked_out` in `cat_player.gd`.
+is the **Health** label in `scenes/ui/hud.tscn` (Â§13). The fall-over is `knocked_out` in `cat_player.gd`.
 
 **Tuning** (select **Health** in `main.tscn`): **Max Health**, **Knockout Seconds** (how long
 you lie there), **Hud Color**. How much a bonk hurts: **Bonk Damage** on the Roomba (above).
@@ -844,7 +844,7 @@ and your cat is back in the hub with `hp=3`.
 
 ## 9. Items & weapons
 
-Every item — fish, the tommy gun, pistols, catnip, catdip, anything you add — goes through one
+Every item â€” fish, the tommy gun, pistols, catnip, catdip, anything you add â€” goes through one
 system, so new items need no new networking or pickup code.
 
 ### How players use items
@@ -859,7 +859,7 @@ system, so new items need no new networking or pickup code.
 
 ### The items
 Only **fish** lie around the city. All gear is **bought** from Comrade Whiskers at the Black
-Markitten in the sewers (§8).
+Markitten in the sewers (Â§8).
 
 | Item | Paws | Where | What it does |
 |---|---|---|---|
@@ -867,22 +867,22 @@ Markitten in the sewers (§8).
 | **Paw-Pistol** | 1 | shop, $60 | One shot per click; buy two to dual wield |
 | **Catnip** | 1 | shop, $25 | Click: 8 s of super zoomies (used up) |
 | **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
-| **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
-| **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
-| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy, noisy and raises the HEAT (§8) |
+| **Sardine** | loot | sidewalks | $20 at the drop-off (Â§8) |
+| **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (Â§8) |
+| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy, noisy and raises the HEAT (Â§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
 it (`HEAT [####------]`). About 3 s of non-stop fire overheats it: it blinks and won't fire until
 it has cooled all the way down. Bolts shove other cats back with a little hop and nudge the car.
-Nobody gets hurt — there is no health yet. Its scene (`scenes/items/tommy_gun.tscn`):
+Nobody gets hurt â€” there is no health yet. Its scene (`scenes/items/tommy_gun.tscn`):
 ```
 TommyGun (Node3D)                    script: weapon.gd (all the numbers are set in the Inspector)
-└── Model (Node3D)                   all the meshes
-    ├── Receiver, Barrel, Stock, Grip, ForeGrip, SightRail, Drum   (plain MeshInstance3Ds)
-    ├── Fin1 / Fin2 / Fin3           glowing pink cooling rings on the barrel
-    ├── HeatCoil                     glowing drum core — changes colour with heat
-    └── Muzzle (Marker3D)            barrel tip; bolts start here
-        └── MuzzleFlash (OmniLight3D)
+â””â”€â”€ Model (Node3D)                   all the meshes
+    â”œâ”€â”€ Receiver, Barrel, Stock, Grip, ForeGrip, SightRail, Drum   (plain MeshInstance3Ds)
+    â”œâ”€â”€ Fin1 / Fin2 / Fin3           glowing pink cooling rings on the barrel
+    â”œâ”€â”€ HeatCoil                     glowing drum core â€” changes colour with heat
+    â””â”€â”€ Muzzle (Marker3D)            barrel tip; bolts start here
+        â””â”€â”€ MuzzleFlash (OmniLight3D)
 ```
 
 ### The pieces
@@ -896,14 +896,14 @@ scripts/items/
                                 backpack, bag, placing items in the city, buying, multiplayer, late joiners
   held_item.gd               <- base for held items that DO something (use_tick, hud_text)
   weapon.gd                  <- base for every gun: fire rate, spread, range, knockback,
-                                overheat, bolt colours — all Inspector numbers
+                                overheat, bolt colours â€” all Inspector numbers
   catnip.gd, catdip.gd       <- examples of use-it-once items
 scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
-The HUD pieces for items are **Crosshair** and **Held** in `scenes/ui/hud.tscn` (§13); they only
+The HUD pieces for items are **Crosshair** and **Held** in `scenes/ui/hud.tscn` (Â§13); they only
 show while you hold something that wants them.
 
-### Adding a new weapon — no code needed
+### Adding a new weapon â€” no code needed
 The **Paw-Pistol** was made exactly this way (`scenes/items/pistol.tscn` + `items/pistol.tres`).
 Steps for your next one (e.g. a shotgun):
 1. In the FileSystem panel, right-click `scenes/items/pistol.tscn` (or `tommy_gun.tscn`) >
@@ -917,7 +917,7 @@ Steps for your next one (e.g. a shotgun):
 4. Sell it: on `shotgun.tres` set **Shop > Price** (e.g. 120), then select **Hub >
    ComradeWhiskers** in `main.tscn` and add `shotgun` to his **Stock**. Done.
    (Or make it lie in the city instead: select **Items** and add it to **Scattered Items** or
-   **Fixed Items** — both are empty on purpose right now.)
+   **Fixed Items** â€” both are empty on purpose right now.)
 
 ### Adding new loot (example: a silver tuna worth $150)
 Duplicate `items/fish.tres` as `silver_tuna.tres`, change **Id**, **Cash Value** 150 and the
@@ -929,7 +929,7 @@ the **Items** node (or ask Claude to place it from the heist like the koi).
 - **Bag Space**: how many of the 3 bag spaces it fills (the koi takes 2).
 - **Carry Speed**: 1 = normal, 0.8 = your cat moves 20% slower while carrying it.
 - **Noise**: 1 = normal, 1.6 = VAC-COPs spot you from 60% further away.
-- **Heat On Pickup**: HEAT added when someone grabs it (§8).
+- **Heat On Pickup**: HEAT added when someone grabs it (Â§8).
 - **Pickup Announcement**: shown to everyone when it's grabbed; `%s` = the cat's name.
 
 ### Adding an item with a new behaviour (a shield, a bomb...)
@@ -941,7 +941,7 @@ use it up. Anything other players must see goes through an `@rpc` function on th
 
 ### Tuning the system (select **Items** in `main.tscn`)
 Bag Size, Pack Size (backpack), Pickup Radius (walk-into), Interact Radius (E), Fixed Items,
-Scattered Items (both empty: gear comes from the shop), Scatter Respawn Seconds. Fish placement stays on the **Heist** node (§8).
+Scattered Items (both empty: gear comes from the shop), Scatter Respawn Seconds. Fish placement stays on the **Heist** node (Â§8).
 
 ### Inventory screen (Tab or I)
 Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is freed while open).
@@ -961,8 +961,8 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   into the backpack; only if the backpack is full too does it swap with what's in your paw.
 - **At the stash lockers** in the sewers the LOOT BAG rows are replaced by your **STASH**
   (9 slots), and clicking moves items between you and the stash instead (see **The stash &
-  saved progress** in §8).
-- The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, §13) just has an empty
+  saved progress** in Â§8).
+- The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, Â§13) just has an empty
   `Inventory` node (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`). It's drawn sharp at
   full resolution. Select **Inventory** in `hud.tscn` to change **Slot Size**, **Slot Font Size**,
   **Title Font Size** and **Columns**; colours and borders: `ui/hud_theme.tres`.
@@ -976,7 +976,7 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   then **PLAY / SETTINGS / QUIT**. The way through:
   ```
   PLAY  ->  SOLO / MULTIPLAYER
-              SOLO  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, §11) -- NEXT --> a game just for you
+              SOLO  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, Â§11) -- NEXT --> a game just for you
               MULTIPLAYER  ->  LOCAL CO-OP / ONLINE CO-OP
                                  -> the LANDING PAGE: everyone on this computer joins and picks a cat
                                       LOCAL:  START GAME = everyone into the sewers together
@@ -993,12 +993,12 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   **BACK** (or **Esc**) always goes one step back. The game version shows bottom-left.
 - **Pause menu (Esc, or START on a controller, in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
   SETTINGS / LEAVE GAME / QUIT TO DESKTOP. The game does
-  **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
+  **not** stop (it's online) â€” your cat just stands still and the car rolls to a stop while it's
   open. LEAVE GAME goes back to the start menu; if the host leaves, everyone does.
 - **Settings:** five tabs. Click **<** / **>** to change a value; hover a row for a one-line
   explanation at the bottom. Changes apply instantly and are saved. **RESET** = defaults.
   **Esc** = back.
-- **No key list on screen during play** — the keys live in **SETTINGS > KEYS**, and prompts
+- **No key list on screen during play** â€” the keys live in **SETTINGS > KEYS**, and prompts
   ("[E] TALK TO...", "E PURR-TOMMY" over items, "TAB: close" in the inventory) always show the
   player's *current* key. The city number is shown in the pause menu.
 - **Controllers** (Xbox, PlayStation, Switch Pro... anything Windows sees) work everywhere,
@@ -1096,7 +1096,7 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
 - **Each player's buttons are their own:** their stick walks their cat, their A jumps it, their
   RT fires their gun, their Y opens the inventory with THEIR stuff in it, their rumble.
   The keys/buttons are the same for everyone (SETTINGS > KEYS, PAD column).
-- **Split screen:** every player gets their own part of the screen (§13, "How the screen is put
+- **Split screen:** every player gets their own part of the screen (Â§13, "How the screen is put
   together").
 - **Their own HUD:** every player has their own cash, loot, HP, extraction arrow, prompts,
   messages and scoreboard ("YOU") on their own screen, plus their OWN inventory (Y) and talk box /
@@ -1127,9 +1127,9 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   box ignores keys.
 - **Clashes:** if the key was already used by a control needed at the same time, that control
   loses it and the hint says "SPACE was taken from JUMP - give it a new key!". Controls only
-  clash when their **context** overlaps: `foot` (walking), `car` (driving), `any` (both) — so
+  clash when their **context** overlaps: `foot` (walking), `car` (driving), `any` (both) â€” so
   JUMP (foot) and HANDBRAKE (car) can both be Space.
-- **Esc and START can't be rebound** — they always open/close menus. The other menu buttons
+- **Esc and START can't be rebound** â€” they always open/close menus. The other menu buttons
   (A = press, B = back, LB/RB = tabs, X = drop in the inventory) are in **FIXED** in
   `scripts/controls.gd`.
 - **Adding a control:** add one line to **ACTIONS** in `scripts/controls.gd`, e.g.
@@ -1149,24 +1149,24 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
 
 ### Node tree (in `main.tscn`, under PS1Overlay)
 ```
-(The in-game HUD is NOT here: it's the sharp overlay in scenes/ui/hud.tscn, §13.)
+(The in-game HUD is NOT here: it's the sharp overlay in scenes/ui/hud.tscn, Â§13.)
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
-├── Shade (ColorRect)             <- darkens the city a little so the text reads
-├── Title / Subtitle / Tagline (Label)
-├── MainScreen (VBoxContainer)    <- PlayButton, SettingsButton, QuitButton
-├── ModeScreen (VBoxContainer)    <- PlayingAs (Label), SoloButton, MultiplayerButton, BackButton
-├── PlayScreen (PanelContainer) > VBox      <- the MULTIPLAYER screen
-│   ├── Columns > HostColumn (HostLabel, SeedInput, HostButton)
-│   │           > JoinColumn (JoinLabel, AddressInput, JoinButton)
-│   └── BackButton
-├── Status (Label)                <- "Connecting..." / errors
-└── Version (Label)
+â”œâ”€â”€ Shade (ColorRect)             <- darkens the city a little so the text reads
+â”œâ”€â”€ Title / Subtitle / Tagline (Label)
+â”œâ”€â”€ MainScreen (VBoxContainer)    <- PlayButton, SettingsButton, QuitButton
+â”œâ”€â”€ ModeScreen (VBoxContainer)    <- PlayingAs (Label), SoloButton, MultiplayerButton, BackButton
+â”œâ”€â”€ PlayScreen (PanelContainer) > VBox      <- the MULTIPLAYER screen
+â”‚   â”œâ”€â”€ Columns > HostColumn (HostLabel, SeedInput, HostButton)
+â”‚   â”‚           > JoinColumn (JoinLabel, AddressInput, JoinButton)
+â”‚   â””â”€â”€ BackButton
+â”œâ”€â”€ Status (Label)                <- "Connecting..." / errors
+â””â”€â”€ Version (Label)
 PauseMenu (Control)               script: ui/pause_menu.gd
-└── Dim, Panel > VBox > Title, ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton, Note
+â””â”€â”€ Dim, Panel > VBox > Title, ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton, Note
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
-CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, §11)
+CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, Â§11)
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
-(The inventory screen and the NPC talk box are in the sharp HUD instead: scenes/ui/hud.tscn, §13.)
+(The inventory screen and the NPC talk box are in the sharp HUD instead: scenes/ui/hud.tscn, Â§13.)
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,
 Panel > VBox > Title, Tabs, Scroll (ScrollContainer) > Rows, Hint, Buttons (ResetButton,
@@ -1175,27 +1175,27 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
 **Scroll > Inspector > Layout > Custom Minimum Size > y** (now 104).
 
 ### The pieces
-- **`scripts/ui/main_menu.gd`** (on **Lobby**) — the start menu screens. It doesn't connect
+- **`scripts/ui/main_menu.gd`** (on **Lobby**) â€” the start menu screens. It doesn't connect
   anything itself: it sends `play_pressed` / `solo_pressed` / `host_pressed` / `join_pressed` /
   `settings_pressed` signals, and `game.gd` does the work (e.g. `play_pressed` opens CHOOSE YOUR
   CAT, whose NEXT shows the SOLO / MULTIPLAYER screen again). Inspector knobs on **Lobby** > **Start Menu**: Menu Camera, Camera
   Sway Degrees / Seconds, Title Flicker.
-- **`scripts/ui/pause_menu.gd`** (on **PauseMenu**) — Esc / START opens/closes it (B closes) once a game has
+- **`scripts/ui/pause_menu.gd`** (on **PauseMenu**) â€” Esc / START opens/closes it (B closes) once a game has
   started. While it (or Settings opened from it) is up, `PauseMenu.is_open` is true and the cat,
   car and inventory ignore the keyboard.
-- **`scripts/settings.gd`** — Autoload named **Settings**. Holds every setting with its default,
+- **`scripts/settings.gd`** â€” Autoload named **Settings**. Holds every setting with its default,
   loads/saves the file, and applies the screen, sound and wobble settings. Other scripts read e.g.
   `Settings.mouse_speed`. `game.gd` applies the two that live in the scene (CRT look and fog).
-- **Esc order:** the topmost open thing handles Esc first — the talk box / inventory (in the
+- **Esc order:** the topmost open thing handles Esc first â€” the talk box / inventory (in the
   HUD, which always hears keys before the game), then settings, then the pause menu, then the
   start menu. (Godot sends keys to the node lowest in the scene tree first, so keep that order
   under PS1Overlay.)
-- **`ui/menu_theme.tres`** — the menu look (dark purple boxes, pink edges, cyan hover).
+- **`ui/menu_theme.tres`** â€” the menu look (dark purple boxes, pink edges, cyan hover).
   Double-click it in the FileSystem dock to change colours in the Theme editor.
 - **PS1 wobble** is a *global shader parameter*: Project Settings > **Shader Globals** >
   `psx_wobble` (1 = on). Every `psx_lit` material reads it.
 - **Sound buses:** the game creates **Music** and **SFX** buses (under Master). Sounds played by
-  the **Sound** autoload (§12) pick the right one themselves. Only if you place an
+  the **Sound** autoload (Â§12) pick the right one themselves. Only if you place an
   AudioStreamPlayer by hand, set its **Bus** in the Inspector to Music or SFX so the sliders work.
 
 ### Adding a new setting
@@ -1237,7 +1237,7 @@ NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
 - **Your cats:** you can have as many as you like. **NEW** starts a fresh one (type its name in the
   box), **<** / **>** switch between them, **DELETE** asks "SURE?" and a second click deletes that
   cat **with its cash and stash**. The cat showing when you press NEXT is the one you play.
-- **Each cat has its own name, look, cash and stash** (§8 "The stash & saved progress").
+- **Each cat has its own name, look, cash and stash** (Â§8 "The stash & saved progress").
 - **NEXT needs a name** ("Name your cat first!").
 - Everything is **saved straight away** (in `settings.cfg`). Changing your look in the middle of a
   game changes your cat right there, and everyone else sees it.
@@ -1265,19 +1265,19 @@ Double-click `cat_parts/palette.tres`. It has four lists: **Fur Colors**, **Mark
 colour of each list is what a brand-new cat starts with in MY CAT.
 
 ### Where it lives
-- `scripts/cat/cat_look.gd` (`CatLook`) — the framework. A cat's **look** is a small list of
+- `scripts/cat/cat_look.gd` (`CatLook`) â€” the framework. A cat's **look** is a small list of
   values: four colours plus which part is in each slot. `CatLook.apply(model, look)` paints a cat
   model and puts the parts on. It also loads the part cards and palette, makes random looks, and
   throws away anything broken (unknown parts, wrong types).
-- `scripts/cat/cat_part.gd` (`CatPart`) — the accessory card. `scripts/cat/cat_palette.gd`
-  (`CatPalette`) — the colour lists.
-- `cat_parts/` — the cards and the palette. `scenes/cat_parts/` — the accessory models.
-- `scenes/cat_model.tscn` — the cat's body, used by player cats and the MY CAT preview. The colour
+- `scripts/cat/cat_part.gd` (`CatPart`) â€” the accessory card. `scripts/cat/cat_palette.gd`
+  (`CatPalette`) â€” the colour lists.
+- `cat_parts/` â€” the cards and the palette. `scenes/cat_parts/` â€” the accessory models.
+- `scenes/cat_model.tscn` â€” the cat's body, used by player cats and the MY CAT preview. The colour
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
-- `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
+- `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) â€” the screen. It builds
   itself: the cat row, then one row per colour and per slot.
-- `scripts/settings.gd` — your cats: `Settings.cats` (each `{"id", "name", "look"}`) and
+- `scripts/settings.gd` â€” your cats: `Settings.cats` (each `{"id", "name", "look"}`) and
   `Settings.current_cat_id`, with helpers `current_cat()`, `new_cat()`, `select_cat()`,
   `update_current_cat()`, `delete_cat()`. Each cat's cash + stash file is named after its id.
 - **Multiplayer:** your look is the `look` property on your cat (`cat_player.gd`). The cat's
@@ -1304,13 +1304,13 @@ cat's look is printed, e.g. `DevCapture look 1: fur=#383342 hat=neon_halo face=s
 ## 12. Sound & music
 
 Every sound goes through one Autoload, **Sound** (`scripts/sound.gd`). The sounds themselves
-are just files in the `sounds/` folder — **adding or replacing a sound needs no code.**
+are just files in the `sounds/` folder â€” **adding or replacing a sound needs no code.**
 
 ```
 sounds/
-├── sfx/          <- one-off effects        (SOUND FX slider)
-├── ambience/     <- background loops        (SOUND FX slider)
-└── music/        <- music loops, one per area (MUSIC slider)
+â”œâ”€â”€ sfx/          <- one-off effects        (SOUND FX slider)
+â”œâ”€â”€ ambience/     <- background loops        (SOUND FX slider)
+â””â”€â”€ music/        <- music loops, one per area (MUSIC slider)
 ```
 
 The files there now are **placeholder bleeps** made by Claude. Replace them with real ones.
@@ -1386,14 +1386,14 @@ ears" when it does it.)
 - **Guns** (e.g. `scenes/items/pistol.tscn`, root) > **Look** > **Shot Sound**: which `sfx/` file it fires.
 
 ### Making something new play a sound (one line of code)
-- `Sound.play("buy")` — plain sound, only you hear it (menus, "you got hurt").
-- `Sound.play_at("shoot", where)` — from a spot in the world, on this computer. Use it where
+- `Sound.play("buy")` â€” plain sound, only you hear it (menus, "you got hurt").
+- `Sound.play_at("shoot", where)` â€” from a spot in the world, on this computer. Use it where
   **every** computer already runs the code (like a shot that's drawn on every screen).
-- `Sound.play_everywhere("bonk", where)` — from a spot, sent to **every** player's computer.
+- `Sound.play_everywhere("bonk", where)` â€” from a spot, sent to **every** player's computer.
   Use it where only one computer knows it happened (usually the host).
-- `Sound.attach_loop("engine_loop", self)` — a looping sound that rides along on a node; keep the
+- `Sound.attach_loop("engine_loop", self)` â€” a looping sound that rides along on a node; keep the
   returned player to change its `pitch_scale` / `volume_db`.
-- `Sound.play_music("city")` / `Sound.play_ambience("rain")` — fade over to another track.
+- `Sound.play_music("city")` / `Sound.play_ambience("rain")` â€” fade over to another track.
 
 ### Testing shortcut
 Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] footstep at (...)`).
@@ -1414,21 +1414,21 @@ doesn't bend or dither it.
 ### How the screen is put together (`scenes/game_screen.tscn`, the scene F5 runs)
 ```
 GameScreen (Control)        script: ui/game_screen.gd  <- sizes everything when the window changes
-├── HUD (CanvasLayer)       <- an instance of scenes/ui/hud.tscn, Layer 10 = always on top
-├── Bars (ColorRect)        <- black, behind everything (the border in 4:3 / SHARP mode)
-├── GameView (TextureRect)  <- shows player 1's game picture, blown up (Texture Filter: Nearest)
-│   └── GameViewport (SubViewport)   <- the "PS1 screen", 320x240 (wider on wide monitors)
-│       └── Main            <- scenes/main.tscn, the actual game
-├── GameView2..4            <- made by the script when couch players join (split screen, below)
-│   ├── GameViewport > Camera3D      <- their 3D view (same world, their camera)
-│   └── Post > Dither                <- the CRT + dither look on their picture
-└── JoinHint (Label)        <- "PRESS START TO JOIN" in the empty corner with 3 players
+â”œâ”€â”€ HUD (CanvasLayer)       <- an instance of scenes/ui/hud.tscn, Layer 10 = always on top
+â”œâ”€â”€ Bars (ColorRect)        <- black, behind everything (the border in 4:3 / SHARP mode)
+â”œâ”€â”€ GameView (TextureRect)  <- shows player 1's game picture, blown up (Texture Filter: Nearest)
+â”‚   â””â”€â”€ GameViewport (SubViewport)   <- the "PS1 screen", 320x240 (wider on wide monitors)
+â”‚       â””â”€â”€ Main            <- scenes/main.tscn, the actual game
+â”œâ”€â”€ GameView2..4            <- made by the script when couch players join (split screen, below)
+â”‚   â”œâ”€â”€ GameViewport > Camera3D      <- their 3D view (same world, their camera)
+â”‚   â””â”€â”€ Post > Dither                <- the CRT + dither look on their picture
+â””â”€â”€ JoinHint (Label)        <- "PRESS START TO JOIN" in the empty corner with 3 players
 ```
-`game_screen.gd` works out the game picture's size from **SCALING** and **ASPECT** (§1, §10), and
+`game_screen.gd` works out the game picture's size from **SCALING** and **ASPECT** (Â§1, Â§10), and
 passes your mouse and keyboard through to the game. Its Inspector knobs: **Game Height** (240),
 **Design Width** (320) and **Divider** (the black line between split screens, game pixels).
 
-**Split screen:** with 2-4 players on this computer (couch co-op, §10) the picture is cut up:
+**Split screen:** with 2-4 players on this computer (couch co-op, Â§10) the picture is cut up:
 2 players side by side (or top + bottom: SETTINGS > DISPLAY > 2-PLAYER SPLIT), 3-4 players in
 the four corners. The whole picture stays 240 game pixels tall, so each screen is a half or a
 quarter of it. Players 2-4's screens don't build a second city: they look at the same world
@@ -1442,24 +1442,24 @@ whole picture so they fit).
 ### The HUD scene (`scenes/ui/hud.tscn`, script `scripts/ui/hud.gd`)
 ```
 HUD (CanvasLayer)            script: ui/hud.gd
-└── Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
-    ├── Names (Control)      <- names over cats' and NPCs' heads (script ui/hud_name_tags.gd)
-    ├── Top (Control)        <- stays up while you talk / shop
-    │   ├── Cash             <- top-left, big green "$120"
-    │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
-    │   ├── Health           <- "HP ##-" (flashes white when hurt)
-    │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
-    │   ├── Heat             <- under it: "HEAT 2 [######--------------]" (scripts/heat_meter.gd)
-    │   └── Scoreboard       <- top-right: everyone's cash
-    ├── Middle (Control)     <- hidden while the talk box or inventory is open
-    │   ├── Popup            <- big "EXTRACTED +$150" that fades out
-    │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
-    │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
-    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
-    │   └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
-    ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
-    └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
-        └── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script
+â””â”€â”€ Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
+    â”œâ”€â”€ Names (Control)      <- names over cats' and NPCs' heads (script ui/hud_name_tags.gd)
+    â”œâ”€â”€ Top (Control)        <- stays up while you talk / shop
+    â”‚   â”œâ”€â”€ Cash             <- top-left, big green "$120"
+    â”‚   â”œâ”€â”€ Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
+    â”‚   â”œâ”€â”€ Health           <- "HP ##-" (flashes white when hurt)
+    â”‚   â”œâ”€â”€ DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
+    â”‚   â”œâ”€â”€ Heat             <- under it: "HEAT 2 [######--------------]" (scripts/heat_meter.gd)
+    â”‚   â””â”€â”€ Scoreboard       <- top-right: everyone's cash
+    â”œâ”€â”€ Middle (Control)     <- hidden while the talk box or inventory is open
+    â”‚   â”œâ”€â”€ Popup            <- big "EXTRACTED +$150" that fades out
+    â”‚   â”œâ”€â”€ Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
+    â”‚   â”œâ”€â”€ Message          <- what Don says, "KNOCKED OUT BY...", etc.
+    â”‚   â”œâ”€â”€ Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
+    â”‚   â””â”€â”€ Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
+    â”œâ”€â”€ Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, Â§9)
+    â””â”€â”€ NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, Â§8)
+        â””â”€â”€ Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script
 ```
 - **Units:** positions are in "HUD units": the screen is always **720 units tall** (and 960 or
   more wide), whatever the real resolution. So a label 36 units big is 1/20 of the screen
@@ -1570,8 +1570,8 @@ python trailer/edit.py        <- cuts the trailers together (a few minutes)
 ```
 
 The finished videos land in `shots\trailer\out\`:
-- `cypurrpunk_long.mp4` — the 92-second trailer, 1920x1080 (YouTube, Steam, itch.io)
-- `cypurrpunk_short_*.mp4` — 20-26-second vertical (1080x1920) cuts for TikTok, Instagram Reels and
+- `cypurrpunk_long.mp4` â€” the 92-second trailer, 1920x1080 (YouTube, Steam, itch.io)
+- `cypurrpunk_short_*.mp4` â€” 20-26-second vertical (1080x1920) cuts for TikTok, Instagram Reels and
   YouTube Shorts: `heist` (the whole game in one go), `boss` (the MEGA VAC-COP), `cats` (dressing up),
   `coop` (split screen), `loop` (how a run goes, step by step).
 
@@ -1594,9 +1594,9 @@ The finished videos land in `shots\trailer\out\`:
 **Thumbnail:** `python trailer/thumbnail.py` turns stills in `shots\thumb\` (`raw_a.png`, `raw_b.png`) into
 1280x720 YouTube thumbnails (`thumbnail_red.jpg`, `thumbnail_blue.jpg`): logo top-left, "REVEAL TRAILER"
 bottom-left (change `TAG` in the script). The stills are the hero cat with the MEGA VAC-COP behind it,
-taken with DevCapture `--heat=100 --roomba=boss --bait_roomba=-7 --portrait=me --portrait_side=0.5`
+taken with DevCapture `--heat=100 --roomba=boss --no_boss_sign --bait_roomba=-7 --portrait=me --portrait_side=0.5`
 (`raw_b` = after 80 frames, red siren; `raw_a` = after 40 frames, blue siren).
 
 **Uploading:** TikTok / Reels / Shorts take the vertical files as they are. Add your store link
-(Steam / itch.io) in the post text; the trailers end on "COMING SOON" — change that card in `edit.py`
+(Steam / itch.io) in the post text; the trailers end on "COMING SOON" â€” change that card in `edit.py`
 once there's a wishlist page.

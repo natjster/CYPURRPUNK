@@ -336,6 +336,8 @@ func _ready() -> void:
 			for i in 20:
 				await get_tree().process_frame  # let the camera settle (over-the-shoulder slide)
 			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			if args.has("no_boss_sign") and roomba.has_node("BossSign"):
+				roomba.get_node("BossSign").visible = false  # --no_boss_sign: no "MEGA VAC-COP" over it (thumbnails)
 			if not multiplayer.is_server():
 				# A client can't move the host's Roombas, so walk our cat up to one instead.
 				player.teleport_to(roomba.global_position + Vector3(float(args["bait_roomba"]), 0, 0), 0.0)
