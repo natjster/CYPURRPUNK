@@ -147,6 +147,8 @@ var _tail: Node3D
 var _leg_l_home: Vector3  # where each leg sits in cat_model.tscn (we swing them from the hip)
 var _leg_r_home: Vector3
 var _tail_home_z: float
+var _tail_base: Vector3  # the tail's root on the cat's bum (set in _ready)
+const TAIL_HALF_LENGTH := 0.225  # half of Mesh_tail's height (0.45) in cat_model.tscn
 var _leg_phase: float = 0.0
 var _tail_phase: float = 0.0
 var _leg_amount: float = 0.0  # 0 = legs still, 1 = full swing (eases in and out)
@@ -204,6 +206,8 @@ func _ready() -> void:
 		_leg_r_home = _leg_r.position
 	if _tail != null:
 		_tail_home_z = _tail.rotation.z
+		# Where the tail's thick end joins the body: the sway hinges here so it stays put.
+		_tail_base = _tail.position + _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
 
 	if is_multiplayer_authority():
@@ -478,6 +482,9 @@ func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
 	_tail_phase += delta * (tail_idle_speed + speed * tail_speed_per_mps)
 	if _tail != null:
 		_tail.rotation.z = _tail_home_z + sin(_tail_phase) * tail_swish
+		# Turn around the tail's root, not its middle: slide it so the root stays centred on
+		# the body and only the tip swings side to side.
+		_tail.position = _tail_base - _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 
 
 ## Turn one leg by `angle`, hinging at its top (the hip) instead of its middle, so the paw
