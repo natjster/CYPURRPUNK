@@ -1,7 +1,7 @@
 class_name HeatMeter
 extends Node
-## HEAT — how angry the city is. The longer cats stay up top (and the more trouble they cause),
-## the hotter it gets, and the harder the VAC-COPs come for you.
+## HEAT — how angry the city is, and the CLOCK of each district. The longer cats stay up top (and
+## the more trouble they cause), the hotter it gets, and the harder the VAC-COPs come for you.
 ## Attach to the "Heat" node in main.tscn. One meter, shared by every player.
 ##
 ## How it plays:
@@ -10,10 +10,11 @@ extends Node
 ##     shooting Roombas, blowing them up.
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
 ##     that drive faster and spot cats from further away.
-##   - At 100 heat: level 5, the MEGA VAC-COP comes out (scenes/roomba_boss.tscn). It always
-##     knows where you are. Smash it and it spits out a golden koi and the heat drops.
-##   - Heat cools when you extract (each extraction cools it a bit) and drains away fast
-##     while nobody is up top.
+##   - At 75 heat the EXIT manhole opens (fish_heist.gd). At 90 Don warns you.
+##   - At 100 heat: level 5. The hatch is SEALED and the DEEP CLEAN begins (fish_heist.gd): the
+##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
+##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
+##     district's clock. Going home doesn't reset it - only a new district does.
 ##   - There is NO heat bar on the HUD (kept simple on purpose): players only HEAR it go up
 ##     (the heat_up / boss_siren sounds) and feel it in how many Roombas come.
 ##
@@ -30,8 +31,9 @@ const MAX_LEVEL: int = 5
 
 @export_group("Heating up")
 ## Heat added every second while at least one cat is up in the city.
-## 0.5 = about 3 minutes from cool to the MEGA VAC-COP if you cause no trouble at all.
-@export var heat_per_second: float = 0.5
+## 0.11 = about 15 minutes up top from a fresh district to the DEEP CLEAN, if you cause no
+## trouble at all (the exit opens after about 11).
+@export var heat_per_second: float = 0.11
 ## More cats up top heat the city faster: +this much (0.1 = +10%) for every cat up there beyond
 ## the first. (8 cats up top with 0.1 = 1.7x as fast.)
 @export var heat_per_extra_cat: float = 0.1
@@ -42,11 +44,12 @@ const MAX_LEVEL: int = 5
 
 @export_group("Cooling down")
 ## Heat taken away when a cat extracts ("the cops lose your trail").
-@export var cool_per_extraction: float = 15.0
+@export var cool_per_extraction: float = 0.0
 ## Heat lost every second while NO cat is up top.
-@export var cool_per_second_when_empty: float = 3.0
-## Heat taken away when the MEGA VAC-COP is destroyed.
-@export var cool_when_boss_destroyed: float = 45.0
+@export var cool_per_second_when_empty: float = 0.0
+## Heat taken away when the MEGA VAC-COP is destroyed. (0: it only comes out in the DEEP CLEAN,
+## and smashing it doesn't stop that.)
+@export var cool_when_boss_destroyed: float = 0.0
 
 @export_group("What each level does")
 ## Extra Roombas on patrol per level above 1 (level 3 = 2 x this extra).

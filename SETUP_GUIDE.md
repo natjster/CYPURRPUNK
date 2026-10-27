@@ -33,7 +33,7 @@ Meow-City/
 â”‚   â”œâ”€â”€ cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 â”‚   â”œâ”€â”€ getaway_car.gd         <- driving, drifting, who's driving
 â”‚   â”œâ”€â”€ city_generator.gd      <- builds the whole city from one number
-â”‚   â”œâ”€â”€ fish_heist.gd          <- fish spots, the extraction beam, cash, the heist HUD
+â”‚   â”œâ”€â”€ fish_heist.gd          <- fish spots, manholes, payphones, the DEEP CLEAN, cash, the heist HUD
 â”‚   â”œâ”€â”€ hub.gd                 <- THE SEWERS: the underground hub where cats start (Â§8)
 â”‚   â”œâ”€â”€ npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (Â§8)
 â”‚   â”œâ”€â”€ quests/                <- the quest system: quest_data.gd, quest_manager.gd (Â§8)
@@ -371,7 +371,6 @@ The more players, the busier the city (counted on the host, players on every com
 | Extra VAC-COPs for every player beyond the 2nd | **Roombas** > Extra Roombas Per Player | 1 (8 players = +6) |
 | Heat rises faster per extra cat up top | **Heat** > Heat Per Extra Cat | 0.1 (+10% each) |
 | Loot grows back faster per extra player | **Items** > Regrow Faster Per Player | 0.15 (8 players = about 2x) |
-| One extra extraction beam open from this many players | **Heist** > Extra Beam Players | 5 (0 = never) |
 
 The script side: `Game.instance.player_count()` is how many players the game has right now.
 
@@ -472,8 +471,10 @@ number, the **city seed**. Same number = exact same city.
   (taller towards downtown, glowing windows, sometimes a rooftop box and a neon sign with coloured
   light) or an empty yard with crates, dumpsters and trash bags. Street lamps sit at every
   crossroads and halfway along each block. Invisible walls stop you driving off the edge.
-- **Always in the same place, whatever the seed:** cats spawn at the centre crossroads, the
-  car parks just north of it, and **Meow-Mart** is the shop on the nearest corner.
+- **Always in the same place, whatever the seed:** cats come up the **entry manhole** in the
+  centre crossroads and the car parks just north of it.
+- **Points of interest, somewhere different every district:** **Meow-Mart** (a random lot), the
+  **exit manhole** and the **payphones** (placed by `fish_heist.gd`, see §8).
 
 **Tuning** (select **City** in `main.tscn`, Inspector): Blocks Per Side (keep it even), Block
 Size, Street Width, Min/Max Height, Empty Lot Chance, Neon Chance, Rooftop Chance, plus the
@@ -497,9 +498,13 @@ Tested at a steady 60 fps on an RTX 4060.
 ## 8. The extraction loop: the Sewers hub + Fish Heist
 
 ```
-THE SEWERS (hub, safe)  --talk to Don Catleone-->  THE CITY (grab fish)
-        ^                                               |
-        +------ step into the green EXTRACTION beam ----+
+THE SEWERS (hub, safe)  --Don sends you up the entry manhole-->  THE CITY (grab fish)
+        ^                                                              |
+        +--- climb down the EXIT manhole (opens at 75 heat; a payphone ---+
+             call to Don tells you where it is)
+
+  HEAT hits 100: the hatch is SEALED, the DEEP CLEAN swarm wipes out anyone still up top,
+  and the rebellion moves to a NEW DISTRICT (a new city seed).
 ```
 
 ### The underground hub ("THE SEWERS")
@@ -551,7 +556,7 @@ Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STA
 (9 slots) where the loot bag usually is:
 - **Click** something in your paws or backpack = put it in the stash.
 - **Click** something in the stash = take it into your backpack (equip it from there as usual).
-- Only gear goes in the stash (no fish: fish are for cashing in at the beam).
+- Only gear goes in the stash (no fish: fish are for cashing in at the exit manhole).
 
 Gear in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
 
@@ -646,7 +651,7 @@ A quest is a job an NPC gives you, with a cash reward. The first one is **MITTEN
 1. Talk to **Lil' Mittens** > **WHAT DO YOU NEED?** > **FINE. THREE FISH.**
 2. Go get the fish. (There's no quest tracker on the HUD any more: the HUD was simplified. Check
    your loot bag with the inventory screen.)
-3. Step into the extraction beam with **all 3 fish in your bag at once**: you get the fish's
+3. Climb down the exit manhole with **all 3 fish in your bag at once**: you get the fish's
    normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
    and you just get the fish money â€” the quest stays active for your next trip.
 4. Talk to her again afterwards: she thanks you and offers it again (it's repeatable).
@@ -673,7 +678,7 @@ Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
 
 **Test it without playing:** `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
 --goto_dropoff_after=20 --talk_again_after=40` takes the quest, grabs 3 fish, extracts (prints
-`quest bonus $100`) and talks to her again.
+`quest bonus $100`) and talks to her again. (Add `--heat=80` so the exit is open.)
 
 **Tuning the hub** (select **Hub**): **Size** (Half Width, Half Length, Height, Channel Width),
 **Spawning** (Spawn Spot = where cats appear, Surface Spot = where Don sends you in the city),
@@ -682,10 +687,35 @@ Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
 **The mood switch:** while *your* camera is in the hub, the moon and rain switch off and the fog
 turns green â€” on your screen only. Go back up and the rainy night city returns.
 
-### Fish Heist: loot, greed and moving beams
+### Fish Heist: districts, manholes and payphones
 
-**How to play:** loot lies around the city. Walk into it to pick it up automatically (your loot
-bag holds 3 spaces: one in your mouth, the rest stacked on your head). Three kinds:
+**The story:** OVERCLEAN, the AI, runs the city with its VAC-COP Roombas. The cat rebellion hides
+in the sewers (eating rats - nobody likes rats). Each raid is on one **district**. When the heat
+maxes out, Don Catleone seals that district's hatch and the rebellion moves to a new one. In the
+code that just means a new city seed: the whole city is generated again.
+
+**How a district plays:**
+1. Talk to Don > **SEND ME UP TOP**: you climb out of the **entry manhole** in the centre
+   crossroads. It's **one-way**: there's no going back down it.
+2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **15 minutes** from a
+   fresh district to max if you cause no trouble; the golden koi and gunfights speed it up).
+3. At **75 heat** the **exit manhole** opens somewhere random in the city: the lid slides off and
+   a green glow comes out of the hole. At the same moment every **payphone** in the district
+   starts **ringing** (bell sound, blinking light).
+4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
+   Don. He tells you which side of town the exit is on, and the **HUD arrow to the exit switches
+   on for the whole crew**. (Call before 75 and he only says "not yet" and which side it's on.)
+5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. You can
+   go up again into the **same district at the same heat** as many times as you like.
+6. At **90 heat** Don warns you on the radio ("sealin' the hatch soon!").
+7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
+   swarm of **24 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
+   away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
+   what (everything they carry is lost). Don won't send anyone up while it's sealed.
+8. A few seconds later a **new district** is built (new city, heat back to 0, fresh patrol) and
+   Don can send you up again.
+
+**Loot** (walk into it to pick it up; your loot bag holds 3 spaces):
 
 | Loot | Worth | Bag space | Where | Catch |
 |---|---|---|---|---|
@@ -693,41 +723,55 @@ bag holds 3 spaces: one in your mouth, the rest stacked on your head). Three kin
 | **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
 | **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it adds **+20 HEAT** and plays a sound for everyone |
 
-Reach an **open EXTRACTION beam**, the tall green light you can see through the fog, on foot or
-by car. The city has **4 beam spots** at crossroads (you'll see their ring of posts even when
-they're off), and **only 2 are open at a time**. Each stays open 40-70 seconds; in its last 10
-seconds it **blinks** and its sign counts down (`CLOSING 7`), then it shuts and a different one
-opens somewhere else. So plan your escape and keep an eye on the clock!
+Fish and sardines grow back after 20 seconds, the koi after 2 minutes. If you drove onto the exit,
+the getaway car goes back to its parking spot.
 
-Every piece of loot pays its worth into **your own** cash, you're sent **back down to the hub**
-(with or without loot), and the city **cools down 15 HEAT** (see **HEAT** below). If you drove
-in, the getaway car goes back to its parking spot. Fish and sardines grow back after 20 seconds,
-the koi after 2 minutes.
+**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = `EXIT ^ 120m`
+(direction and distance to the exit; `SEALING SOON!` after Don's warning) **only after someone
+called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
+**only while you're in the sewers**.
 
-**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = distance and direction
-to the **nearest open** beam (`^` ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about
-to shut), or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash, **only while you're
-in the sewers**. There is no cash, loot or heat line up in the city, and no news pop-ups (koi
-grabbed, boss down, "vacuumed your fish", heat level): those are sounds only now.
-
-**Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Loot is normal
-loot items (Â§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres` (models in
-`scenes/items/`).
+**Where it lives:**
+- `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`: places loot, manholes and
+  payphones for each district, referees extraction, runs the seal and the DEEP CLEAN.
+- `scripts/manhole.gd`: the manhole itself (built in code). Its two pictures are
+  `textures/manhole_closed.png` and `textures/manhole_open.png` - repaint them in any paint
+  program (keep them square, round art in the middle).
+- `scenes/props/payphone.tscn` + `scripts/npcs/payphone.gd`: the payphone, an NPC you **USE**.
+  Select its root to edit what Don says (**Line Too Early**, **Line Exit Open**, **Line Sealed**;
+  `{where}` becomes e.g. "north-east"). The ring is `sounds/sfx/phone_ring.wav`.
+- `Game.new_district()` in `scripts/game.gd`: builds the next district.
+- Loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres`.
 
 **Tuning:**
 - Select **Heist** in `main.tscn`:
   - **Loot**: Loot Item (what sits outside Meow-Mart), Meow Mart Fish, Street Fish, Street
     Sardines, Golden Koi (how many), Respawn Seconds, Koi Respawn Seconds, Koi Min Distance.
-  - **Extraction Beams**: Dropoff Radius, Beam Spots, Open At Once, Beam Open Min/Max Seconds,
-    Beam Warning Seconds, Min Dropoff Distance (from Meow-Mart), Beam Spacing, Beam Color.
-- What loot pays, how heavy / noisy it is: open its card in `items/` (see Â§9, **Loot settings**).
+  - **Manholes**: Exit Opens At Heat (75), Seal Warning At Heat (90), Exit Radius (how close you
+    must get), Exit Min Distance (from the centre).
+  - **Payphones**: Payphones (how many), Payphone Spacing, Payphone Min Distance.
+  - **The DEEP CLEAN**: Deep Clean Seconds (30), Deep Clean Roombas (24), New District Delay.
+- Select **Roombas** > **DEEP CLEAN swarm**: Swarm Min/Max Distance (how close to you they
+  appear), Swarm Sight Multiplier.
+- How long a district lasts: **Heat** > Heat Per Second (see **HEAT** below).
+- What loot pays, how heavy / noisy it is: open its card in `items/` (see §9, **Loot settings**).
 - How much you can carry: **Bag Size** on the **Items** node.
 
-**Multiplayer:** the host referees every pickup and extraction. Loot spots and beam spots come
-from the city number, so the same city always has the same heist; the host alone decides which
-beams are open and tells everyone. The hub and Don aren't networked at
-all â€” everyone's computer builds the same tunnel, and talking to Don only moves *your* cat. A
-player who leaves takes their cash with them (their carried fish drop where they stood).
+**Test it without playing:**
+- `--deploy --heat=80 --heat_hold=400 --talk=Payphone0` calls Don on the first payphone (the line
+  is printed, and `DevCapture heist: ... revealed=true`).
+- `--deploy --heat=80 --heat_hold=600 --near_exit=6 --hold=move_forward --hold_frames=120` walks
+  onto the open exit (prints `extracted`).
+- `--deploy --heat=100 --heat_hold=30 --frames=4800` runs a whole DEEP CLEAN and prints
+  `[Game] New district: city #...`.
+
+**Multiplayer:** the host referees every pickup and extraction. Loot, manholes and payphones come
+from the city number, so every computer places them identically. A payphone call asks the host,
+who switches the arrow on for everyone; the host also decides when the hatch is sealed and when
+the next district starts (it sends the new city number to everyone). The hub and Don aren't
+networked at all: everyone's computer builds the same tunnel, and talking to Don only moves
+*your* cat. A player who leaves takes their cash with them (their carried fish drop where they
+stood).
 
 **Items stay on their own level:** a cat can only grab things within 3 m above or below it
 (`MAX_REACH_HEIGHT` in `item_manager.gd`), and something dropped in the sewers stays in the
@@ -779,11 +823,15 @@ host says it is. Bonks, stolen fish and explosions are all decided by the host.
 The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-middle, under the
 extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**:
 
-- It creeps up **0.5 per second** while any cat is in the city (about 3 minutes from 0 to 100 if
-  you cause no trouble).
+- It's the **district's clock**: it creeps up **0.11 per second** while any cat is in the city
+  (about 15 minutes from 0 to 100 if you cause no trouble).
 - Trouble adds more: **+20** for grabbing the golden koi, **+1** per gun hit on a Roomba, **+6**
   per Roomba destroyed.
-- It cools **-15** each time someone extracts, and drains **3 per second** while nobody is up top.
+- It **never cools down** by itself (extracting and going home don't lower it). Only a new
+  district resets it to 0. (The Cooling Down numbers on the Heat node are 0; raise them if you
+  ever want cooling back.)
+- **75** opens the exit manhole, **90** = Don's warning, **100** = the hatch is sealed and the
+  **DEEP CLEAN** starts (see Fish Heist above).
 
 Every 25 heat is one **HEAT LEVEL** (an alarm sound; there is no heat bar or popup on the HUD). Each level above 1 brings
 **+2 Roombas** (they roll in one every 4 seconds), and all Roombas chase **7% faster** and spot
@@ -794,8 +842,8 @@ At **100 heat**: `MEGA VAC-COP DEPLOYED!`. A giant Roomba (`scenes/roomba_boss.t
 from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to
-the top-middle of your screen while it's near). Destroy it and it spits out a **golden koi** and the heat drops
-**45**. If the heat cools below 60 on its own (everyone extracts), it goes home.
+the top-middle of your screen while it's near). Destroy it and it spits out a **golden koi**,
+but the DEEP CLEAN goes on. It goes home when the new district starts.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
 levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas and the boss).
@@ -973,7 +1021,7 @@ Duplicate `items/fish.tres` as `silver_tuna.tres`, change **Id**, **Cash Value**
 the **Items** node (or ask Claude to place it from the heist like the koi).
 
 **Loot settings** (on any loot card, Inspector > **Loot**):
-- **Cash Value**: what it pays at an extraction beam.
+- **Cash Value**: what it pays when you climb down the exit manhole.
 - **Bag Space**: how many of the 3 bag spaces it fills (the koi takes 2).
 - **Carry Speed**: 1 = normal, 0.8 = your cat moves 20% slower while carrying it.
 - **Noise**: 1 = normal, 1.6 = VAC-COPs spot you from 60% further away.
@@ -1390,7 +1438,8 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `engine_loop` (loops) | the getaway car; pitch follows the speed | everyone nearby |
 | `car_door` | getting in / out of the car | everyone nearby |
 | `hurt` / `knockout` | you lose HP / hit 0 HP | just you |
-| `extract` | you reach the extraction beam | just you |
+| `extract` | you climb down the exit manhole | just you |
+| `phone_ring` (loops) | payphones while the exit is open and nobody has called Don yet | everyone nearby |
 | `koi_grab` | someone grabs a golden koi | everyone (2D) |
 | `heat_up` | the HEAT goes up a level | everyone (2D) |
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |

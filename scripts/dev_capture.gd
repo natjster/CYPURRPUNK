@@ -55,7 +55,9 @@ extends Node
 ##   --hold=ACTION     hold a control for --hold_frames (default 60), e.g. move_forward,
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
-##   --goto_dropoff_after=N   jump into the extraction beam after N more frames (in the car if driving)
+##   --goto_dropoff_after=N   jump onto the exit manhole after N more frames (in the car if driving;
+##                     it's only open with --heat=80 or more)
+##   --near_exit=D     stand D metres south of the exit manhole, facing it
 ##   --mouse_test      check mouse-look gets the mouse through the game screen (prints how far it turned)
 ##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
@@ -239,18 +241,13 @@ func _ready() -> void:
 		if args.has("pos"):
 			var p: PackedFloat64Array = args["pos"].split_floats(",")
 			player.global_position = Vector3(p[0], p[1], p[2])
-		if args.has("near_beam"):
-			# --near_beam=D: stand D metres south of the nearest OPEN extraction beam, facing it
-			# (then --hold=move_forward walks into it).
-			var heist := scene.get_node("Heist") as FishHeist
-			for i in 300:  # (beams open a moment after the game starts)
-				if heist.nearest_open_beam(player.global_position) >= 0:
-					break
-				await get_tree().physics_frame
-			var beam := heist.beam_positions[heist.nearest_open_beam(player.global_position)]
-			player.global_position = beam + Vector3(0, 0, float(args["near_beam"]))
+		if args.has("near_exit"):
+			# --near_exit=D: stand D metres south of the EXIT manhole, facing it (then
+			# --hold=move_forward walks onto it; it only lets you down with --heat=80 or more).
+			var exit_at := FishHeist.instance.exit_position
+			player.global_position = exit_at + Vector3(0, 0.5, float(args["near_exit"]))
 			player.camera_pivot.rotation.y = 0.0
-			print("DevCapture near_beam: beam at %s" % beam)
+			print("DevCapture near_exit: exit manhole at %s" % exit_at)
 		if args.has("yaw"):
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
@@ -430,8 +427,7 @@ func _ready() -> void:
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
-			var heist_node := scene.get_node("Heist") as FishHeist
-			var beam := heist_node.beam_positions[heist_node.nearest_open_beam(player.global_position)] + Vector3(1, 0, 1)
+			var beam := FishHeist.instance.exit_position + Vector3(0.5, 0, 0.5)  # (needs --heat=80: open)
 			var car := scene.get_node("GetawayCar") as GetawayCar
 			if car.driver_id == player.player_id:
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
@@ -573,7 +569,7 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
-		print("DevCapture heist: beams=%s open=%s cash=%s" % [heist.beam_positions, heist.beam_time_left, heist.cash])
+		print("DevCapture heist: exit=%s open=%s revealed=%s sealed=%s cash=%s" % [heist.exit_position, heist.exit_is_open(), heist.exit_revealed, heist.sealed, heist.cash])
 	if HeatMeter.instance != null:
 		var regulars := 0
 		var bosses := 0

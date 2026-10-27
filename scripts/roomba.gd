@@ -257,6 +257,8 @@ func _can_chase(cat: CatPlayer, reach: float) -> bool:
 	reach *= ItemManager.instance.loot_noise(cat.player_id)
 	if heat_scaling:
 		reach *= HeatMeter.instance.sight_multiplier()
+	if RoombaPatrol.instance.deep_clean_extra > 0:
+		reach *= RoombaPatrol.instance.swarm_sight_multiplier  # the DEEP CLEAN: they hunt you down
 	return _flat(cat.global_position - global_position).length() < reach
 
 

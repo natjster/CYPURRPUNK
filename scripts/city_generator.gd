@@ -9,8 +9,9 @@ extends Node3D
 ## always a crossroads (cats spawn there), and the street just north of it always has
 ## room for the getaway car. Each block is cut into 4 lots; each lot becomes a building
 ## (taller towards downtown), or an empty yard with crates and trash. Some buildings get
-## glowing neon signs, and every crossroads gets a street lamp. One shop near the centre
-## is always MEOW-MART.
+## glowing neon signs, and every crossroads gets a street lamp. One random lot is MEOW-MART
+## (a "point of interest": it's somewhere different in every district).
+## The manholes and payphones (the other points of interest) are placed by fish_heist.gd.
 ##
 ## All tuning knobs are in the Inspector when you select the City node in main.tscn.
 
@@ -63,8 +64,9 @@ const BUILDING_TINTS: Array[Color] = [
 
 ## The seed of the city currently built.
 var city_seed: int = 0
-## Front door of Meow-Mart — handy for the upcoming heist gameplay.
+## Front door of Meow-Mart (fish_heist.gd lines fish up outside it).
 var meow_mart_position: Vector3
+var _meow_mart_lot: Vector3  # centre of the lot Meow-Mart is built on (picked in generate)
 
 var _rng := RandomNumberGenerator.new()
 # Shared 1x1x1 boxes, stretched to size per object (saves memory). Each box is cut into
@@ -92,6 +94,10 @@ func generate(new_seed: int) -> void:
 
 	var pitch := block_size + street_width  # distance from one block to the next
 	var city_half_width := blocks_per_side * pitch * 0.5
+	# Meow-Mart's lot: a random block, a random corner of it.
+	var mart_block := Vector3((_rng.randi_range(0, blocks_per_side - 1) + 0.5 - blocks_per_side / 2.0) * pitch, 0,
+		(_rng.randi_range(0, blocks_per_side - 1) + 0.5 - blocks_per_side / 2.0) * pitch)
+	_meow_mart_lot = mart_block + Vector3(_rng.randi_range(0, 1) * 2 - 1, 0, _rng.randi_range(0, 1) * 2 - 1) * block_size * 0.25
 	_build_ground(city_half_width, pitch)
 	for bx in blocks_per_side:
 		for bz in blocks_per_side:
@@ -239,11 +245,10 @@ func _add_glow_light(at: Vector3, color: Color) -> void:
 	add_child(light)
 
 
-# --- Meow-Mart: always the shop on the corner nearest the centre ---
+# --- Meow-Mart: a random lot in every district ---
 
 func _is_meow_mart_lot(lot_center: Vector3) -> bool:
-	var corner := -(street_width * 0.5 + block_size * 0.25)
-	return lot_center.is_equal_approx(Vector3(corner, 0, corner))
+	return lot_center.is_equal_approx(_meow_mart_lot)
 
 
 func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:

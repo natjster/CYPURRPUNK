@@ -11,7 +11,7 @@ extends Node
 ##   - Taking a quest asks the host (request_start). The host tells everyone (_set_quests).
 ##   - Progress isn't sent at all: it's counted from your loot bag, which every computer
 ##     already knows about (ItemManager.inventories).
-##   - At the extraction beam, fish_heist.gd asks the host's QuestManager for the bonus
+##   - At the exit manhole, fish_heist.gd asks the host's QuestManager for the bonus
 ##     (complete_on_extract) BEFORE the loot bag is emptied.
 ##   - Late joiners get everyone's quests (send_state_to); quitters are forgotten.
 ##
@@ -117,7 +117,7 @@ func _set_quests(player_id: int, active_now: Array, completed_now: Dictionary) -
 	completed[player_id] = completed_now
 
 
-# --- Finishing quests (host, at the extraction beam) ---
+# --- Finishing quests (host, at the exit manhole) ---
 
 ## Host only, called by fish_heist.gd as a cat extracts, BEFORE its bag is emptied.
 ## Completes every active quest whose objective is met and returns

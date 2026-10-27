@@ -54,7 +54,7 @@ message = "GO GO GO. Mind the vacuums!"
 [sub_resource type="Resource" id="Choice_again"]
 script = ExtResource("4_choice")
 text = "FINE. THREE MORE."
-message = "I KNEW you loved me. Three fish. Same beam. Same hundred bucks."
+message = "I KNEW you loved me. Three fish. Same hatch. Same hundred bucks."
 action = "quest:mittens_fish"
 
 [sub_resource type="Resource" id="Choice_notnow"]
@@ -65,7 +65,7 @@ message = "I'll count the seconds. One... two... (please hurry)"
 [sub_resource type="Resource" id="Page_ready"]
 script = ExtResource("3_page")
 id = "ready"
-lines = PackedStringArray("I can SMELL them. Three fish! Why are they still in YOUR bag?! Jump in the green extraction beam so they get to me! That's how the pipes work! Probably!", "You HAVE them?! Don't look at me, look at the BEAM. Go! Extract! Before I eat your tail!")
+lines = PackedStringArray("I can SMELL them. Three fish! Why are they still in YOUR bag?! Get them down the exit hatch so they get to me! That's how the pipes work! Probably!", "You HAVE them?! Don't look at me, find the HATCH. Go! Extract! Before I eat your tail!")
 choices = Array[ExtResource("4_choice")]([SubResource("Choice_onmyway")])
 only_if_quest = "mittens_fish"
 only_if_state = "ready"
@@ -96,7 +96,7 @@ only_if_quest = "mittens_fish"
 [sub_resource type="Resource" id="Page_ask"]
 script = ExtResource("3_page")
 id = "ask"
-lines = PackedStringArray("THREE fish. Up top they just leave 'em lying outside Meow-Mart. Three, not two. Two is a snack. Three is a MEAL. Bring all three down through the extraction beam and I'll give you a hundred bucks. I found it. Don't ask where.")
+lines = PackedStringArray("THREE fish. Up top they just leave 'em lying outside Meow-Mart. Three, not two. Two is a snack. Three is a MEAL. Bring all three down through the exit hatch and I'll give you a hundred bucks. I found it. Don't ask where.")
 choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_alot"), SubResource("Choice_no")])
 
 [sub_resource type="Resource" id="Page_guilt"]
@@ -113,7 +113,7 @@ lines = PackedStringArray("I'm Lil' Mittens. I live in the box. Don Catleone say
 [sub_resource type="Resource" id="Page_remind"]
 script = ExtResource("3_page")
 id = "remind"
-lines = PackedStringArray("Three fish. In your bag. ALL three at once. Then step in the green extraction beam. It's not complicated! ...Sorry. Love you. Go.")
+lines = PackedStringArray("Three fish. In your bag. ALL three at once. Then climb down the exit hatch. It's not complicated! ...Sorry. Love you. Go.")
 
 [sub_resource type="CapsuleShape3D" id="Shape_cat"]
 radius = 0.3

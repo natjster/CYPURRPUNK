@@ -32,7 +32,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `PlayerPause` in hud.tscn (only when `PlayerPause.split_active()`; else the big PauseMenu); blocks only that
   seat (`cat._menu_open`, `car._driver_paused`). Test: `--saved_cats=A,B`, `--pad_press=1:Start` on `--menu=mode`.
 - Phase 7 (8 players): balance scales with `Game.player_count()` (Roombas `extra_roombas_per_player`, heat
-  `heat_per_extra_cat`, Items `regrow_faster_per_player`, Heist `extra_beam_players`). Hub `free_spawn_position`.
+  `heat_per_extra_cat`, Items `regrow_faster_per_player`). Hub `free_spawn_position`.
   Sync: cat/car `replication_interval` 0.033, roomba 0.05 (host sends ~12 KB/s for 8 players). RoombaPatrol only
   runs after `start_patrol` (the start menu counts as "server": it used to spawn Roombas that broke joining).
   A real controller on this PC can disturb `--hold` tests (its events mix into actions). Test: `--net_stats=N`,
@@ -80,8 +80,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   anchors (the HUD Frame matches the game picture's shape). Test: `--window=1720x720`.
 - `scripts/city_generator.gd` (`CityGenerator`, the `City` node): the whole level is generated from a
   seed with one seeded RNG — keep all randomness on `_rng` and in a fixed order, or players' cities
-  diverge. Host sends only the seed (`Game._receive_city_seed`). Centre crossroads, car spot
-  (`CAR_SPAWN`) and Meow-Mart (`meow_mart_position`) are fixed for every seed. Buildings share
+  diverge. Host sends only the seed (`Game._receive_city_seed`). Centre crossroads and car spot
+  (`CAR_SPAWN`) are fixed for every seed; Meow-Mart's lot is random (`meow_mart_position`). Buildings share
   materials; per-object colour comes from the shader's `instance_tint` instance uniform.
   Determinism check: DevCapture prints a city `fingerprint`; host and client must match.
   Large surfaces must stay subdivided (~2.5 m, `_box_mesh_for`): affine texture mapping on big
@@ -104,8 +104,16 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
   levels 1-5, NOT shown on the HUD: level-ups are sounds only): `RoombaPatrol._follow_the_heat` adds Roombas per level and spawns
   the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`, drops a koi) at 100.
-  Extraction beams: `FishHeist.beam_positions` (from city seed) + host-timed `beam_time_left`
-  (`_set_beams` RPC; `nearest_open_beam`). Test: `--heat=100 [--heat_hold=N]`, `--roomba=boss`.
+  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~15 min up top to 100).
+- Districts (`fish_heist.gd`): ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
+  the centre (one-way), EXIT manhole at `FishHeist.exit_position` (street spot from the heist rng), open while
+  `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,
+  `scripts/npcs/payphone.gd`, `Npc.prompt_verb` "USE") ring while open + not `exit_revealed`; a call ->
+  `request_reveal_exit` -> host `_set_state(sealed, revealed)`; HUD `DropOff` arrow only when revealed.
+  Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
+  after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
+  `start_patrol`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
+  `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
 - Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
   `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
   RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
@@ -244,5 +252,8 @@ Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from th
 low-poly, dithering, CRT.
 
 ## Direction
-The game is now an extraction game: spawn in the underground hub, go up to the city for loot,
-extract back down, with VAC-COP Roombas as the threat.
+Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hides in the sewers. Spawn in
+the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
+DEEP CLEAN, then a new district (new seed). PLANNED next: scrap (Roomba drop, takes bag space: money vs
+time) fed to a shared MAINFRAME in the hub that drains slowly + a chunk per sealed district; its level
+sets the next district's starting heat; mainframe at 0 = boss-fight finale (design TBD).

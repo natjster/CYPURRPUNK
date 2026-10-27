@@ -1,0 +1,117 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/payphone.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="BoxShape3D" id="Shape_booth"]
+size = Vector3(0.7, 2.0, 0.5)
+
+[sub_resource type="ShaderMaterial" id="Mat_metal"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.2, 0.32, 0.45, 1)
+shader_parameter/specular = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_dark"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.08, 0.08, 0.1, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_screen"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.3, 1, 0.6, 1)
+shader_parameter/emission_color = Color(0.3, 1, 0.6, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_sign"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.75, 0.15, 1)
+shader_parameter/emission_color = Color(1, 0.75, 0.15, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_pole"]
+size = Vector3(0.12, 1.0, 0.12)
+
+[sub_resource type="BoxMesh" id="Mesh_box"]
+size = Vector3(0.55, 0.8, 0.3)
+
+[sub_resource type="BoxMesh" id="Mesh_hood"]
+size = Vector3(0.7, 0.08, 0.45)
+
+[sub_resource type="BoxMesh" id="Mesh_screen"]
+size = Vector3(0.3, 0.1, 0.02)
+
+[sub_resource type="BoxMesh" id="Mesh_keypad"]
+size = Vector3(0.18, 0.22, 0.03)
+
+[sub_resource type="BoxMesh" id="Mesh_handset"]
+size = Vector3(0.08, 0.38, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_sign"]
+size = Vector3(0.5, 0.14, 0.04)
+
+[node name="Payphone" type="StaticBody3D"]
+script = ExtResource("1_script")
+npc_name = "PAYPHONE"
+prompt_verb = "USE"
+talk_radius = 2.6
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 1.0, 0)
+shape = SubResource("Shape_booth")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Pole" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.5, -0.05)
+mesh = SubResource("Mesh_pole")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Box" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.4, 0)
+mesh = SubResource("Mesh_box")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Hood" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.84, 0.05)
+mesh = SubResource("Mesh_hood")
+surface_material_override/0 = SubResource("Mat_metal")
+
+[node name="Screen" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.67, 0.16)
+mesh = SubResource("Mesh_screen")
+surface_material_override/0 = SubResource("Mat_screen")
+
+[node name="Keypad" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.08, 1.38, 0.16)
+mesh = SubResource("Mesh_keypad")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="Handset" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.17, 1.4, 0.18)
+mesh = SubResource("Mesh_handset")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="Sign" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.96, 0.05)
+mesh = SubResource("Mesh_sign")
+surface_material_override/0 = SubResource("Mat_sign")
+
+[node name="RingLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.3, 0.3)
+light_color = Color(1, 0.75, 0.15, 1)
+light_energy = 3.0
+light_volumetric_fog_energy = 2.0
+omni_range = 5.0
+
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
+position = Vector3(0, 2.4, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(1, 0.75, 0.15, 1)
+outline_size = 6
+text = "PAYPHONE"
+font_size = 32
+pixel_size = 0.009

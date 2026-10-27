@@ -13,8 +13,8 @@ extends Node3D
 ##   - COMRADE WHISKERS runs THE BLACK MARKITTEN on the west wall: the only place to get
 ##     gear (guns, catnip, catdip). Pay with the cash you earn extracting fish.
 ##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
-##   - In the city, reach the green EXTRACTION beam (fish_heist.gd): your loot is cashed in
-##     and you're brought back down here (return_cat()).
+##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
+##     cashed in and you're brought back down here (return_cat()).
 ##
 ## The tunnel is built from code in _ready() (like the city), but it is always the SAME:
 ## it doesn't use the city seed or any randomness, so every computer builds it identically.
@@ -148,8 +148,12 @@ func spawn_position(n: int) -> Vector3:
 	return to_global(spawn_spot + Vector3((n % 3) * 1.5 - 1.5, 0, (n / 3) * 1.5))
 
 
-## "SEND ME UP TOP": pop the cat out at the city's centre crossroads.
+## "SEND ME UP TOP": pop the cat out of the ENTRY manhole in the city's centre crossroads.
 func deploy(cat: CatPlayer) -> void:
+	if FishHeist.instance.sealed:
+		# The DEEP CLEAN is on up there: wait for the next district.
+		Game.instance.show_message("DON CATLEONE: Hatch is sealed, kid. Sit tight - we're movin' to a new district.", 4.0, cat.slot)
+		return
 	var spread := Vector3(randf_range(-3, 3), 0, randf_range(0, 3))  # don't land on each other
 	cat.teleport_to(surface_spot + spread, 0.0)
 	print("[Hub] %s went up to the city" % cat.name)

@@ -21,7 +21,7 @@ extends Node3D
 ##   - The city is generated from a seed number (see city_generator.gd). The host
 ##     sends just that number to each player, and everyone builds the same city.
 ##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
-##     Don Catleone sends them up; the EXTRACTION beam brings them back (fish_heist.gd).
+##     Don Catleone sends them up a manhole; the EXIT manhole brings them back (fish_heist.gd).
 ##
 ## Testing shortcuts: launch the game with "--solo", "--host" or "--join" to skip the menu
 ## (plus "--name=Whiskers" / "--seed=42" for the cat's name and the city number).
@@ -199,6 +199,27 @@ func _on_settings_closed() -> void:
 		pause_menu.open()
 	else:
 		main_menu.show_main_screen()
+
+
+## Host: the hatch was sealed (fish_heist.gd), so the rebellion moves to a NEW DISTRICT: a new
+## city seed for everyone, the car back at its spot, the heat back to calm, a fresh patrol.
+## (Everyone should be down in the sewers by now: the DEEP CLEAN knocked out anyone up top.)
+func new_district() -> void:
+	var new_seed := randi_range(1, 99999)
+	print("[Game] New district: city #%d" % new_seed)
+	_receive_city_seed.rpc(new_seed)  # everyone else builds it...
+	city.generate(new_seed)  # ...and so do we
+	_show_city_number()
+	park_car()
+	$Heat.reset()
+	$Roombas.start_patrol()
+	_district_news.rpc()
+
+
+## Host -> everyone: Don's news about the new district.
+@rpc("authority", "call_local", "reliable")
+func _district_news() -> void:
+	show_message("DON CATLEONE: We're movin' to a new part of town. Hatch is ready when you are.", 5.0)
 
 
 ## Host → one player: "build city number X". Every computer builds the identical city.

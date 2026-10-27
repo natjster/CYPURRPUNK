@@ -59,7 +59,7 @@ SHOTS = {
     "car_drive": f"{PLAY} --pos=3,0,-6 --drive --hold=gas --hold_delay=30 --hold_frames=210 --frames=10",
     "car_cine": f"{CINE} --pos=3,0,-6 --drive --hold=gas --hold_delay=30 --hold_frames=210 "
                 "--cam_follow --cam_from=4,1.5,-6 --cam_to=-3,2,7 --look_from=0,0.6,0 --look_to=0,0.6,0 --frames=240",
-    "extract": f"{CINE} --grab=fish --near_beam=9 --hold=move_forward --hold_delay=20 --hold_frames=150 "
+    "extract": f"{CINE} --grab=fish --heat=80 --near_exit=9 --hold=move_forward --hold_delay=20 --hold_frames=150 "
                "--cam_follow --cam_from=2.5,0.7,2.5 --cam_to=2,3.5,6 --frames=60",
     "extract_play": f"{PLAY} --grab=fish --goto_dropoff_after=10 --frames=150",
     # --- CO-OP + CATS ---

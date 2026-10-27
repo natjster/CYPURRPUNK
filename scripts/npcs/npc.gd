@@ -31,6 +31,8 @@ signal action_chosen(action: String, cat: CatPlayer)
 
 ## Shown above the talk box, on the "[E] TALK TO ..." prompt and on the NameTag.
 @export var npc_name: String = "STRAY CAT"
+## The word on the prompt before the name: "[E] TALK TO STRAY CAT", "[E] USE PAYPHONE".
+@export var prompt_verb: String = "TALK TO"
 ## How close (metres) you must be to talk.
 @export var talk_radius: float = 3.0
 ## The conversation. The first page is the greeting. See npc_page.gd.

@@ -8,6 +8,9 @@ extends Node3D
 ##
 ## How many are out follows the HEAT (scripts/heat_meter.gd): every heat level adds a few, and
 ## at max heat the MEGA VAC-COP (scenes/roomba_boss.tscn) comes out until the heat cools down.
+## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN: it sets
+## deep_clean_extra, and a swarm that many strong pours in close to the cats still up top,
+## hunting them from much further away (roomba.gd _can_chase).
 ##
 ## Only the HOST creates Roombas (game.gd calls start_patrol() when hosting). Where they appear
 ## is random each game — they're not part of the city seed, so they never change the city.
@@ -36,6 +39,20 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 ## The boss goes home once the heat cools below this (out of 100).
 @export var boss_leaves_below_heat: float = 60.0
 
+@export_group("DEEP CLEAN swarm")
+## During the DEEP CLEAN, swarm Roombas appear between these distances (metres) from a cat up top.
+@export var swarm_min_distance: float = 15.0
+@export var swarm_max_distance: float = 40.0
+## During the DEEP CLEAN every Roomba spots cats this many times further away than normal.
+@export var swarm_sight_multiplier: float = 6.0
+
+## The one patrol (RoombaPatrol.instance).
+static var instance: RoombaPatrol
+
+## Host: how many EXTRA Roombas the DEEP CLEAN wants out right now (0 = no deep clean).
+## Set by fish_heist.gd.
+var deep_clean_extra: int = 0
+
 var _respawn_at: Array[float] = []  # host: when each replacement is due
 var _clock: float = 0.0
 var _next_number: int = 0
@@ -46,6 +63,10 @@ var _boss: Roomba = null
 ## host's when we join someone.
 var _patrolling: bool = false
 var _rng := RandomNumberGenerator.new()
+
+
+func _enter_tree() -> void:
+	instance = self
 
 
 func _ready() -> void:
@@ -59,6 +80,7 @@ func start_patrol() -> void:
 	_patrolling = true
 	_respawn_at.clear()
 	_boss = null
+	deep_clean_extra = 0
 	for i in roomba_count:
 		_spawn_one()
 
@@ -102,17 +124,18 @@ func _follow_the_heat() -> void:
 		_announce.rpc("THE MEGA VAC-COP WENT HOME.")
 
 	# Regular Roombas: how many are out (or on their way back after being smashed)?
-	if _clock < _next_change_at:
+	# (During the DEEP CLEAN there's no waiting: the swarm pours in, one every frame.)
+	if _clock < _next_change_at and deep_clean_extra == 0:
 		return
 	var regulars: Array[Roomba] = []
 	for child in get_children():
 		var roomba := child as Roomba
 		if roomba != null and not roomba.is_boss and not roomba.is_queued_for_deletion():
 			regulars.append(roomba)
-	var wanted := roomba_count + heat.extra_roombas() \
+	var wanted := roomba_count + heat.extra_roombas() + deep_clean_extra \
 		+ floori(extra_roombas_per_player * maxi(Game.instance.player_count() - 2, 0))
 	if regulars.size() + _respawn_at.size() < wanted:
-		_spawn_one()
+		_spawn_one(deep_clean_extra > 0)
 		_next_change_at = _clock + reinforce_seconds
 	elif regulars.size() + _respawn_at.size() > wanted:
 		# Too many for this heat: send one home, but only one nobody is looking at.
@@ -123,12 +146,32 @@ func _follow_the_heat() -> void:
 		_next_change_at = _clock + reinforce_seconds
 
 
-func _spawn_one() -> void:
+## "swarm" = DEEP CLEAN: appear close to a cat that's still up top.
+func _spawn_one(swarm: bool = false) -> void:
 	var roomba := ROOMBA_SCENE.instantiate() as Roomba
 	roomba.name = "Roomba%d" % _next_number  # unique names keep everyone's copies matched up
 	_next_number += 1
-	roomba.position = _spawn_spot()
+	roomba.position = _swarm_spot() if swarm else _spawn_spot()
 	add_child(roomba, true)
+
+
+## DEEP CLEAN: a sidewalk spot near (but not on top of) a random cat up in the city.
+func _swarm_spot() -> Vector3:
+	var targets: Array[Vector3] = []
+	for cat in Game.instance.players.get_children():
+		var where := (cat as Node3D).global_position
+		if not UndergroundHub.is_in_hub(where):
+			targets.append(where)
+	if targets.is_empty():
+		return _spawn_spot()
+	var target := targets[_rng.randi_range(0, targets.size() - 1)]
+	var spot := Vector3.ZERO
+	for attempt in 40:
+		spot = ItemManager.instance.random_sidewalk_spot(_rng) + Vector3(0, 0.1, 0)
+		var d := spot.distance_to(target)
+		if d > swarm_min_distance and d < swarm_max_distance:
+			break
+	return spot
 
 
 ## A random sidewalk spot away from the centre and at least "distance" from every cat.

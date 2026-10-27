@@ -112,7 +112,7 @@ func _process(_delta: float) -> void:
 	var key := Controls.display_name(Controls.binding("interact", Controls.PAD_SLOT)) if Seats.uses_pad(seat) \
 		else Controls.key_text("interact")
 	if npc != null:
-		Hud.set_text("Prompt", "[%s] TALK TO %s" % [key, npc.npc_name], seat)
+		Hud.set_text("Prompt", "[%s] %s %s" % [key, npc.prompt_verb, npc.npc_name], seat)
 	elif stash:
 		Hud.set_text("Prompt", "[%s] OPEN STASH" % key, seat)
 
