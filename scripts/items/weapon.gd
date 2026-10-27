@@ -32,8 +32,16 @@ extends HeldItem
 @export var overheated_cool_rate: float = 0.35
 
 @export_group("Hits")
-## How hard a bolt shoves another cat (metres per second). Every bolt that hits a Roomba
-## takes 1 of its health (see roomba.gd).
+## Health a bolt takes off a VAC-COP (they have 100, the MEGA VAC-COP 600: see roomba.gd).
+## The shooter sees the number pop off what they hit (scripts/ui/hud_damage_numbers.gd).
+@export var damage: int = 25
+## Each bolt's damage wobbles by up to this fraction (0.1 = 10% either way), like Cyberpunk.
+@export_range(0.0, 0.5) var damage_wobble: float = 0.1
+## Chance a bolt is a CRITICAL hit (0.1 = 1 in 10): bigger yellow number, more damage.
+@export_range(0.0, 1.0) var crit_chance: float = 0.1
+## A critical hit does this many times the damage.
+@export var crit_multiplier: float = 2.0
+## How hard a bolt shoves another cat (metres per second).
 @export var cat_knockback: float = 7.0
 ## Little hop a zapped cat does.
 @export var cat_hop: float = 3.0
@@ -131,7 +139,11 @@ func _fire() -> void:
 		var car := hit.collider as GetawayCar
 		var roomba := hit.collider as Roomba
 		if roomba != null:
-			roomba.take_hit.rpc_id(1, holder.player_id)  # the host keeps score of Roomba health
+			# Roll the damage here so the number we show is the number the host takes off.
+			var crit := _rng.randf() < crit_chance
+			var amount := roundi(damage * _rng.randf_range(1.0 - damage_wobble, 1.0 + damage_wobble) * (crit_multiplier if crit else 1.0))
+			roomba.take_hit.rpc_id(1, holder.player_id, amount)  # the host keeps score of Roomba health
+			Hud.damage_number(hit.position, amount, crit, holder.slot)  # pops up straight away on OUR HUD
 		elif cat != null:
 			# The zapped cat's OWN computer moves it, so ask that computer to do the shove.
 			cat.get_zapped.rpc_id(cat.get_multiplayer_authority(), aim * cat_knockback + Vector3.UP * cat_hop)

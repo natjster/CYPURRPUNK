@@ -1,26 +1,28 @@
 class_name Roomba
 extends CharacterBody3D
-## VAC-COP — a police Roomba that patrols the city and hunts cats on foot.
+## VAC-COP â€” a police Roomba that patrols the city and hunts cats on foot.
 ## Attach to the root of scenes/roomba.tscn. Expected node tree:
 ##   Roomba (CharacterBody3D)       <- this script
-##   ├── CollisionShape3D
-##   ├── Model (Node3D)             <- turns to face where it drives
-##   │   ├── Body, Cap, Bumper      <- MeshInstance3D (Body flashes when shot)
-##   │   ├── Eye                    <- glows red while chasing
-##   │   ├── SirenRed, SirenBlue    <- flash while chasing
-##   │   └── Brush (Node3D)         <- the little side brush, spins
-##   ├── SirenLight (OmniLight3D)   <- red/blue light on the street while chasing
-##   └── MultiplayerSynchronizer    <- shares sync_position, sync_yaw, state
+##   â”œâ”€â”€ CollisionShape3D
+##   â”œâ”€â”€ Model (Node3D)             <- turns to face where it drives
+##   â”‚   â”œâ”€â”€ Body, Cap, Bumper      <- MeshInstance3D (Body flashes when shot)
+##   â”‚   â”œâ”€â”€ Eye                    <- glows red while chasing
+##   â”‚   â”œâ”€â”€ SirenRed, SirenBlue    <- flash while chasing
+##   â”‚   â””â”€â”€ Brush (Node3D)         <- the little side brush, spins
+##   â”œâ”€â”€ SirenLight (OmniLight3D)   <- red/blue light on the street while chasing
+##   â””â”€â”€ MultiplayerSynchronizer    <- shares sync_position, sync_yaw, state, health
 ##
 ## What it does:
-##   PATROL  — drives slowly between random sidewalk spots.
-##   CHASE   — spots a cat on foot within sight_range and drives at it (faster than a walking
-##             cat, slower than zoomies — so SHIFT saves you).
-##   BONK    — touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
+##   PATROL  â€” drives slowly between random sidewalk spots.
+##   CHASE   â€” spots a cat on foot within sight_range and drives at it (faster than a walking
+##             cat, slower than zoomies â€” so SHIFT saves you).
+##   BONK    â€” touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
 ##             takes bonk_damage HP. A cat at 0 HP is knocked out and drops everything
 ##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
-##   Shoot it (max_health hits) or ram it with the car (faster than car_smash_speed) and it
-##   explodes, spitting out everything it vacuumed.
+##   Shoot it (each bolt takes the gun's Damage off its max_health) or ram it with the car
+##   (faster than car_smash_speed) and it explodes, spitting out everything it vacuumed.
+##   Its HEALTH BAR floats over it once it's hurt or chasing (scripts/ui/hud_health_bars.gd,
+##   via health_bar_info() below), and the shooter sees damage numbers (weapon.gd).
 ## Cats in the car and cats down in the hub are ignored.
 ## The HEAT (scripts/heat_meter.gd) makes it chase faster and spot cats from further away, and a
 ## cat carrying NOISY loot (the golden koi) is spotted from further too.
@@ -56,13 +58,17 @@ enum State { PATROL, CHASE, STUNNED }
 @export var stun_seconds: float = 2.5
 ## Does a bonk vacuum one piece of loot out of the cat's bag?
 @export var steals_loot: bool = true
-## HP a bonk takes off the cat (cats have 3, see the Health node). At 0 the cat is knocked out
-## and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
-@export var bonk_damage: int = 1
+## HP a bonk takes off the cat (cats have 100, see the Health node; 34 = three bonks). At 0 the
+## cat is knocked out and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
+@export var bonk_damage: int = 34
 
 @export_group("Toughness")
-## Hits from any gun before it explodes.
-@export var max_health: int = 3
+## Health. Each bolt takes the gun's Damage (pistol ~40, tommy gun ~25: see the gun scenes).
+@export var max_health: int = 100
+## The name over its health bar.
+@export var display_name: String = "VAC-COP"
+## How high over its middle the health bar floats (metres; the boss's is higher).
+@export var health_bar_height: float = 0.55
 ## The getaway car smashes it if driving faster than this (m/s).
 @export var car_smash_speed: float = 7.0
 
@@ -84,8 +90,9 @@ var sync_position: Vector3
 var sync_yaw: float
 var state: State = State.PATROL
 
-## Host only: health left, and the loot it has vacuumed (dropped when it explodes).
-var health: int
+## Health left. The HOST changes it; the MultiplayerSynchronizer copies it to everyone (for the
+## health bars). The loot it has vacuumed is host only (dropped when it explodes).
+var health: int = -1  # -1 = not set yet (a late joiner gets the host's number when it spawns)
 var stomach: Array = []
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -101,7 +108,7 @@ var _flash_time: float = 0.0
 ## start the moment a chase begins).
 var _hum: AudioStreamPlayer3D
 var _last_state: State = State.PATROL
-var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city's RNG
+var _rng := RandomNumberGenerator.new()  # patrol choices only â€” NOT the city's RNG
 
 @onready var model: Node3D = $Model
 @onready var body_mesh: MeshInstance3D = $Model/Body
@@ -113,7 +120,9 @@ var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city'
 
 
 func _ready() -> void:
-	health = max_health
+	if health < 0:
+		health = max_health
+	add_to_group(HudHealthBars.GROUP)  # a floating health bar on everyone's HUD
 	sync_position = global_position
 	_stuck_check_at = global_position
 	_rng.randomize()
@@ -305,12 +314,13 @@ func _is_stuck(delta: float) -> bool:
 # --- Getting hurt ---
 
 ## A bolt hit us. Sent to the host by the shooter's gun (weapon.gd), with the shooter's player ID
-## (0 = nobody in particular, e.g. a test).
+## (0 = nobody in particular, e.g. a test) and how much damage the bolt did (the gun rolls it,
+## crits included, so the number the shooter sees is the number taken off).
 @rpc("any_peer", "call_local", "reliable")
-func take_hit(shooter_id: int = 0) -> void:
+func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
 	if not multiplayer.is_server() or health <= 0:
 		return
-	health -= 1
+	health -= clampi(amount, 1, 500)  # (clamped: a broken / cheating client can't one-shot the boss)
 	_hit_flash.rpc()
 	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit)  # gunfire makes the city angry
 	if health <= 0:
@@ -342,6 +352,13 @@ func explode() -> void:
 	print("[Roomba] %s exploded" % name)
 	(get_parent() as RoombaPatrol).roomba_destroyed(self)
 	queue_free()  # the spawner removes it on everyone's screen
+
+
+## For the floating health bar (scripts/ui/hud_health_bars.gd): shown once hurt or chasing.
+func health_bar_info() -> Dictionary:
+	return {"hp": maxi(health, 0), "max": max_health, "name": display_name, "boss": is_boss,
+		"position": global_position + Vector3.UP * health_bar_height,
+		"show": health < max_health or state == State.CHASE}
 
 
 # --- Messages from the host ---

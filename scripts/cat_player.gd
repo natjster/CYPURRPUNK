@@ -152,6 +152,18 @@ func reads_input() -> bool:
 	return is_multiplayer_authority() and Seats.taken[slot]
 
 
+## For the floating health bars over OTHER players' heads (scripts/ui/hud_health_bars.gd):
+## a slim cyan bar just under the name, only once this cat is hurt. (Your own health is the big
+## bar top-left of your HUD instead.)
+func health_bar_info() -> Dictionary:
+	var health := CatHealth.instance
+	if health == null:
+		return {}
+	var hp := health.get_health(player_id)
+	return {"hp": hp, "max": health.max_health, "position": global_position + Vector3.UP * 1.3,
+		"show": hp < health.max_health, "name": ""}
+
+
 func _ready() -> void:
 	# FIELD OF VIEW comes from the Settings menu (the Camera3D's own fov is ignored).
 	_base_fov = Settings.field_of_view
@@ -160,6 +172,7 @@ func _ready() -> void:
 	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
 	spring_arm.add_excluded_object(get_rid())
 	_apply_look()
+	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
 
 	if is_multiplayer_authority():
 		# One of OUR cats: its name and look come from the player sitting at this slot

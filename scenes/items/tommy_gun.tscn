@@ -85,6 +85,8 @@ cat_hop = 3.0
 car_impulse = 90.0
 bolt_color = Color(0.2, 0.95, 1, 1)
 hot_color = Color(1, 0.15, 0.1, 1)
+damage = 25
+crit_chance = 0.08
 hud_name = "PURR-TOMMY"
 
 [node name="Model" type="Node3D" parent="."]

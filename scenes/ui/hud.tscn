@@ -7,6 +7,9 @@
 [ext_resource type="Script" path="res://scripts/ui/inventory_ui.gd" id="5_inventory"]
 [ext_resource type="Script" path="res://scripts/ui/npc_dialog.gd" id="6_dialog"]
 [ext_resource type="Script" path="res://scripts/ui/player_pause.gd" id="7_pause"]
+[ext_resource type="Script" path="res://scripts/ui/hud_health_bar.gd" id="8_hpbar"]
+[ext_resource type="Script" path="res://scripts/ui/hud_health_bars.gd" id="9_bars"]
+[ext_resource type="Script" path="res://scripts/ui/hud_damage_numbers.gd" id="10_damage"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -28,6 +31,26 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_names")
+
+[node name="Bars" type="Control" parent="Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("9_bars")
+
+[node name="Damage" type="Control" parent="Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("10_damage")
 
 [node name="Top" type="Control" parent="Frame"]
 layout_mode = 1
@@ -58,14 +81,14 @@ offset_bottom = 82.0
 theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
 text = "LOOT 0/6"
 
-[node name="Health" type="Label" parent="Frame/Top"]
+[node name="Health" type="Control" parent="Frame/Top"]
 layout_mode = 0
-offset_left = 26.0
-offset_top = 80.0
-offset_right = 526.0
-offset_bottom = 106.0
-theme_override_colors/font_color = Color(1, 0.35, 0.45, 1)
-text = "HP ###"
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 384.0
+offset_bottom = 124.0
+mouse_filter = 2
+script = ExtResource("8_hpbar")
 
 [node name="DropOff" type="Label" parent="Frame/Top"]
 layout_mode = 1

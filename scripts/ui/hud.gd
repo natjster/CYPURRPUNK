@@ -13,7 +13,10 @@ extends CanvasLayer
 ##   HUD (this script)
 ##   └── Frame            <- exactly covers the game picture (resized by GameScreen)
 ##       ├── Names        <- names over cats' / NPCs' heads (scripts/ui/hud_name_tags.gd)
-##       ├── Top          <- stays up while you talk / shop: Cash, Carrying, Health, DropOff, Scoreboard
+##       ├── Bars         <- health bars over enemies / hurt cats (scripts/ui/hud_health_bars.gd)
+##       ├── Damage       <- damage numbers off things you shoot (scripts/ui/hud_damage_numbers.gd)
+##       ├── Top          <- stays up while you talk / shop: Cash, Carrying, Health (your health
+##       │                   bar, scripts/ui/hud_health_bar.gd), DropOff, Scoreboard
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
@@ -22,7 +25,8 @@ extends CanvasLayer
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
 ##   Hud.set_text("Cash", "$120")            change a label's words (by node name)
 ##   Hud.show_element("Crosshair", true)      show / hide one piece
-##   Hud.set_color("Health", Color.WHITE)     change a label's text colour
+##   Hud.set_color("Cash", Color.WHITE)       change a label's text colour
+##   Hud.damage_number(where, 38, false, seat) a damage number popping off a world position
 ##   Hud.show_message("DON: Go get 'em.", 4)  the line of text in the middle, for N seconds
 ##   Hud.popup("EXTRACTED +$80", 2.5)         the big text that fades out (e.g. extraction)
 ##   Hud.set_in_game(true)                    the whole HUD on (in a game) / off (start menu)
@@ -120,7 +124,7 @@ static func show_element(element_name: String, shown: bool, seat_number: int = 0
 		piece.visible = shown
 
 
-## Change a label's text colour (e.g. flash the HP line white when you're hurt).
+## Change a label's text colour (e.g. flash the cash line).
 static func set_color(element_name: String, color: Color, seat_number: int = 0) -> void:
 	var label := element(element_name, seat_number) as Label
 	if label != null:
@@ -143,6 +147,14 @@ static func popup(text: String, seconds: float = 2.5, seat_number: int = -1) -> 
 		set_text("Popup", text, hud.seat)
 		show_element("Popup", true, hud.seat)
 		hud._popup_time = seconds
+
+
+## A damage number popping off the world position "where" (Cyberpunk-style), on this player's
+## HUD only. crit = a critical hit (bigger, yellow). See scripts/ui/hud_damage_numbers.gd.
+static func damage_number(where: Vector3, amount: int, crit: bool = false, seat_number: int = 0) -> void:
+	var numbers := element("Damage", seat_number) as HudDamageNumbers
+	if numbers != null:
+		numbers.spawn(where, amount, crit)
 
 
 ## The HUDs a message goes to: one player's, or everyone's (-1).

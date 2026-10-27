@@ -706,7 +706,7 @@ in, the getaway car goes back to its parking spot. Fish and sardines grow back a
 the koi after 2 minutes.
 
 **HUD:** top-left = your cash, `LOOT 2/3 ($400) HEAVY!` (or your quest's progress, see
-**Quests**) and your HP; top-middle = distance and direction to the **nearest open** beam (`^`
+**Quests**) and your **health bar**; top-middle = distance and direction to the **nearest open** beam (`^`
 ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about to shut), or
 `THE SEWERS - SAFE ZONE` in the hub; under it the **HEAT** bar; top-right = everyone's cash.
 
@@ -737,12 +737,14 @@ sewers. (Before, a cat standing in the hub could pick up fish lying in the city 
 Eight police Roombas patrol the city's sidewalks (more as the HEAT rises, see below). When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
 slower than **zoomies** (Shift) â€” so run! If it touches you it **bonks** you flying,
-**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **1 HP**.
+**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **34 HP**.
 Then it backs off for a couple of seconds. Three bonks and you're **knocked out** (see
 **Health & knockouts** below).
 
-**Getting your fish back:** destroy it. **3 shots** from any gun, or **run it over** with the
-car at speed. It explodes and spits out everything it vacuumed â€” walk over the fish to grab them.
+**Getting your fish back:** destroy it. It has **100 health**: about **3 pistol shots** (40 each)
+or **4 tommy-gun bolts** (25 each), or **run it over** with the car at speed. Once it's hurt or
+chasing, a red **health bar** floats over it, and every hit pops a **damage number** off it
+(see **Health bars & damage numbers** below). It explodes and spits out everything it vacuumed â€” walk over the fish to grab them.
 A new Roomba rolls out somewhere else 25 seconds later. Cats in the car and cats in the hub are
 safe. Shoot a Roomba and it gets angry and chases *you*.
 
@@ -755,7 +757,7 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
 â”œâ”€â”€ CollisionShape3D
 â”œâ”€â”€ Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
 â”œâ”€â”€ SirenLight (OmniLight3D)       <- red/blue on the street while chasing
-â””â”€â”€ MultiplayerSynchronizer        <- sync_position, sync_yaw, state
+â””â”€â”€ MultiplayerSynchronizer        <- sync_position, sync_yaw, state, health
 ```
 
 **Tuning:**
@@ -763,8 +765,8 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
   (never appears this close to a cat or the centre crossroads).
 - Open `scenes/roomba.tscn`, select the root **Roomba**: **Driving** (Patrol Speed, Chase Speed,
   Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
-  Steals Loot, **Bonk Damage** = HP a bonk takes, 0 = harmless), **Toughness** (Max Health, Car
-  Smash Speed).
+  Steals Loot, **Bonk Damage** = HP a bonk takes off a cat, 0 = harmless), **Toughness** (**Max
+  Health**, **Display Name** = the name over its health bar, **Health Bar Height**, Car Smash Speed).
 - **Boss** group (Is Boss, Drop On Destroy, Heat Scaling): see **HEAT and the MEGA VAC-COP**.
   Normal Roombas get faster and sharper-eyed with heat (Heat Scaling on).
 - Roombas are on collision **Layer 2**, so cats and the car pass over them instead of getting
@@ -790,8 +792,9 @@ carrying the koi...
 
 At **100 heat**: `MEGA VAC-COP DEPLOYED!`. A giant Roomba (`scenes/roomba_boss.tscn`) drives in
 from across town, following the streets around buildings until it can see you (every Roomba
-does this while chasing). It **always knows where you are** (sight 400 m), bonks for **2 HP**, can't be
-run over, and takes **18 hits**. Destroy it and it spits out a **golden koi** and the heat drops
+does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
+bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to
+the top-middle of your screen while it's near). Destroy it and it spits out a **golden koi** and the heat drops
 **45**. If the heat cools below 60 on its own (everyone extracts), it goes home.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
@@ -810,8 +813,8 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
 - How much heat an item adds when grabbed: **Heat On Pickup** on its card.
 
 ### Health & knockouts (the risk in "extraction")
-Every cat has **3 HP**, shown top-left under your cash and loot: `HP ###` (it flashes when
-you're hurt). Each VAC-COP bonk takes one.
+Every cat has **100 HP**, shown as the **health bar** top-left under your cash and loot (see
+**Health bars & damage numbers** below). Each VAC-COP bonk takes 34, the MEGA VAC-COP's 67.
 
 At **0 HP you're KNOCKED OUT**:
 1. **Everything you carry drops on the street where you fell**: the gear in your paws, your
@@ -826,14 +829,14 @@ a knockout). Cats in the car and in the hub can't be hurt. Your cash and quests 
 
 So gear you take up top is at risk every time. Gear left in **the stash** (below) is safe.
 
-**Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the HP line
-is the **Health** label in `scenes/ui/hud.tscn` (Â§13). The fall-over is `knocked_out` in `cat_player.gd`.
+**Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the health bar
+is **Frame > Top > Health** in `scenes/ui/hud.tscn` (script `scripts/ui/hud_health_bar.gd`, Â§13). The fall-over is `knocked_out` in `cat_player.gd`.
 
 **Tuning** (select **Health** in `main.tscn`): **Max Health**, **Knockout Seconds** (how long
-you lie there), **Hud Color**. How much a bonk hurts: **Bonk Damage** on the Roomba (above).
+you lie there). How much a bonk hurts: **Bonk Damage** on the Roomba (above).
 
 **Something new that hurts cats** (a trap, a guard dog...): on the host, call
-`CatHealth.instance.damage(player_id, 1, "A GUARD DOG")`. The last part is shown on the
+`CatHealth.instance.damage(player_id, 20, "A GUARD DOG")`. The last part is shown on the
 knocked-out screen. Guns don't hurt cats (no player-vs-player damage yet).
 
 **Multiplayer:** the host decides all damage and knockouts and tells everyone, like cash.
@@ -841,7 +844,49 @@ knocked-out screen. Guns don't hurt cats (no player-vs-player damage yet).
 **Test it without playing:** `--give=pistol,catnip --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3
 --frames=1500` gives you gear, grabs the fish at Meow-Mart, lets a VAC-COP beat you up and
 prints `[Health] Player 1 was knocked out`; afterwards the pistol and catnip are on the street
-and your cat is back in the hub with `hp=3`.
+and your cat is back in the hub with `hp=100`.
+
+### Health bars & damage numbers (Cyberpunk-style, all drawn on the HUD)
+Everything here is drawn by the HUD layer (sharp at your real resolution, not pixelated or CRT'd).
+
+- **Your health bar** (top-left, under LOOT): a number box (`87`) and a slanted red bar cut into
+  10 segments. When you're hurt the bit you lost turns **white-yellow** and drains away after a
+  moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
+  pulses; at 0 it says **KNOCKED OUT**.
+  Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
+  Heal, Back, Frame, Accent), **Shape** (Segments, Segment Gap, Slant, Number Box Width, Number
+  Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
+  Transform**.
+- **Enemy health bars** float over a VAC-COP once it's hurt or chasing: its name (`VAC-COP`) over a
+  thin red segmented bar, with the same white-yellow chip. They shrink with distance, fade out far
+  away and hide behind walls. The **MEGA VAC-COP** gets a big bar pinned to the **top-middle** of
+  the screen instead (`!! MEGA VAC-COP`), like a Cyberpunk boss.
+- **Other players' cats** get a slim **cyan** bar under their name once they're hurt (handy in co-op).
+  Tuning: select **Frame > Bars**: Max Distance, Fade Distance, World Width, Min / Max Width, Bar
+  Height, Name Font Size, **Boss Distance / Boss Bar Width / Boss Bar Top**, Chip Delay, Drain
+  Speed, Hide Behind Walls, and the **Colours** (Friend Color = other cats' bars).
+- **Damage numbers:** every bolt that hits a VAC-COP pops its damage off the spot you hit
+  (white, e.g. `27`), floating up and fading. **Critical hits** are bigger and yellow with a `!`
+  (`84!`). Only the shooter sees their own numbers (on their own screen in split screen).
+  Tuning: select **Frame > Damage**: Lifetime, Rise, Spread, Font Size, Crit Font Size, Color,
+  Crit Color.
+- **How much a gun does** is on the gun scene's root (e.g. `scenes/items/pistol.tscn`) under
+  **Hits**: **Damage** (pistol 40, tommy gun 25), **Damage Wobble** (0.1 = each bolt is up to 10%
+  more or less), **Crit Chance** (pistol 0.15, tommy 0.08), **Crit Multiplier** (2 = double).
+  Guns still don't hurt other cats (they just shove them).
+- **Give something new a health bar** (e.g. a guard dog): add its root node to the group
+  `hud_health_bars` (**Node** dock > **Groups**) and give its script a `health_bar_info()`
+  function: copy the one in `scripts/roomba.gd` and change the numbers. The talking NPCs in the
+  hub (Don, Whiskers, Mittens) don't have one: they live in the safe zone and can't be hurt.
+
+**Multiplayer:** the shooter's computer rolls each bolt's damage (so the number you see is the
+number taken off) and the host takes it off the VAC-COP; the Roomba's health is copied to every
+player by its MultiplayerSynchronizer, so everyone's bars match (late joiners too).
+
+**Test it without playing:** `--give=tommy_gun --pos=-12,0,-6.5 --yaw=180 --pitch=-10
+--bait_roomba=aim --hold=shoot --hold_delay=60 --hold_frames=4 --frames=75` parks a VAC-COP in
+your sights and fires a short burst (bar + numbers on the screenshot). For the boss bar:
+`--heat=100 --roomba=boss --give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=7 --zap_roomba=4 --frames=110`.
 
 ---
 
@@ -899,7 +944,7 @@ scripts/items/
                                 backpack, bag, placing items in the city, buying, multiplayer, late joiners
   held_item.gd               <- base for held items that DO something (use_tick, hud_text)
   weapon.gd                  <- base for every gun: fire rate, spread, range, knockback,
-                                overheat, bolt colours â€” all Inspector numbers
+                                damage + crits, overheat, bolt colours â€” all Inspector numbers
   catnip.gd, catdip.gd       <- examples of use-it-once items
 scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
@@ -913,7 +958,8 @@ Steps for your next one (e.g. a shotgun):
    **Duplicate** > `shotgun.tscn`. Open it and reshape the meshes under **Model** (keep
    **Model/Muzzle** at the barrel tip). Delete `HeatCoil` if it shouldn't overheat.
 2. Select the root node. In the Inspector set e.g. **Automatic** off (one shot per click),
-   **Fire Rate** 2, **Heat Per Shot** 0, **Cat Knockback** 14, **Bolt Color**, **Hud Name** "SHOTGUN".
+   **Fire Rate** 2, **Damage** 60, **Crit Chance** 0.1, **Heat Per Shot** 0, **Cat Knockback** 14,
+   **Bolt Color**, **Hud Name** "SHOTGUN".
 3. Right-click the `items` folder > **Create New > Resource...** > **ItemData** > save as
    `shotgun.tres`. Set **Id** `shotgun`, **Display Name** `SHOTGUN`, **Kind** Held, **Hands** 1 or 2,
    **Scene** = `shotgun.tscn`, **Glow Color** (alpha above 0 to glow on the street).
@@ -1447,10 +1493,12 @@ whole picture so they fit).
 HUD (CanvasLayer)            script: ui/hud.gd
 â””â”€â”€ Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
     â”œâ”€â”€ Names (Control)      <- names over cats' and NPCs' heads (script ui/hud_name_tags.gd)
+    â”œâ”€â”€ Bars (Control)       <- health bars over VAC-COPs / hurt cats, boss bar (ui/hud_health_bars.gd)
+    â”œâ”€â”€ Damage (Control)     <- damage numbers off things you shoot (ui/hud_damage_numbers.gd)
     â”œâ”€â”€ Top (Control)        <- stays up while you talk / shop
     â”‚   â”œâ”€â”€ Cash             <- top-left, big green "$120"
     â”‚   â”œâ”€â”€ Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
-    â”‚   â”œâ”€â”€ Health           <- "HP ##-" (flashes white when hurt)
+    â”‚   â”œâ”€â”€ Health           <- your health bar, drawn in code (script ui/hud_health_bar.gd)
     â”‚   â”œâ”€â”€ DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
     â”‚   â”œâ”€â”€ Heat             <- under it: "HEAT 2 [######--------------]" (scripts/heat_meter.gd)
     â”‚   â””â”€â”€ Scoreboard       <- top-right: everyone's cash
@@ -1504,7 +1552,8 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
 ```gdscript
 Hud.set_text("Cash", "$120")              # change a label's words (by node name)
 Hud.show_element("Crosshair", true)       # show / hide one piece
-Hud.set_color("Health", Color.WHITE)      # change a label's text colour
+Hud.set_color("Cash", Color.WHITE)        # change a label's text colour
+Hud.damage_number(hit_position, 38, false) # a damage number popping off a spot (true = crit)
 Hud.show_message("DON: Go get 'em.", 4.0) # middle-of-screen line for N seconds
 Hud.popup("EXTRACTED +$80", 2.5)          # the big fading text
 Hud.set_in_game(true)                     # whole HUD on (game) / off (start menu)
@@ -1519,7 +1568,7 @@ Hud.set_text("Cash", "$120", cat.slot)         # player 2's cash line
 Hud.show_message("SOLD!", 3.0, cat.slot)       # only that player sees it
 Hud.show_message("THE KOI IS GONE!")           # no seat on a message / popup = EVERY player sees it
 for cat in Game.instance.playing_cats():       # every player on this computer
-	Hud.set_text("Health", "...", cat.slot)
+	Hud.set_text("Carrying", "...", cat.slot)
 ```
 (Labels with no seat go to player 1. Their talk box and inventory: `NpcDialog.for_cat(cat)`,
 `InventoryScreen.for_seat(cat.slot)`.) Players 2-4's HUDs are made by `game_screen.gd` from

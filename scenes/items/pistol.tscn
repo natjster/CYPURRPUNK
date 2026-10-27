@@ -56,6 +56,8 @@ car_impulse = 120.0
 bolt_color = Color(1, 0.35, 0.7, 1)
 hot_color = Color(1, 0.35, 0.7, 1)
 bolt_width = 0.1
+damage = 40
+crit_chance = 0.15
 hud_name = "PAW-PISTOL"
 
 [node name="Model" type="Node3D" parent="."]

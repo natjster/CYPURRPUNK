@@ -4,8 +4,11 @@ extends Node
 ## Reach it from anywhere with CatHealth.instance.
 ##
 ## How it plays:
-##   - Every cat has max_health hit points (top-left of the HUD, under your cash: "HP ###").
-##   - A VAC-COP bonk takes some (Roomba > Hunting > Bonk Damage). At 0 you're KNOCKED OUT:
+##   - Every cat has max_health hit points (100), shown as the Cyberpunk-style HEALTH BAR
+##     top-left of the HUD (scripts/ui/hud_health_bar.gd). Other cats' bars float over their
+##     heads once they're hurt (scripts/ui/hud_health_bars.gd).
+##   - A VAC-COP bonk takes some (Roomba > Hunting > Bonk Damage, 34 = three bonks and you're
+##     out). At 0 you're KNOCKED OUT:
 ##     EVERYTHING you carry (paws, backpack and loot bag) drops on the street where you fell.
 ##     You lie there for knockout_seconds, then wake up back in the sewers with nothing.
 ##     Anyone can go up and grab your stuff: you, a friend... or a rival.
@@ -19,11 +22,9 @@ extends Node
 ## the host (damage()), which tells everyone the new health (_set_health). The knocked-out
 ## player's own computer plays the fall-over and moves its cat down (owners move their own cat).
 
-@export var max_health: int = 3
+@export var max_health: int = 100
 ## How long a knocked-out cat lies on the street before waking up in the sewers (seconds).
 @export var knockout_seconds: float = 3.0
-## Colour of the HP line on the HUD (it flashes white when you get hurt).
-@export var hud_color: Color = Color(1, 0.35, 0.45)
 
 ## The one health node (CatHealth.instance).
 static var instance: CatHealth
@@ -31,10 +32,6 @@ static var instance: CatHealth
 ## Player ID -> hit points. Everyone keeps a copy; only the host changes it (via RPC).
 ## A player who isn't in the list has full health.
 var health := {}
-
-## Player ID -> seconds left of flashing the HP line (one of our players just got hurt).
-var _flash_time := {}
-
 
 
 func _enter_tree() -> void:
@@ -87,13 +84,11 @@ func _physics_process(_delta: float) -> void:
 ## Host -> everyone: this player's HP is now "hp".
 @rpc("authority", "call_local", "reliable")
 func _set_health(player_id: int, hp: int) -> void:
-	# One of our players got hurt: thump their controller (and flash their HP line, below).
+	# One of our players got hurt: thump their controller and say ouch.
+	# (Their health bar flashes and shows the chip by itself: hud_health_bar.gd.)
 	if PlayerId.is_local(player_id) and hp < get_health(player_id) and hp > 0:
 		Seats.rumble(player_id, 0.3, 0.7, 0.25)
-	if PlayerId.is_local(player_id) and hp < get_health(player_id):
-		_flash_time[player_id] = 0.6  # flash their HP line
-		if hp > 0:
-			Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
+		Sound.play("hurt")  # (0 HP plays "knockout" instead, see _knocked_out)
 	health[player_id] = hp
 
 
@@ -133,14 +128,10 @@ func _forget_player(player_id: int) -> void:
 	health.erase(player_id)
 
 
-# --- HUD: "HP ##-" under your cash (every player on this computer, on their own HUD) ---
+# --- HUD: every player on this computer gets their own health bar (top-left of their HUD) ---
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	for cat in Game.instance.playing_cats():
-		var me := cat.player_id
-		var hp := get_health(me)
-		Hud.set_text("Health", "HP " + "#".repeat(hp) + "-".repeat(maxi(max_health - hp, 0)) + ("  KNOCKED OUT" if hp <= 0 else ""), cat.slot)
-		var flash := maxf(_flash_time.get(me, 0.0) - delta, 0.0)
-		_flash_time[me] = flash
-		var blink := flash > 0.0 and fmod(flash, 0.2) < 0.1
-		Hud.set_color("Health", Color.WHITE if blink else hud_color, cat.slot)
+		var bar := Hud.element("Health", cat.slot) as HudHealthBar
+		if bar != null:
+			bar.set_health(get_health(cat.player_id), max_health)
