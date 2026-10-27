@@ -1,5 +1,5 @@
 extends CanvasLayer
-## MEOW-CITY 1999 — keeps the menus readable on widescreen / ultrawide monitors.
+## CYPURRPUNK — keeps the menus readable on widescreen / ultrawide monitors.
 ## Attach to PS1Overlay in scenes/main.tscn.
 ##
 ## The game is always 240 pixels tall. On a wide monitor (SETTINGS > DISPLAY > ASPECT = WIDE)

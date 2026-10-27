@@ -1,6 +1,6 @@
 class_name MainMenu
 extends Control
-## MEOW-CITY 1999 — the START MENU shown over the city before a game.
+## CYPURRPUNK — the START MENU shown over the city before a game.
 ## Attach to the "Lobby" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   Lobby (Control)                 <- this script
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
@@ -52,7 +52,7 @@ signal settings_pressed
 @export var camera_sway_degrees: float = 18.0
 ## How long one slow pan left-and-back takes, in seconds.
 @export var camera_sway_seconds: float = 40.0
-## How much the big MEOW-CITY title flickers like a neon sign (0 = steady).
+## How much the big CYPURRPUNK title flickers like a neon sign (0 = steady).
 @export var title_flicker: float = 0.25
 
 @onready var title_label: Label = $Title

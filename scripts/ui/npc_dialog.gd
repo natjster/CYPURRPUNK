@@ -1,6 +1,6 @@
 class_name NpcDialog
 extends Control
-## MEOW-CITY 1999 — the TALK BOX at the bottom of the screen when you talk to an NPC.
+## CYPURRPUNK — the TALK BOX at the bottom of the screen when you talk to an NPC.
 ## Part of the HUD (scenes/ui/hud.tscn > HUD > Frame > NpcDialog), so it's drawn sharp at your
 ## monitor's real resolution, on top of the low-res game. Node tree:
 ##   NpcDialog (Control)        <- this script

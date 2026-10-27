@@ -1,6 +1,6 @@
 class_name CatLook
 extends RefCounted
-## MEOW-CITY 1999 — THE CHARACTER CREATOR FRAMEWORK: what a cat looks like, and dressing a
+## CYPURRPUNK — THE CHARACTER CREATOR FRAMEWORK: what a cat looks like, and dressing a
 ## cat model in it. Used by player cats (cat_player.gd) and the MY CAT screen's preview
 ## (scripts/ui/cat_creator.gd). You never put this script on a node: call CatLook.apply(...).
 ##

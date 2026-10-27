@@ -1,6 +1,6 @@
 class_name CatPalette
 extends Resource
-## MEOW-CITY 1999 — the COLOURS players can pick in the MY CAT screen.
+## CYPURRPUNK — the COLOURS players can pick in the MY CAT screen.
 ## There's one: res://cat_parts/palette.tres. Double-click it and edit the lists in the
 ## Inspector (click a colour to change it, "+ Add Element" for a new one). No code needed.
 ## The first colour of each list is the default.

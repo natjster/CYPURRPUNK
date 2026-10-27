@@ -1,6 +1,6 @@
 class_name GameScreen
 extends Control
-## MEOW-CITY 1999 — the very top scene (scenes/game_screen.tscn, the one Godot starts).
+## CYPURRPUNK — the very top scene (scenes/game_screen.tscn, the one Godot starts).
 ## It puts two pictures on your monitor:
 ##
 ##   1. The GAME: the whole of scenes/main.tscn (the 3D city, the pixel menus, the CRT + dither

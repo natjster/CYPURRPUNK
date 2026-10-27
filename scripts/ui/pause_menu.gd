@@ -1,6 +1,6 @@
 class_name PauseMenu
 extends Control
-## MEOW-CITY 1999 — the PAUSE MENU (press Esc, or START on a controller, during a game).
+## CYPURRPUNK — the PAUSE MENU (press Esc, or START on a controller, during a game).
 ## Attach to the "PauseMenu" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   PauseMenu (Control)   <- this script
 ##   ├── Dim (ColorRect)

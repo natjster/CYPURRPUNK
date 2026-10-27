@@ -1,6 +1,6 @@
 class_name PlayerPause
 extends Control
-## MEOW-CITY 1999 — ONE PLAYER'S PAUSE MENU, for split screen (couch co-op).
+## CYPURRPUNK — ONE PLAYER'S PAUSE MENU, for split screen (couch co-op).
 ## Part of every player's HUD (scenes/ui/hud.tscn > HUD > Frame > PlayerPause); it builds its
 ## own box and buttons, so the scene only needs the empty node.
 ##

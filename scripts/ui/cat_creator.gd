@@ -1,6 +1,6 @@
 class_name CatCreator
 extends Control
-## MEOW-CITY 1999 — the CHOOSE YOUR CAT screen (the character creator).
+## CYPURRPUNK — the CHOOSE YOUR CAT screen (the character creator).
 ## Attach to the "CatCreator" Control under PS1Overlay in main.tscn; it builds everything
 ## itself, so the scene only needs the empty node.
 ##

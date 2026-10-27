@@ -1,6 +1,6 @@
 class_name NpcPage
 extends Resource
-## MEOW-CITY 1999 — ONE PAGE of an NPC's conversation: something they say + the answer buttons.
+## CYPURRPUNK — ONE PAGE of an NPC's conversation: something they say + the answer buttons.
 ## An NPC (npc.gd) has a list of these under "Pages" in the Inspector.
 ## The FIRST page (that fits — see "Only If Quest" below) is what they say when you press E.
 ##

@@ -1,6 +1,6 @@
 class_name CatPlayer
 extends CharacterBody3D
-## MEOW-CITY 1999 — third-person cat controller.
+## CYPURRPUNK — third-person cat controller.
 ## Attach to the root "Player" (CharacterBody3D). Expected node tree:
 ##   Player (CharacterBody3D)  <- this script
 ##   ├── CollisionShape3D

@@ -1,6 +1,6 @@
 class_name QuestData
 extends Resource
-## MEOW-CITY 1999 — a QUEST CARD: everything the game needs to know about one quest.
+## CYPURRPUNK — a QUEST CARD: everything the game needs to know about one quest.
 ##
 ## Every quest is one of these saved as a .tres file in the res://quests/ folder. The game
 ## loads every card in that folder automatically (quest_manager.gd), so adding a quest =

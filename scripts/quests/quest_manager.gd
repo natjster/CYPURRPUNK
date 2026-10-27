@@ -1,6 +1,6 @@
 class_name QuestManager
 extends Node
-## MEOW-CITY 1999 — THE QUEST SYSTEM. Attach to the "Quests" node in main.tscn.
+## CYPURRPUNK — THE QUEST SYSTEM. Attach to the "Quests" node in main.tscn.
 ## Reach it from anywhere with QuestManager.instance.
 ##
 ## Quest cards are QuestData .tres files in res://quests/, loaded automatically.

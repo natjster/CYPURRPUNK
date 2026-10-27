@@ -1,6 +1,6 @@
 class_name UndergroundHub
 extends Node3D
-## MEOW-CITY 1999 — THE SEWERS: the underground hub where every cat starts.
+## CYPURRPUNK — THE SEWERS: the underground hub where every cat starts.
 ## Attach to the "Hub" node in main.tscn. That node sits 200 m BELOW the city
 ## (position 0, -200, 0), so the hub and the city are one world and one multiplayer game:
 ## going "up top" or "back down" is just moving your cat between the two.

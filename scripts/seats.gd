@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — SEATS: which controller belongs to which player on THIS computer (couch co-op).
+## CYPURRPUNK — SEATS: which controller belongs to which player on THIS computer (couch co-op).
 ## Loaded automatically on startup (it's an Autoload named "Seats"), after Controls.
 ##
 ## A computer has up to 4 SEATS (PlayerId.MAX_LOCAL). Seat number = the player's slot

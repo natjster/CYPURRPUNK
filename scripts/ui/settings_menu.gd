@@ -1,6 +1,6 @@
 class_name SettingsMenu
 extends Control
-## MEOW-CITY 1999 — the SETTINGS screen (opened from the start menu and the pause menu).
+## CYPURRPUNK — the SETTINGS screen (opened from the start menu and the pause menu).
 ## Attach to the root of scenes/ui/settings_menu.tscn. Expected node tree:
 ##   SettingsMenu (Control)      <- this script
 ##   ├── Dim (ColorRect)         <- darkens the game behind the menu

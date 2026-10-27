@@ -1,4 +1,4 @@
-# MEOW-CITY 1999 — notes for Claude
+# CYPURRPUNK — notes for Claude
 
 Godot 4.7.2 multiplayer PS1-style cyberpunk cat game. The user is a non-coder: keep code heavily
 commented, expose tuning as `@export`, give Godot editor click-paths, and update `SETUP_GUIDE.md`
@@ -61,7 +61,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
   the transport; Steam swaps in here; LAN discovery: hosts broadcast `Net.advert` (set by game.gd
   `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`), `Settings` (`scripts/settings.gd`: all player settings,
-  saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999`; test runs with `--capture` use
+  saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999` (old name kept on purpose so saves survive the rename to CYPURRPUNK); test runs with `--capture` use
   defaults and never save), `Controls`, `DevCapture` (debug builds only).
 - Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by
   name (`meow_1/_2` = random variants of "meow"); `play` (2D, local), `play_at` (3D, local: use where

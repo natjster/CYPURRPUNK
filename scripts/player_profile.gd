@@ -1,6 +1,6 @@
 class_name PlayerProfile
 extends Node
-## MEOW-CITY 1999 — SAVED PROGRESS: your cash and your stash, kept between games.
+## CYPURRPUNK — SAVED PROGRESS: your cash and your stash, kept between games.
 ## Attach to the "Profile" node in main.tscn. Reach it with PlayerProfile.instance.
 ##
 ## What's saved: your CASH and what's in your STASH (the lockers in the sewers). That's all:

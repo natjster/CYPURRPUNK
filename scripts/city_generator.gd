@@ -1,6 +1,6 @@
 class_name CityGenerator
 extends Node3D
-## MEOW-CITY 1999 — builds the whole city from a single number, the "seed".
+## CYPURRPUNK — builds the whole city from a single number, the "seed".
 ##
 ## The same seed always makes exactly the same city. In multiplayer the host only sends
 ## that one number, and every computer builds an identical city by itself.

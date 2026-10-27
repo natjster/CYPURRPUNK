@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3]
 
-; MEOW-CITY 1999 HUD look: chunky monospace text with a dark outline + drop shadow, so it reads
+; CYPURRPUNK HUD look: chunky monospace text with a dark outline + drop shadow, so it reads
 ; over the bright neon city, and sharp neon-edged boxes for the talk box and inventory
 ; (the same colours as the pixel menus in ui/menu_theme.tres, but drawn at full resolution).
 ; Used by scenes/ui/hud.tscn. Double-click this file in Godot's FileSystem dock to edit it in

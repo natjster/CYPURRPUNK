@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — every sound in the game goes through here (an Autoload named "Sound").
+## CYPURRPUNK — every sound in the game goes through here (an Autoload named "Sound").
 ##
 ## ADDING / SWAPPING A SOUND needs no code: drop a .wav, .ogg or .mp3 file into one of these
 ## folders and it's picked up by its file name the next time the game starts:

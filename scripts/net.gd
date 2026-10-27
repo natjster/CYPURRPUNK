@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — the network connection: hosting, joining and leaving a game.
+## CYPURRPUNK — the network connection: hosting, joining and leaving a game.
 ## Loaded automatically on startup (it's an Autoload named "Net").
 ##
 ## Everything that knows HOW players connect lives here, so switching from LAN (ENet) to
@@ -12,7 +12,7 @@ extends Node
 ##     and to the signals below (start playing, back to the menu).
 ##
 ## FINDING GAMES ON YOUR NETWORK (no typing IP addresses): while hosting, this computer shouts
-## "a MEOW-CITY game is here!" to the whole local network once a second (a small UDP broadcast
+## "a CYPURRPUNK game is here!" to the whole local network once a second (a small UDP broadcast
 ## on DISCOVERY_PORT, with what's in `advert`: host name, city number, players). The MULTIPLAYER
 ## screen listens (start_listening) and lists every game it hears (`found_games`, signal
 ## games_changed). Firewalls must allow UDP 7777 AND 7778.

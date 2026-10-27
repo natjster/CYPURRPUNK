@@ -1,6 +1,6 @@
 class_name GetawayCar
 extends RigidBody3D
-## MEOW-CITY 1999 — arcade getaway car.
+## CYPURRPUNK — arcade getaway car.
 ## Attach to the root "GetawayCar" (RigidBody3D). Expected node tree:
 ##   GetawayCar (RigidBody3D)   <- this script
 ##   ├── CollisionShape3D       <- box around the car body

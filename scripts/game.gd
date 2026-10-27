@@ -1,6 +1,6 @@
 class_name Game
 extends Node3D
-## MEOW-CITY 1999 — main scene script: starts games, spawns cats, keeps late joiners in sync.
+## CYPURRPUNK — main scene script: starts games, spawns cats, keeps late joiners in sync.
 ## Attach to the root "Main" node of main.tscn.
 ##
 ## Who does what:

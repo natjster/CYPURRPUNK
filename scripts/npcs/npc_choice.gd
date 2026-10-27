@@ -1,6 +1,6 @@
 class_name NpcChoice
 extends Resource
-## MEOW-CITY 1999 — ONE ANSWER BUTTON in an NPC's talk box (e.g. "> WHO ARE YOU?").
+## CYPURRPUNK — ONE ANSWER BUTTON in an NPC's talk box (e.g. "> WHO ARE YOU?").
 ## Lives inside an NpcPage's Choices list. Everything is set in the Inspector.
 ##
 ## What happens when the player clicks it, in this order:

@@ -1,7 +1,7 @@
 @tool
 class_name HudCrosshair
 extends Control
-## MEOW-CITY 1999 — the aiming crosshair on the HUD: four short lines with a gap in the middle
+## CYPURRPUNK — the aiming crosshair on the HUD: four short lines with a gap in the middle
 ## and a dot, drawn sharp at full resolution. Sits in the exact middle of the game picture
 ## (that's where guns aim). Tweak the look in the Inspector (scenes/ui/hud.tscn > HUD >
 ## Frame > Middle > Crosshair); the editor shows your changes straight away.

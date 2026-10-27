@@ -1,5 +1,5 @@
 class_name PlayerId
-## MEOW-CITY 1999 — PLAYER IDs: one number per player (per cat), even with several players
+## CYPURRPUNK — PLAYER IDs: one number per player (per cat), even with several players
 ## on one computer (split screen).
 ##
 ## Two different numbers, don't mix them up:

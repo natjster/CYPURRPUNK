@@ -1,6 +1,6 @@
 class_name Shopkeeper
 extends Npc
-## MEOW-CITY 1999 — a SHOPKEEPER: a normal NPC (npc.gd) who can also sell items.
+## CYPURRPUNK — a SHOPKEEPER: a normal NPC (npc.gd) who can also sell items.
 ## Comrade Whiskers, who runs THE BLACK MARKITTEN down in the sewers
 ## (scenes/npcs/comrade_whiskers.tscn), is one.
 ##

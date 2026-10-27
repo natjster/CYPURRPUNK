@@ -1,6 +1,6 @@
 class_name SeatFocus
 extends RefCounted
-## MEOW-CITY 1999 — ONE PLAYER'S HIGHLIGHTED BUTTON in a HUD window (talk box, inventory, pause).
+## CYPURRPUNK — ONE PLAYER'S HIGHLIGHTED BUTTON in a HUD window (talk box, inventory, pause).
 ##
 ## Why not Godot's own "focus"? Godot allows only ONE focused button in the whole game window,
 ## even across the split-screen HUDs: when player 2 highlighted a button, player 1's highlight

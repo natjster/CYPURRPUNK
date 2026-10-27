@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — the CONTROLS framework: every key, mouse button and CONTROLLER button the game uses.
+## CYPURRPUNK — the CONTROLS framework: every key, mouse button and CONTROLLER button the game uses.
 ## Loaded automatically on startup (it's an Autoload named "Controls").
 ##
 ## What it does:

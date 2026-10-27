@@ -1,6 +1,6 @@
 class_name CatPart
 extends Resource
-## MEOW-CITY 1999 — ONE ACCESSORY CARD for the character creator (a hat, shades, a collar...).
+## CYPURRPUNK — ONE ACCESSORY CARD for the character creator (a hat, shades, a collar...).
 ## Every .tres file of this type in res://cat_parts/ shows up in the MY CAT screen by itself.
 ##
 ## To make a new accessory (SETUP_GUIDE §11 has the click-by-click version):

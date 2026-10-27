@@ -1,6 +1,6 @@
 class_name CatHealth
 extends Node
-## MEOW-CITY 1999 — CAT HEALTH and KNOCKOUTS. Attach to the "Health" node in main.tscn.
+## CYPURRPUNK — CAT HEALTH and KNOCKOUTS. Attach to the "Health" node in main.tscn.
 ## Reach it from anywhere with CatHealth.instance.
 ##
 ## How it plays:

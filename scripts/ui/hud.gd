@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## MEOW-CITY 1999 — the HUD framework: everything on screen during a game that isn't the world
+## CYPURRPUNK — the HUD framework: everything on screen during a game that isn't the world
 ## or a menu (cash, HP, loot, the extraction arrow, prompts, crosshair, messages).
 ##
 ## It is drawn ON TOP of the game at your monitor's real resolution (see scripts/ui/game_screen.gd),

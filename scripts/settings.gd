@@ -1,5 +1,5 @@
 extends Node
-## MEOW-CITY 1999 — every player setting in one place (screen, sound, mouse, controller, effects).
+## CYPURRPUNK — every player setting in one place (screen, sound, mouse, controller, effects).
 ## Loaded automatically on startup (it's an Autoload named "Settings").
 ##
 ## Other scripts just read the values, e.g. Settings.mouse_speed, and listen to the

@@ -1,4 +1,4 @@
-# MEOW-CITY 1999 — Setup & How-It-Works Guide
+# CYPURRPUNK — Setup & How-It-Works Guide
 
 Everything below is **already built as files in this folder**. You don't have to paste code —
 open the project and press Play. The sections explain what each piece is, so you can tweak it
@@ -60,6 +60,9 @@ Meow-City/
 click **Import**, pick `project.godot` in this folder, then **Import & Edit**. Press **F5** to play.
 
 **Where your saves go:** `%APPDATA%\MeowCity1999\` (paste that into the Explorer address bar).
+The folder keeps its old name on purpose: the game used to be called MEOW-CITY 1999, and renaming the
+folder would lose everyone's saves. It's set in **Project > Project Settings > Application > Config >
+Custom User Dir Name**; leave it alone.
 Set in Project Settings > Application > Config > **Use Custom User Dir** / **Custom User Dir Name**.
 
 ---
@@ -968,7 +971,7 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 ## 10. Start menu, pause menu and Settings
 
 ### What the player sees
-- **Start menu:** big flickering MEOW-CITY 1999 title over the rainy city (the camera slowly pans),
+- **Start menu:** big flickering CYPURRPUNK title over the rainy city (the camera slowly pans),
   then **PLAY / SETTINGS / QUIT**. The way through:
   ```
   PLAY  ->  SOLO / MULTIPLAYER

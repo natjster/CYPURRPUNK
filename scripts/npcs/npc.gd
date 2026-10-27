@@ -1,6 +1,6 @@
 class_name Npc
 extends StaticBody3D
-## MEOW-CITY 1999 — THE NPC FRAMEWORK: any character you can walk up to and talk to.
+## CYPURRPUNK — THE NPC FRAMEWORK: any character you can walk up to and talk to.
 ## Don Catleone (scenes/npcs/don_catleone.tscn) is built on it, and so is the starter
 ## scene scenes/npcs/npc_template.tscn — duplicate that to make a new NPC (SETUP_GUIDE §8).
 ##

@@ -1,6 +1,6 @@
 class_name HudNameTags
 extends Control
-## MEOW-CITY 1999 — names floating over cats' and NPCs' heads, drawn by the HUD so they're sharp.
+## CYPURRPUNK — names floating over cats' and NPCs' heads, drawn by the HUD so they're sharp.
 ## Lives at scenes/ui/hud.tscn > HUD > Frame > Names (under everything else on the HUD).
 ##
 ## HOW IT WORKS: cats (scenes/player.tscn) and NPCs (scenes/npcs/*.tscn) still have their
