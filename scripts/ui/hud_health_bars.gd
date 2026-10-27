@@ -5,11 +5,11 @@ extends Control
 ##
 ## What you see over a VAC-COP:
 ##        VAC-COP
-##   ▰▰▰▰▰▰▱▱▱▱      <- thin slanted red bar; the bit just lost is white-yellow and drains away
+##   ██████░░░░      <- thin plain red bar; the bit just lost is white-yellow and drains away
 ##   - It appears once the thing is HURT or is CHASING someone, and fades out further than
 ##     max_distance or behind walls.
 ##   - BOSSES (the MEGA VAC-COP) get a big bar pinned to the top-middle of the screen instead,
-##     with a "!!" danger mark, while they're within boss_distance.
+##     with its name above it, while they're within boss_distance.
 ##   - Other players' cats show a slim bar under their name once they're hurt.
 ##
 ## GIVE SOMETHING NEW A HEALTH BAR (e.g. a future guard dog): add its root node to the group
@@ -38,8 +38,8 @@ const GROUP := "hud_health_bars"
 @export var boss_bar_width: float = 440.0
 ## ...and this far down from the top of the screen (under your own health bar).
 @export var boss_bar_top: float = 152.0
-## Bar height (HUD units).
-@export var bar_height: float = 9.0
+## Bar thickness (HUD units).
+@export var bar_height: float = 4.5
 @export var name_font_size: int = 15
 ## Seconds the white-yellow chip waits before draining, and how fast it drains (bar per second).
 @export var chip_delay: float = 0.35
@@ -144,7 +144,7 @@ func _add_boss_bar(info: Dictionary, anim: Dictionary) -> void:
 			stacked += 1
 	var width := minf(boss_bar_width, size.x * 0.5)
 	var height := bar_height * 1.6
-	var top := boss_bar_top + stacked * (height + 30.0)
+	var top := boss_bar_top + stacked * (height + 34.0)
 	_draw_list.append({
 		"rect": Rect2(Vector2(round((size.x - width) * 0.5), top), Vector2(width, height)),
 		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha,
@@ -172,50 +172,21 @@ func _draw() -> void:
 	for bar in _draw_list:
 		var rect: Rect2 = bar.rect
 		var a: float = bar.alpha
-		var slant := rect.size.y * 0.8
+		var w := rect.size.x
 		var fill: Color = friend_color if bar.friend else fill_color
-		_slanted(rect, 0.0, 1.0, slant, Color(back_color, back_color.a * a))
-		# Segments: 10 for normal enemies, 20 for bosses, none for friends' slim bars.
-		var pieces := 1 if bar.friend else (20 if bar.boss else 10)
-		var gap := 2.0 / rect.size.x
-		for i in pieces:
-			var s0 := float(i) / pieces + (gap * 0.5 if i > 0 else 0.0)
-			var s1 := float(i + 1) / pieces - (gap * 0.5 if i < pieces - 1 else 0.0)
-			_part(rect, s0, s1, 0.0, bar.shown, slant, Color(fill, a))
-			_part(rect, s0, s1, bar.shown, bar.chip, slant, Color(chip_color, a))
-		var outline := _points(rect, 0.0, 1.0, slant)
-		outline.append(outline[0])
-		draw_polyline(outline, Color(friend_color if bar.friend else frame_color, frame_color.a * a), 1.0)
-		# Name above the bar (left-aligned, like Cyberpunk); bosses get a "!!" danger mark.
+		# A plain rectangle: dark back, red fill, then the white-yellow chip (just lost).
+		draw_rect(rect, Color(back_color, back_color.a * a))
+		draw_rect(Rect2(rect.position, Vector2(w * bar.shown, rect.size.y)), Color(fill, a))
+		if bar.chip > bar.shown:
+			draw_rect(Rect2(rect.position.x + w * bar.shown, rect.position.y, w * (bar.chip - bar.shown), rect.size.y), Color(chip_color, a))
+		draw_rect(rect, Color(friend_color if bar.friend else frame_color, frame_color.a * a), false, 1.0)
+		# Name above the bar (left-aligned, like Cyberpunk). The boss's is bigger and gold.
 		var label: String = bar.name
-		if bar.boss:
-			label = "!! " + label
 		if label != "":
 			var font_size := name_font_size + (3 if bar.boss else 0)
-			var pos := Vector2(rect.position.x + slant, rect.position.y - 5)
+			var pos := Vector2(rect.position.x, rect.position.y - 5)
 			draw_string_outline(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 5, Color(0.04, 0.01, 0.08, a))
 			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(Color(1, 0.85, 0.3) if bar.boss else name_color, a))
-
-
-func _part(rect: Rect2, s0: float, s1: float, from: float, to: float, slant: float, color: Color) -> void:
-	var a := maxf(s0, from)
-	var b := minf(s1, to)
-	if b > a:
-		_slanted(rect, a, b, slant, color)
-
-
-func _slanted(rect: Rect2, from: float, to: float, slant: float, color: Color) -> void:
-	draw_colored_polygon(_points(rect, from, to, slant), color)
-
-
-## A slice from..to (0..1) of the bar, every edge leaning by "slant".
-func _points(rect: Rect2, from: float, to: float, slant: float) -> PackedVector2Array:
-	var w := rect.size.x - slant
-	var x0 := rect.position.x + w * from
-	var x1 := rect.position.x + w * to
-	var y0 := rect.position.y
-	var y1 := rect.end.y
-	return PackedVector2Array([Vector2(x0 + slant, y0), Vector2(x1 + slant, y0), Vector2(x1, y1), Vector2(x0, y1)])
 
 
 ## Is there a wall between the camera and the bar? (The thing itself, our cat and cars don't count.)

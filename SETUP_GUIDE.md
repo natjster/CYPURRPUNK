@@ -849,18 +849,17 @@ and your cat is back in the hub with `hp=100`.
 ### Health bars & damage numbers (Cyberpunk-style, all drawn on the HUD)
 Everything here is drawn by the HUD layer (sharp at your real resolution, not pixelated or CRT'd).
 
-- **Your health bar** (top-left, under LOOT): a number box (`87`) and a slanted red bar cut into
-  10 segments. When you're hurt the bit you lost turns **white-yellow** and drains away after a
+- **Your health bar** (top-left, under LOOT): a number box (`87`) and a thin, plain red bar. When you're hurt the bit you lost turns **white-yellow** and drains away after a
   moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
   pulses; at 0 it says **KNOCKED OUT**.
   Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
-  Heal, Back, Frame, Accent), **Shape** (Segments, Segment Gap, Slant, Number Box Width, Number
-  Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
+  Heal, Back, Frame), **Shape** (Bar Thickness, Number Box Width, Number Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
   Transform**.
 - **Enemy health bars** float over a VAC-COP once it's hurt or chasing: its name (`VAC-COP`) over a
-  thin red segmented bar, with the same white-yellow chip. They shrink with distance, fade out far
+  thin plain red bar, with the same white-yellow chip. They shrink with distance, fade out far
   away and hide behind walls. The **MEGA VAC-COP** gets a big bar pinned to the **top-middle** of
-  the screen instead (`!! MEGA VAC-COP`), like a Cyberpunk boss.
+  the screen instead, with its name above it, like a Cyberpunk boss (so it has no floating sign
+  over it any more).
 - **Other players' cats** get a slim **cyan** bar under their name once they're hurt (handy in co-op).
   Tuning: select **Frame > Bars**: Max Distance, Fade Distance, World Width, Min / Max Width, Bar
   Height, Name Font Size, **Boss Distance / Boss Bar Width / Boss Bar Top**, Chip Delay, Drain

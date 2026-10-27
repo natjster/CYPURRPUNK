@@ -35,13 +35,3 @@ scale = Vector3(2.6, 2.6, 2.6)
 [node name="SirenLight" parent="."]
 light_energy = 5.0
 omni_range = 12.0
-
-[node name="BossSign" type="Label3D" parent="."]
-position = Vector3(0, 1.8, 0)
-billboard = 1
-texture_filter = 0
-modulate = Color(1, 0.25, 0.25, 1)
-outline_size = 8
-font_size = 40
-pixel_size = 0.012
-text = "MEGA VAC-COP"
