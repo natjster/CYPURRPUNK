@@ -427,7 +427,7 @@ func _forget_player(player_id: int) -> void:
 	cash.erase(player_id)
 
 
-# --- HUD (your cash, your loot, where to go, everyone's cash: scenes/ui/hud.tscn) ---
+# --- HUD (where to go, and everyone's cash in the sewers: scenes/ui/hud.tscn) ---
 
 ## Every player on this computer gets their own lines on their own HUD (split screen).
 func _update_hud() -> void:
@@ -440,34 +440,20 @@ func _update_hud() -> void:
 func _update_hud_for(my_cat: CatPlayer) -> void:
 	var me := my_cat.player_id
 	var seat := my_cat.slot
-	var items := ItemManager.instance
-	Hud.set_text("Cash", "$%d" % cash.get(me, 0), seat)
-	# Under the cash: your quest's progress (e.g. "QUEST: MITTENS' FISH 2/3") if you have one,
-	# otherwise how full your loot bag is.
-	var quest_line := QuestManager.instance.hud_text(me)
-	if quest_line != "":
-		Hud.set_text("Carrying", "QUEST: " + quest_line, seat)
-	else:
-		var used := items.bag_used(me)
-		var worth := 0
-		for item_id in items.get_inventory(me).bag:
-			worth += (items.catalog[item_id] as ItemData).cash_value
-		var notes := ""
-		if used >= items.bag_size:
-			notes += "  FULL!"
-		if items.carry_speed(me) < 1.0:
-			notes += "  HEAVY!"
-		Hud.set_text("Carrying", "LOOT %d/%d ($%d)%s" % [used, items.bag_size, worth, notes], seat)
-
 	# Distance and rough direction to the extraction beam, relative to where the camera looks.
 	# Down in the hub there's no beam to point at.
 	var where := car.global_position if car.driver_id == me else my_cat.global_position
-	if UndergroundHub.is_in_hub(where):
+	var in_sewers := UndergroundHub.is_in_hub(where)
+	if in_sewers:
 		Hud.set_text("DropOff", "THE SEWERS - SAFE ZONE", seat)
 	else:
 		Hud.set_text("DropOff", _direction_text(where, GameScreen.instance.camera_for_seat(seat)), seat)
 
-	# Everyone's cash, richest first.
+	# Everyone's cash, richest first (top-right). Only shown down in the sewers: up in the city
+	# the HUD stays clean.
+	Hud.show_element("Scoreboard", in_sewers, seat)
+	if not in_sewers:
+		return
 	var rows: Array = []
 	for node in players.get_children():
 		var cat := node as CatPlayer

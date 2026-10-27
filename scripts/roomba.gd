@@ -374,7 +374,8 @@ func _hit_flash() -> void:
 func _vacuumed(player_id: int, display_name: String) -> void:
 	if not PlayerId.is_local(player_id):
 		return
-	Game.instance.show_message("A VAC-COP VACUUMED YOUR %s!  Smash it to get it back." % display_name, 3.0, PlayerId.slot_of(player_id))
+	# No text on screen (HUD kept simple): just the console.
+	print("[Roomba] vacuumed player %d's %s" % [player_id, display_name])
 
 
 # --- Every computer: gliding (non-host) and the flashing lights ---

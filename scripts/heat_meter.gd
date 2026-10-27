@@ -14,7 +14,8 @@ extends Node
 ##     knows where you are. Smash it and it spits out a golden koi and the heat drops.
 ##   - Heat cools when you extract (each extraction cools it a bit) and drains away fast
 ##     while nobody is up top.
-##   - HUD label "Heat" (scenes/ui/hud.tscn) shows the bar.
+##   - There is NO heat bar on the HUD (kept simple on purpose): players only HEAR it go up
+##     (the heat_up / boss_siren sounds) and feel it in how many Roombas come.
 ##
 ## MULTIPLAYER: only the HOST changes the heat. It sends the number to everyone a few times a
 ## second (for the HUD); Roombas run on the host, so they read it directly.
@@ -136,31 +137,15 @@ func send_state_to(peer_id: int) -> void:
 	_set_heat.rpc_id(peer_id, heat)
 
 
-# --- HUD (every computer) ---
+# --- Level-up sounds (every computer; no heat bar on the HUD) ---
 
 func _process(_delta: float) -> void:
 	var lvl := level()
-	# A sound and a big flash when the heat goes UP a level.
+	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:
 		if lvl == MAX_LEVEL:
-			Hud.popup("MEGA VAC-COP DEPLOYED!", 3.0)
 			Sound.play("boss_siren")  # sounds/sfx/boss_siren.wav
 		else:
-			Hud.popup("HEAT LEVEL %d" % lvl, 2.0)
 			Sound.play("heat_up")  # sounds/sfx/heat_up.wav
 	_last_level = lvl
 
-	# "HEAT 3 [#######-----]": 20 marks for the whole 0..100.
-	var marks := int(heat / MAX_HEAT * 20.0)
-	var text := "HEAT %d [%s%s]" % [lvl, "#".repeat(marks), "-".repeat(20 - marks)]
-	if lvl == MAX_LEVEL:
-		text = "HEAT MAX - MEGA VAC-COP!"
-	for seat in PlayerId.MAX_LOCAL:  # every player on this computer sees the same heat
-		Hud.set_text("Heat", text, seat)
-	# Yellow when calm, orange, then red; blinks at max.
-	var colors := [Color(1, 0.9, 0.4), Color(1, 0.75, 0.3), Color(1, 0.55, 0.2), Color(1, 0.35, 0.2), Color(1, 0.15, 0.15)]
-	var color: Color = colors[lvl - 1]
-	if lvl == MAX_LEVEL and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25:
-		color = Color.WHITE
-	for seat in PlayerId.MAX_LOCAL:
-		Hud.set_color("Heat", color, seat)

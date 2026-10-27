@@ -644,9 +644,8 @@ name).
 ### Quests
 A quest is a job an NPC gives you, with a cash reward. The first one is **MITTENS' FISH**:
 1. Talk to **Lil' Mittens** > **WHAT DO YOU NEED?** > **FINE. THREE FISH.**
-2. The top-left HUD line (under your cash) turns into the quest tracker:
-   `QUEST: MITTENS' FISH 1/3`, then `3/3 - EXTRACT!` when you have them all. (With no quest it
-   shows your loot bag, `LOOT 1/3`, as before.)
+2. Go get the fish. (There's no quest tracker on the HUD any more: the HUD was simplified. Check
+   your loot bag with the inventory screen.)
 3. Step into the extraction beam with **all 3 fish in your bag at once**: you get the fish's
    normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
    and you just get the fish money â€” the quest stays active for your next trip.
@@ -692,7 +691,7 @@ bag holds 3 spaces: one in your mouth, the rest stacked on your head). Three kin
 |---|---|---|---|---|
 | **Sardine** | $20 | 1 | 8 on random sidewalks | none: small fry |
 | **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
-| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it adds **+20 HEAT** and tells everyone `NAME GRABBED THE GOLDEN KOI!` |
+| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it adds **+20 HEAT** and plays a sound for everyone |
 
 Reach an **open EXTRACTION beam**, the tall green light you can see through the fog, on foot or
 by car. The city has **4 beam spots** at crossroads (you'll see their ring of posts even when
@@ -705,10 +704,11 @@ Every piece of loot pays its worth into **your own** cash, you're sent **back do
 in, the getaway car goes back to its parking spot. Fish and sardines grow back after 20 seconds,
 the koi after 2 minutes.
 
-**HUD:** top-left = your cash, `LOOT 2/3 ($400) HEAVY!` (or your quest's progress, see
-**Quests**) and your **health bar**; top-middle = distance and direction to the **nearest open** beam (`^`
-ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about to shut), or
-`THE SEWERS - SAFE ZONE` in the hub; under it the **HEAT** bar; top-right = everyone's cash.
+**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = distance and direction
+to the **nearest open** beam (`^` ahead, `<` `>` turn, `v` behind, plus `CLOSING 7s!` when it's about
+to shut), or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash, **only while you're
+in the sewers**. There is no cash, loot or heat line up in the city, and no news pop-ups (koi
+grabbed, boss down, "vacuumed your fish", heat level): those are sounds only now.
 
 **Where it lives:** `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`. Loot is normal
 loot items (Â§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres` (models in
@@ -737,7 +737,7 @@ sewers. (Before, a cat standing in the hub could pick up fish lying in the city 
 Eight police Roombas patrol the city's sidewalks (more as the HEAT rises, see below). When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
 slower than **zoomies** (Shift) â€” so run! If it touches you it **bonks** you flying,
-**vacuums up one fish** from your loot bag ("A VAC-COP VACUUMED YOUR FISH!") and takes **34 HP**.
+**vacuums up one fish** from your loot bag and takes **34 HP**.
 Then it backs off for a couple of seconds. Three bonks and you're **knocked out** (see
 **Health & knockouts** below).
 
@@ -785,7 +785,7 @@ extraction arrow: `HEAT 2 [#######-------------]`) is **shared by every player**
   per Roomba destroyed.
 - It cools **-15** each time someone extracts, and drains **3 per second** while nobody is up top.
 
-Every 25 heat is one **HEAT LEVEL** (a `HEAT LEVEL 3` popup + alarm). Each level above 1 brings
+Every 25 heat is one **HEAT LEVEL** (an alarm sound; there is no heat bar or popup on the HUD). Each level above 1 brings
 **+2 Roombas** (they roll in one every 4 seconds), and all Roombas chase **7% faster** and spot
 you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
 carrying the koi...
@@ -849,7 +849,7 @@ and your cat is back in the hub with `hp=100`.
 ### Health bars & damage numbers (Cyberpunk-style, all drawn on the HUD)
 Everything here is drawn by the HUD layer (sharp at your real resolution, not pixelated or CRT'd).
 
-- **Your health bar** (top-left, under LOOT): a number box (`87`) and a thin, plain red bar. When you're hurt the bit you lost turns **white-yellow** and drains away after a
+- **Your health bar** (top-left corner): a number box (`87`) and a thin, plain red bar. When you're hurt the bit you lost turns **white-yellow** and drains away after a
   moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
   pulses; at 0 it says **KNOCKED OUT**.
   Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
@@ -1549,25 +1549,25 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
 
 ### Using it from a script (no node paths needed)
 ```gdscript
-Hud.set_text("Cash", "$120")              # change a label's words (by node name)
+Hud.set_text("DropOff", "EXTRACT ^ 9m")   # change a label's words (by node name)
 Hud.show_element("Crosshair", true)       # show / hide one piece
-Hud.set_color("Cash", Color.WHITE)        # change a label's text colour
+Hud.set_color("DropOff", Color.WHITE)     # change a label's text colour
 Hud.damage_number(hit_position, 38, false) # a damage number popping off a spot (true = crit)
 Hud.show_message("DON: Go get 'em.", 4.0) # middle-of-screen line for N seconds
 Hud.popup("EXTRACTED +$80", 2.5)          # the big fading text
 Hud.set_in_game(true)                     # whole HUD on (game) / off (start menu)
-Hud.element("Cash")                       # the node itself, for anything else
+Hud.element("Scoreboard")                 # the node itself, for anything else
 ```
 (`Game.instance.show_message(...)` still works too: it calls `Hud.show_message`.)
 
 **Split screen (couch co-op): every player has their own HUD.** Add the player's SEAT
 (`cat.slot`: 0 = player 1, 1 = player 2...) at the end to talk to their HUD:
 ```gdscript
-Hud.set_text("Cash", "$120", cat.slot)         # player 2's cash line
+Hud.set_text("DropOff", "...", cat.slot)       # player 2's extraction line
 Hud.show_message("SOLD!", 3.0, cat.slot)       # only that player sees it
 Hud.show_message("THE KOI IS GONE!")           # no seat on a message / popup = EVERY player sees it
 for cat in Game.instance.playing_cats():       # every player on this computer
-	Hud.set_text("Carrying", "...", cat.slot)
+	Hud.set_text("DropOff", "...", cat.slot)
 ```
 (Labels with no seat go to player 1. Their talk box and inventory: `NpcDialog.for_cat(cat)`,
 `InventoryScreen.for_seat(cat.slot)`.) Players 2-4's HUDs are made by `game_screen.gd` from

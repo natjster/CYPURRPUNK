@@ -1,7 +1,8 @@
 class_name Hud
 extends CanvasLayer
 ## CYPURRPUNK — the HUD framework: everything on screen during a game that isn't the world
-## or a menu (cash, HP, loot, the extraction arrow, prompts, crosshair, messages).
+## or a menu (HP, the extraction arrow, everyone's cash in the sewers, prompts, crosshair, messages).
+## Kept simple on purpose: no cash / loot / heat lines while you're up in the city.
 ##
 ## It is drawn ON TOP of the game at your monitor's real resolution (see scripts/ui/game_screen.gd),
 ## so its text is sharp, while the game underneath keeps its chunky 240-pixel PS1 look.
@@ -15,22 +16,23 @@ extends CanvasLayer
 ##       ├── Names        <- names over cats' / NPCs' heads (scripts/ui/hud_name_tags.gd)
 ##       ├── Bars         <- health bars over enemies / hurt cats (scripts/ui/hud_health_bars.gd)
 ##       ├── Damage       <- damage numbers off things you shoot (scripts/ui/hud_damage_numbers.gd)
-##       ├── Top          <- stays up while you talk / shop: Cash, Carrying, Health (your health
-##       │                   bar, scripts/ui/hud_health_bar.gd), DropOff, Scoreboard
+##       ├── Top          <- stays up while you talk / shop: Health (your health bar, top-left,
+##       │                   scripts/ui/hud_health_bar.gd), DropOff (top-middle), Scoreboard
+##       │                   (top-right, everyone's cash: only shown in the sewers, fish_heist.gd)
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
-##   Hud.set_text("Cash", "$120")            change a label's words (by node name)
+##   Hud.set_text("DropOff", "EXTRACT ^ 9m")  change a label's words (by node name)
 ##   Hud.show_element("Crosshair", true)      show / hide one piece
-##   Hud.set_color("Cash", Color.WHITE)       change a label's text colour
+##   Hud.set_color("DropOff", Color.WHITE)    change a label's text colour
 ##   Hud.damage_number(where, 38, false, seat) a damage number popping off a world position
 ##   Hud.show_message("DON: Go get 'em.", 4)  the line of text in the middle, for N seconds
 ##   Hud.popup("EXTRACTED +$80", 2.5)         the big text that fades out (e.g. extraction)
 ##   Hud.set_in_game(true)                    the whole HUD on (in a game) / off (start menu)
-##   Hud.element("Cash")                      the node itself, for anything else
+##   Hud.element("Scoreboard")                the node itself, for anything else
 ##
 ## ADDING A NEW HUD PIECE: open scenes/ui/hud.tscn, right-click Top (or Middle) > Add Child Node >
 ## Label, give it a unique name (e.g. "Ammo"), pick an anchor in the toolbar (Layout > Anchors
@@ -46,7 +48,7 @@ extends CanvasLayer
 ## game_screen.tscn; players 2-4's are copies made by scripts/ui/game_screen.gd (each inside its
 ## own little SubViewport, so each player has their own highlighted button). Each HUD knows its
 ## SEAT (0 = player 1, scripts/seats.gd). The functions below take an optional seat:
-##   Hud.set_text("Cash", "$120", cat.slot)   player 2's cash line (seat left out = player 1)
+##   Hud.set_text("DropOff", "...", cat.slot) player 2's line (seat left out = player 1)
 ##   Hud.show_message("HI", 3, cat.slot)      only player 2 sees it
 ##   Hud.show_message("KOI GRABBED!")         messages / popups with no seat: EVERY player sees them
 
@@ -124,7 +126,7 @@ static func show_element(element_name: String, shown: bool, seat_number: int = 0
 		piece.visible = shown
 
 
-## Change a label's text colour (e.g. flash the cash line).
+## Change a label's text colour.
 static func set_color(element_name: String, color: Color, seat_number: int = 0) -> void:
 	var label := element(element_name, seat_number) as Label
 	if label != null:

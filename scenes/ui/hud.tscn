@@ -61,32 +61,12 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Cash" type="Label" parent="Frame/Top"]
-layout_mode = 0
-offset_left = 24.0
-offset_top = 12.0
-offset_right = 424.0
-offset_bottom = 58.0
-theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
-theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 36
-text = "$0"
-
-[node name="Carrying" type="Label" parent="Frame/Top"]
-layout_mode = 0
-offset_left = 26.0
-offset_top = 56.0
-offset_right = 726.0
-offset_bottom = 82.0
-theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
-text = "LOOT 0/6"
-
 [node name="Health" type="Control" parent="Frame/Top"]
 layout_mode = 0
 offset_left = 24.0
-offset_top = 88.0
+offset_top = 16.0
 offset_right = 384.0
-offset_bottom = 124.0
+offset_bottom = 52.0
 mouse_filter = 2
 script = ExtResource("8_hpbar")
 
@@ -103,21 +83,6 @@ grow_horizontal = 2
 theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
 theme_override_font_sizes/font_size = 22
 text = "EXTRACT ^ 0m"
-horizontal_alignment = 1
-
-[node name="Heat" type="Label" parent="Frame/Top"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -300.0
-offset_top = 46.0
-offset_right = 300.0
-offset_bottom = 70.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
-theme_override_font_sizes/font_size = 18
-text = "HEAT 1 [--------------------]"
 horizontal_alignment = 1
 
 [node name="Scoreboard" type="Label" parent="Frame/Top"]

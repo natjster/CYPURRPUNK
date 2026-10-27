@@ -148,10 +148,11 @@ func _far_from_cats(spot: Vector3, distance: float) -> bool:
 	return true
 
 
-## Host -> everyone: a line of text in the middle of the screen.
+## Host -> everyone: news about the MEGA VAC-COP. Console only now (the HUD was simplified, so
+## nothing pops up on screen).
 @rpc("authority", "call_local", "reliable")
 func _announce(text: String) -> void:
-	Hud.show_message(text, 3.0)
+	print("[Roombas] " + text)
 
 
 ## Everyone: a flash of orange light and bits of Roomba flying everywhere.

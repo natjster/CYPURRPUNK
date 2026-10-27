@@ -11,7 +11,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Root window = stretch `canvas_items`, keep_height, 960x720 base ("HUD units").
 - HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport,
   so it's sharp at real resolution and not CRT'd. Use the statics: `Hud.set_text/show_element/set_color/
-  show_message/popup/set_in_game/element` by label name (Cash, Carrying, Health, DropOff, Scoreboard |
+  show_message/popup/set_in_game/element` by label name (Health, DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
@@ -102,7 +102,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Greed + pressure: loot tiers sardine $20 / fish $50 / `golden_koi` $400 (ItemData `carry_speed`,
   `noise`, `heat_on_pickup`, `pickup_announcement`; `ItemManager.carry_speed/loot_noise`). HEAT =
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
-  levels 1-5, HUD label `Heat`): `RoombaPatrol._follow_the_heat` adds Roombas per level and spawns
+  levels 1-5, NOT shown on the HUD: level-ups are sounds only): `RoombaPatrol._follow_the_heat` adds Roombas per level and spawns
   the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`, drops a koi) at 100.
   Extraction beams: `FishHeist.beam_positions` (from city seed) + host-timed `beam_time_left`
   (`_set_beams` RPC; `nearest_open_beam`). Test: `--heat=100 [--heat_hold=N]`, `--roomba=boss`.
@@ -211,8 +211,8 @@ Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
 progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
-`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. HUD line `HUD/Carrying` shows
-`hud_text()` when a quest is active. Lil' Mittens (`scenes/npcs/lil_mittens.tscn`, in the Hub) gives
+`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more; `hud_text()` is unused.)
+Lil' Mittens (`scenes/npcs/lil_mittens.tscn`, in the Hub) gives
 `mittens_fish` (3 fish, +$100, repeatable). Test: `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
 --goto_dropoff_after=20 --talk_again_after=40`.
 

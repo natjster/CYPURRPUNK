@@ -795,10 +795,11 @@ func loot_noise(player_id: int) -> float:
 	return loudest
 
 
-## Host -> everyone: a line of text in the middle of the screen (e.g. "MITTENS GRABBED THE GOLDEN KOI!").
+## Host -> everyone: someone grabbed a big prize. Only a sound now (the HUD was simplified, so
+## no "MITTENS GRABBED THE GOLDEN KOI!" text); "text" is kept for the console.
 @rpc("authority", "call_local", "reliable")
 func _announce(text: String) -> void:
-	Hud.show_message(text, 3.5)
+	print("[Items] " + text)
 	Sound.play("koi_grab")  # sounds/sfx/koi_grab.wav
 
 
