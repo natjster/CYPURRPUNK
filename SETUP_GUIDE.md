@@ -1228,7 +1228,7 @@ FUR       <  [colour]  >        main coat
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
 NOSE      <  [colour]  >
-HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / MOHAWK / NEON HALO
+HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / GREEN MOHAWK / MOHAWK / NEON HALO
 FACE      <  SHADES    >        NONE / CIGAR / CYBER VISOR / HEADBAND / SHADES
 NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
 [ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
