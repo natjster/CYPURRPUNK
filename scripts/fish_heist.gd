@@ -23,7 +23,7 @@ extends Node3D
 ##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash, quests
 ##     done at that moment pay their bonus, and you climb down to the hub. You can go up again
 ##     (same district, same heat) as many times as you like - until it maxes out.
-##   - At 90 heat Don warns you. At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
+##   - (The HUD heat bar shows how close you are.) At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
 ##     VAC-COPs plus the MEGA VAC-COP. Anyone left up top is as good as dead (after
 ##     deep_clean_seconds they're knocked out no matter what, losing what they carry).
 ##     Then a NEW DISTRICT is built (new seed, heat back to 0) and Don can send you up again.
@@ -56,8 +56,6 @@ extends Node3D
 @export_group("Manholes (the way in and out)")
 ## The EXIT manhole opens (lid off, climb down) once the heat reaches this (out of 100).
 @export var exit_opens_at_heat: float = 75.0
-## Don radios "sealing the hatch soon!" at this heat.
-@export var seal_warning_at_heat: float = 90.0
 ## How close (metres) to the middle of the open exit manhole you must get to climb down.
 @export var exit_radius: float = 1.6
 ## The exit is at least this far (metres) from the centre, where you come up.
@@ -114,7 +112,6 @@ var _extract_wait := {}
 ## next district. -1 = not yet.
 var _deep_clean_ends_at: float = -1.0
 var _new_district_at: float = -1.0
-var _warned: bool = false  # this computer already showed Don's "sealing soon" warning
 
 
 func _enter_tree() -> void:
@@ -135,7 +132,6 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	_payphones.clear()
 	exit_revealed = false
 	sealed = false
-	_warned = false
 	_deep_clean_ends_at = -1.0
 	_new_district_at = -1.0
 
@@ -256,11 +252,6 @@ func _process(_delta: float) -> void:
 	# The phones ring once the exit is open, until somebody picks up.
 	for phone in _payphones:
 		phone.set_ringing(open and not exit_revealed)
-	# Don's warning on the radio, once per district.
-	if not _warned and not sealed and HeatMeter.instance.heat >= seal_warning_at_heat:
-		_warned = true
-		Sound.play("alert")
-		Game.instance.show_message("DON CATLEONE (RADIO): They're onto us! I'm sealin' the hatch soon - get to the exit, NOW!", 6.0)
 	_update_hud()
 
 
@@ -446,7 +437,6 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 
 
 ## "EXIT > 120m": distance and rough direction to the exit manhole from where the camera looks.
-## Adds "SEALING SOON!" once Don has warned that the hatch is closing.
 func _direction_text(where: Vector3, camera: Camera3D) -> String:
 	var to_exit := exit_position - where
 	var arrow := "^"
@@ -459,5 +449,4 @@ func _direction_text(where: Vector3, camera: Camera3D) -> String:
 			arrow = ">"
 		elif angle < -30.0:
 			arrow = "<"
-	var hurry := "  SEALING SOON!" if HeatMeter.instance.heat >= seal_warning_at_heat else ""
-	return "EXIT %s %dm%s" % [arrow, int(Vector2(to_exit.x, to_exit.z).length()), hurry]
+	return "EXIT %s %dm" % [arrow, int(Vector2(to_exit.x, to_exit.z).length())]

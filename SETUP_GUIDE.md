@@ -714,7 +714,7 @@ code that just means a new city seed: the whole city is generated again.
    on for the whole crew**. (Call before 75 and he only says "not yet" and which side it's on.)
 5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. You can
    go up again into the **same district at the same heat** as many times as you like.
-6. At **90 heat** Don warns you on the radio ("sealin' the hatch soon!").
+6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
 7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
    swarm of **40 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
    away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
@@ -734,7 +734,7 @@ Fish and sardines grow back after 20 seconds, the koi after 2 minutes. If you dr
 the getaway car goes back to its parking spot.
 
 **HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = `EXIT ^ 120m`
-(direction and distance to the exit; `SEALING SOON!` after Don's warning) **only after someone
+(direction and distance to the exit) **only after someone
 called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
 **only while you're in the sewers**.
 
@@ -853,14 +853,16 @@ Every 25 heat is one **HEAT LEVEL** (an alarm sound). The HUD shows the heat as 
 of your health bar (number box on the right, 0-100), flashing RED and BLUE like police lights - faster
 at each level, with a white flash on the frame when a level goes up. Tick marks show 25/50/75 (75 = the
 exit opens). It's **Frame > Top > Heat** in `scenes/ui/hud.tscn` (script `scripts/ui/hud_heat_bar.gd`):
-select it and change the two colours, flash speed and smoothness in the Inspector.. Each level above 1 brings
+select it and change the two colours, flash speed and smoothness in the Inspector. Each level above 1 brings
 **+5 Roombas** (they roll in one every 2 seconds), and all Roombas chase **7% faster** and spot
 you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
 carrying the koi...
 
-**The MEGA VAC-COP is called in every time the crew destroys 3 VAC-COPs**, up to **4 times per
-district** (only one is out at a time; it stays until destroyed or the district ends), and it
-always comes out for the DEEP CLEAN at 100 heat (that one doesn't count). Everyone hears its
+**A MEGA VAC-COP rolls out at every HEAT LEVEL 1-4**: one as the district starts, then one more
+at heat 25, 50 and 75 (even if another is still out; they stay until destroyed or the district
+ends). On top of that, **one is called in every time the crew destroys 3 VAC-COPs**, up to **4 times
+per district** (only when no boss is out), and one always comes out for the DEEP CLEAN at 100 heat
+(level bosses and the DEEP CLEAN one don't count toward the 4). Everyone hears its
 siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (its big health bar is pinned to
@@ -876,7 +878,8 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Boss Destroyed), **What Each Level Does** (Extra Roombas Per Level, Speed Per Level, Sight Per
   Level).
 - Select **Roombas**: **Reinforce Seconds**, and under **MEGA VAC-COP**: Boss Spawn Distance,
-  **Boss Every Kills** (3), **Bosses Per District** (4); under **DEEP CLEAN swarm**: Swarm Min/Max
+  **Boss Every Kills** (3), **Bosses Per District** (4), **Boss On Levels** ([1, 2, 3, 4]: remove a
+  number to skip that level's boss); under **DEEP CLEAN swarm**: Swarm Min/Max
   Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
 - The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
   with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On

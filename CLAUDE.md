@@ -104,7 +104,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
   levels 1-5, HUD `Heat` bar top-right flashes red/blue; level-ups also play a sound): `RoombaPatrol._follow_the_heat` adds Roombas per level
   (20 base, +5/level, +40 DEEP CLEAN) and spawns the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`,
-  drops a koi) every `boss_every_kills` (3) regular kills, max `bosses_per_district` (4), plus at max heat.
+  drops a koi) at each heat level in `boss_on_levels` (1-4, stacks), every `boss_every_kills` (3) regular kills when no boss is out (max `bosses_per_district` 4), plus at max heat.
   Roomba perf: far (>60 m from all cats) patrollers think every 4th frame (velocity scaled for move_and_slide),
   chase route replanned 10/s, mesh `visibility_range_end`, siren light distance fade, hum paused when far;
   sync_position/yaw are ON_CHANGE (`delta_interval` 0.05). Health bars show only once shot (`health < max`).

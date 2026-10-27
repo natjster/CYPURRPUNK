@@ -10,7 +10,7 @@ extends Node
 ##     shooting Roombas, blowing them up.
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
 ##     that drive faster and spot cats from further away.
-##   - At 75 heat the EXIT manhole opens (fish_heist.gd). At 90 Don warns you.
+##   - At 75 heat the EXIT manhole opens (fish_heist.gd).
 ##   - At 100 heat: level 5. The hatch is SEALED and the DEEP CLEAN begins (fish_heist.gd): the
 ##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
 ##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
