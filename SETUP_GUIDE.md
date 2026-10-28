@@ -25,6 +25,7 @@ Meow-City/
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
 ├── scripts/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
+│   ├── game_systems.gd        <- GameSystems: the list of host-run systems (§16)
 │   ├── net.gd                 <- autoload "Net": host / join / leave (the only file that knows HOW we connect)
 │   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
 │   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
@@ -461,8 +462,9 @@ players' cats and the car **glide** toward the latest position every frame.
   150 frames and jumped up to 52 cm at once; the cat on screen moved every frame, max 14 cm.
 
 ### Joining mid-game
-A player who joins late gets, in order: the city number, every item (on the street and in
-everyone's paws/bags), everyone's cash, quests and HP, their cat, and who is driving the car.
+A player who joins late gets the city number first, then every **game system** (§16) sends what
+it knows: who is driving the car, every item (on the street and in everyone's paws/bags), everyone's
+quests, cash and HP, and the heat. Then their cat appears.
 
 ### Known limitations (planned for later)
 1. **The host is trusted.** Fine for friends; a public game would need anti-cheat checks.
@@ -1768,3 +1770,34 @@ are listed in `THUMBNAILS` at the top of the script.
 **Uploading:** TikTok / Reels / Shorts take the vertical files as they are. Add your store link
 (Steam / itch.io) in the post text; the trailers end on "COMING SOON" — change that card in `edit.py`
 once there's a wishlist page.
+
+---
+
+## 16. Building new things (the frameworks)
+
+The game already has "add a card, no code" systems for items (§9), NPCs and quests (§8), cat
+accessories (§11) and sounds (§12). This section covers the frameworks for the bigger pieces:
+new game systems, new enemies, new things you can shoot, and new places to build.
+
+### Game systems (`scripts/game_systems.gd`, class **GameSystems**)
+A **game system** is a node under **Main** that the host runs and that keeps something for every
+player or for the whole game. Today these are: **GetawayCar** (who drives), **Items**, **Quests**,
+**Heist** (cash, the exit), **Health**, **Heat** and **Roombas** (the patrol).
+
+Each one joins the group `game_systems` and answers any of three calls. game.gd just calls
+"everyone in the group", so it never needs to know which systems exist:
+
+| Call | When (host only) | Example |
+|---|---|---|
+| `start_district()` | a game starts, or the crew moves to a new district | Heat goes back to 0, a fresh patrol, the car is parked |
+| `send_state_to(peer)` | a computer joins mid-game | send everyone's cash to the newcomer |
+| `player_left(player_id, last_position)` | a player quits | forget their HP; drop their gear at `last_position` |
+
+**Adding a new system** (e.g. the planned SCRAP or MAINFRAME):
+1. In `main.tscn`, right-click **Main > Add Child Node > Node**, name it (e.g. `Mainframe`).
+2. Attach a new script. In its `_ready()` write `add_to_group(GameSystems.GROUP)`.
+3. Write only the calls from the table that it needs. That's it: late joiners, quitting players
+   and new districts are handled without touching game.gd.
+
+The calls go top to bottom in the scene tree order of `main.tscn`. **Items** must stay above the
+systems that read items (it sends the items a late joiner needs first).

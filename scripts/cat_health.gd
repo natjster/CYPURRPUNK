@@ -38,6 +38,10 @@ func _enter_tree() -> void:
 	instance = self
 
 
+func _ready() -> void:
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
+
+
 # --- Questions anyone can ask (every computer has the answers) ---
 
 func get_health(player_id: int) -> int:
@@ -119,7 +123,7 @@ func _receive_state(health_now: Dictionary) -> void:
 
 
 ## Host: a player quit.
-func player_left(player_id: int) -> void:
+func player_left(player_id: int, _last_position: Vector3) -> void:
 	_forget_player.rpc(player_id)
 
 

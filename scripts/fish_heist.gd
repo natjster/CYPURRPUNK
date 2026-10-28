@@ -120,6 +120,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group("item_placers")  # the item system calls place_items() for every new city
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 
 
 # --- Setting up a district (called by the item system for every new city, on every computer) ---
@@ -295,7 +296,7 @@ func _physics_process(delta: float) -> void:
 			earned += (items.catalog[item_id] as ItemData).cash_value
 		if driving:
 			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
-			Game.instance.park_car()  # ...and it waits at its parking spot for the next trip up
+			Game.instance.car.park()  # ...and it waits at its parking spot for the next trip up
 		_extracted.rpc(player_id, earned, loot.size(), quest_bonus)
 
 
@@ -399,7 +400,7 @@ func _receive_state(cash_now: Dictionary) -> void:
 
 
 ## Host: a player quit. Their cash goes with them.
-func player_left(player_id: int) -> void:
+func player_left(player_id: int, _last_position: Vector3) -> void:
 	_forget_player.rpc(player_id)
 
 

@@ -148,6 +148,7 @@ func _ready() -> void:
 	_chase_yaw = global_rotation.y
 	_base_pitch = camera_arm.rotation.x
 	add_to_group("cars")  # lets late-joining cats check if they're inside a car
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	sync_position = global_position
 	sync_rotation = global_rotation
 	_engine = Sound.attach_loop("engine_loop", self, -80.0)
@@ -258,6 +259,36 @@ func set_driver(player_id: int) -> void:
 	var new_driver := Game.instance.cat_for(player_id)
 	if new_driver != null:
 		new_driver.enter_car(self)
+
+
+## Host (and start menu): back to the parking spot, stopped. Also used when the driver
+## extracts, so the car is waiting for the next trip up.
+func park() -> void:
+	global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	sync_position = global_position
+	sync_rotation = global_rotation
+
+
+# --- Game system hooks (scripts/game_systems.gd) ---
+
+## Host: a new game / new district - the car waits at its spot.
+func start_district() -> void:
+	park()
+
+
+## Host -> a computer that just joined: who's already driving, so that driver's cat is hidden
+## and their copy of the car follows the right player.
+func send_state_to(peer: int) -> void:
+	if driver_id != 0:
+		set_driver.rpc_id(peer, driver_id)
+
+
+## Host: a player quit. If they were driving, empty the car before their cat disappears.
+func player_left(player_id: int, _last_position: Vector3) -> void:
+	if driver_id == player_id:
+		set_driver.rpc(0)
 
 
 ## A tommy gun bolt hit the car. Sent to whoever simulates the car, who applies the push.

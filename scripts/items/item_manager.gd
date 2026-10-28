@@ -90,6 +90,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	_load_catalog()
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	city.generated.connect(_on_city_generated)
 	Controls.changed.connect(_refresh_pickup_prompts)
 
@@ -605,8 +606,8 @@ func set_stash(player_id: int, stash: Array) -> void:
 
 
 ## Host: a player quit. Everything they carried drops where they stood.
-func player_left(player_id: int, at: Vector3) -> void:
-	drop_everything(player_id, at)
+func player_left(player_id: int, last_position: Vector3) -> void:
+	drop_everything(player_id, last_position)
 	_forget_player.rpc(player_id)
 
 
@@ -616,7 +617,8 @@ func _forget_player(player_id: int) -> void:
 
 
 ## Host -> a computer that just joined (network ID "peer"): every item on the street and in
-## everyone's paws/bags. (Called by game.gd right after the city seed, so the city's items already exist.)
+## everyone's paws/bags. (Sent right after the city seed, so the city's items already exist; Items
+## sits above the other systems in main.tscn so it goes first.)
 func send_state_to(peer: int) -> void:
 	_receive_state.rpc_id(peer, world, inventories)
 

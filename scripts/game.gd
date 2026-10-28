@@ -98,7 +98,7 @@ func _ready() -> void:
 		leave_reason = ""
 	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
 	city.generate(PREVIEW_SEED)
-	park_car()
+	car.park()
 	_handle_test_shortcuts()
 
 
@@ -141,11 +141,11 @@ func host_game(city_seed: int) -> void:
 ## Host (or solo): build the city and start.
 func _begin_game(city_seed: int) -> void:
 	city.generate(city_seed)
-	park_car()
 	_start_playing()
 	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player
-	$Heat.reset()  # the city starts calm (scripts/heat_meter.gd)
-	$Roombas.start_patrol()  # the VAC-COPs come out (the spawner copies them to everyone)
+	# Every game system resets for the first district: the heat starts calm, the VAC-COPs come
+	# out, the car is parked... (scripts/game_systems.gd)
+	GameSystems.call_all(get_tree(), "start_district")
 
 
 func join_game(address: String) -> void:
@@ -211,9 +211,7 @@ func new_district() -> void:
 	print("[Game] New district: city #%d" % new_seed)
 	_receive_city_seed.rpc(new_seed)  # everyone else builds it...
 	city.generate(new_seed)  # ...and so do we
-	park_car()
-	$Heat.reset()
-	$Roombas.start_patrol()
+	GameSystems.call_all(get_tree(), "start_district")  # heat to calm, fresh patrol, car parked...
 	_district_news.rpc()
 
 
@@ -251,16 +249,6 @@ func playing_cats() -> Array[CatPlayer]:
 		if cat.reads_input():
 			list.append(cat)
 	return list
-
-
-## Host (and start menu): put the car back at its parking spot, stopped.
-## Also used when the driver extracts, so the car is waiting for the next trip up.
-func park_car() -> void:
-	car.global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
-	car.linear_velocity = Vector3.ZERO
-	car.angular_velocity = Vector3.ZERO
-	car.sync_position = car.global_position
-	car.sync_rotation = car.global_rotation
 
 
 ## The settings that live in this scene: CRT strength and volumetric fog.
@@ -381,16 +369,10 @@ func _on_peer_connected(peer_id: int) -> void:
 		return
 	if multiplayer.is_server():
 		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # build the same city first
-		$Items.send_state_to(peer_id)  # then which items are taken, who holds/carries what
-		$Heist.send_state_to(peer_id)  # then everyone's cash
-		$Quests.send_state_to(peer_id)  # and everyone's quests
-		$Health.send_state_to(peer_id)  # and everyone's HP
-		$Heat.send_state_to(peer_id)  # and how angry the city is
+		# Then every game system catches them up: items, cash, quests, HP, heat, who drives...
+		# (scripts/game_systems.gd)
+		GameSystems.call_all(get_tree(), "send_state_to", [peer_id])
 		_spawn_cat(PlayerId.make(peer_id, 0))  # their first player (more can join in later)
-		# Late joiner: tell them who's already driving, so that driver's cat is hidden
-		# and their copy of the car follows the right player.
-		if car.driver_id != 0:
-			car.set_driver.rpc_id(peer_id, car.driver_id)
 
 
 ## A computer left: every player on it leaves.
@@ -408,12 +390,8 @@ func _remove_player(player_id: int) -> void:
 	if cat == null and not $Heist.cash.has(player_id):
 		return  # never played (e.g. an empty split-screen slot)
 	print("[Network] Player %d left" % player_id)
-	if car.driver_id == player_id:
-		car.set_driver.rpc(0)  # empty the car before their cat disappears
-	$Heist.player_left(player_id)
-	$Quests.player_left(player_id)
-	$Health.player_left(player_id)
-	# Everything they carried drops where they stood, so nothing is lost.
-	$Items.player_left(player_id, cat.global_position if cat != null else SPAWN_POINT)
+	# Every game system forgets them (the car empties, their gear drops where they stood...).
+	var last_position := cat.global_position if cat != null else SPAWN_POINT
+	GameSystems.call_all(get_tree(), "player_left", [player_id, last_position])
 	if cat != null:
 		cat.queue_free()  # the spawner removes it on everyone's screen too

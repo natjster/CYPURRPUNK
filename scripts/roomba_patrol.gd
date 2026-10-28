@@ -15,7 +15,7 @@ extends Node3D
 ## deep_clean_extra, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
 ##
-## Only the HOST creates Roombas (game.gd calls start_patrol() when hosting). Where they appear
+## Only the HOST creates Roombas (start_district(), called through game_systems.gd when a game starts). Where they appear
 ## is random each game — they're not part of the city seed, so they never change the city.
 
 const ROOMBA_SCENE: PackedScene = preload("res://scenes/roomba.tscn")
@@ -74,7 +74,7 @@ var _boss_level_done: int = 0
 ## Host: regular Roombas destroyed since the last boss call, and bosses called this district.
 var _kills_toward_boss: int = 0
 var _bosses_called: int = 0
-## True once this computer hosts a game (start_patrol). Before that - in the start menu the
+## True once this computer hosts a game (start_district). Before that - in the start menu the
 ## game counts as its own "host" - no Roombas may be sent out: they'd clash with the real
 ## host's when we join someone.
 var _patrolling: bool = false
@@ -87,10 +87,12 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	_rng.randomize()
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 
 
-## Host: clear any old Roombas and put a fresh patrol out (called when a game is hosted).
-func start_patrol() -> void:
+## Host: clear any old Roombas and put a fresh patrol out (a new game or a new district;
+## game_systems.gd calls it).
+func start_district() -> void:
 	for old in get_children():
 		old.queue_free()
 	_patrolling = true

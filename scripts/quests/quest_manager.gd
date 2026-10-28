@@ -38,6 +38,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	for file in DirAccess.get_files_at(QUESTS_FOLDER):
 		file = file.trim_suffix(".remap")  # exported games rename resources
 		if file.ends_with(".tres"):
@@ -145,7 +146,7 @@ func _receive_state(active_now: Dictionary, completed_now: Dictionary) -> void:
 
 
 ## Host: a player quit. Their quests go with them.
-func player_left(player_id: int) -> void:
+func player_left(player_id: int, _last_position: Vector3) -> void:
 	_forget_player.rpc(player_id)
 
 

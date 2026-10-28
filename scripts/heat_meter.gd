@@ -77,6 +77,10 @@ func _enter_tree() -> void:
 	instance = self
 
 
+func _ready() -> void:
+	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
+
+
 ## 1..5. 5 = the MEGA VAC-COP is out.
 func level() -> int:
 	if heat >= MAX_HEAT:
@@ -107,8 +111,8 @@ func add_heat(amount: float) -> void:
 	_send_timer = 0.0  # tell everyone right away
 
 
-## Host: back to zero (a new game).
-func reset() -> void:
+## Host: back to zero (a new game or a new district; game_systems.gd).
+func start_district() -> void:
 	heat = 0.0
 	_last_level = 1
 	_send_timer = 0.0

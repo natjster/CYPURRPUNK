@@ -34,7 +34,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Phase 7 (8 players): balance scales with `Game.player_count()` (Roombas `extra_roombas_per_player`, heat
   `heat_per_extra_cat`, Items `regrow_faster_per_player`). Hub `free_spawn_position`.
   Sync: cat/car `replication_interval` 0.033, roomba 0.05 (host sends ~12 KB/s for 8 players). RoombaPatrol only
-  runs after `start_patrol` (the start menu counts as "server": it used to spawn Roombas that broke joining).
+  runs after `start_district` (the start menu counts as "server": it used to spawn Roombas that broke joining).
   A real controller on this PC can disturb `--hold` tests (its events mix into actions). Test: `--net_stats=N`,
   `--pad_press_delay=N`.
 - Phase 8: `Seats.color(seat)` (SEAT_COLORS) = pause title / lobby row colour (no split-screen frames or tags).
@@ -62,6 +62,11 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - `scenes/main.tscn` (script `scripts/game.gd`, class `Game`, `Game.instance`): starts games, spawns
   cats via `MultiplayerSpawner` → `Players/` (cats named by PLAYER id; look up with
   `Game.instance.cat_for(id)` / `my_cat()` (first local player) / `local_cats()`), late-joiner catch-up, CRT/fog settings.
+- GAME SYSTEMS (`scripts/game_systems.gd`, static `GameSystems`): host-run nodes join group `GameSystems.GROUP`
+  and implement any of `start_district()` (new game / new district), `send_state_to(peer)` (late joiner),
+  `player_left(player_id, last_position)`; game.gd calls `GameSystems.call_all(tree, method, args)` in main.tscn tree
+  order (Items above the rest). Members: GetawayCar (`park()`), Items, Quests, Heist, Health, Heat, Roombas. Never
+  add per-system calls to game.gd. SETUP_GUIDE §16 = the frameworks.
 - PLAYER IDs (`scripts/player_id.gd`, static `PlayerId`): a player id = network peer + slot*2^32 (slot 0..3,
   max 4 per PC, 8 total = `Net.MAX_PLAYERS`); slot 0's id == the peer id. Every per-player dict (cash, HP,
   quests, inventories, stash, `car.driver_id`, profiles) is keyed by player id, never peer id. Client->host
@@ -135,7 +140,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `request_reveal_exit` -> host `_set_state(sealed, revealed)`; HUD `DropOff` arrow only when revealed.
   Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
-  `start_patrol`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
+  `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
 - Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
   `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
