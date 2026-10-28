@@ -20,6 +20,8 @@ extends RigidBody3D
 ## Controls while driving: W = gas, S = brake / reverse, A/D = steer,
 ## Space = handbrake (drift), E = get out. Mouse / right stick = look around (the camera swings
 ## back behind the car by itself a moment after you stop looking, while driving forward).
+## Passengers: once someone drives, other cats by the door get "RIDE ALONG" (E); they share the
+## driver's chase view and press E again to hop out (see "Passengers" in the Inspector).
 
 @export_group("Engine")
 @export var max_speed: float = 26.0          ## m/s (~95 km/h)
@@ -72,6 +74,14 @@ extends RigidBody3D
 ## Where the cat pops out, relative to the car (-X = driver's side / left).
 @export var exit_offset: Vector3 = Vector3(-2.2, 0.2, 0.0)
 
+@export_group("Passengers")
+## How many cats can ride along besides the driver (they press E by the door once someone's
+## driving, and E again to hop out). They can't steer: they just enjoy the chase view.
+@export var passenger_seats: int = 3
+## Where the FIRST passenger pops out (+X = the right-hand side). Each next one is this much further back.
+@export var passenger_exit_offset: Vector3 = Vector3(2.2, 0.2, -0.8)
+@export var passenger_exit_spacing: Vector3 = Vector3(0.0, 0.0, 1.4)
+
 @export_group("Engine Sound")
 ## Engine pitch when idling, and at top speed (1.0 = the file's own pitch).
 ## The sound is sounds/sfx/engine_loop.wav (it loops).
@@ -96,6 +106,8 @@ const MAX_ENTER_DISTANCE: float = 5.0
 
 ## Player ID of the cat driving (scripts/player_id.gd), or 0 when the car is empty.
 var driver_id: int = 0
+## Player IDs of the cats riding along (not driving), in the order they got in.
+var passenger_ids: Array[int] = []
 ## True while sliding sideways with the handbrake (handy later for tyre smoke / sounds).
 var is_drifting: bool = false
 
@@ -198,11 +210,20 @@ func _read_driver_keys() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# A passenger on THIS computer pressed E: hop out (each passenger checks their own keys / pad).
+	for passenger_id in passenger_ids:
+		var passenger := Game.instance.cat_for(passenger_id) if Game.instance != null else null
+		if passenger == null or not passenger.reads_input() or PauseMenu.is_open or passenger._menu_open():
+			continue
+		if Seats.event_is(passenger.slot, event, "interact"):
+			request_exit.rpc_id(1, passenger_id)
+			get_viewport().set_input_as_handled()
+			return
 	if not _driver_reads_input() or _driver_paused():
 		return
 	var seat := PlayerId.slot_of(driver_id)
 	if Seats.event_is(seat, event, "interact"):
-		request_exit.rpc_id(1)
+		request_exit.rpc_id(1, driver_id)
 		get_viewport().set_input_as_handled()
 	elif seat == 0 and event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		# Mouse look while driving (MOUSE SPEED and INVERT MOUSE Y from Settings, like on foot).
@@ -223,21 +244,82 @@ func _driver_paused() -> bool:
 	return PauseMenu.is_open or (driver != null and driver._menu_open())
 
 
+## Is this player in the car at all (driving OR riding along)?
+func has_occupant(player_id: int) -> bool:
+	return player_id != 0 and (driver_id == player_id or passenger_ids.has(player_id))
+
+
+## Is there a free seat (the driver's seat first, then the passenger seats)?
+func has_free_seat() -> bool:
+	return driver_id == 0 or passenger_ids.size() < passenger_seats
+
+
 ## A cat (player ID) asks to get in. Runs on the host only, which decides.
+## Empty car = they drive. Someone already driving = they ride along (if a seat is free).
 @rpc("any_peer", "call_local", "reliable")
 func request_enter(player_id: int) -> void:
-	if not multiplayer.is_server() or driver_id != 0 or not PlayerId.sender_owns(player_id):
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or has_occupant(player_id):
 		return
 	var cat := Game.instance.cat_for(player_id)
-	if cat != null and cat.global_position.distance_to(global_position) <= MAX_ENTER_DISTANCE:
+	if cat == null or cat.global_position.distance_to(global_position) > MAX_ENTER_DISTANCE:
+		return
+	if driver_id == 0:
 		set_driver.rpc(player_id)
+	elif passenger_ids.size() < passenger_seats:
+		var riders := passenger_ids.duplicate()
+		riders.append(player_id)
+		set_passengers.rpc(riders)
 
 
-## The driver asks to get out. Runs on the host only.
+## A cat in the car (driver or passenger) asks to get out. Runs on the host only.
+## (It names WHICH cat: on split screen two cats in the car can belong to the same computer.)
 @rpc("any_peer", "call_local", "reliable")
-func request_exit() -> void:
-	if multiplayer.is_server() and PlayerId.sender_owns(driver_id):
+func request_exit(player_id: int) -> void:
+	if multiplayer.is_server() and PlayerId.sender_owns(player_id):
+		remove_occupant(player_id)
+
+
+## Host: take this player out of the car, wherever they sit. (Leaves the others where they are:
+## if the driver hops out the passengers stay put, and one of them can climb into the driver's seat.)
+func remove_occupant(player_id: int) -> void:
+	if driver_id == player_id:
 		set_driver.rpc(0)
+	elif passenger_ids.has(player_id):
+		var riders := passenger_ids.duplicate()
+		riders.erase(player_id)
+		set_passengers.rpc(riders)
+
+
+## Host: everybody out (the DEEP CLEAN, a new district...).
+func empty_car() -> void:
+	if not passenger_ids.is_empty():
+		set_passengers.rpc([])
+	if driver_id != 0:
+		set_driver.rpc(0)
+
+
+## The host tells EVERY computer who rides along now (the whole list). Cats that left the
+## list get out on the right-hand side; new ones disappear into the back seat.
+@rpc("any_peer", "call_local", "reliable")
+func set_passengers(riders: Array) -> void:
+	if multiplayer.get_remote_sender_id() != 1:
+		return  # only the host may decide this
+	var old := passenger_ids.duplicate()
+	passenger_ids.clear()
+	for id in riders:
+		passenger_ids.append(int(id))
+	for i in old.size():
+		if not passenger_ids.has(old[i]):
+			var leaving := Game.instance.cat_for(old[i])
+			if leaving != null:
+				Sound.play_at("car_door", global_position)
+				leaving.exit_car(to_global(passenger_exit_offset + passenger_exit_spacing * i))
+	for id in passenger_ids:
+		if not old.has(id):
+			var rider := Game.instance.cat_for(id)
+			if rider != null:
+				Sound.play_at("car_door", global_position)
+				rider.enter_car(self)
 
 
 ## The host tells EVERY computer who is driving now (0 = nobody).
@@ -284,12 +366,13 @@ func start_district() -> void:
 func send_state_to(peer: int) -> void:
 	if driver_id != 0:
 		set_driver.rpc_id(peer, driver_id)
+	if not passenger_ids.is_empty():
+		set_passengers.rpc_id(peer, passenger_ids)
 
 
-## Host: a player quit. If they were driving, empty the car before their cat disappears.
+## Host: a player quit. If they were in the car, take them out before their cat disappears.
 func player_left(player_id: int, _last_position: Vector3) -> void:
-	if driver_id == player_id:
-		set_driver.rpc(0)
+	remove_occupant(player_id)
 
 
 ## The hit framework (scripts/hit.gd): a bolt hit the car. Runs on the SHOOTER's computer;
@@ -420,14 +503,16 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 # --- The E key (scripts/interactable.gd): a cat by the door can get in ---
 
 func interact_distance(cat: CatPlayer) -> float:
-	return global_position.distance_to(cat.global_position) if cat.nearby_car == self else -1.0
+	if cat.nearby_car != self or not has_free_seat():
+		return -1.0  # too far, or every seat is taken
+	return global_position.distance_to(cat.global_position)
 
 
 func interact_prompt(_cat: CatPlayer) -> String:
-	return "GET IN" if driver_id == 0 else ""
+	return "GET IN" if driver_id == 0 else "RIDE ALONG"
 
 
-## Ask the host for the keys: it decides, so two cats can't grab the car at once.
+## Ask the host for a seat: it decides, so two cats can't grab the same seat at once.
 func interact(cat: CatPlayer) -> void:
 	request_enter.rpc_id(1, cat.player_id)
 

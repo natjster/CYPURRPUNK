@@ -251,8 +251,11 @@ func _physics_process(delta: float) -> void:
 		for item_id in loot:
 			earned += (items.catalog[item_id] as ItemData).cash_value
 		if their_car != null:
-			their_car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
-			their_car.park()  # ...and it waits at its parking spot for the next trip up
+			their_car.remove_occupant(player_id)  # out of the car first...
+			# ...and once the last cat is out it waits at its parking spot for the next trip up.
+			# (Everyone in the car is at the beam, so the passengers extract this same frame.)
+			if their_car.driver_id == 0 and their_car.passenger_ids.is_empty():
+				their_car.park()
 		Wallet.instance.earn(player_id, earned + quest_bonus, "extracted %d loot" % loot.size())
 		_extracted.rpc(player_id, earned, quest_bonus)
 
@@ -265,8 +268,7 @@ func _run_deep_clean() -> void:
 		_deep_clean_ends_at = _clock
 	if _deep_clean_ends_at >= 0.0 and _clock >= _deep_clean_ends_at:
 		_deep_clean_ends_at = -1.0
-		if car.driver_id != 0:
-			car.set_driver.rpc(0)  # nobody escapes in the car either
+		car.empty_car()  # nobody escapes in the car either (driver or passengers)
 		for player_id in Game.instance.player_ids():
 			if Game.instance.is_up_top(player_id):
 				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN")

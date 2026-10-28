@@ -24,6 +24,8 @@ extends Node
 ##   --yaw=DEG         turn the camera left/right
 ##   --pitch=DEG       tilt the camera up/down
 ##   --drive           put the cat in the car (car view)
+##   --ride_along=S,S  (with --drive --add_local) those couch slots get in as passengers
+##   --ride_exit=S     (with --ride_along) then that passenger gets out again
 ##   --car_mouse=PX    (with --drive) move the mouse PX screen pixels to the right while driving
 ##                     (the car camera turns); prints the camera's look angle
 ##   --car_watch=N     print the car camera's look angle every N frames until the snap
@@ -282,6 +284,28 @@ func _ready() -> void:
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
 			(scene.get_node("GetawayCar") as GetawayCar).request_enter.rpc_id(1, player.player_id)
+			if args.has("ride_along"):
+				# Split screen: these couch slots walk up to the car and press E too (passenger seats).
+				var car := scene.get_node("GetawayCar") as GetawayCar
+				for i in 20:
+					await get_tree().process_frame  # the driver gets in first
+				for ride_slot in args["ride_along"].split(","):
+					var rider: CatPlayer = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(ride_slot)))
+					if rider == null:
+						continue
+					rider.teleport_to(car.global_position + Vector3(2.5, 0.5, 0), 0.0)
+					for i in 10:
+						await get_tree().physics_frame
+					car.interact(rider)
+					for i in 10:
+						await get_tree().process_frame
+				print("DevCapture ride_along: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
+				if args.has("ride_exit"):
+					# --ride_exit=S: that passenger hops out again.
+					car.request_exit.rpc_id(1, PlayerId.make(multiplayer.get_unique_id(), int(args["ride_exit"])))
+					for i in 20:
+						await get_tree().process_frame
+					print("DevCapture ride_exit: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
 			if args.has("car_mouse"):
 				for i in 20:
 					await get_tree().process_frame  # wait until we're behind the wheel
@@ -437,14 +461,14 @@ func _ready() -> void:
 		if args.has("exit_after"):
 			for i in int(args["exit_after"]):
 				await get_tree().process_frame
-			(scene.get_node("GetawayCar") as GetawayCar).request_exit.rpc_id(1)
+			(scene.get_node("GetawayCar") as GetawayCar).request_exit.rpc_id(1, player.player_id)
 		if args.has("goto_dropoff_after"):
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
 			var beam := FishHeist.instance.exit_position + Vector3(0.5, 0, 0.5)  # (needs --heat=80: open)
 			var car := scene.get_node("GetawayCar") as GetawayCar
-			if car.driver_id == player.player_id:
+			if car.has_occupant(player.player_id):
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
 			else:
 				player.global_position = beam
@@ -617,7 +641,7 @@ func _ready() -> void:
 		print("DevCapture roombas (%d): %s" % [lines.size(), " | ".join(lines)])
 	var car := scene.get_node_or_null("GetawayCar") as GetawayCar
 	if car != null:
-		print("DevCapture car: position=%s driver=%d frozen=%s" % [car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.freeze])
+		print("DevCapture car: position=%s driver=%d passengers=%s frozen=%s" % [car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():

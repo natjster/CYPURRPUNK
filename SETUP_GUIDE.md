@@ -268,6 +268,17 @@ Arcade-style: each physics step it nudges velocity directly instead of simulatin
 
 The E press is marked "handled" so the same key press can't enter and exit in one frame.
 
+### Passengers (riding along)
+Once someone is driving, other cats by the door see **"[E] RIDE ALONG"** — online or split screen.
+Up to 3 can ride (**Passenger Seats** in the Inspector, group *Passengers*: click `GetawayCar` in
+`main.tscn`). Passengers can't steer: they get the driver's chase view and press **E** again to hop
+out on the right-hand side (**Passenger Exit Offset**; each next one **Passenger Exit Spacing** further
+back). If the driver gets out, the passengers stay in; one of them can hop out and take the wheel.
+Driving onto the exit beam extracts everyone in the car together. In code: the host keeps
+`passenger_ids` and tells every computer the whole list (`set_passengers`); anything that asks "is this
+player in the car?" uses `has_occupant(id)` (or `Game.car_of(id)`), and `remove_occupant(id)` /
+`empty_car()` take cats out. Test: `--add_local=2 --pos=1,0.5,-10 --drive --ride_along=1,2 --ride_exit=1`.
+
 ---
 
 ## 4. Testing and fixing errors

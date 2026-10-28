@@ -240,10 +240,10 @@ func player_count() -> int:
 	return players.get_child_count()
 
 
-## The car this player is driving right now, or null (they're on foot).
+## The car this player is in right now (driving OR riding along), or null (they're on foot).
 func car_of(player_id: int) -> GetawayCar:
 	for node in get_tree().get_nodes_in_group("cars"):
-		if (node as GetawayCar).driver_id == player_id:
+		if (node as GetawayCar).has_occupant(player_id):
 			return node
 	return null
 

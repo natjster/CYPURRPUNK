@@ -237,7 +237,7 @@ func _ready() -> void:
 		# Joined while this cat was already in a car? Hide it now.
 		for node in get_tree().get_nodes_in_group("cars"):
 			var car := node as GetawayCar
-			if car.driver_id == player_id:
+			if car.has_occupant(player_id):  # driving or riding along
 				enter_car(car)
 
 

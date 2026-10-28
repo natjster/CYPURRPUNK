@@ -176,7 +176,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Only `CatModel` rotates; body never does (camera is a child).
 - `scenes/getaway_car.tscn` + `scripts/getaway_car.gd` (`GetawayCar`): arcade RigidBody3D. Authority =
   driver (host when empty); non-authority copies are frozen (kinematic) and glide to `sync_*`.
-  Enter/exit go through host-validated RPCs (`request_enter`/`request_exit` → `set_driver`).
+  Enter/exit go through host-validated RPCs (`request_enter`/`request_exit(player_id)` → `set_driver`).
+  Passengers: `passenger_ids` (`passenger_seats` 3, `set_passengers` RPC = whole list); use `has_occupant(id)` /
+  `Game.car_of(id)` (driver OR passenger), `remove_occupant(id)`, `empty_car()`. Test: `--drive --ride_along=1,2 --ride_exit=1`.
   Drive input (`throttle`/`steer`/`handbrake`) is filled by `_read_driver_keys()`; physics only reads it.
 - `shaders/psx_lit.gdshader` (all 3D: jitter, affine UVs, flat shading, emission, specular) and
   `shaders/psx_post.gdshader` (CRT + 15-bit dither, on a ColorRect). Renders at 320x240.
