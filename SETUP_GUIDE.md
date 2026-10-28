@@ -2000,6 +2000,11 @@ no touch controls yet. Touching the screen only clicks menu buttons, like a mous
 - On a phone the game skips the window size / fullscreen settings (`scripts/settings.gd` `apply()`).
 
 ### One-time setup on your PC
+**Already done on this PC** (2026-10-27): the templates, the Android SDK (command-line tools +
+platform-tools, build-tools 36.1.0, Android 36) and Java 17. Only needed again on a new computer.
+The game has no icon yet, so the phone shows Godot's robot icon: set one in
+**Project Settings > Application > Config > Icon** (a square PNG, 192x192 or bigger).
+
 1. **Export templates** (the ready-made Godot engine for phones, about 1 GB): in Godot,
    **Editor > Manage Export Templates... > Download and Install**.
 2. **Android SDK** (Google's tools that pack and install apps): the easiest way is to install
