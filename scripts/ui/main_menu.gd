@@ -6,7 +6,7 @@ extends Control
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
 ##   ├── Title / Subtitle / Tagline (Label)
 ##   ├── MainScreen (VBoxContainer)  <- PlayButton, SettingsButton, QuitButton
-##   ├── ModeScreen (VBoxContainer)  <- PlayingAs (Label, unused), SoloButton, MultiplayerButton, BackButton
+##   ├── ModeScreen (VBoxContainer)  <- SoloButton, MultiplayerButton, BackButton
 ##   ├── CoopScreen (VBoxContainer)  <- made by this script: LOCAL CO-OP / ONLINE CO-OP / BACK
 ##   ├── LandingScreen (VBoxContainer) <- made by this script: who's playing (see below)
 ##   ├── PlayScreen (PanelContainer) > VBox      <- the ONLINE screen
@@ -99,7 +99,6 @@ func _ready() -> void:
 	$ModeScreen/SoloButton.pressed.connect(_on_solo_pressed)
 	$ModeScreen/MultiplayerButton.pressed.connect(show_coop_screen)
 	$ModeScreen/BackButton.pressed.connect(show_main_screen)
-	$ModeScreen/PlayingAs.hide()  # (you pick your cat after SOLO, or on the landing page)
 	_build_coop_screen()
 	_build_landing_screen()
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.pressed.connect(_on_host_pressed)

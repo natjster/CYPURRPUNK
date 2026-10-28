@@ -162,7 +162,7 @@ func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 	if choice.go_to.is_empty():
 		NpcDialog.for_cat(cat).close()  # close first, so an action can open something else
 	if not choice.message.is_empty():
-		Game.instance.show_message("%s: %s" % [npc_name, choice.message], 4.0, cat.slot)
+		Hud.show_message("%s: %s" % [npc_name, choice.message], 4.0, cat.slot)
 	if not choice.action.is_empty():
 		_run_action(choice.action, cat)
 	if not choice.go_to.is_empty():
@@ -187,7 +187,7 @@ func _run_action(action: String, cat: CatPlayer) -> void:
 ## Override this in a script that "extends Npc" to give an NPC its own actions:
 ##   func _on_action(action: String, cat: CatPlayer) -> void:
 ##       if action == "pet_me":
-##           Game.instance.show_message("Purrrr.")
+##           Hud.show_message("Purrrr.")
 func _on_action(action: String, _cat: CatPlayer) -> void:
 	if action_chosen.get_connections().is_empty():
 		push_warning("NPC %s: nobody handles the action '%s'." % [npc_name, action])

@@ -152,7 +152,7 @@ func spawn_position(n: int) -> Vector3:
 func deploy(cat: CatPlayer) -> void:
 	if FishHeist.instance.sealed:
 		# The DEEP CLEAN is on up there: wait for the next district.
-		Game.instance.show_message("DON CATLEONE: Hatch is sealed, kid. Sit tight - we're movin' to a new district.", 4.0, cat.slot)
+		Hud.show_message("DON CATLEONE: Hatch is sealed, kid. Sit tight - we're movin' to a new district.", 4.0, cat.slot)
 		return
 	var spread := Vector3(randf_range(-3, 3), 0, randf_range(0, 3))  # don't land on each other
 	cat.teleport_to(surface_spot + spread, 0.0)

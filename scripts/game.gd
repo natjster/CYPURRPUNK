@@ -220,7 +220,7 @@ func new_district() -> void:
 ## Host -> everyone: Don's news about the new district.
 @rpc("authority", "call_local", "reliable")
 func _district_news() -> void:
-	show_message("DON CATLEONE: We're movin' to a new part of town. Hatch is ready when you are.", 5.0)
+	Hud.show_message("DON CATLEONE: We're movin' to a new part of town. Hatch is ready when you are.", 5.0)
 
 
 ## Host → one player: "build city number X". Every computer builds the identical city.
@@ -236,13 +236,6 @@ func _process(_delta: float) -> void:
 			"players": player_count(), "max": Net.MAX_PLAYERS}
 
 
-
-
-## A line of text in the middle of the screen for a few seconds (e.g. what Don says).
-## seat = only that player on this computer sees it (split screen); left out = everyone here.
-## (Same as Hud.show_message; kept here because lots of scripts call it.)
-func show_message(text: String, seconds: float = 4.0, seat: int = -1) -> void:
-	Hud.show_message(text, seconds, seat)
 
 
 ## How many players are in the game right now, on every computer (up to Net.MAX_PLAYERS = 8).

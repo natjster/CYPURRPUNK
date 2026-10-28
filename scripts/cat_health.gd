@@ -101,7 +101,7 @@ func _knocked_out(player_id: int, cause: String) -> void:
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
 	Seats.rumble(player_id, 0.8, 1.0, 0.7)  # big shake on their controller
 	Sound.play("knockout")
-	Game.instance.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5, cat.slot)
+	Hud.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5, cat.slot)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):
 		cat.knocked_out = false

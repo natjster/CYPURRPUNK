@@ -76,16 +76,6 @@ func progress(player_id: int, quest_id: String) -> int:
 	return ItemManager.instance.get_inventory(player_id).bag.count(data.item)
 
 
-## The top-left HUD line for our first active quest, or "" if we have none.
-## e.g. "MITTENS' FISH 2/3"  or  "MITTENS' FISH 3/3 - EXTRACT!"
-func hud_text(player_id: int) -> String:
-	for quest_id in active.get(player_id, []):
-		var data: QuestData = catalog[quest_id]
-		var have := mini(progress(player_id, quest_id), data.count)
-		return "%s %d/%d%s" % [data.title, have, data.count, " - EXTRACT!" if have >= data.count else ""]
-	return ""
-
-
 # --- Taking a quest ---
 
 ## Call on your own computer (the NPC does this): ask the host to give this player the quest.

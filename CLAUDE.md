@@ -242,7 +242,7 @@ Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
 progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
-`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more; `hud_text()` is unused.)
+`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more.)
 Lil' Mittens (`scenes/npcs/lil_mittens.tscn`, in the Hub) gives
 `mittens_fish` (3 fish, +$100, repeatable). Test: `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
 --goto_dropoff_after=20 --talk_again_after=40`.

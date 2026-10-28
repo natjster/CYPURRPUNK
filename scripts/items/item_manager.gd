@@ -410,7 +410,7 @@ func request_buy(player_id: int, item_id: String) -> void:
 func _buy_result(player_id: int, ok: bool, text: String) -> void:
 	print("[Items] Shop says: %s" % text)
 	Sound.play("buy" if ok else "error")
-	Game.instance.show_message(("SOLD! " if ok else "") + text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
+	Hud.show_message(("SOLD! " if ok else "") + text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
 
 
 ## The holder used up the item in this paw (catnip). Host only.
@@ -814,12 +814,6 @@ func bag_used(player_id: int) -> int:
 ## The item script in a cat's paw (0 = right, 1 = left), or null.
 func held_item(cat: CatPlayer, hand: int) -> HeldItem:
 	return cat.cat_model.get_node_or_null("HeldR" if hand == 0 else "HeldL") as HeldItem
-
-
-## The cat of this computer's FIRST player, or null. (Its paws are the ones the mouse /
-## controller uses, and the HUD shows. Split screen gives each player their own later.)
-func local_cat() -> CatPlayer:
-	return Game.instance.my_cat() if Game.instance != null else null
 
 
 func _held_ids(hands: Array) -> Array:

@@ -348,7 +348,7 @@ func _set_state(is_sealed: bool, revealed: bool) -> void:
 	exit_revealed = revealed
 	if newly_sealed:
 		Sound.play("boss_siren")
-		Game.instance.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
+		Hud.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
 
 
 # --- What the host tells everyone (runs on every computer) ---

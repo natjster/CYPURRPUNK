@@ -1,6 +1,6 @@
 class_name GameScreen
 extends Control
-## CYPURRPUNK â€” the very top scene (scenes/game_screen.tscn, the one Godot starts).
+## CYPURRPUNK — the very top scene (scenes/game_screen.tscn, the one Godot starts).
 ## It puts two pictures on your monitor:
 ##
 ##   1. The GAME: the whole of scenes/main.tscn (the 3D city and the CRT + dither look) is
@@ -32,21 +32,21 @@ extends Control
 ##
 ## Node tree:
 ##   GameScreen (this script)
-##   â”œâ”€â”€ HUD                 <- the sharp overlay (a CanvasLayer, always drawn on top)
-##   â”œâ”€â”€ Bars                <- black behind everything (the border you see in 4:3 / SHARP mode)
-##   â”œâ”€â”€ GameView            <- shows player 1's game picture, blown up
-##   â”‚   â””â”€â”€ GameViewport    <- the 320x240-ish "PS1 screen" the game is drawn into
-##   â”‚       â””â”€â”€ Main        <- scenes/main.tscn (the actual game)
-##   â”‚           â””â”€â”€ CRT     <- made by this script: the CRT + dither effect (ColorDepthDither),
-##   â”‚                          moved here out of PS1Overlay
-##   â”œâ”€â”€ GameView2..4        <- made by this script: players 2-4 (hidden until they join)
-##   â”‚   â”œâ”€â”€ GameViewport > Camera3D       <- their 3D view
-##   â”‚   â””â”€â”€ Post > Dither                 <- the CRT look on top (what you see)
-##   â”œâ”€â”€ Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
-##   â”‚   â””â”€â”€ Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
-##   â”œâ”€â”€ JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
-##   â””â”€â”€ MenuView            <- made by this script: the sharp menus, over the whole game picture
-##       â””â”€â”€ MenuViewport > PS1Overlay   <- moved here from main.tscn (Lobby, PauseMenu, ...)
+##   ├── HUD                 <- the sharp overlay (a CanvasLayer, always drawn on top)
+##   ├── Bars                <- black behind everything (the border you see in 4:3 / SHARP mode)
+##   ├── GameView            <- shows player 1's game picture, blown up
+##   │   └── GameViewport    <- the 320x240-ish "PS1 screen" the game is drawn into
+##   │       └── Main        <- scenes/main.tscn (the actual game)
+##   │           └── CRT     <- made by this script: the CRT + dither effect (ColorDepthDither),
+##   │                          moved here out of PS1Overlay
+##   ├── GameView2..4        <- made by this script: players 2-4 (hidden until they join)
+##   │   ├── GameViewport > Camera3D       <- their 3D view
+##   │   └── Post > Dither                 <- the CRT look on top (what you see)
+##   ├── Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
+##   │   └── Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
+##   ├── JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
+##   └── MenuView            <- made by this script: the sharp menus, over the whole game picture
+##       └── MenuViewport > PS1Overlay   <- moved here from main.tscn (Lobby, PauseMenu, ...)
 ##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
 ## This script also passes your mouse and keyboard on to the menus, then the game inside GameViewport.

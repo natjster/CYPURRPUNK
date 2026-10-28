@@ -1,22 +1,22 @@
 class_name Roomba
 extends CharacterBody3D
-## VAC-COP â€” a police Roomba that patrols the city and hunts cats on foot.
+## VAC-COP — a police Roomba that patrols the city and hunts cats on foot.
 ## Attach to the root of scenes/roomba.tscn. Expected node tree:
 ##   Roomba (CharacterBody3D)       <- this script
-##   â”œâ”€â”€ CollisionShape3D
-##   â”œâ”€â”€ Model (Node3D)             <- turns to face where it drives
-##   â”‚   â”œâ”€â”€ Body, Cap, Bumper      <- MeshInstance3D (Body flashes when shot)
-##   â”‚   â”œâ”€â”€ Eye                    <- glows red while chasing
-##   â”‚   â”œâ”€â”€ SirenRed, SirenBlue    <- flash while chasing
-##   â”‚   â””â”€â”€ Brush (Node3D)         <- the little side brush, spins
-##   â”œâ”€â”€ SirenLight (OmniLight3D)   <- red/blue light on the street while chasing
-##   â””â”€â”€ MultiplayerSynchronizer    <- shares sync_position, sync_yaw, state, health
+##   ├── CollisionShape3D
+##   ├── Model (Node3D)             <- turns to face where it drives
+##   │   ├── Body, Cap, Bumper      <- MeshInstance3D (Body flashes when shot)
+##   │   ├── Eye                    <- glows red while chasing
+##   │   ├── SirenRed, SirenBlue    <- flash while chasing
+##   │   └── Brush (Node3D)         <- the little side brush, spins
+##   ├── SirenLight (OmniLight3D)   <- red/blue light on the street while chasing
+##   └── MultiplayerSynchronizer    <- shares sync_position, sync_yaw, state, health
 ##
 ## What it does:
-##   PATROL  â€” drives slowly between random sidewalk spots.
-##   CHASE   â€” spots a cat on foot within sight_range and drives at it (faster than a walking
-##             cat, slower than zoomies â€” so SHIFT saves you).
-##   BONK    â€” touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
+##   PATROL  — drives slowly between random sidewalk spots.
+##   CHASE   — spots a cat on foot within sight_range and drives at it (faster than a walking
+##             cat, slower than zoomies — so SHIFT saves you).
+##   BONK    — touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
 ##             takes bonk_damage HP. A cat at 0 HP is knocked out and drops everything
 ##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
 ##   Shoot it (each bolt takes the gun's Damage off its max_health) or ram it with the car
@@ -133,7 +133,7 @@ var _frame: int = 0  # host: counts physics frames, for thinking less often
 var _route_point: Vector3  # host: where the chase is headed (re-planned replans_per_second)
 var _replan_left: float = 0.0
 var _hum_check_left: float = 0.0  # every computer: time until we check if anyone can hear us
-var _rng := RandomNumberGenerator.new()  # patrol choices only â€” NOT the city's RNG
+var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city's RNG
 
 @onready var model: Node3D = $Model
 @onready var body_mesh: MeshInstance3D = $Model/Body
@@ -330,7 +330,6 @@ func _bonk(cat: CatPlayer) -> void:
 		var item_id := ItemManager.instance.take_one_loot(player_id)
 		if item_id != "":
 			stomach.append(item_id)
-			_vacuumed.rpc_id(PlayerId.peer_of(player_id), player_id, (ItemManager.instance.catalog[item_id] as ItemData).display_name)
 	# After the vacuuming, so a knockout drops whatever is left (the stolen one stays inside us).
 	CatHealth.instance.damage(player_id, bonk_damage, "A VAC-COP")
 	print("[Roomba] %s bonked player %d (stomach: %s)" % [name, player_id, stomach])
@@ -429,15 +428,6 @@ func health_bar_info() -> Dictionary:
 func _hit_flash() -> void:
 	_flash_time = 0.15
 	Sound.play_at("roomba_hit", global_position)
-
-
-## Host -> the bonked cat's owner: tell them what got vacuumed.
-@rpc("authority", "call_local", "reliable")
-func _vacuumed(player_id: int, display_name: String) -> void:
-	if not PlayerId.is_local(player_id):
-		return
-	# No text on screen (HUD kept simple): just the console.
-	print("[Roomba] vacuumed player %d's %s" % [player_id, display_name])
 
 
 # --- Every computer: gliding (non-host) and the flashing lights ---
