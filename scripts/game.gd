@@ -234,8 +234,6 @@ func _process(_delta: float) -> void:
 			"players": player_count(), "max": Net.MAX_PLAYERS}
 
 
-
-
 ## How many players are in the game right now, on every computer (up to Net.MAX_PLAYERS = 8).
 ## The balance scales with it: more VAC-COPs, faster heat, faster-growing loot, an extra beam.
 func player_count() -> int:

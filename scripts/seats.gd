@@ -501,11 +501,6 @@ func _resume_after_unplug(seat: int) -> void:
 		menu.close_unplug_pause()
 
 
-## Is this player's controller unplugged right now?
-func is_unplugged(seat: int) -> bool:
-	return _unplugged.has(seat)
-
-
 # --- Inner workings ---
 
 ## SOLO game: every controller drives player 1 (nobody else can join).

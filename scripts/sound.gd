@@ -192,11 +192,6 @@ func play_ambience(id: String) -> void:
 	_crossfade("ambience", id, AMBIENCE_DB)
 
 
-## True if there's a file for this sound effect (handy for tests).
-func has_sound(id: String) -> bool:
-	return _sounds["sfx"].has(id)
-
-
 # --- Behind the scenes ---
 
 ## Read every sound file in a folder: {"meow": [meow_1, meow_2], "shoot": [shoot]}.

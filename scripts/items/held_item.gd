@@ -19,11 +19,6 @@ var holder: CatPlayer = null
 var hand: int = 0
 
 
-## Is this item in the paw of the cat that THIS computer controls (and on foot)?
-func is_mine() -> bool:
-	return holder != null and holder.is_multiplayer_authority() and holder.is_controlled
-
-
 ## Owner only, every physics frame while held.
 ## trigger_down = the use button is held; trigger_pressed = it was pressed this frame.
 func use_tick(_trigger_down: bool, _trigger_pressed: bool, _delta: float) -> void:

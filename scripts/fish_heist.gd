@@ -292,7 +292,7 @@ func _physics_process(delta: float) -> void:
 			earned += (items.catalog[item_id] as ItemData).cash_value
 		if driving:
 			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
-			Game.instance.car.park()  # ...and it waits at its parking spot for the next trip up
+			car.park()  # ...and it waits at its parking spot for the next trip up
 		_extracted.rpc(player_id, earned, loot.size(), quest_bonus)
 
 

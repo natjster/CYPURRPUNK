@@ -111,7 +111,7 @@ func start_district() -> void:
 func roomba_destroyed(roomba: Enemy) -> void:
 	_show_explosion.rpc(roomba.global_position)
 	if roomba.is_boss:
-		_announce.rpc("THE MEGA VAC-COP IS DOWN!")
+		print("[Roombas] THE MEGA VAC-COP IS DOWN!")
 	else:
 		_respawn_at.append(_clock + respawn_seconds)
 		_kills_toward_boss += 1
@@ -203,7 +203,6 @@ func _swarm_spot() -> Vector3:
 	return spot
 
 
-## A random sidewalk spot away from the centre and at least "distance" from every cat.
 ## Host: send one MEGA VAC-COP in from across town (why = for the console log).
 func _spawn_boss(why: String) -> void:
 	var boss := BOSS_SCENE.instantiate() as Roomba
@@ -212,7 +211,7 @@ func _spawn_boss(why: String) -> void:
 	boss.position = _spawn_spot(boss_spawn_distance)
 	boss.destroyed.connect(roomba_destroyed)
 	add_child(boss, true)
-	_announce.rpc("MEGA VAC-COP DEPLOYED (%s)" % why)
+	print("[Roombas] MEGA VAC-COP DEPLOYED (%s)" % why)
 	_boss_siren.rpc()  # everyone hears it coming
 
 
@@ -226,6 +225,7 @@ func _bosses_out() -> int:
 	return count
 
 
+## A random sidewalk spot away from the centre and at least "distance" from every cat.
 func _spawn_spot(distance: float = min_spawn_distance) -> Vector3:
 	var spot := Vector3.ZERO
 	for attempt in 30:
@@ -240,13 +240,6 @@ func _far_from_cats(spot: Vector3, distance: float) -> bool:
 		if spot.distance_to((cat as Node3D).global_position) < distance:
 			return false
 	return true
-
-
-## Host -> everyone: news about the MEGA VAC-COP. Console only now (the HUD was simplified, so
-## nothing pops up on screen).
-@rpc("authority", "call_local", "reliable")
-func _announce(text: String) -> void:
-	print("[Roombas] " + text)
 
 
 ## Host -> everyone: the MEGA VAC-COP's siren (everywhere at once: it's on its way).
