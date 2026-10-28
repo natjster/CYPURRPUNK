@@ -42,6 +42,7 @@ Meow-City/
 │   ├── roomba.gd              <- one VAC-COP (extends Enemy): patrol, chase, bonk, vacuum loot
 │   ├── hit.gd                 <- Hit: one way for anything to get shot (§16)
 │   ├── motion.gd              <- Motion: small helpers (distance along the ground, network gliding)
+│   ├── level_kit.gd           <- LevelKit: boxes, lights, signs, PS1 materials for code-built places (§16)
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
@@ -1854,3 +1855,24 @@ says how a VAC-COP drives, chases and bonks.
    it, count kills...). Ask Claude to wire up the spawning.
 
 Copy `scripts/roomba.gd` for a full working example.
+
+### Building places in code (`scripts/level_kit.gd`, class **LevelKit**)
+The city, THE SEWERS and the manholes are built by code, not by hand in the editor. They all use
+the same kit of building blocks, so a new place (the MAINFRAME room, a new district type...) gets
+the PS1 look and the rules below for free:
+
+| Line of code | What it makes |
+|---|---|
+| `LevelKit.psx_material({"albedo_color": Color(0.3, 0.3, 0.3)})` | a material with the PS1 look (any `psx_lit` shader setting) |
+| `LevelKit.add_box(self, center, size, material, true)` | a box; `true` = solid (cats and cars bump into it) |
+| `LevelKit.add_cylinder(self, center, radius, length, material)` | a six-sided pipe or pillar |
+| `LevelKit.add_light(self, at, color, energy, range)` | a pool of coloured light glowing into the fog |
+| `LevelKit.add_sign(self, "TEXT", at, color, font_size, facing)` | glowing neon letters |
+| `LevelKit.subdivided_plane(Vector2(w, d))` | a flat floor piece |
+
+**The rules it keeps for you:** big surfaces are cut into ~2.5 m pieces (on big triangles the PS1
+textures shear and "swim"), and boxes of the same shape share one mesh (a city has hundreds).
+Give one box its own colour with `box.set_instance_shader_parameter("instance_tint", Color(...))`
+instead of making a new material.
+**The rule you keep:** never put two visible surfaces a few cm apart (a floor on a floor): they
+flicker. Examples: `_build_shop()` and `_build_stash()` in `scripts/hub.gd`.

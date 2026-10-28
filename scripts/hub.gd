@@ -79,12 +79,8 @@ const DEPTH_LINE: float = -100.0
 @onready var _moonlight: Light3D = $"../Moonlight"
 @onready var _rain: GPUParticles3D = $"../Rain"
 
-# Same trick as the city: big surfaces are cut into ~2.5 m pieces, or the PS1 texture warp
-# makes them shear and swim. Boxes needing the same cuts share one mesh.
-const PIECE_SIZE: float = 2.5
 ## Glow colours of the boxes on the Black Markitten's shelves.
 const SHOP_GOODS_COLORS: Array[Color] = [Color(1, 0.35, 0.7), Color(0.3, 1, 0.35), Color(0.3, 0.8, 1), Color(1, 0.8, 0.2)]
-var _box_meshes := {}
 var _in_hub_view: bool = false
 var _city_mood := {}  # the night-city fog/ambient values, to put back when you go up
 ## Split screen: a copy of the world's look with the OTHER mood (sewer while player 1 is up top,
@@ -217,21 +213,13 @@ func _set_mood(environment: Environment, in_hub: bool) -> void:
 
 func _make_materials() -> void:
 	var asphalt := preload("res://textures/asphalt.png")
-	_concrete = _psx({"albedo_texture": asphalt, "albedo_color": Color(0.45, 0.5, 0.46), "world_uv": true, "world_uv_scale": 0.4, "specular": 0.4, "roughness": 0.4})
-	_wall = _psx({"albedo_texture": asphalt, "albedo_color": Color(0.3, 0.36, 0.33), "world_uv": true, "world_uv_scale": 0.3})
-	_water = _psx({"albedo_color": Color(0.03, 0.12, 0.09), "specular": 0.7, "roughness": 0.15, "emission_color": Color(0.2, 1, 0.6), "emission_energy": 0.04})
-	_metal = _psx({"albedo_color": Color(0.26, 0.28, 0.3), "specular": 0.5, "roughness": 0.4})
-	_cardboard = _psx({"albedo_color": Color(0.55, 0.4, 0.22)})
-	_crate = _psx({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": Color(0.3, 0.9, 0.8)})
-	_neon = _psx({"emission_color": Color.WHITE, "emission_energy": 5.0})
-
-
-func _psx(params: Dictionary) -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = preload("res://shaders/psx_lit.gdshader")
-	for key in params:
-		material.set_shader_parameter(key, params[key])
-	return material
+	_concrete = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": Color(0.45, 0.5, 0.46), "world_uv": true, "world_uv_scale": 0.4, "specular": 0.4, "roughness": 0.4})
+	_wall = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": Color(0.3, 0.36, 0.33), "world_uv": true, "world_uv_scale": 0.3})
+	_water = LevelKit.psx_material({"albedo_color": Color(0.03, 0.12, 0.09), "specular": 0.7, "roughness": 0.15, "emission_color": Color(0.2, 1, 0.6), "emission_energy": 0.04})
+	_metal = LevelKit.psx_material({"albedo_color": Color(0.26, 0.28, 0.3), "specular": 0.5, "roughness": 0.4})
+	_cardboard = LevelKit.psx_material({"albedo_color": Color(0.55, 0.4, 0.22)})
+	_crate = LevelKit.psx_material({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": Color(0.3, 0.9, 0.8)})
+	_neon = LevelKit.psx_material({"emission_color": Color.WHITE, "emission_energy": 5.0})
 
 
 ## Floor, sewage channel, walls and ceiling. No two surfaces overlap (they'd flicker).
@@ -242,38 +230,38 @@ func _build_tunnel() -> void:
 	var walkway := w - c  # width of each walkway
 
 	# Walkways either side of the channel: 1 m thick slabs with their top at floor level (0).
-	_add_box(Vector3(-(c + walkway * 0.5), -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
-	_add_box(Vector3(c + walkway * 0.5, -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
+	LevelKit.add_box(self, Vector3(-(c + walkway * 0.5), -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
+	LevelKit.add_box(self, Vector3(c + walkway * 0.5, -0.5, 0), Vector3(walkway, 1, l * 2), _concrete, true)
 	# Channel bottom (1 m lower) and the murky water in it (looks only — you can wade in it).
-	_add_box(Vector3(0, -1.5, 0), Vector3(channel_width, 1, l * 2), _wall, true)
+	LevelKit.add_box(self, Vector3(0, -1.5, 0), Vector3(channel_width, 1, l * 2), _wall, true)
 	var water := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(channel_width, l * 2)
 	plane.subdivide_width = 1
-	plane.subdivide_depth = int(l * 2 / PIECE_SIZE)
+	plane.subdivide_depth = int(l * 2 / LevelKit.PIECE_SIZE)
 	water.mesh = plane
 	water.material_override = _water
 	water.position = Vector3(0, -0.6, 0)
 	add_child(water)
 	# Two bridges over the channel (their tops line up with the walkways).
 	for z in [-8.0, 8.0]:
-		_add_box(Vector3(0, -0.25, z), Vector3(channel_width, 0.5, 3), _concrete, true)
+		LevelKit.add_box(self, Vector3(0, -0.25, z), Vector3(channel_width, 0.5, 3), _concrete, true)
 		for side in [-1.0, 1.0]:  # railings
-			_add_box(Vector3(0, 0.45, z + side * 1.4), Vector3(channel_width, 0.1, 0.1), _metal, false)
+			LevelKit.add_box(self, Vector3(0, 0.45, z + side * 1.4), Vector3(channel_width, 0.1, 0.1), _metal, false)
 
 	# Walls and ceiling: 1 m thick boxes just outside the room.
-	_add_box(Vector3(-w - 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
-	_add_box(Vector3(w + 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
-	_add_box(Vector3(0, height * 0.5 - 1, -l - 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
-	_add_box(Vector3(0, height * 0.5 - 1, l + 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
-	_add_box(Vector3(0, height + 0.5, 0), Vector3(w * 2 + 2, 1, l * 2 + 2), _wall, true)
+	LevelKit.add_box(self, Vector3(-w - 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
+	LevelKit.add_box(self, Vector3(w + 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
+	LevelKit.add_box(self, Vector3(0, height * 0.5 - 1, -l - 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
+	LevelKit.add_box(self, Vector3(0, height * 0.5 - 1, l + 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
+	LevelKit.add_box(self, Vector3(0, height + 0.5, 0), Vector3(w * 2 + 2, 1, l * 2 + 2), _wall, true)
 
 	# Big pipes along the ceiling, and ribs across it every 5 m (makes it read as a tunnel).
 	for x in [-w + 1.2, w - 1.2]:
-		var pipe := _add_cylinder(Vector3(x, height - 1.0, 0), 0.45, l * 2, _metal)
+		var pipe := LevelKit.add_cylinder(self, Vector3(x, height - 1.0, 0), 0.45, l * 2, _metal)
 		pipe.rotation.x = PI / 2
 	for z in range(-int(l) + 5, int(l), 5):
-		_add_box(Vector3(0, height - 0.3, z), Vector3(w * 2, 0.6, 0.6), _wall, false)
+		LevelKit.add_box(self, Vector3(0, height - 0.3, z), Vector3(w * 2, 0.6, 0.6), _wall, false)
 
 
 func _build_props() -> void:
@@ -283,26 +271,26 @@ func _build_props() -> void:
 	# Hanging work lights down both walkways: warm pools of light in the green murk.
 	for z in range(-int(l) + 4, int(l), 8):
 		for x in [-w + 5.0, w - 5.0]:
-			_add_box(Vector3(x, height - 1.6, z), Vector3(0.05, 1.2, 0.05), _metal, false)  # cable
-			var bulb := _add_box(Vector3(x, height - 2.3, z), Vector3(0.3, 0.2, 0.3), _neon, false)
+			LevelKit.add_box(self, Vector3(x, height - 1.6, z), Vector3(0.05, 1.2, 0.05), _metal, false)  # cable
+			var bulb := LevelKit.add_box(self, Vector3(x, height - 2.3, z), Vector3(0.3, 0.2, 0.3), _neon, false)
 			bulb.set_instance_shader_parameter("instance_tint", Color(1, 0.7, 0.35))
-			_add_light(Vector3(x, height - 2.6, z), Color(1, 0.65, 0.32), 4.0, 12.0)
+			LevelKit.add_light(self, Vector3(x, height - 2.6, z), Color(1, 0.65, 0.32), 4.0, 12.0)
 	# A cold cyan glow coming up off the water.
 	for z in [-14.0, 0.0, 14.0]:
-		_add_light(Vector3(0, -0.2, z), Color(0.2, 1, 0.7), 1.2, 6.0)
+		LevelKit.add_light(self, Vector3(0, -0.2, z), Color(0.2, 1, 0.7), 1.2, 6.0)
 
 	# A ladder up the north wall to a drain grate (where Don "sends you up").
 	for side in [-0.5, 0.5]:
-		_add_box(Vector3(-w + 6 + side, height * 0.5, -l + 0.15), Vector3(0.08, height, 0.08), _metal, false)
+		LevelKit.add_box(self, Vector3(-w + 6 + side, height * 0.5, -l + 0.15), Vector3(0.08, height, 0.08), _metal, false)
 	for y in range(1, int(height)):
-		_add_box(Vector3(-w + 6, y, -l + 0.15), Vector3(1.0, 0.06, 0.06), _metal, false)
+		LevelKit.add_box(self, Vector3(-w + 6, y, -l + 0.15), Vector3(1.0, 0.06, 0.06), _metal, false)
 
 	# Don Catleone's corner: a pink glow over his spot and crates for a desk.
 	var don := npc.position
-	_add_light(Vector3(don.x, 3.0, don.z + 1.0), Color(1, 0.4, 0.8), 3.0, 8.0)
-	_add_light(Vector3(don.x - 1.0, 1.6, don.z + 2.0), Color(1, 0.85, 0.6), 2.0, 5.0)  # lights his face
-	_add_box(Vector3(don.x + 2.2, 0.45, don.z + 0.3), Vector3(1.4, 0.9, 0.9), _crate, true)
-	_add_box(Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)
+	LevelKit.add_light(self, Vector3(don.x, 3.0, don.z + 1.0), Color(1, 0.4, 0.8), 3.0, 8.0)
+	LevelKit.add_light(self, Vector3(don.x - 1.0, 1.6, don.z + 2.0), Color(1, 0.85, 0.6), 2.0, 5.0)  # lights his face
+	LevelKit.add_box(self, Vector3(don.x + 2.2, 0.45, don.z + 0.3), Vector3(1.4, 0.9, 0.9), _crate, true)
+	LevelKit.add_box(self, Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)
 
 	_build_shop()
 	_build_stash()
@@ -310,19 +298,19 @@ func _build_props() -> void:
 	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
 	# players will feed it scrap for server-wide buffs.
 	var frame_x := -w + 1.0
-	_add_box(Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
-	var screen := _add_box(Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
+	LevelKit.add_box(self, Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
+	var screen := LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
 	screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
-	_add_light(Vector3(frame_x + 2.5, 2.8, 0), Color(0.2, 1, 0.45), 2.5, 8.0)
-	_add_sign("THE MAINFRAME\nOVERCLOCK  OFFLINE", Vector3(frame_x + 1.35, 2.8, 0), Color(0.0, 0.06, 0.02), 32, PI / 2)
+	LevelKit.add_light(self, Vector3(frame_x + 2.5, 2.8, 0), Color(0.2, 1, 0.45), 2.5, 8.0)
+	LevelKit.add_sign(self, "THE MAINFRAME\nOVERCLOCK  OFFLINE", Vector3(frame_x + 1.35, 2.8, 0), Color(0.0, 0.06, 0.02), 32, PI / 2)
 
 	# Cardboard-box shanties along the east wall (the "homes" of sewer cats).
 	for z in [4.0, 9.0, 14.0]:
-		_add_box(Vector3(w - 1.4, 0.6, z), Vector3(2.0, 1.2, 2.6), _cardboard, true)
-		_add_box(Vector3(w - 1.4, 1.45, z - 0.3), Vector3(1.4, 0.5, 1.6), _cardboard, false)
+		LevelKit.add_box(self, Vector3(w - 1.4, 0.6, z), Vector3(2.0, 1.2, 2.6), _cardboard, true)
+		LevelKit.add_box(self, Vector3(w - 1.4, 1.45, z - 0.3), Vector3(1.4, 0.5, 1.6), _cardboard, false)
 	# Crates, trash and junk.
 	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -4), Vector3(-4, 0.5, -17)]:
-		_add_box(spot, Vector3.ONE, _crate, true)
+		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
 
 
 ## THE BLACK MARKITTEN: Comrade Whiskers' rebel shop on the west wall. Everything is placed
@@ -332,25 +320,25 @@ func _build_shop() -> void:
 	var at := shopkeeper.position
 	var wall_x := -half_width  # inside face of the west wall
 	# The counter: a slab of metal on crates, between him and the customers.
-	_add_box(Vector3(at.x + 1.3, 0.45, at.z), Vector3(0.7, 0.9, 3.2), _crate, true)
-	_add_box(Vector3(at.x + 1.3, 0.95, at.z), Vector3(0.9, 0.1, 3.4), _metal, false)
-	var strip := _add_box(Vector3(at.x + 1.76, 0.86, at.z), Vector3(0.04, 0.06, 3.4), _neon, false)  # glowing edge
+	LevelKit.add_box(self, Vector3(at.x + 1.3, 0.45, at.z), Vector3(0.7, 0.9, 3.2), _crate, true)
+	LevelKit.add_box(self, Vector3(at.x + 1.3, 0.95, at.z), Vector3(0.9, 0.1, 3.4), _metal, false)
+	var strip := LevelKit.add_box(self, Vector3(at.x + 1.76, 0.86, at.z), Vector3(0.04, 0.06, 3.4), _neon, false)  # glowing edge
 	strip.set_instance_shader_parameter("instance_tint", Color(1, 0.15, 0.1))
 	# Shelves on the wall behind him, stocked with glowing "goods".
 	for shelf_y in [1.2, 2.0, 2.8]:
-		_add_box(Vector3(wall_x + 0.35, shelf_y, at.z), Vector3(0.6, 0.08, 4.0), _metal, false)
+		LevelKit.add_box(self, Vector3(wall_x + 0.35, shelf_y, at.z), Vector3(0.6, 0.08, 4.0), _metal, false)
 		for i in 5:
-			var goods := _add_box(Vector3(wall_x + 0.35, shelf_y + 0.17, at.z - 1.6 + i * 0.8), Vector3(0.3, 0.26, 0.3), _neon, false)
+			var goods := LevelKit.add_box(self, Vector3(wall_x + 0.35, shelf_y + 0.17, at.z - 1.6 + i * 0.8), Vector3(0.3, 0.26, 0.3), _neon, false)
 			goods.set_instance_shader_parameter("instance_tint", SHOP_GOODS_COLORS[(i + int(shelf_y * 10)) % SHOP_GOODS_COLORS.size()] * 0.5)
 	# Crates of "merchandise that fell off a truck" stacked either side.
 	for spot in [Vector3(at.x, 0.5, at.z - 2.6), Vector3(at.x, 0.5, at.z + 2.6), Vector3(at.x, 1.5, at.z + 2.6)]:
-		_add_box(spot, Vector3.ONE, _crate, true)
+		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
 	# A red rebel banner hanging over the shelves.
-	var banner := _add_box(Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
+	var banner := LevelKit.add_box(self, Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
 	banner.set_instance_shader_parameter("instance_tint", Color(0.35, 0.02, 0.03))
 	# Red light over the shop, and a warm one so you can see his face.
-	_add_light(Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
-	_add_light(Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
+	LevelKit.add_light(self, Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
+	LevelKit.add_light(self, Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
 
 
 ## THE STASH: a row of battered lockers on the east wall where cats keep gear safe.
@@ -361,83 +349,7 @@ func _build_stash() -> void:
 	# Four tall lockers against the wall, each with a glowing lock light.
 	for i in 4:
 		var z := at.z - 1.5 + i
-		_add_box(Vector3(wall_x - 0.4, 1.1, z), Vector3(0.8, 2.2, 0.9), _metal, true)
-		var lock := _add_box(Vector3(wall_x - 0.82, 1.2, z + 0.25), Vector3(0.04, 0.1, 0.1), _neon, false)
+		LevelKit.add_box(self, Vector3(wall_x - 0.4, 1.1, z), Vector3(0.8, 2.2, 0.9), _metal, true)
+		var lock := LevelKit.add_box(self, Vector3(wall_x - 0.82, 1.2, z + 0.25), Vector3(0.04, 0.1, 0.1), _neon, false)
 		lock.set_instance_shader_parameter("instance_tint", Color(0.3, 1, 0.4))
-	_add_light(Vector3(wall_x - 1.6, 2.6, at.z), Color(0.4, 0.9, 1), 2.5, 6.0)
-
-
-## A glowing text sign. "facing" turns it (0 = readable from the south / +Z side).
-## The hub keeps its walls clean on purpose: only THE MAINFRAME uses this now.
-func _add_sign(text: String, at: Vector3, color: Color, size: int, facing: float) -> void:
-	var label := Label3D.new()
-	label.text = text
-	label.font_size = size
-	label.pixel_size = 0.02
-	label.outline_size = 0
-	label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	label.modulate = Color(color * 2.5, 1)  # brighter than white = it glows
-	label.position = at
-	label.rotation.y = facing
-	add_child(label)
-
-
-func _add_light(at: Vector3, color: Color, energy: float, light_range: float) -> void:
-	var light := OmniLight3D.new()
-	light.position = at
-	light.light_color = color
-	light.light_energy = energy
-	light.light_volumetric_fog_energy = 1.5
-	light.omni_range = light_range
-	add_child(light)
-
-
-## Adds a box. "solid" = cats bump into it.
-func _add_box(center: Vector3, size: Vector3, material: Material, solid: bool) -> MeshInstance3D:
-	var mesh := MeshInstance3D.new()
-	mesh.mesh = _box_mesh_for(size)
-	mesh.scale = size
-	mesh.material_override = material
-	if solid:
-		var body := StaticBody3D.new()
-		body.position = center
-		add_child(body)
-		var shape := CollisionShape3D.new()
-		shape.shape = BoxShape3D.new()
-		(shape.shape as BoxShape3D).size = size
-		body.add_child(shape)
-		body.add_child(mesh)
-	else:
-		mesh.position = center
-		add_child(mesh)
-	return mesh
-
-
-func _add_cylinder(center: Vector3, radius: float, length: float, material: Material) -> MeshInstance3D:
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = radius
-	cylinder.bottom_radius = radius
-	cylinder.height = length
-	cylinder.radial_segments = 6
-	cylinder.rings = int(length / PIECE_SIZE)
-	var mesh := MeshInstance3D.new()
-	mesh.mesh = cylinder
-	mesh.material_override = material
-	mesh.position = center
-	add_child(mesh)
-	return mesh
-
-
-## A 1x1x1 box cut so that, once stretched to "size", its pieces are ~PIECE_SIZE metres.
-func _box_mesh_for(size: Vector3) -> BoxMesh:
-	var cuts := Vector3i(
-		maxi(0, ceili(size.x / PIECE_SIZE) - 1),
-		maxi(0, ceili(size.y / PIECE_SIZE) - 1),
-		maxi(0, ceili(size.z / PIECE_SIZE) - 1))
-	if not _box_meshes.has(cuts):
-		var box := BoxMesh.new()
-		box.subdivide_width = cuts.x
-		box.subdivide_height = cuts.y
-		box.subdivide_depth = cuts.z
-		_box_meshes[cuts] = box
-	return _box_meshes[cuts]
+	LevelKit.add_light(self, Vector3(wall_x - 1.6, 2.6, at.z), Color(0.4, 0.9, 1), 2.5, 6.0)

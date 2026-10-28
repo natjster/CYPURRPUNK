@@ -89,11 +89,7 @@ func _ready() -> void:
 		_coil.set_surface_override_material(0, _coil_material)
 	# Bolts: one shared thin box, stretched per shot. White glow; colour comes from instance_tint.
 	_bolt_mesh.size = Vector3(bolt_width, bolt_width, 1.0)
-	_bolt_material = ShaderMaterial.new()
-	_bolt_material.shader = preload("res://shaders/psx_lit.gdshader")
-	_bolt_material.set_shader_parameter("albedo_color", Color.BLACK)
-	_bolt_material.set_shader_parameter("emission_color", Color.WHITE)
-	_bolt_material.set_shader_parameter("emission_energy", 8.0)
+	_bolt_material = LevelKit.psx_material({"albedo_color": Color.BLACK, "emission_color": Color.WHITE, "emission_energy": 8.0})
 	_rng.randomize()
 	if _muzzle_flash != null:
 		_muzzle_flash.light_energy = 0.0

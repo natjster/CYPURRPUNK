@@ -74,12 +74,7 @@ func _add_disc(mesh: Mesh, material: Material, at: Vector3) -> MeshInstance3D:
 ## The game's PS1 look (psx_lit shader) with the picture on top. "glow" makes the picture
 ## light up by itself (the open hole's green sewer light).
 func _material(texture_path: String, glow: float) -> ShaderMaterial:
-	var material := ShaderMaterial.new()
-	material.shader = preload("res://shaders/psx_lit.gdshader")
-	material.set_shader_parameter("albedo_texture", load(texture_path))
-	material.set_shader_parameter("texture_glow", glow)
-	material.set_shader_parameter("specular", 0.3)
-	return material
+	return LevelKit.psx_material({"albedo_texture": load(texture_path), "texture_glow": glow, "specular": 0.3})
 
 
 ## A flat-topped disc: a 16-sided top showing the whole picture (the picture's middle at the

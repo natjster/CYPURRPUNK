@@ -105,7 +105,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`CAR_SPAWN`) are fixed for every seed; Meow-Mart's lot is random (`meow_mart_position`). Buildings share
   materials; per-object colour comes from the shader's `instance_tint` instance uniform.
   Determinism check: DevCapture prints a city `fingerprint`; host and client must match.
-  Large surfaces must stay subdivided (~2.5 m, `_box_mesh_for`): affine texture mapping on big
+  Large surfaces must stay subdivided (~2.5 m: build with `LevelKit` (`scripts/level_kit.gd`: add_box/add_cylinder/add_light/add_sign/psx_material/subdivided_plane, shared box-mesh cache) — city, hub, manhole and gun bolts all use it): affine texture mapping on big
   triangles makes textures shear and swim. DevCapture `--no_affine` / `--no_snap` help diagnose.
   Never stack visible surfaces a few cm apart (e.g. sidewalk over street): they z-fight and
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
