@@ -153,10 +153,12 @@ func send_state_to(peer_id: int) -> void:
 
 func _process(_delta: float) -> void:
 	var lvl := level()
-	# Every player on this computer gets the heat bar (top-right of their HUD).
+	# Every player on this computer gets the heat bar (top-right of their HUD) - but only
+	# while they're up in the city. Down in the sewer hub the bar is hidden.
 	for cat in Game.instance.playing_cats():
 		var bar := Hud.element("Heat", cat.slot) as HudHeatBar
 		if bar != null:
+			bar.visible = not UndergroundHub.is_in_hub(cat.global_position)
 			bar.set_heat(heat, MAX_HEAT, lvl)
 	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:

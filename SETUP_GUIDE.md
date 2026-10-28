@@ -882,11 +882,13 @@ select it and change the two colours, flash speed and smoothness in the Inspecto
 you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
 carrying the koi...
 
-**A MEGA VAC-COP rolls out at every HEAT LEVEL 1-4**: one as the district starts, then one more
-at heat 25, 50 and 75 (even if another is still out; they stay until destroyed or the district
-ends). On top of that, **one is called in every time the crew destroys 3 VAC-COPs**, up to **4 times
-per district** (only when no boss is out), and one always comes out for the DEEP CLEAN at 100 heat
-(level bosses and the DEEP CLEAN one don't count toward the 4). The car can't run it over: driving into
+**No MEGA VAC-COP ever comes out before 25 heat** (Roombas node > **Boss Min Heat**). Then one
+rolls out at **HEAT LEVELS 2-4**: at heat 25, 50 and 75 (even if another is still out; they stay
+until destroyed or the district ends). On top of that, **one is called in every time the crew destroys
+3 VAC-COPs**, up to **4 times per district** (only when no boss is out, and only from 25 heat on: kills
+before that still count, so the boss arrives right at 25), and one always comes out for the DEEP CLEAN at
+100 heat (level bosses and the DEEP CLEAN one don't count toward the 4).
+The heat bar only shows while you're up in the city - it's hidden down in the sewer hub. The car can't run it over: driving into
 it is a crash, like hitting a wall (the car stops dead and bounces back a little; tune
 **Boss Crash Bounce** on the GetawayCar). That works because `roomba_boss.tscn` is also on
 collision **layer 3** and the car's **Mask** includes layer 3 (Inspector > CollisionObject3D >

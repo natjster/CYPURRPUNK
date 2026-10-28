@@ -9,8 +9,8 @@ extends Node3D
 ## How many are out follows the HEAT (scripts/heat_meter.gd): every heat level adds a few, and
 ## The MEGA VAC-COP (scenes/roomba_boss.tscn) is called in every boss_every_kills VAC-COPs the
 ## crew destroys (up to bosses_per_district times), one more arrives every time the heat
-## reaches one of the boss_on_levels (levels 1-4: so the first comes out as the district starts),
-## and one always comes out for the DEEP CLEAN.
+## reaches one of the boss_on_levels (levels 2-4: heat 25, 50, 75), and one always comes out for
+## the DEEP CLEAN. None (except the DEEP CLEAN's) ever come before boss_min_heat (25).
 ## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN (Events.district_sealed):
 ## we set deep_clean_extra to Deep Clean Roombas, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
@@ -47,7 +47,10 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 ## (1 = as soon as the district starts, 2 = heat 25, 3 = heat 50, 4 = heat 75). These come even
 ## if another boss is still out, and they don't count toward Bosses Per District.
 ## Remove numbers from the list (Inspector) to skip those levels; empty = no level bosses.
-@export var boss_on_levels: Array[int] = [1, 2, 3, 4]
+@export var boss_on_levels: Array[int] = [2, 3, 4]
+## NO MEGA VAC-COP of any kind (level, kill call) until the heat is at least this much
+## (0..100). The DEEP CLEAN's boss comes at max heat, so it's never held back.
+@export var boss_min_heat: float = 25.0
 
 @export_group("DEEP CLEAN swarm")
 ## Extra VAC-COPs that swarm in when the hatch is sealed (the DEEP CLEAN, fish_heist.gd).
@@ -143,15 +146,17 @@ func _follow_the_heat() -> void:
 	# Level bosses: one every time the heat reaches a level in boss_on_levels (even if another
 	# boss is already out). Bosses stay until they're destroyed or the district ends.
 	var lvl := heat.level()
+	var hot_enough := heat.heat >= boss_min_heat  # no bosses at all below Boss Min Heat
 	while _boss_level_done < mini(lvl, HeatMeter.MAX_LEVEL - 1):
 		_boss_level_done += 1
-		if _boss_level_done in boss_on_levels:
+		if _boss_level_done in boss_on_levels and hot_enough:
 			_spawn_boss("HEAT LEVEL %d" % _boss_level_done)
 	# The other bosses only come when no boss is out:
 	#   - called in after every boss_every_kills VAC-COPs destroyed, up to bosses_per_district,
 	#   - and always out for the DEEP CLEAN (max heat).
 	if _bosses_out() == 0:
-		var called := _kills_toward_boss >= boss_every_kills and _bosses_called < bosses_per_district
+		var called := _kills_toward_boss >= boss_every_kills and _bosses_called < bosses_per_district \
+			and hot_enough  # (kills before heat 25 still count: the boss comes once it's hot enough)
 		if called:
 			_kills_toward_boss -= boss_every_kills
 			_bosses_called += 1
