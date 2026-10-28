@@ -16,6 +16,7 @@ extends Node3D
 ##       GOLDEN KOI $400: only one in the city, far from Meow-Mart, glowing gold. It's HEAVY
 ##       (slows you), NOISY (Roombas spot you from further) and grabbing it raises the HEAT
 ##       (scripts/heat_meter.gd). Greed has a price! Taken loot grows back after a while.
+##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
 ##   - At 3/4 heat (exit_opens_at_heat) the EXIT manhole opens, somewhere random, and every
 ##     PAYPHONE in the district rings. Payphones (scripts/npcs/payphone.gd) are scattered too:
@@ -32,27 +33,9 @@ extends Node3D
 ## Multiplayer: the HOST is the referee. It checks every frame who is standing on the open exit,
 ## empties their loot bag and tells everyone with an RPC. The extracted player's own computer
 ## then moves their cat down to the hub (owners always move their own cat).
-## Loot, manholes and payphones are placed from the city seed with their OWN random generator,
+## Manholes and payphones are placed from the city seed with their OWN random generator,
 ## so every computer places them identically and buildings never move. Whether the exit has been
 ## found (exit_revealed) and whether the hatch is sealed are decided by the host (_set_state).
-
-@export_group("Loot")
-## Which item card is placed outside Meow-Mart (and counted by quests like Mittens').
-@export var loot_item: String = "fish"
-## Fish waiting outside Meow-Mart.
-@export var meow_mart_fish: int = 5
-## Extra fish scattered on sidewalks around the city.
-@export var street_fish: int = 5
-## Cheap sardines scattered on sidewalks around the city.
-@export var street_sardines: int = 8
-## How many golden koi are hidden in the city (the big $400 prize).
-@export var golden_koi: int = 1
-## Seconds before taken fish and sardines appear again at their spot.
-@export var respawn_seconds: float = 20.0
-## Seconds before a taken golden koi appears again.
-@export var koi_respawn_seconds: float = 120.0
-## Golden koi are placed at least this far (metres) from Meow-Mart, so you have to travel.
-@export var koi_min_distance: float = 60.0
 
 @export_group("Manholes (the way in and out)")
 ## The EXIT manhole opens (lid off, climb down) once the heat reaches this (out of 100).
@@ -135,24 +118,6 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + HEIST_SEED_SALT)
-
-	# A row of fish on the sidewalk outside Meow-Mart's door.
-	var door := city.meow_mart_position
-	for i in meow_mart_fish:
-		items.add_spawn_point(loot_item, door + Vector3((i - (meow_mart_fish - 1) / 2.0) * 1.3, 0, -0.5), respawn_seconds)
-	# Fish and sardines dropped on random sidewalks around the city.
-	for i in street_fish:
-		items.add_spawn_point(loot_item, items.random_sidewalk_spot(rng), respawn_seconds)
-	for i in street_sardines:
-		items.add_spawn_point("sardine", items.random_sidewalk_spot(rng), respawn_seconds)
-	# The golden koi: somewhere far from Meow-Mart.
-	for i in golden_koi:
-		var spot := items.random_sidewalk_spot(rng)
-		for attempt in 20:
-			if spot.distance_to(door) >= koi_min_distance:
-				break
-			spot = items.random_sidewalk_spot(rng)
-		items.add_spawn_point("golden_koi", spot, koi_respawn_seconds)
 
 	# The manholes: the way up (centre) and the way back (a random street far from the centre).
 	_entry = _add_manhole(ENTRY_POSITION)

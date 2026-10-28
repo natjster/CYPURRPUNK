@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="LootTable" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/loot_table.gd" id="1_table"]
+[ext_resource type="Script" path="res://scripts/items/loot_spawn.gd" id="2_spawn"]
+
+[sub_resource type="Resource" id="Resource_mart_fish"]
+script = ExtResource("2_spawn")
+item_id = "fish"
+count = 5
+where = 1
+respawn_seconds = 20.0
+
+[sub_resource type="Resource" id="Resource_street_fish"]
+script = ExtResource("2_spawn")
+item_id = "fish"
+count = 5
+respawn_seconds = 20.0
+
+[sub_resource type="Resource" id="Resource_sardines"]
+script = ExtResource("2_spawn")
+item_id = "sardine"
+count = 8
+respawn_seconds = 20.0
+
+[sub_resource type="Resource" id="Resource_koi"]
+script = ExtResource("2_spawn")
+item_id = "golden_koi"
+count = 1
+min_distance_from_meow_mart = 60.0
+respawn_seconds = 120.0
+
+[resource]
+script = ExtResource("1_table")
+spawns = Array[ExtResource("2_spawn")]([SubResource("Resource_mart_fish"), SubResource("Resource_street_fish"), SubResource("Resource_sardines"), SubResource("Resource_koi")])

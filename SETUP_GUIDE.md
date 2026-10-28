@@ -20,6 +20,7 @@ Meow-City/
 │   ├── props/                 <- street_lamp (warm light cone), rain (follows the camera)
 │   └── ui/                    <- settings_menu.tscn (the Settings screen), hud.tscn (the HUD, §13)
 ├── items/                     <- ITEM CARDS (.tres), one per item, loaded automatically (§9)
+├── loot/city.tres             <- THE LOOT TABLE: what lies where in every district (§9)
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
@@ -767,12 +768,11 @@ called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = 
   Select its root to edit what Don says (**Line Too Early**, **Line Exit Open**, **Line Sealed**;
   `{where}` becomes e.g. "north-east"). The ring is `sounds/sfx/phone_ring.wav`.
 - `Game.new_district()` in `scripts/game.gd`: builds the next district.
-- Loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres`.
+- Loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres`. Where
+  they lie and how many: the loot table `loot/city.tres` (§9 "The loot table").
 
 **Tuning:**
 - Select **Heist** in `main.tscn`:
-  - **Loot**: Loot Item (what sits outside Meow-Mart), Meow Mart Fish, Street Fish, Street
-    Sardines, Golden Koi (how many), Respawn Seconds, Koi Respawn Seconds, Koi Min Distance.
   - **Manholes**: Exit Opens At Heat (75), Seal Warning At Heat (90), Exit Radius (how close you
     must get), Exit Min Distance (from the centre).
   - **Payphones**: Payphones (how many), Payphone Spacing, Payphone Min Distance.
@@ -1065,13 +1065,32 @@ Steps for your next one (e.g. a shotgun):
    **Scene** = `shotgun.tscn`, **Glow Color** (alpha above 0 to glow on the street).
 4. Sell it: on `shotgun.tres` set **Shop > Price** (e.g. 120), then select **Hub >
    ComradeWhiskers** in `main.tscn` and add `shotgun` to his **Stock**. Done.
-   (Or make it lie in the city instead: select **Items** and add it to **Scattered Items** or
-   **Fixed Items** — both are empty on purpose right now.)
+   (Or make it lie in the city instead: add a line for it to the loot table, below.)
 
 ### Adding new loot (example: a silver tuna worth $150)
 Duplicate `items/fish.tres` as `silver_tuna.tres`, change **Id**, **Cash Value** 150 and the
-**Scene** (e.g. a tinted copy of `scenes/items/fish.tscn`), then add it to **Scattered Items** on
-the **Items** node (or ask Claude to place it from the heist like the koi).
+**Scene** (e.g. a tinted copy of `scenes/items/fish.tscn`), then add a line for it to the loot
+table (below).
+
+### The loot table (`loot/city.tres`: what lies around every district)
+Every new district puts down the lines of its loot table, top to bottom. Double-click
+`loot/city.tres` in the FileSystem dock and expand **Spawns**. Today it has four lines:
+
+| Item Id | Count | Where | Respawn Seconds | |
+|---|---|---|---|---|
+| fish | 5 | Outside Meow Mart | 20 | a row by the door |
+| fish | 5 | Sidewalk | 20 | random sidewalks |
+| sardine | 8 | Sidewalk | 20 | |
+| golden_koi | 1 | Sidewalk | 120 | Min Distance From Meow Mart 60 |
+
+Each line (a **LootSpawn**, `scripts/items/loot_spawn.gd`) says: **Item Id** (the card's id),
+**Count**, **Where** (Sidewalk = random spots all over town, Outside Meow Mart = a row by its
+door, Fixed Spot = always at **Spot**), **Min Distance From Meow Mart** (Sidewalk only: makes you
+travel for it), and **Respawn Seconds** (how long until a taken one grows back; 0 = never).
+**Add a line:** Spawns > **Add Element**, click the new empty slot > **New LootSpawn**, fill it in.
+**Remove one:** the trash-can icon next to it. More players make everything grow back faster
+(**Items > Regrow Faster Per Player**). The **Items** node's **Loot Table** setting points at this
+file: a future district type can have its own table (duplicate the file, point at the copy).
 
 **Loot settings** (on any loot card, Inspector > **Loot**):
 - **Cash Value**: what it pays when you climb down the exit manhole.
@@ -1089,8 +1108,8 @@ it on the root of the item's scene, and write what happens in `use_tick()`. Call
 use it up. Anything other players must see goes through an `@rpc` function on that script.
 
 ### Tuning the system (select **Items** in `main.tscn`)
-Bag Size, Pack Size (backpack), Pickup Radius (walk-into), Interact Radius (E), Fixed Items,
-Scattered Items (both empty: gear comes from the shop), Scatter Respawn Seconds. Fish placement stays on the **Heist** node (§8).
+Bag Size, Pack Size (backpack), Pickup Radius (walk-into), Interact Radius (E), **Loot Table**
+(what lies in each city, see above), Regrow Faster Per Player.
 
 ### Inventory screen (Tab or I)
 Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is freed while open).

@@ -3,8 +3,8 @@ extends Node3D
 ## THE ITEM SYSTEM. One of these lives in main.tscn as the "Items" node.
 ## It handles every item in the game the same way, so new items need no new plumbing:
 ##   - loads every item card (ItemData .tres) from res://items/
-##   - places items in each city, lying on the street, and makes them grow back
-##     (today only the heist's fish: gear is BOUGHT in the sewers, see request_buy)
+##   - places the LOOT TABLE (res://loot/city.tres: fish, sardines, the koi) in each city,
+##     lying on the street, and makes it grow back (gear is BOUGHT in the sewers, see request_buy)
 ##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
 ##   - pickups (walk-into for auto_pickup items, E for the rest), drops (G), using up (catnip)
 ##   - each cat's PAWS (right + left; a 2-paw item takes both), BACKPACK and LOOT BAG
@@ -28,7 +28,7 @@ static var instance: ItemManager
 const ITEMS_FOLDER: String = "res://items/"
 const FIRST_DROPPED_ID: int = 100000
 ## Mixed into the city seed so item placement has its own random numbers.
-const SCATTER_SEED_SALT: int = 4242
+const LOOT_SEED_SALT: int = 4242
 ## Where loot sits on a cat: first in its mouth, then stacked on its head.
 const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0), Vector3(0, 1.23, 0), Vector3(0, 1.34, 0)]
 ## A cat can't grab an item more than this many metres above or below it (see _reach_distance).
@@ -48,15 +48,9 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var interact_radius: float = 2.5
 
 @export_group("Placed in every city")
-## Items at fixed spots in every city (they don't grow back): item id -> position.
-## Empty on purpose: gear is bought at the Black Markitten in the sewers now.
-## Example if you want one back: "tommy_gun" -> Vector3(-3, 0, 1).
-@export var fixed_items: Dictionary = {}
-## Items scattered on random sidewalks: item id -> how many. Empty on purpose (see above).
-## Example: "catnip" -> 4. (The heist's fish are placed by fish_heist.gd, not here.)
-@export var scattered_items: Dictionary = {}
-## Seconds before a scattered item grows back after it's taken.
-@export var scatter_respawn_seconds: float = 30.0
+## What lies around every district: a list of "N of this item, here, grows back after S
+## seconds" lines (scripts/items/loot_table.gd). Double-click it to edit the lines.
+@export var loot_table: LootTable = preload("res://loot/city.tres")
 ## More players = loot grows back faster, so there's enough to go round: every player beyond
 ## the first makes it this much faster (0.15 = 15%; 8 players = about twice as fast).
 @export var regrow_faster_per_player: float = 0.15
@@ -121,15 +115,38 @@ func _on_city_generated(city_seed: int) -> void:
 	_dropped_by.clear()
 	_next_id = FIRST_DROPPED_ID
 
-	for item_id in fixed_items:
-		add_spawn_point(item_id, fixed_items[item_id], 0.0)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(city_seed * 31 + SCATTER_SEED_SALT)
-	for item_id in scattered_items:
-		for i in int(scattered_items[item_id]):
-			add_spawn_point(item_id, random_sidewalk_spot(rng), scatter_respawn_seconds)
-	# Anything else that places items (the fish heist) does it now, in a fixed order.
+	rng.seed = hash(city_seed * 31 + LOOT_SEED_SALT)
+	if loot_table != null:
+		for line in loot_table.spawns:
+			if line != null:
+				_place_loot_line(line, rng)
+	# Anything else that places things per city (the heist's manholes and payphones) goes now,
+	# in a fixed order.
 	get_tree().call_group("item_placers", "place_items", self, city_seed)
+
+
+## One line of the loot table: "count" of an item, where the line says (loot_spawn.gd).
+func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
+	if not catalog.has(line.item_id):
+		push_warning("[Items] Loot table: no item card called '%s' in res://items/" % line.item_id)
+		return
+	var door := city.meow_mart_position
+	for i in line.count:
+		var spot := Vector3.ZERO
+		match line.where:
+			LootSpawn.Where.OUTSIDE_MEOW_MART:
+				# A row along the sidewalk outside the door, 1.3 m apart, centred on it.
+				spot = door + Vector3((i - (line.count - 1) / 2.0) * 1.3, 0, -0.5)
+			LootSpawn.Where.FIXED_SPOT:
+				spot = line.spot + Vector3(i * 0.8, 0, 0)
+			_:  # SIDEWALK
+				spot = random_sidewalk_spot(rng)
+				for attempt in 20:  # far enough from Meow-Mart? (a few tries, then take what we got)
+					if spot.distance_to(door) >= line.min_distance_from_meow_mart:
+						break
+					spot = random_sidewalk_spot(rng)
+		add_spawn_point(line.item_id, spot, line.respawn_seconds)
 
 
 ## Put an item on the street. respawn_seconds > 0 = it grows back that long after it's taken.

@@ -252,7 +252,10 @@ Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); ac
 Shops: `Shopkeeper` (`scripts/npcs/shopkeeper.gd`, extends Npc) — choice action `shop` opens BUY buttons for
 its `stock`; prices = `ItemData.price` (0 = not for sale); host `ItemManager.request_buy` -> `Wallet.spend`.
 Comrade Whiskers (`scenes/npcs/comrade_whiskers.tscn`) runs THE BLACK MARKITTEN on the hub's west wall
-(decor in `hub._build_shop`). The city places NO gear (`fixed_items`/`scattered_items` empty): only fish.
+(decor in `hub._build_shop`). The city places NO gear: only loot.
+LOOT TABLE: `ItemManager.loot_table` = `res://loot/city.tres` (`LootTable` of `LootSpawn` lines: item_id, count, where
+SIDEWALK/OUTSIDE_MEOW_MART/FIXED_SPOT, min_distance_from_meow_mart, respawn_seconds), placed first in `_on_city_generated`
+(own rng, `LOOT_SEED_SALT`); then `item_placers` (the heist: manholes + payphones). Never hard-code loot spots in code.
 Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).
 
 ## Quest framework
