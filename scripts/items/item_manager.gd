@@ -383,7 +383,7 @@ func request_pickup(player_id: int, world_id: int) -> void:
 
 ## A player clicked "BUY" at a shop (scripts/npcs/shopkeeper.gd). Runs on the host only,
 ## which checks the price on the item card (never trusts the buyer), takes the cash
-## (FishHeist.spend) and puts the item in their paws/backpack, like picking it up.
+## (Wallet.spend) and puts the item in their paws/backpack, like picking it up.
 ## The buyer gets a "_buy_result" message back either way.
 @rpc("any_peer", "call_local", "reliable")
 func request_buy(player_id: int, item_id: String) -> void:
@@ -397,7 +397,7 @@ func request_buy(player_id: int, item_id: String) -> void:
 		return  # the shop is down in the sewers: no buying from up top
 	if not _can_take(player_id, data):
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No room for that, comrade.")
-	elif not FishHeist.instance.spend(player_id, data.price):
+	elif not Wallet.instance.spend(player_id, data.price):
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
 	else:
 		_put_in_inventory(player_id, item_id, cat.global_position)

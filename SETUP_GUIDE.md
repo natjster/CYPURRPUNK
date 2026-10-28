@@ -34,7 +34,8 @@ Meow-City/
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
 │   ├── city_generator.gd      <- builds the whole city from one number
-│   ├── fish_heist.gd          <- fish spots, manholes, payphones, the DEEP CLEAN, cash, the heist HUD
+│   ├── fish_heist.gd          <- fish spots, manholes, payphones, the DEEP CLEAN, the exit arrow
+│   ├── wallet.gd              <- Wallet: every player's cash + the sewer scoreboard (§16)
 │   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
 │   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
 │   ├── quests/                <- the quest system: quest_data.gd, quest_manager.gd (§8)
@@ -1786,12 +1787,12 @@ once there's a wishlist page.
 
 The game already has "add a card, no code" systems for items (§9), NPCs and quests (§8), cat
 accessories (§11) and sounds (§12). This section covers the frameworks for the bigger pieces:
-new game systems, new enemies, new things you can shoot, and new places to build.
+new game systems, money, new enemies, new things you can shoot, and new places to build.
 
 ### Game systems (`scripts/game_systems.gd`, class **GameSystems**)
 A **game system** is a node under **Main** that the host runs and that keeps something for every
 player or for the whole game. Today these are: **GetawayCar** (who drives), **Items**, **Quests**,
-**Heist** (cash, the exit), **Health**, **Heat** and **Roombas** (the patrol).
+**Heist** (the exit), **Wallet** (cash), **Health**, **Heat** and **Roombas** (the patrol).
 
 Each one joins the group `game_systems` and answers any of three calls. game.gd just calls
 "everyone in the group", so it never needs to know which systems exist:
@@ -1810,6 +1811,22 @@ Each one joins the group `game_systems` and answers any of three calls. game.gd 
 
 The calls go top to bottom in the scene tree order of `main.tscn`. **Items** must stay above the
 systems that read items (it sends the items a late joiner needs first).
+
+### Money (`scripts/wallet.gd`, class **Wallet**, the **Wallet** node)
+Every player's cash lives in one place. The host is the only one who changes it; everyone has a
+copy (for the shop page and the sewer scoreboard). Anything that pays or charges calls one line,
+**on the host**:
+
+| Line of code | What it does |
+|---|---|
+| `Wallet.instance.earn(player_id, 120, "sold scrap")` | give cash (the text is for the console log) |
+| `Wallet.instance.spend(player_id, 50)` | take cash; returns `false` (and takes nothing) if they can't afford it |
+| `Wallet.instance.cash_of(player_id)` | how much they have (works on every computer) |
+
+The exit pays your loot this way, the Black Markitten charges this way, and your save file
+(`player_profile.gd`) saves whatever the wallet says. A new way to earn or pay (selling scrap,
+feeding the MAINFRAME) needs nothing else. Want to react when cash changes? Connect
+`Wallet.instance.cash_changed` (it fires on every computer).
 
 ### Getting shot (`scripts/hit.gd`, class **Hit**)
 When a gun fires, it finds what the bolt hit and hands it a **Hit**: who shot, which gun, the

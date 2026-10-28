@@ -65,7 +65,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - GAME SYSTEMS (`scripts/game_systems.gd`, static `GameSystems`): host-run nodes join group `GameSystems.GROUP`
   and implement any of `start_district()` (new game / new district), `send_state_to(peer)` (late joiner),
   `player_left(player_id, last_position)`; game.gd calls `GameSystems.call_all(tree, method, args)` in main.tscn tree
-  order (Items above the rest). Members: GetawayCar (`park()`), Items, Quests, Heist, Health, Heat, Roombas. Never
+  order (Items above the rest). Members: GetawayCar (`park()`), Items, Quests, Heist, Wallet, Health, Heat, Roombas. Never
   add per-system calls to game.gd. SETUP_GUIDE §16 = the frameworks.
 - PLAYER IDs (`scripts/player_id.gd`, static `PlayerId`): a player id = network peer + slot*2^32 (slot 0..3,
   max 4 per PC, 8 total = `Net.MAX_PLAYERS`); slot 0's id == the peer id. Every per-player dict (cash, HP,
@@ -159,6 +159,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   boss = same floating bar, `boss_size` x bigger, out to `boss_distance`); damage numbers = `Hud.damage_number(pos, amount, crit, seat)` (`Frame/Damage`).
   Weapon rolls `damage`/`crit_chance` on the shooter and sends it in `roomba.take_hit(shooter_id, amount)`;
   Roomba `health` is synced (synchronizer, on change).
+- CASH = `scripts/wallet.gd` (`Wallet.instance`, `Wallet` node): host `earn(id, n, why)` / `spend(id, n) -> bool` /
+  `set_cash`; anyone `cash_of(id)`, signal `cash_changed`; draws the sewer `Scoreboard`. Never keep cash elsewhere.
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
   Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (lockers on the east wall,
   `hub._build_stash`); the inventory screen (`InventoryScreen`) swaps the loot bag for the stash there.
@@ -245,7 +247,7 @@ message, action, go_to). Built-in actions in `Npc._run_action`; custom ones via 
 `scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk[=NodeName] --choose=N,M`.
 Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); action `quest:<id>` starts one.
 Shops: `Shopkeeper` (`scripts/npcs/shopkeeper.gd`, extends Npc) — choice action `shop` opens BUY buttons for
-its `stock`; prices = `ItemData.price` (0 = not for sale); host `ItemManager.request_buy` -> `FishHeist.spend`.
+its `stock`; prices = `ItemData.price` (0 = not for sale); host `ItemManager.request_buy` -> `Wallet.spend`.
 Comrade Whiskers (`scenes/npcs/comrade_whiskers.tscn`) runs THE BLACK MARKITTEN on the hub's west wall
 (decor in `hub._build_shop`). The city places NO gear (`fixed_items`/`scattered_items` empty): only fish.
 Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).

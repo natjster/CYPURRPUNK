@@ -34,7 +34,7 @@ func _on_action(action: String, cat: CatPlayer) -> void:
 
 ## Show the shop page: what he says + a BUY button per item in stock + BACK.
 func open_shop(cat: CatPlayer) -> void:
-	var my_cash: int = FishHeist.instance.cash.get(cat.player_id, 0)
+	var my_cash: int = Wallet.instance.cash_of(cat.player_id)
 	var line: String = shop_lines[randi() % shop_lines.size()] if not shop_lines.is_empty() else "Take your pick."
 	if line.contains("%d"):
 		line = line % my_cash

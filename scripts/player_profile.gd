@@ -116,7 +116,7 @@ func _request_restore(player_id: int, cash: int, stash: Array) -> void:
 		if item_id is String and items.catalog.has(item_id) \
 				and (items.catalog[item_id] as ItemData).kind != ItemData.Kind.LOOT and clean.size() < items.stash_size:
 			clean.append(item_id)
-	FishHeist.instance._set_cash.rpc(player_id, clampi(cash, 0, MAX_CASH))
+	Wallet.instance.set_cash(player_id, clampi(cash, 0, MAX_CASH))
 	items.set_stash(player_id, clean)
 	print("[Profile] Player %d came back with $%d and stash %s" % [player_id, clampi(cash, 0, MAX_CASH), clean])
 	_restore_done.rpc_id(PlayerId.peer_of(player_id), player_id)
@@ -150,7 +150,7 @@ func _current_key(player_id: int) -> String:
 
 
 func _cash_of(player_id: int) -> int:
-	return FishHeist.instance.cash.get(player_id, 0)
+	return Wallet.instance.cash_of(player_id)
 
 
 func _save(player_id: int, path: String) -> void:

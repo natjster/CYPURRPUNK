@@ -426,7 +426,7 @@ func _on_peer_disconnected(peer_id: int) -> void:
 ## Host only: a player is gone (their computer left, or a split-screen player dropped out).
 func _remove_player(player_id: int) -> void:
 	var cat := cat_for(player_id)
-	if cat == null and not $Heist.cash.has(player_id):
+	if cat == null and not Wallet.instance.knows(player_id):
 		return  # never played (e.g. an empty split-screen slot)
 	print("[Network] Player %d left" % player_id)
 	# Every game system forgets them (the car empties, their gear drops where they stood...).

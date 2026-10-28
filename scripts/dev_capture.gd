@@ -196,10 +196,10 @@ func _ready() -> void:
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
 		if args.has("cash") and multiplayer.is_server():
-			FishHeist.instance._set_cash.rpc(player.player_id, int(args["cash"]))
+			Wallet.instance.set_cash(player.player_id, int(args["cash"]))
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
-				FishHeist.instance._set_cash.rpc(peer_id, int(args["cash"])))
+				Wallet.instance.set_cash(peer_id, int(args["cash"])))
 		if args.has("heat") and multiplayer.is_server():
 			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))
@@ -584,7 +584,7 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
-		print("DevCapture heist: exit=%s open=%s revealed=%s sealed=%s cash=%s" % [heist.exit_position, heist.exit_is_open(), heist.exit_revealed, heist.sealed, heist.cash])
+		print("DevCapture heist: exit=%s open=%s revealed=%s sealed=%s cash=%s" % [heist.exit_position, heist.exit_is_open(), heist.exit_revealed, heist.sealed, Wallet.instance.cash])
 	if HeatMeter.instance != null:
 		var regulars := 0
 		var bosses := 0

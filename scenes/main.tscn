@@ -26,6 +26,7 @@
 [ext_resource type="Script" path="res://scripts/ui/cat_creator.gd" id="26_creator"]
 [ext_resource type="Script" path="res://scripts/ui/ps1_overlay.gd" id="27_overlay"]
 [ext_resource type="Script" path="res://scripts/heat_meter.gd" id="28_heat"]
+[ext_resource type="Script" path="res://scripts/wallet.gd" id="29_wallet"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -139,6 +140,9 @@ script = ExtResource("21_quests")
 
 [node name="Heist" type="Node3D" parent="."]
 script = ExtResource("10_heist")
+
+[node name="Wallet" type="Node" parent="."]
+script = ExtResource("29_wallet")
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("24_health")

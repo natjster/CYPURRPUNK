@@ -19,7 +19,7 @@ extends CanvasLayer
 ##       ├── Top          <- stays up while you talk / shop: Health (your health bar, top-left,
 ##       │                   scripts/ui/hud_health_bar.gd), Heat (the red/blue heat bar, top-right,
 ##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
-##       │                   (under Heat, everyone's cash: only shown in the sewers, fish_heist.gd)
+##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse

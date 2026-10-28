@@ -20,7 +20,8 @@ extends Node3D
 ##   - At 3/4 heat (exit_opens_at_heat) the EXIT manhole opens, somewhere random, and every
 ##     PAYPHONE in the district rings. Payphones (scripts/npcs/payphone.gd) are scattered too:
 ##     call Don on one and he tells you where the exit is; the HUD arrow switches on for the crew.
-##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash, quests
+##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash
+##     (the Wallet, scripts/wallet.gd), quests
 ##     done at that moment pay their bonus, and you climb down to the hub. You can go up again
 ##     (same district, same heat) as many times as you like - until it maxes out.
 ##   - (The HUD heat bar shows how close you are.) At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
@@ -79,7 +80,7 @@ extends Node3D
 ## knocked-out cats are back in the sewers first.
 @export var new_district_delay: float = 6.0
 
-## The one heist node, so the shop can reach everyone's cash (FishHeist.instance).
+## The one heist node (FishHeist.instance).
 static var instance: FishHeist
 
 ## Mixed into the city seed so heist placement has its own random numbers.
@@ -98,8 +99,6 @@ var exit_position: Vector3
 var exit_revealed: bool = false
 ## True from max heat until the new district is built: the hatch is shut, nobody gets out.
 var sealed: bool = false
-## Player ID -> cash. Everyone keeps a copy; only the host changes it (via RPC).
-var cash := {}
 
 var _built: Array[Node] = []  # manholes and payphones, so a new district can clear them
 var _entry: Manhole
@@ -292,7 +291,8 @@ func _physics_process(delta: float) -> void:
 		if their_car != null:
 			their_car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
 			their_car.park()  # ...and it waits at its parking spot for the next trip up
-		_extracted.rpc(player_id, earned, loot.size(), quest_bonus)
+		Wallet.instance.earn(player_id, earned + quest_bonus, "extracted %d loot" % loot.size())
+		_extracted.rpc(player_id, earned, quest_bonus)
 
 
 ## Host, while sealed: when time's up, whoever is still up top goes down (loot and all), then a
@@ -340,9 +340,7 @@ func _set_state(is_sealed: bool, revealed: bool) -> void:
 
 ## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now.
 @rpc("authority", "call_local", "reliable")
-func _extracted(player_id: int, earned: int, count: int, quest_bonus: int = 0) -> void:
-	cash[player_id] = cash.get(player_id, 0) + earned + quest_bonus
-	print("[Heist] Player %d extracted with %d loot for $%d + quest bonus $%d (total $%d)" % [player_id, count, earned, quest_bonus, cash[player_id]])
+func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
 	var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
@@ -356,44 +354,13 @@ func _extracted(player_id: int, earned: int, count: int, quest_bonus: int = 0) -
 		UndergroundHub.instance.return_cat(cat)  # down the drain we go
 
 
-## Host only: take "amount" from a player's cash (the sewer shop calls this).
-## Returns false (and takes nothing) if they can't afford it.
-func spend(player_id: int, amount: int) -> bool:
-	if cash.get(player_id, 0) < amount:
-		return false
-	_set_cash.rpc(player_id, cash.get(player_id, 0) - amount)
-	return true
-
-
-## Host -> everyone: this player's cash is now "amount".
-@rpc("authority", "call_local", "reliable")
-func _set_cash(player_id: int, amount: int) -> void:
-	cash[player_id] = amount
-
-
-## Host -> a computer that just joined (network ID "peer"): everyone's cash, and whether the
-## exit is found / the hatch sealed.
+## Host -> a computer that just joined (network ID "peer"): whether the exit is found / the
+## hatch sealed.
 func send_state_to(peer: int) -> void:
-	_receive_state.rpc_id(peer, cash)
 	_set_state.rpc_id(peer, sealed, exit_revealed)
 
 
-@rpc("authority", "call_remote", "reliable")
-func _receive_state(cash_now: Dictionary) -> void:
-	cash = cash_now
-
-
-## Host: a player quit. Their cash goes with them.
-func player_left(player_id: int, _last_position: Vector3) -> void:
-	_forget_player.rpc(player_id)
-
-
-@rpc("authority", "call_local", "reliable")
-func _forget_player(player_id: int) -> void:
-	cash.erase(player_id)
-
-
-# --- HUD (the arrow to the exit, and everyone's cash in the sewers: scenes/ui/hud.tscn) ---
+# --- HUD (the arrow to the exit: scenes/ui/hud.tscn. Everyone's cash is the Wallet's.) ---
 
 ## Every player on this computer gets their own lines on their own HUD (split screen).
 func _update_hud() -> void:
@@ -417,21 +384,6 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		Hud.show_element("DropOff", show_arrow, seat)
 		if show_arrow:
 			Hud.set_text("DropOff", _direction_text(where, GameScreen.instance.camera_for_seat(seat)), seat)
-
-	# Everyone's cash, richest first (top-right). Only shown down in the sewers: up in the city
-	# the HUD stays clean.
-	Hud.show_element("Scoreboard", in_sewers, seat)
-	if not in_sewers:
-		return
-	var rows: Array = []
-	for node in players.get_children():
-		var cat := node as CatPlayer
-		rows.append([cash.get(cat.player_id, 0), cat.get_node("NameTag").text if cat.player_id != me else "YOU"])
-	rows.sort_custom(func(a, b): return a[0] > b[0])
-	var lines := PackedStringArray()
-	for row in rows:
-		lines.append("%s $%d" % [row[1], row[0]])
-	Hud.set_text("Scoreboard", "\n".join(lines), seat)
 
 
 ## "EXIT > 120m": distance and rough direction to the exit manhole from where the camera looks.
