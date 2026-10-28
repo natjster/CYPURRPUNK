@@ -187,10 +187,9 @@ func _spawn_one(swarm: bool = false) -> void:
 ## DEEP CLEAN: a sidewalk spot near (but not on top of) a random cat up in the city.
 func _swarm_spot() -> Vector3:
 	var targets: Array[Vector3] = []
-	for cat in Game.instance.players.get_children():
-		var where := (cat as Node3D).global_position
-		if not UndergroundHub.is_in_hub(where):
-			targets.append(where)
+	for player_id in Game.instance.player_ids():
+		if Game.instance.is_up_top(player_id):
+			targets.append(Game.instance.player_position(player_id))
 	if targets.is_empty():
 		return _spawn_spot()
 	var target := targets[_rng.randi_range(0, targets.size() - 1)]

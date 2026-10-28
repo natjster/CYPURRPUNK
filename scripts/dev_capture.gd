@@ -776,7 +776,6 @@ func _film_camera(player: CatPlayer, args: Dictionary) -> void:
 	var delay := int(args.get("cam_delay", "0"))
 	var ease_on: bool = args.get("cam_ease", "true") != "false"
 	var i := -delay
-	var car := Game.instance.get_node("GetawayCar") as GetawayCar
 	var anchor := player.global_position  # what --cam_follow follows
 	while is_instance_valid(camera):
 		var t := clampf(float(i) / frames, 0.0, 1.0)
@@ -784,7 +783,7 @@ func _film_camera(player: CatPlayer, args: Dictionary) -> void:
 			t = smoothstep(0.0, 1.0, t)
 		# Follow the cat, or the car while the cat drives it. A sudden jump of 30 m+ (extracted
 		# down to the hub, say) is ignored, so the camera stays where the action was.
-		var followed := car.global_position if car.driver_id == player.player_id else player.global_position
+		var followed := Game.instance.player_position(player.player_id)
 		if followed.distance_to(anchor) < 30.0:
 			anchor = followed
 		var head := anchor + Vector3(0, 0.6, 0)  # roughly the cat's head

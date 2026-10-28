@@ -272,15 +272,14 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var items := ItemManager.instance
-	for node in players.get_children():
-		var player_id := (node as CatPlayer).player_id
-		var driving := car.driver_id == player_id
-		var where: Vector3 = car.global_position if driving else (node as Node3D).global_position
-		if UndergroundHub.is_in_hub(where) or _clock < _extract_wait.get(player_id, 0.0):
+	for player_id in Game.instance.player_ids():
+		var their_car := Game.instance.car_of(player_id)  # null = on foot
+		var where := Game.instance.player_position(player_id)
+		if not Game.instance.is_up_top(player_id) or _clock < _extract_wait.get(player_id, 0.0):
 			continue
 		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: no flopping into the hole to save your stuff
-		if Motion.flat_distance(where, exit_position) >= exit_radius + (1.5 if driving else 0.0):
+		if Motion.flat_distance(where, exit_position) >= exit_radius + (1.5 if their_car != null else 0.0):
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
 		_extract_wait[player_id] = _clock + 3.0
@@ -290,9 +289,9 @@ func _physics_process(delta: float) -> void:
 		var earned := 0
 		for item_id in loot:
 			earned += (items.catalog[item_id] as ItemData).cash_value
-		if driving:
-			car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
-			car.park()  # ...and it waits at its parking spot for the next trip up
+		if their_car != null:
+			their_car.set_driver.rpc(0)  # out of the car first (the host owns the car again)...
+			their_car.park()  # ...and it waits at its parking spot for the next trip up
 		_extracted.rpc(player_id, earned, loot.size(), quest_bonus)
 
 
@@ -300,31 +299,20 @@ func _physics_process(delta: float) -> void:
 ## new district is built.
 func _run_deep_clean() -> void:
 	# Nobody up top (everyone extracted / knocked out)? No point waiting: end it now.
-	if _deep_clean_ends_at >= 0.0 and not _anyone_up_top():
+	if _deep_clean_ends_at >= 0.0 and Game.instance.players_up_top() == 0:
 		_deep_clean_ends_at = _clock
 	if _deep_clean_ends_at >= 0.0 and _clock >= _deep_clean_ends_at:
 		_deep_clean_ends_at = -1.0
 		if car.driver_id != 0:
 			car.set_driver.rpc(0)  # nobody escapes in the car either
-		for node in players.get_children():
-			var cat := node as CatPlayer
-			if not UndergroundHub.is_in_hub(cat.global_position):
-				CatHealth.instance.damage(cat.player_id, 99999, "THE DEEP CLEAN")
+		for player_id in Game.instance.player_ids():
+			if Game.instance.is_up_top(player_id):
+				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN")
 		_new_district_at = _clock + new_district_delay
 	if _new_district_at >= 0.0 and _clock >= _new_district_at:
 		_new_district_at = -1.0
 		RoombaPatrol.instance.deep_clean_extra = 0
 		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
-
-
-## Host: is any cat (or the car's driver) up in the city right now?
-func _anyone_up_top() -> bool:
-	for node in players.get_children():
-		var cat := node as CatPlayer
-		var where: Vector3 = car.global_position if car.driver_id == cat.player_id else cat.global_position
-		if not UndergroundHub.is_in_hub(where):
-			return true
-	return false
 
 
 ## A payphone call (any computer -> host): switch the exit arrow on for the whole crew.
@@ -418,8 +406,8 @@ func _update_hud() -> void:
 func _update_hud_for(my_cat: CatPlayer) -> void:
 	var me := my_cat.player_id
 	var seat := my_cat.slot
-	var where := car.global_position if car.driver_id == me else my_cat.global_position
-	var in_sewers := UndergroundHub.is_in_hub(where)
+	var where := Game.instance.player_position(me)
+	var in_sewers := not Game.instance.is_up_top(me)
 	# The arrow to the exit only shows once Don has told the crew where it is (a payphone call).
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)

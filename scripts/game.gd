@@ -240,6 +240,47 @@ func player_count() -> int:
 	return players.get_child_count()
 
 
+## The car this player is driving right now, or null (they're on foot).
+func car_of(player_id: int) -> GetawayCar:
+	for node in get_tree().get_nodes_in_group("cars"):
+		if (node as GetawayCar).driver_id == player_id:
+			return node
+	return null
+
+
+## Where a player really is: their car while they drive it, otherwise their cat.
+## (Vector3.ZERO if they have no cat.) Use this instead of cat.global_position for anything
+## that asks "where is this PLAYER?" - the exit check, the heat, the HUD arrow...
+func player_position(player_id: int) -> Vector3:
+	var car_now := car_of(player_id)
+	if car_now != null:
+		return car_now.global_position
+	var cat := cat_for(player_id)
+	return cat.global_position if cat != null else Vector3.ZERO
+
+
+## Is this player up in the city (not down in the safe sewers)?
+func is_up_top(player_id: int) -> bool:
+	return cat_for(player_id) != null and not UndergroundHub.is_in_hub(player_position(player_id))
+
+
+## Every player ID in the game right now (all computers), in join order.
+func player_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for node in players.get_children():
+		ids.append((node as CatPlayer).player_id)
+	return ids
+
+
+## How many players are up in the city right now (0 = everyone is home in the sewers).
+func players_up_top() -> int:
+	var count := 0
+	for player_id in player_ids():
+		if is_up_top(player_id):
+			count += 1
+	return count
+
+
 ## Every player on this computer who has a screen right now (couch co-op): their cats.
 func playing_cats() -> Array[CatPlayer]:
 	var list: Array[CatPlayer] = []

@@ -63,7 +63,6 @@ const MAX_REACH_HEIGHT: float = 3.0
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
-@onready var car: GetawayCar = $"../GetawayCar"
 
 ## Item id -> ItemData, for every card in res://items/.
 var catalog := {}
@@ -247,7 +246,7 @@ func _host_tick() -> void:
 	for node in players.get_children():
 		var cat := node as CatPlayer
 		var player_id := cat.player_id
-		if car.driver_id == player_id:
+		if Game.instance.car_of(player_id) != null:
 			continue  # no grabbing things from inside the car
 		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: it's lying on the loot it just spilled, don't suck it back up
@@ -376,7 +375,7 @@ func request_pickup(player_id: int, world_id: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or not world.has(world_id):
 		return
 	var cat := _cat(player_id)
-	if cat == null or car.driver_id == player_id or CatHealth.instance.is_down(player_id):
+	if cat == null or Game.instance.car_of(player_id) != null or CatHealth.instance.is_down(player_id):
 		return
 	if _reach_distance(cat.global_position, world[world_id].pos) <= interact_radius + 0.5 and _can_take(player_id, catalog[world[world_id].item]):
 		_give(player_id, world_id)
@@ -488,7 +487,7 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var cat := _cat(player_id)
-	if cat == null or car.driver_id == player_id:
+	if cat == null or Game.instance.car_of(player_id) != null:
 		return
 	if ground.distance_to(cat.global_position) > 3.0:
 		ground = cat.global_position  # no dropping things across the map

@@ -121,13 +121,7 @@ func start_district() -> void:
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or Game.instance == null:
 		return
-	var cats_up := 0
-	for cat in Game.instance.players.get_children():
-		var where := (cat as Node3D).global_position
-		if Game.instance.car.driver_id == (cat as CatPlayer).player_id:
-			where = Game.instance.car.global_position
-		if not UndergroundHub.is_in_hub(where):
-			cats_up += 1
+	var cats_up := Game.instance.players_up_top()
 	if cats_up > 0:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
 		heat = minf(heat + heat_per_second * crowd * delta, MAX_HEAT)
