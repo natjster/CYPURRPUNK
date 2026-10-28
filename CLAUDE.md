@@ -115,7 +115,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `hub.deploy(cat)`. Host detects cats/driver at the beam in `fish_heist.gd` -> `_extracted` RPC ->
   owner calls `hub.return_cat`. Owners move their own cat with `CatPlayer.teleport_to`. The hub swaps
   the local mood (moon/rain off, green fog) when the camera is below the line.
-- Enemy: VAC-COP `Roomba` (`scenes/roomba.tscn`, `scripts/roomba.gd`), host-simulated CharacterBody on
+- ENEMY FRAMEWORK `scripts/enemy.gd` (`Enemy`, CharacterBody3D): health (synced), `receive_hit` -> host `take_hit`
+  (heat, flash) -> `_on_hurt(shooter)` virtual / `explode()` (drops `stomach` + `drop_on_destroy`, heat, `destroyed`
+  signal), `run_over_by_car(delta)`, `health_bar_info`, non-host glide to `sync_position`/`sync_yaw` (rotates `Model`).
+  Subclasses call `super()` in `_ready`/`_process`. HIT FRAMEWORK `scripts/hit.gd` (`Hit`: shooter, weapon, damage,
+  crit, direction, position; `Hit.target_of(collider)` walks up to a `receive_hit` node): weapon.gd never type-checks
+  targets; cat (shove), car (push), Enemy implement `receive_hit(hit) -> bool` (true = damage number).
+  `Motion` (`scripts/motion.gd`): `flat`, `flat_distance`, `glide_weight`, `glide`.
+- Enemy: VAC-COP `Roomba` (`scenes/roomba.tscn`, `scripts/roomba.gd`, extends Enemy), host-simulated, on
   collision layer 2 (mask 1), others glide to `sync_position`/`sync_yaw`/`state`. `RoombaPatrol`
   (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
   Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;

@@ -1,6 +1,9 @@
 class_name Roomba
-extends CharacterBody3D
+extends Enemy
 ## VAC-COP — a police Roomba that patrols the city and hunts cats on foot.
+## Built on the enemy framework (scripts/enemy.gd): health, getting shot, getting run over,
+## exploding, health bar and network gliding all come from there. This script is only the
+## VAC-COP's own behaviour.
 ## Attach to the root of scenes/roomba.tscn. Expected node tree:
 ##   Roomba (CharacterBody3D)       <- this script
 ##   ├── CollisionShape3D
@@ -19,10 +22,9 @@ extends CharacterBody3D
 ##   BONK    — touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
 ##             takes bonk_damage HP. A cat at 0 HP is knocked out and drops everything
 ##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
-##   Shoot it (each bolt takes the gun's Damage off its max_health) or ram it with the car
-##   (faster than car_smash_speed) and it explodes, spitting out everything it vacuumed.
-##   Its HEALTH BAR floats over it only once a player has SHOT it (scripts/ui/hud_health_bars.gd,
-##   via health_bar_info() below), and the shooter sees damage numbers (weapon.gd).
+##   Shoot it (each bolt takes the gun's Damage off its Max Health) or ram it with the car
+##   (faster than Car Smash Speed) and it explodes, spitting out everything it vacuumed.
+##   Shooting it also makes it chase the shooter.
 ## Cats in the car and cats down in the hub are ignored.
 ## The HEAT (scripts/heat_meter.gd) makes it chase faster and spot cats from further away, and a
 ## cat carrying NOISY loot (the golden koi) is spotted from further too.
@@ -35,8 +37,8 @@ extends CharacterBody3D
 ## is a crash, like hitting a wall: the car stops dead and the boss isn't hurt.
 ##
 ## MULTIPLAYER: the HOST runs every Roomba's brain (this script's _physics_process). Everyone
-## else's copy just glides to the synced position, like other players' cats. Roombas are
-## created by the host (roomba_patrol.gd) and copied to everyone by a MultiplayerSpawner.
+## else's copy just glides to the synced position (enemy.gd). Roombas are created by the host
+## (roomba_patrol.gd) and copied to everyone by a MultiplayerSpawner.
 ##
 ## PERFORMANCE (there can be 70+ of them): a Roomba far from every cat thinks only every few
 ## frames (far_think_every), a chasing one re-plans its route a few times a second, its model
@@ -69,29 +71,8 @@ enum State { PATROL, CHASE, STUNNED }
 ## HP a bonk takes off the cat (cats have 100, see the Health node; 34 = three bonks). At 0 the
 ## cat is knocked out and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
 @export var bonk_damage: int = 34
-
-@export_group("Toughness")
-## Health. Each bolt takes the gun's Damage (pistol ~40, tommy gun ~25: see the gun scenes).
-@export var max_health: int = 100
-## The name over its health bar.
-@export var display_name: String = "VAC-COP"
-## How high over its middle the health bar floats (metres; the boss's is higher).
-@export var health_bar_height: float = 0.55
-## The getaway car smashes it if driving faster than this (m/s).
-@export var car_smash_speed: float = 7.0
-
-@export_group("Boss")
-## The MEGA VAC-COP (scenes/roomba_boss.tscn) ticks this. Destroying a boss COOLS the heat
-## instead of raising it, and the patrol doesn't send a replacement.
-@export var is_boss: bool = false
-## Item dropped on the street when it's destroyed, on top of whatever it vacuumed
-## (e.g. "golden_koi" for the boss). "" = nothing extra.
-@export var drop_on_destroy: String = ""
 ## Does the HEAT level (scripts/heat_meter.gd) make it faster and sharper-eyed?
 @export var heat_scaling: bool = true
-
-@export_group("Network Smoothing")
-@export var network_smoothing: float = 12.0
 
 @export_group("Performance")
 ## Further than this (metres) from every cat, a patrolling Roomba only thinks every
@@ -105,25 +86,15 @@ enum State { PATROL, CHASE, STUNNED }
 ## The vacuum hum only plays within this distance (metres) of a player on this computer.
 @export var hum_distance: float = 35.0
 
-## Synced to everyone: where the host says it is, which way it faces, and what it's doing.
-var sync_position: Vector3
-var sync_yaw: float
+## Synced to everyone: what it's doing (the lights and sounds follow it).
 var state: State = State.PATROL
 
-## Health left. The HOST changes it; the MultiplayerSynchronizer copies it to everyone (for the
-## health bars). The loot it has vacuumed is host only (dropped when it explodes).
-var health: int = -1  # -1 = not set yet (a late joiner gets the host's number when it spawns)
-var stomach: Array = []
-
-var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _target: Vector3
 var _chase_id: int = 0
 var _stun_left: float = 0.0
 var _stuck_check_at: Vector3
 var _stuck_time: float = 0.0
-var _last_car_position: Vector3
 var _clock: float = 0.0
-var _flash_time: float = 0.0
 ## Sounds (every computer): the vacuum hum, and what we were doing last frame (to hear the siren
 ## start the moment a chase begins).
 var _hum: AudioStreamPlayer3D
@@ -135,8 +106,6 @@ var _replan_left: float = 0.0
 var _hum_check_left: float = 0.0  # every computer: time until we check if anyone can hear us
 var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city's RNG
 
-@onready var model: Node3D = $Model
-@onready var body_mesh: MeshInstance3D = $Model/Body
 @onready var eye: MeshInstance3D = $Model/Eye
 @onready var siren_red: MeshInstance3D = $Model/SirenRed
 @onready var siren_blue: MeshInstance3D = $Model/SirenBlue
@@ -145,10 +114,7 @@ var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city'
 
 
 func _ready() -> void:
-	if health < 0:
-		health = max_health
-	add_to_group(HudHealthBars.GROUP)  # a floating health bar on everyone's HUD
-	sync_position = global_position
+	super()  # health, health bar, network (enemy.gd)
 	_stuck_check_at = global_position
 	_rng.randomize()
 	_frame = _rng.randi_range(0, 99)  # so far-away Roombas don't all think on the same frame
@@ -161,10 +127,7 @@ func _ready() -> void:
 	siren_light.distance_fade_begin = 25.0
 	siren_light.distance_fade_length = 10.0
 	if is_multiplayer_authority():
-		_last_car_position = Game.instance.car.global_position
 		_pick_patrol_target()
-	else:
-		set_physics_process(false)  # only the host thinks; we just glide (see _process)
 
 
 # --- The host's brain ---
@@ -182,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	if _smashed_by_car(delta):
+	if run_over_by_car(delta):
 		explode()
 		return
 
@@ -200,7 +163,7 @@ func _physics_process(delta: float) -> void:
 				_chase_id = cat.player_id
 				state = State.CHASE
 			else:
-				move = _flat(_target - global_position)
+				move = Motion.flat(_target - global_position)
 				speed = patrol_speed
 				if move.length() < 1.5 or is_on_wall() or _is_stuck(delta):
 					_pick_patrol_target()
@@ -216,10 +179,10 @@ func _physics_process(delta: float) -> void:
 				if _replan_left <= 0.0:
 					_replan_left = 1.0 / replans_per_second
 					_route_point = _chase_point(cat)
-				move = _flat(_route_point - global_position)
+				move = Motion.flat(_route_point - global_position)
 				# Hotter city = faster Roombas (heat_meter.gd).
 				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
-				if _flat(cat.global_position - global_position).length() < bump_range:
+				if Motion.flat_distance(cat.global_position, global_position) < bump_range:
 					_bonk(cat)
 
 	# Drive: ease toward the wanted velocity and turn to face where we're going.
@@ -242,7 +205,7 @@ func _physics_process(delta: float) -> void:
 ## True if no cat is within far_distance (then nothing up close can see us thinking slowly).
 func _far_from_cats() -> bool:
 	for node in Game.instance.players.get_children():
-		if _flat((node as Node3D).global_position - global_position).length() < far_distance:
+		if Motion.flat_distance((node as Node3D).global_position, global_position) < far_distance:
 			return false
 	return true
 
@@ -252,7 +215,7 @@ func _find_cat_to_chase() -> CatPlayer:
 	var best: CatPlayer = null
 	for node in Game.instance.players.get_children():
 		var cat := node as CatPlayer
-		if _can_chase(cat, sight_range) and (best == null or _flat(cat.global_position - global_position).length() < _flat(best.global_position - global_position).length()):
+		if _can_chase(cat, sight_range) and (best == null or Motion.flat_distance(cat.global_position, global_position) < Motion.flat_distance(best.global_position, global_position)):
 			best = cat
 	return best
 
@@ -283,7 +246,7 @@ func _chase_point(cat: CatPlayer) -> Vector3:
 
 	if (on_ns and cat_on_ns and my_x == cat_x) or (on_ew and not cat_on_ns and my_z == cat_z):
 		# Same street as the cat: drive along it to the cat (then straight at it).
-		return goal if _flat(cat_spot - here).length() < 2.0 else cat_spot
+		return goal if Motion.flat_distance(cat_spot, here) < 2.0 else cat_spot
 	if not on_ns and not on_ew:
 		# Off the street (sidewalk, yard): get onto the nearest one first.
 		if absf(here.x - my_x * pitch) < absf(here.z - my_z * pitch):
@@ -317,13 +280,13 @@ func _can_chase(cat: CatPlayer, reach: float) -> bool:
 		reach *= HeatMeter.instance.sight_multiplier()
 	if RoombaPatrol.instance.deep_clean_extra > 0:
 		reach *= RoombaPatrol.instance.swarm_sight_multiplier  # the DEEP CLEAN: they hunt you down
-	return _flat(cat.global_position - global_position).length() < reach
+	return Motion.flat_distance(cat.global_position, global_position) < reach
 
 
 ## Knock the cat flying and vacuum one piece of loot out of its bag.
 func _bonk(cat: CatPlayer) -> void:
 	var player_id := cat.player_id
-	var push := _flat(cat.global_position - global_position).normalized() * bump_push + Vector3.UP * bump_hop
+	var push := Motion.flat(cat.global_position - global_position).normalized() * bump_push + Vector3.UP * bump_hop
 	cat.get_zapped.rpc_id(PlayerId.peer_of(player_id), push)  # the cat's owner moves it
 	Sound.play_everywhere("bonk", cat.global_position)
 	if steals_loot:
@@ -339,21 +302,11 @@ func _bonk(cat: CatPlayer) -> void:
 	velocity.y = 0.0
 
 
-## Host: did the getaway car just run us over? (The host's copy of the car may be frozen
-## and gliding when someone else drives, so measure its speed from how far it moved.)
-func _smashed_by_car(delta: float) -> bool:
-	var car := Game.instance.car
-	var car_speed := car.global_position.distance_to(_last_car_position) / maxf(delta, 0.001)
-	_last_car_position = car.global_position
-	return car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
-		and _flat(car.global_position - global_position).length() < 2.8
-
-
 func _pick_patrol_target() -> void:
 	# A random sidewalk spot not too far away, so it wanders its own neighbourhood.
 	for attempt in 8:
 		var spot := ItemManager.instance.random_sidewalk_spot(_rng)
-		if _flat(spot - global_position).length() < 35.0:
+		if Motion.flat_distance(spot, global_position) < 35.0:
 			_target = spot
 			return
 	_target = global_position + Vector3(_rng.randf_range(-10, 10), 0, _rng.randf_range(-10, 10))
@@ -370,77 +323,18 @@ func _is_stuck(delta: float) -> bool:
 	return stuck
 
 
-# --- Getting hurt ---
-
-## A bolt hit us. Sent to the host by the shooter's gun (weapon.gd), with the shooter's player ID
-## (0 = nobody in particular, e.g. a test) and how much damage the bolt did (the gun rolls it,
-## crits included, so the number the shooter sees is the number taken off).
-@rpc("any_peer", "call_local", "reliable")
-func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
-	if not multiplayer.is_server() or health <= 0:
-		return
-	health -= clampi(amount, 1, 500)  # (clamped: a broken / cheating client can't one-shot the boss)
-	_hit_flash.rpc()
-	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit)  # gunfire makes the city angry
-	if health <= 0:
-		explode()
-		return
-	# Angry now: chase whoever shot us (if they're on foot).
-	var shooter := Game.instance.cat_for(shooter_id) if PlayerId.sender_owns(shooter_id) else null
+## Host (enemy.gd): shot but still alive. Angry now: chase whoever shot us (if they're on foot).
+func _on_hurt(shooter: CatPlayer) -> void:
 	if _can_chase(shooter, lose_range):
 		_chase_id = shooter.player_id
 		state = State.CHASE
 		_replan_left = 0.0
 
 
-## Host: boom. Spit out everything we vacuumed, tell the patrol to send a new one later.
-func explode() -> void:
-	# Shot dead and run over in the same frame? Only blow up once (or two replacements come).
-	if is_queued_for_deletion():
-		return
-	if health > 0:
-		health = 0
-	for i in stomach.size():
-		ItemManager.instance.drop_on_street(stomach[i], global_position + Vector3(cos(i * 2.1), 0, sin(i * 2.1)) * 1.2)
-	stomach.clear()
-	if drop_on_destroy != "":
-		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
-	# Smashing a Roomba makes the city angrier... but smashing the boss cools it right down.
-	var heat := HeatMeter.instance
-	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)
-	Sound.play_everywhere("explode", global_position)
-	print("[Roomba] %s exploded" % name)
-	(get_parent() as RoombaPatrol).roomba_destroyed(self)
-	queue_free()  # the spawner removes it on everyone's screen
-
-
-## For the floating health bar (scripts/ui/hud_health_bars.gd): hidden until a player SHOOTS it
-## (health is synced, so everyone's HUD shows it once anybody has hit it).
-func health_bar_info() -> Dictionary:
-	return {"hp": maxi(health, 0), "max": max_health, "name": display_name, "boss": is_boss,
-		"position": global_position + Vector3.UP * health_bar_height,
-		"show": health < max_health}
-
-
-# --- Messages from the host ---
-
-@rpc("authority", "call_local", "unreliable")
-func _hit_flash() -> void:
-	_flash_time = 0.15
-	Sound.play_at("roomba_hit", global_position)
-
-
-# --- Every computer: gliding (non-host) and the flashing lights ---
+# --- Every computer: the flashing lights and the sounds (the gliding is in enemy.gd) ---
 
 func _process(delta: float) -> void:
-	if not is_multiplayer_authority():
-		var weight := 1.0 - exp(-network_smoothing * delta)
-		if global_position.distance_to(sync_position) > 6.0:
-			global_position = sync_position
-		else:
-			global_position = global_position.lerp(sync_position, weight)
-		model.rotation.y = lerp_angle(model.rotation.y, sync_yaw, weight)
-
+	super(delta)
 	brush.rotate_y(delta * 14.0)
 	var chasing := state == State.CHASE
 	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
@@ -465,10 +359,3 @@ func _process(delta: float) -> void:
 	siren_light.visible = chasing
 	siren_light.light_color = Color(1, 0.1, 0.15) if blink else Color(0.15, 0.3, 1)
 	eye.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1) if chasing else Color(0.2, 0.9, 1))
-
-	_flash_time = maxf(_flash_time - delta, 0.0)
-	body_mesh.set_instance_shader_parameter("instance_tint", Color(3, 0.6, 0.6) if _flash_time > 0.0 else Color.WHITE)
-
-
-func _flat(v: Vector3) -> Vector3:
-	return Vector3(v.x, 0, v.z)

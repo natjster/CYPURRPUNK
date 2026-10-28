@@ -10,8 +10,9 @@ extends HeldItem
 ##   Model/HeatCoil              <- optional MeshInstance3D that glows hotter as you fire
 ##
 ## How a shot works: the owner aims from its camera through the screen centre, finds what
-## it hits, asks that thing's owner to apply the knockback, and sends one small "draw a
-## bolt to here" message so everyone sees the shot.
+## it hits, rolls the damage and hands it a Hit (the hit framework, scripts/hit.gd: the target
+## decides what happens - enemies lose health, cats get shoved, the car gets pushed), and sends
+## one small "draw a bolt to here" message so everyone sees the shot.
 
 @export_group("Firing")
 ## Shots per second.
@@ -32,7 +33,7 @@ extends HeldItem
 @export var overheated_cool_rate: float = 0.35
 
 @export_group("Hits")
-## Health a bolt takes off a VAC-COP (they have 100, the MEGA VAC-COP 600: see roomba.gd).
+## Health a bolt takes off an enemy (a VAC-COP has 100, the MEGA VAC-COP 600: see roomba.tscn).
 ## The shooter sees the number pop off what they hit (scripts/ui/hud_damage_numbers.gd).
 @export var damage: int = 25
 ## Each bolt's damage wobbles by up to this fraction (0.1 = 10% either way), like Cyberpunk.
@@ -134,21 +135,18 @@ func _fire() -> void:
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	var end: Vector3 = hit.position if hit else from + aim * max_range
 
-	if hit:
-		var cat := hit.collider as CatPlayer
-		var car := hit.collider as GetawayCar
-		var roomba := hit.collider as Roomba
-		if roomba != null:
-			# Roll the damage here so the number we show is the number the host takes off.
-			var crit := _rng.randf() < crit_chance
-			var amount := roundi(damage * _rng.randf_range(1.0 - damage_wobble, 1.0 + damage_wobble) * (crit_multiplier if crit else 1.0))
-			roomba.take_hit.rpc_id(1, holder.player_id, amount)  # the host keeps score of Roomba health
-			Hud.damage_number(hit.position, amount, crit, holder.slot)  # pops up straight away on OUR HUD
-		elif cat != null:
-			# The zapped cat's OWN computer moves it, so ask that computer to do the shove.
-			cat.get_zapped.rpc_id(cat.get_multiplayer_authority(), aim * cat_knockback + Vector3.UP * cat_hop)
-		elif car != null:
-			car.take_hit.rpc_id(car.get_multiplayer_authority(), aim * car_impulse, hit.position)
+	var target := Hit.target_of(hit.collider) if hit else null
+	if target != null:
+		# Roll the damage here so the number we show is the number the host takes off.
+		var info := Hit.new()
+		info.shooter = holder
+		info.weapon = self
+		info.crit = _rng.randf() < crit_chance
+		info.damage = roundi(damage * _rng.randf_range(1.0 - damage_wobble, 1.0 + damage_wobble) * (crit_multiplier if info.crit else 1.0))
+		info.direction = aim
+		info.position = hit.position
+		if target.receive_hit(info):
+			Hud.damage_number(hit.position, info.damage, info.crit, holder.slot)  # pops up straight away on OUR HUD
 
 	if heat_per_shot > 0.0:
 		heat = minf(heat + heat_per_shot, 1.0)

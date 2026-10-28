@@ -105,9 +105,10 @@ func start_district() -> void:
 		_spawn_one()
 
 
-## Host: a Roomba blew up. Show the explosion everywhere and queue its replacement
-## (the boss has no replacement). Every boss_every_kills regulars destroyed calls the boss in.
-func roomba_destroyed(roomba: Roomba) -> void:
+## Host: a Roomba blew up (its "destroyed" signal, enemy.gd). Show the explosion everywhere and
+## queue its replacement (the boss has no replacement). Every boss_every_kills regulars
+## destroyed calls the boss in.
+func roomba_destroyed(roomba: Enemy) -> void:
 	_show_explosion.rpc(roomba.global_position)
 	if roomba.is_boss:
 		_announce.rpc("THE MEGA VAC-COP IS DOWN!")
@@ -179,6 +180,7 @@ func _spawn_one(swarm: bool = false) -> void:
 	roomba.name = "Roomba%d" % _next_number  # unique names keep everyone's copies matched up
 	_next_number += 1
 	roomba.position = _swarm_spot() if swarm else _spawn_spot()
+	roomba.destroyed.connect(roomba_destroyed)
 	add_child(roomba, true)
 
 
@@ -208,6 +210,7 @@ func _spawn_boss(why: String) -> void:
 	boss.name = "RoombaBoss%d" % _next_number
 	_next_number += 1
 	boss.position = _spawn_spot(boss_spawn_distance)
+	boss.destroyed.connect(roomba_destroyed)
 	add_child(boss, true)
 	_announce.rpc("MEGA VAC-COP DEPLOYED (%s)" % why)
 	_boss_siren.rpc()  # everyone hears it coming

@@ -1,0 +1,186 @@
+class_name Enemy
+extends CharacterBody3D
+## THE ENEMY FRAMEWORK: everything every enemy shares. The VAC-COP (roomba.gd) is built on it;
+## a new enemy script starts with "extends Enemy" and only writes its own BEHAVIOUR (how it
+## moves and attacks). This script already handles:
+##
+##   - HEALTH: max_health, synced to everyone, a floating health bar once it's been shot
+##     (health_bar_info, scripts/ui/hud_health_bars.gd).
+##   - GETTING SHOT: receive_hit (the hit framework, hit.gd) -> take_hit on the host -> hit
+##     flash + sound + heat; at 0 HP explode().
+##   - GETTING RUN OVER by the getaway car: call run_over_by_car(delta) from your brain.
+##   - EXPLODING: drops everything in "stomach" plus drop_on_destroy, adds heat (a boss cools
+##     it instead), plays the sound, emits "destroyed" (the spawner listens), and is removed.
+##   - NETWORK: the HOST runs the brain (_physics_process). Everyone else's copy glides to
+##     sync_position / sync_yaw (turning the "Model" child node).
+##
+## A new enemy's scene needs (copy scenes/roomba.tscn as a start):
+##   YourEnemy (CharacterBody3D)       <- your script ("extends Enemy")
+##   ├── CollisionShape3D
+##   ├── Model (Node3D)                <- the look; turns to face sync_yaw on other computers
+##   │   └── Body (MeshInstance3D)     <- flashes when shot (change Flash Mesh to pick another)
+##   └── MultiplayerSynchronizer       <- replicate: position (spawn only), sync_position,
+##                                        sync_yaw, health (both "on change")
+## and something on the host must spawn it under a MultiplayerSpawner (see roomba_patrol.gd).
+##
+## Writing your script (all optional, "super" = run the shared part first):
+##   func _ready() -> void:            super() ... your setup
+##   func _physics_process(delta):     the brain (host only); set sync_position / sync_yaw
+##   func _process(delta) -> void:     super(delta) ... your animations (every computer)
+##   func _on_hurt(shooter: CatPlayer): got shot but still alive (e.g. chase the shooter)
+
+## Host only: this enemy just blew up (before it's removed). The spawner listens to this.
+signal destroyed(enemy: Enemy)
+
+@export_group("Toughness")
+## Health. Each bolt takes the gun's Damage (pistol ~40, tommy gun ~25: see the gun scenes).
+@export var max_health: int = 100
+## The name over its health bar.
+@export var display_name: String = "VAC-COP"
+## How high over its middle the health bar floats (metres; the boss's is higher).
+@export var health_bar_height: float = 0.55
+## The getaway car smashes it if driving faster than this (m/s). (999 = can't be run over.)
+@export var car_smash_speed: float = 7.0
+## How far from its middle the car counts as hitting it (metres).
+@export var car_smash_radius: float = 2.8
+
+@export_group("Boss")
+## A boss: destroying it COOLS the heat instead of raising it (and the patrol sends no
+## replacement). Also its health bar is the big gold one.
+@export var is_boss: bool = false
+## Item dropped on the street when it's destroyed, on top of whatever it vacuumed
+## (e.g. "golden_koi" for the boss). "" = nothing extra.
+@export var drop_on_destroy: String = ""
+
+@export_group("Sounds")
+## Sound files in res://sounds/sfx/ (without .wav).
+@export var hit_sound: String = "roomba_hit"
+@export var explode_sound: String = "explode"
+
+@export_group("Look")
+## The mesh that flashes when shot.
+@export var flash_mesh: NodePath = ^"Model/Body"
+
+@export_group("Network Smoothing")
+## Other computers: how tightly our copy follows the host's (higher = tighter, jerkier).
+@export var network_smoothing: float = 12.0
+## Further off than this (metres) = jump instead of glide.
+@export var snap_distance: float = 6.0
+
+## Synced to everyone: where the host says it is and which way its Model faces.
+var sync_position: Vector3
+var sync_yaw: float
+## Health left. The HOST changes it; the MultiplayerSynchronizer copies it to everyone (for the
+## health bars).
+var health: int = -1  # -1 = not set yet (a late joiner gets the host's number when it spawns)
+## Host only: items inside it (the VAC-COP's vacuumed loot), dropped when it explodes.
+var stomach: Array = []
+var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
+
+var _flash_time: float = 0.0
+var _last_car_position: Vector3
+
+@onready var model: Node3D = get_node_or_null("Model")
+@onready var _flash_mesh: MeshInstance3D = get_node_or_null(flash_mesh)
+
+
+func _ready() -> void:
+	if health < 0:
+		health = max_health
+	add_to_group(HudHealthBars.GROUP)  # a floating health bar on everyone's HUD
+	sync_position = global_position
+	if model != null:
+		sync_yaw = model.rotation.y
+	if is_multiplayer_authority():
+		_last_car_position = Game.instance.car.global_position
+	else:
+		set_physics_process(false)  # only the host thinks; we just glide (see _process)
+
+
+## Every computer: glide (non-host copies) and the hit flash.
+func _process(delta: float) -> void:
+	if not is_multiplayer_authority():
+		var weight := Motion.glide_weight(network_smoothing, delta)
+		global_position = Motion.glide(global_position, sync_position, weight, snap_distance)
+		if model != null:
+			model.rotation.y = lerp_angle(model.rotation.y, sync_yaw, weight)
+	_flash_time = maxf(_flash_time - delta, 0.0)
+	if _flash_mesh != null:
+		_flash_mesh.set_instance_shader_parameter("instance_tint", Color(3, 0.6, 0.6) if _flash_time > 0.0 else Color.WHITE)
+
+
+# --- Getting hurt ---
+
+## The hit framework (hit.gd): a bolt hit us. Runs on the SHOOTER's computer, which sends the
+## damage to the host (the host keeps score of enemy health). true = show a damage number.
+func receive_hit(hit: Hit) -> bool:
+	take_hit.rpc_id(1, hit.shooter_id(), hit.damage)
+	return true
+
+
+## Host: take "amount" health off (sent by receive_hit above; the test tool calls it directly).
+## shooter_id = the player who fired (0 = nobody in particular).
+@rpc("any_peer", "call_local", "reliable")
+func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
+	if not multiplayer.is_server() or health <= 0:
+		return
+	health -= clampi(amount, 1, 500)  # (clamped: a broken / cheating client can't one-shot the boss)
+	_hit_flash.rpc()
+	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit)  # gunfire makes the city angry
+	if health <= 0:
+		explode()
+		return
+	_on_hurt(Game.instance.cat_for(shooter_id) if PlayerId.sender_owns(shooter_id) else null)
+
+
+## Host: shot but still alive. Override it to react (the VAC-COP chases whoever shot it).
+## shooter = their cat, or null.
+func _on_hurt(_shooter: CatPlayer) -> void:
+	pass
+
+
+## Host: did the getaway car just run us over? Call it from your brain every physics frame.
+## (The host's copy of the car may be frozen and gliding when someone else drives, so measure
+## its speed from how far it moved.)
+func run_over_by_car(delta: float) -> bool:
+	var car := Game.instance.car
+	var car_speed := car.global_position.distance_to(_last_car_position) / maxf(delta, 0.001)
+	_last_car_position = car.global_position
+	return car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
+		and Motion.flat_distance(car.global_position, global_position) < car_smash_radius
+
+
+## Host: boom. Spit out everything inside, tell the spawner, disappear everywhere.
+func explode() -> void:
+	# Shot dead and run over in the same frame? Only blow up once (or two replacements come).
+	if is_queued_for_deletion():
+		return
+	if health > 0:
+		health = 0
+	for i in stomach.size():
+		ItemManager.instance.drop_on_street(stomach[i], global_position + Vector3(cos(i * 2.1), 0, sin(i * 2.1)) * 1.2)
+	stomach.clear()
+	if drop_on_destroy != "":
+		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
+	# Smashing an enemy makes the city angrier... but smashing a boss cools it right down.
+	var heat := HeatMeter.instance
+	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)
+	Sound.play_everywhere(explode_sound, global_position)
+	print("[Enemy] %s exploded" % name)
+	destroyed.emit(self)
+	queue_free()  # the spawner removes it on everyone's screen
+
+
+## For the floating health bar (scripts/ui/hud_health_bars.gd): hidden until a player SHOOTS it
+## (health is synced, so everyone's HUD shows it once anybody has hit it).
+func health_bar_info() -> Dictionary:
+	return {"hp": maxi(health, 0), "max": max_health, "name": display_name, "boss": is_boss,
+		"position": global_position + Vector3.UP * health_bar_height,
+		"show": health < max_health}
+
+
+## Host -> everyone: flash and make the hit sound.
+@rpc("authority", "call_local", "unreliable")
+func _hit_flash() -> void:
+	_flash_time = 0.15
+	Sound.play_at(hit_sound, global_position)

@@ -161,7 +161,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	_entry = _add_manhole(ENTRY_POSITION)
 	exit_position = _random_street_spot(rng)
 	for attempt in 40:
-		if _flat_distance(exit_position, ENTRY_POSITION) >= exit_min_distance:
+		if Motion.flat_distance(exit_position, ENTRY_POSITION) >= exit_min_distance:
 			break
 		exit_position = _random_street_spot(rng)
 	_exit = _add_manhole(exit_position)
@@ -173,7 +173,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 			if phone_spots.size() >= payphones:
 				break
 			var spot := items.random_sidewalk_spot(rng)
-			var ok: bool = _flat_distance(spot, ENTRY_POSITION) >= payphone_min_distance or spacing == 0.0
+			var ok: bool = Motion.flat_distance(spot, ENTRY_POSITION) >= payphone_min_distance or spacing == 0.0
 			for other in phone_spots:
 				ok = ok and spot.distance_to(other) >= spacing
 			if ok:
@@ -239,10 +239,6 @@ func exit_direction_name() -> String:
 	return names[posmod(roundi(angle / (TAU / 8.0)), 8)]
 
 
-func _flat_distance(a: Vector3, b: Vector3) -> float:
-	return Vector2(a.x - b.x, a.z - b.z).length()
-
-
 # --- Every frame (every computer): how things look and sound ---
 
 func _process(_delta: float) -> void:
@@ -284,7 +280,7 @@ func _physics_process(delta: float) -> void:
 			continue
 		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: no flopping into the hole to save your stuff
-		if _flat_distance(where, exit_position) >= exit_radius + (1.5 if driving else 0.0):
+		if Motion.flat_distance(where, exit_position) >= exit_radius + (1.5 if driving else 0.0):
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
 		_extract_wait[player_id] = _clock + 3.0

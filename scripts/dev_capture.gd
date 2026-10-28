@@ -37,7 +37,7 @@ extends Node
 ##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone; "me" = our own cat); tweak with
 ##                     --portrait_dist / --portrait_height / --portrait_side (metres), --portrait_fov
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
-##   --zap_roomba=N    (host) hit the nearest Roomba N times, as if shot
+##   --zap_roomba=N    hit the nearest Roomba N times (34 each), as if shot (host or client)
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
 ##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
 ##                     add --kill_bosses to destroy bosses too
@@ -354,7 +354,11 @@ func _ready() -> void:
 		if args.has("zap_roomba"):
 			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
 			for i in int(args["zap_roomba"]):
-				roomba.take_hit()
+				# Through the hit framework (hit.gd), like a real bolt: works on a client too.
+				var hit := Hit.new()
+				hit.shooter = player
+				hit.damage = 34
+				roomba.receive_hit(hit)
 		if args.has("kill_roombas") and multiplayer.is_server():
 			# (host) destroy N regular Roombas as if shot to death (every 3 calls in the MEGA VAC-COP).
 			for i in int(args["kill_roombas"]):

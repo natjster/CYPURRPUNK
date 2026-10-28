@@ -175,7 +175,7 @@ func _physics_process(delta: float) -> void:
 		global_position = sync_position
 		global_rotation = sync_rotation
 		return
-	var weight := 1.0 - exp(-network_smoothing * delta)
+	var weight := Motion.glide_weight(network_smoothing, delta)
 	global_position = global_position.lerp(sync_position, weight)
 	global_rotation.y = lerp_angle(global_rotation.y, sync_rotation.y, weight)
 
@@ -291,6 +291,13 @@ func player_left(player_id: int, _last_position: Vector3) -> void:
 		set_driver.rpc(0)
 
 
+## The hit framework (scripts/hit.gd): a bolt hit the car. Runs on the SHOOTER's computer;
+## whoever simulates the car applies the push. (No damage number.)
+func receive_hit(hit: Hit) -> bool:
+	take_hit.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.car_impulse, hit.position)
+	return false
+
+
 ## A tommy gun bolt hit the car. Sent to whoever simulates the car, who applies the push.
 @rpc("any_peer", "call_local", "unreliable")
 func take_hit(impulse: Vector3, hit_position: Vector3) -> void:
@@ -396,7 +403,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 	# --- Crashed into the MEGA VAC-COP: stop dead (like hitting a wall), bounce back a little ---
 	for i in state.get_contact_count():
-		var boss := state.get_contact_collider_object(i) as Roomba
+		var boss := state.get_contact_collider_object(i) as Enemy
 		if boss == null or not boss.is_boss:
 			continue
 		var away := global_position - boss.global_position

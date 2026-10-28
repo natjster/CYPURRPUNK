@@ -838,4 +838,4 @@ func _cat(player_id: int) -> CatPlayer:
 func _reach_distance(a: Vector3, b: Vector3) -> float:
 	if absf(a.y - b.y) > MAX_REACH_HEIGHT:
 		return INF
-	return Vector2(a.x - b.x, a.z - b.z).length()
+	return Motion.flat_distance(a, b)

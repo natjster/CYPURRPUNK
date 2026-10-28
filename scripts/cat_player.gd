@@ -247,11 +247,8 @@ func _process(delta: float) -> void:
 	if is_multiplayer_authority():
 		_stick_look(delta)
 		return
-	var weight := 1.0 - exp(-network_smoothing * delta)
-	if position.distance_to(sync_position) > teleport_distance:
-		position = sync_position
-	else:
-		position = position.lerp(sync_position, weight)
+	var weight := Motion.glide_weight(network_smoothing, delta)
+	position = Motion.glide(position, sync_position, weight, teleport_distance)
 	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
 	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
 	cat_model.rotation.z = lerp_angle(cat_model.rotation.z, sync_model_rotation.z, weight)  # knocked-out flop
@@ -552,6 +549,13 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 
 
 ## Someone's weapon hit this cat. Sent to the cat's OWNER, who shoves it (owner moves its cat).
+## The hit framework (scripts/hit.gd): another cat's bolt hit us. Runs on the SHOOTER's
+## computer; our OWN computer moves us, so ask it to do the shove. (No damage number.)
+func receive_hit(hit: Hit) -> bool:
+	get_zapped.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.cat_knockback + Vector3.UP * hit.weapon.cat_hop)
+	return false
+
+
 @rpc("any_peer", "call_local", "unreliable")
 func get_zapped(push: Vector3) -> void:
 	if not is_multiplayer_authority() or not is_controlled:

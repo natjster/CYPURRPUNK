@@ -38,7 +38,10 @@ Meow-City/
 │   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
 │   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
 │   ├── quests/                <- the quest system: quest_data.gd, quest_manager.gd (§8)
-│   ├── roomba.gd              <- one VAC-COP: patrol, chase, bonk, vacuum loot, explode
+│   ├── enemy.gd               <- Enemy: what every enemy shares (health, shot, explode, network) (§16)
+│   ├── roomba.gd              <- one VAC-COP (extends Enemy): patrol, chase, bonk, vacuum loot
+│   ├── hit.gd                 <- Hit: one way for anything to get shot (§16)
+│   ├── motion.gd              <- Motion: small helpers (distance along the ground, network gliding)
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
@@ -812,12 +815,13 @@ other player) have **shot** it, a red **health bar** floats over it, and every h
 A new Roomba rolls out somewhere else 15 seconds later. Cats in the car and cats in the hub are
 safe. Shoot a Roomba and it gets angry and chases *you*.
 
-**Where it lives:** `scenes/roomba.tscn` (script `scripts/roomba.gd`). The **Roombas** node in
+**Where it lives:** `scenes/roomba.tscn` (script `scripts/roomba.gd`, built on the enemy
+framework `scripts/enemy.gd`, §16). The **Roombas** node in
 `main.tscn` (script `scripts/roomba_patrol.gd`) puts them out when a game is hosted, and its
 sibling **RoombaSpawner** (a MultiplayerSpawner) copies them to every player.
 
 ```
-Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
+Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd (extends enemy.gd)
 ├── CollisionShape3D
 ├── Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
 ├── SirenLight (OmniLight3D)       <- red/blue on the street while chasing
@@ -838,10 +842,12 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd
   and their positions are only sent over the network when they change.
 - Open `scenes/roomba.tscn`, select the root **Roomba**: **Driving** (Patrol Speed, Chase Speed,
   Turn Speed), **Hunting** (Sight Range, Lose Range, Bump Range, Bump Push, Bump Hop, Stun Seconds,
-  Steals Loot, **Bonk Damage** = HP a bonk takes off a cat, 0 = harmless), **Toughness** (**Max
-  Health**, **Display Name** = the name over its health bar, **Health Bar Height**, Car Smash Speed).
-- **Boss** group (Is Boss, Drop On Destroy, Heat Scaling): see **HEAT and the MEGA VAC-COP**.
-  Normal Roombas get faster and sharper-eyed with heat (Heat Scaling on).
+  Steals Loot, **Bonk Damage** = HP a bonk takes off a cat, 0 = harmless, **Heat Scaling** = gets
+  faster and sharper-eyed with heat).
+- Further down the Inspector, the **Enemy** part (shared by every enemy, `enemy.gd`):
+  **Toughness** (**Max Health**, **Display Name** = the name over its health bar, **Health Bar
+  Height**, Car Smash Speed, Car Smash Radius), **Boss** (Is Boss, Drop On Destroy: see **HEAT and
+  the MEGA VAC-COP**), **Sounds** (Hit Sound, Explode Sound), **Network Smoothing**.
 - Roombas are on collision **Layer 2**, so cats and the car pass over them instead of getting
   stuck (Inspector > Collision > Layer). Guns still hit them.
 
@@ -963,9 +969,10 @@ Everything here is drawn by the HUD layer (sharp at your real resolution, not pi
   **Hits**: **Damage** (pistol 40, tommy gun 25), **Damage Wobble** (0.1 = each bolt is up to 10%
   more or less), **Crit Chance** (pistol 0.15, tommy 0.08), **Crit Multiplier** (2 = double).
   Guns still don't hurt other cats (they just shove them).
-- **Give something new a health bar** (e.g. a guard dog): add its root node to the group
-  `hud_health_bars` (**Node** dock > **Groups**) and give its script a `health_bar_info()`
-  function: copy the one in `scripts/roomba.gd` and change the numbers. The talking NPCs in the
+- **Give something new a health bar** (e.g. a guard dog): if it's an enemy (§16, `extends Enemy`)
+  it already has one. Anything else: add its root node to the group `hud_health_bars` (**Node**
+  dock > **Groups**) and give its script a `health_bar_info()` function: copy the one in
+  `scripts/enemy.gd` and change the numbers. The talking NPCs in the
   hub (Don, Whiskers, Mittens) don't have one: they live in the safe zone and can't be hurt.
 
 **Multiplayer:** the shooter's computer rolls each bolt's damage (so the number you see is the
@@ -1033,7 +1040,8 @@ scripts/items/
                                 backpack, bag, placing items in the city, buying, multiplayer, late joiners
   held_item.gd               <- base for held items that DO something (use_tick, hud_text)
   weapon.gd                  <- base for every gun: fire rate, spread, range, knockback,
-                                damage + crits, overheat, bolt colours — all Inspector numbers
+                                damage + crits, overheat, bolt colours — all Inspector numbers.
+                                What a bolt does to what it hits = the hit framework (§16)
   catnip.gd, catdip.gd       <- examples of use-it-once items
 scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
@@ -1801,3 +1809,48 @@ Each one joins the group `game_systems` and answers any of three calls. game.gd 
 
 The calls go top to bottom in the scene tree order of `main.tscn`. **Items** must stay above the
 systems that read items (it sends the items a late joiner needs first).
+
+### Getting shot (`scripts/hit.gd`, class **Hit**)
+When a gun fires, it finds what the bolt hit and hands it a **Hit**: who shot, which gun, the
+damage (already rolled, crits included), which way the bolt flew and where it landed. The gun
+doesn't care WHAT it hit. Each shootable thing has one function, `receive_hit(hit)`, that decides:
+
+| Thing | What a hit does | Damage number? |
+|---|---|---|
+| Any enemy (VAC-COP, MEGA VAC-COP) | loses health (the host keeps score); explodes at 0 | yes |
+| Another cat | gets shoved (the gun's **Cat Knockback** / **Cat Hop**) | no |
+| The getaway car | gets pushed (the gun's **Car Impulse**) | no |
+
+**Making something new shootable** (a breakable crate, a security camera...): give its script
+```
+func receive_hit(hit: Hit) -> bool:
+	# e.g. ask the host to break it: break_me.rpc_id(1)
+	return true   # true = the shooter sees a damage number
+```
+The function can sit on the node with the collision shape or on its parent (a few levels up is
+fine), so a hitbox can be a child node. This runs on the **shooter's** computer, so anything
+everyone must see goes through an `@rpc`.
+
+### Enemies (`scripts/enemy.gd`, class **Enemy**)
+Everything every enemy needs, in one place: **health** (synced, with the floating health bar once
+shot), **getting shot** (`receive_hit` above), **getting run over** by the car, **exploding**
+(drops what's inside it + **Drop On Destroy**, heats up the city, or cools it for a boss), and
+**network gliding** for the other players. The VAC-COP (`roomba.gd`) is built on it, and only
+says how a VAC-COP drives, chases and bonks.
+
+**Making a new enemy** (e.g. a security drone):
+1. Duplicate `scenes/roomba.tscn` as `drone.tscn` and reshape its **Model** (keep a mesh called
+   **Model/Body**: it flashes when shot, or point **Flash Mesh** at another one).
+2. Make a new script that starts with `extends Enemy` and put it on the root (replacing
+   roomba.gd). Its numbers (Max Health, Display Name, Drop On Destroy, sounds...) are already in
+   the Inspector.
+3. Write its brain in `_physics_process(delta)` (runs on the host only): move it, set
+   `sync_position = global_position` and `sync_yaw = model.rotation.y` at the end, and call
+   `if run_over_by_car(delta): explode()` if the car may squash it. Optional: `_on_hurt(shooter)`
+   (got shot, still alive), and `_ready` / `_process` (start them with `super()` /
+   `super(delta)` so the shared part still runs).
+4. Spawn it on the host under a node a **MultiplayerSpawner** watches (like **Roombas** +
+   **RoombaSpawner**), and connect its `destroyed` signal if the spawner should react (replace
+   it, count kills...). Ask Claude to wire up the spawning.
+
+Copy `scripts/roomba.gd` for a full working example.
