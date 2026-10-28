@@ -4,15 +4,16 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://dj4hiqqd6i5jo"
 path.s3tc="res://.godot/imported/building_windows.png-9e0080001669b516f95e269255970b6f.s3tc.ctex"
+path.etc2="res://.godot/imported/building_windows.png-9e0080001669b516f95e269255970b6f.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://textures/building_windows.png"
-dest_files=["res://.godot/imported/building_windows.png-9e0080001669b516f95e269255970b6f.s3tc.ctex"]
+dest_files=["res://.godot/imported/building_windows.png-9e0080001669b516f95e269255970b6f.s3tc.ctex", "res://.godot/imported/building_windows.png-9e0080001669b516f95e269255970b6f.etc2.ctex"]
 
 [params]
 

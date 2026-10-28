@@ -225,8 +225,10 @@ func apply() -> void:
 	# which can't be resized or made fullscreen.
 	# Only touches the window when the screen settings actually changed, so changing
 	# e.g. the volume doesn't undo a window you resized by hand.
+	# Also skipped on phones (Android): the game always fills the whole screen there.
 	var screen_key := "%s/%s" % [fullscreen, resolution]
-	if screen_key != _applied_screen and DisplayServer.get_name() != "headless" and not Engine.is_embedded_in_editor():
+	if screen_key != _applied_screen and DisplayServer.get_name() != "headless" and not Engine.is_embedded_in_editor() \
+			and not OS.has_feature("mobile"):
 		_applied_screen = screen_key
 		if fullscreen:
 			# Godot's fullscreen fills the monitor at its own native resolution.

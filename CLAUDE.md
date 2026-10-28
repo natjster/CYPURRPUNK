@@ -216,6 +216,11 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Test: `--join_pad=1,2,3`, `--setting=split_side_by_side:false`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
+- ANDROID (SETUP_GUIDE §17): `export_presets.cfg` preset "Android" (arm64, immersive, net + multicast permissions,
+  -> `build/android/cypurrpunk.apk`); `rendering_method.mobile="forward_plus"` on purpose (Mobile renderer has no
+  volumetric fog = no light pools); settings.gd skips window sizing on `OS.has_feature("mobile")`. Controller only,
+  no touch controls. Export from CLI: `--headless --path . --export-debug "Android" build/android/cypurrpunk.apk`.
+
 ## Character creator (MY CAT)
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
