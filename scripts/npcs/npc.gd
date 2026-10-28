@@ -61,6 +61,7 @@ var _greeting: NpcPage  # the page this conversation started on (its buttons are
 
 func _ready() -> void:
 	add_to_group(GROUP)
+	add_to_group(Interactable.GROUP)  # E talks to us (scripts/interactable.gd)
 	_model = get_node_or_null("Model")
 	_tail = get_node_or_null("Model/Tail")
 	var tag := get_node_or_null("NameTag") as Label3D
@@ -95,29 +96,24 @@ func _nearest_cat() -> Node3D:
 	return nearest
 
 
-# --- Finding who to talk to (used by cat_player.gd and the "[E] TALK" prompt) ---
+# --- The E key (scripts/interactable.gd): "[E] TALK TO <name>" when a cat is close ---
 
-## The closest NPC this cat is in talking range of, or null.
-static func nearest_in_reach(cat: CatPlayer) -> Npc:
-	var best: Npc = null
-	for npc in cat.get_tree().get_nodes_in_group(GROUP):
-		if npc is Npc and npc.in_reach(cat) and (best == null or
-				npc.global_position.distance_to(cat.global_position) < best.global_position.distance_to(cat.global_position)):
-			best = npc
-	return best
+func interact_distance(cat: CatPlayer) -> float:
+	var distance := global_position.distance_to(cat.global_position)
+	return distance if distance < talk_radius else -1.0
 
 
-## E pressed: talk to the nearest NPC in reach. Returns true if a conversation started.
-static func try_talk(cat: CatPlayer) -> bool:
-	var npc := nearest_in_reach(cat)
-	if npc == null:
-		return false
-	npc.talk(cat)
-	return true
+func interact_prompt(_cat: CatPlayer) -> String:
+	return "%s %s" % [prompt_verb, npc_name]
 
 
-func in_reach(cat: CatPlayer) -> bool:
-	return global_position.distance_to(cat.global_position) < talk_radius
+func interact(cat: CatPlayer) -> void:
+	talk(cat)
+
+
+## Talking beats the stash and the car, but a street item right at your feet comes first.
+func interact_priority() -> int:
+	return 20
 
 
 # --- The conversation ---

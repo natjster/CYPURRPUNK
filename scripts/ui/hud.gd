@@ -230,3 +230,16 @@ func _process(delta: float) -> void:
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
 	frame.visible = in_game and not menu_open()
 	middle.visible = not wants_input(seat)
+	_update_prompt()
+
+
+## "[E] TALK TO DON CATLEONE", "[E] OPEN STASH", "[E] GET IN"...: what E would do for OUR
+## player's cat right now (scripts/interactable.gd picks the best thing in reach).
+func _update_prompt() -> void:
+	var game := Game.instance
+	var cat := game.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if game != null and in_game else null
+	var text := Interactable.prompt_for(cat) if cat != null and cat.reads_input() else ""
+	show_element("Prompt", text != "", seat)
+	if text != "":
+		var key := Controls.display_name(Controls.binding("interact", Controls.PAD_SLOT)) if Seats.uses_pad(seat) 			else Controls.key_text("interact")
+		set_text("Prompt", "[%s] %s" % [key, text], seat)

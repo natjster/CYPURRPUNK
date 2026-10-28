@@ -22,8 +22,7 @@ extends Control
 ## for you from their Pages, so you normally never call it yourself.
 ## SPLIT SCREEN: every player has their own talk box in their own HUD (Hud.seat), so two players
 ## can talk to two NPCs at once. NpcDialog.for_seat(seat) / for_cat(cat) finds the right one.
-## It also shows the "[E] TALK TO ..." prompt (the HUD's "Prompt" label) when your cat is near
-## an NPC, and "[E] OPEN STASH" at the stash lockers in the sewers.
+## (The "[E] TALK TO ..." line is the HUD's Prompt, drawn by hud.gd for anything usable.)
 ## While it's open your cat ignores the keyboard (cat_player.gd checks NpcDialog.is_open_for),
 ## the mouse and keys go to this box instead of the game (scripts/ui/game_screen.gd), and Esc
 ## closes it.
@@ -59,7 +58,6 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	hide()
-	Hud.show_element("Prompt", false, seat)
 	_design = [panel.offset_left, panel.offset_top, panel.offset_right, panel.offset_bottom]
 	resized.connect(_fit_panel)
 	_focus.highlighted.connect(func(button: Button): scroll.ensure_control_visible(button))  # long pages scroll along
@@ -92,29 +90,6 @@ static func for_cat(cat: CatPlayer) -> NpcDialog:
 static func is_open_for(seat_number: int) -> bool:
 	var dialog := for_seat(seat_number)
 	return dialog != null and dialog.is_open
-
-
-## Every frame: "[E] TALK TO <name>" while our cat stands next to an NPC (this computer only).
-## (Still runs while the talk box is hidden: hiding a Control doesn't stop _process.)
-func _process(_delta: float) -> void:
-	var game := Game.instance
-	var cat := game.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if game != null else null
-	if cat != null and not cat.reads_input():
-		cat = null
-	var npc: Npc = null
-	if cat != null and cat.is_controlled and not is_open:
-		npc = Npc.nearest_in_reach(cat)
-	# The stash lockers use the same prompt line (they aren't an NPC, but it's the same E key).
-	var inventory := InventoryScreen.for_seat(seat)
-	var stash := npc == null and cat != null and cat.is_controlled and not is_open \
-		and not (inventory != null and inventory.visible) and UndergroundHub.instance.near_stash(cat)
-	Hud.show_element("Prompt", npc != null or stash, seat)
-	var key := Controls.display_name(Controls.binding("interact", Controls.PAD_SLOT)) if Seats.uses_pad(seat) \
-		else Controls.key_text("interact")
-	if npc != null:
-		Hud.set_text("Prompt", "[%s] %s %s" % [key, npc.prompt_verb, npc.npc_name], seat)
-	elif stash:
-		Hud.set_text("Prompt", "[%s] OPEN STASH" % key, seat)
 
 
 func _input(event: InputEvent) -> void:

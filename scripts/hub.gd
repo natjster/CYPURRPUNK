@@ -345,6 +345,9 @@ func _build_shop() -> void:
 ## Built around stash_spot (change it in the Inspector: Hub > Stash and they follow).
 func _build_stash() -> void:
 	var at := stash_spot
+	# Press E here: the inventory opens with your stash in it (scripts/interactable.gd).
+	var lockers := Interactable.make(self, stash_spot, "OPEN STASH", stash_radius, 10)
+	lockers.used.connect(func(cat: CatPlayer): InventoryScreen.for_seat(cat.slot).open(cat))
 	var wall_x := half_width  # inside face of the east wall
 	# Four tall lockers against the wall, each with a glowing lock light.
 	for i in 4:

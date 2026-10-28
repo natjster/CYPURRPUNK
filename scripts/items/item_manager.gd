@@ -82,6 +82,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	add_to_group(Interactable.GROUP)  # E grabs the nearest press-E item (scripts/interactable.gd)
 	_load_catalog()
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	city.generated.connect(_on_city_generated)
@@ -654,8 +655,32 @@ func _receive_state(world_now: Dictionary, inventories_now: Dictionary) -> void:
 
 # --- Things cats call ---
 
-## E pressed: grab the nearest press-E item in reach. Returns true if there was one.
-func try_interact(cat: CatPlayer) -> bool:
+# The E key (scripts/interactable.gd): the street items are all one "interactable" - this node.
+# (No HUD line: each press-E item already floats its own "E PURR-TOMMY" label.)
+
+func interact_distance(cat: CatPlayer) -> float:
+	var best_id := _nearest_press_e_item(cat)
+	return _reach_distance(cat.global_position, world[best_id].pos) if best_id >= 0 else -1.0
+
+
+func interact_prompt(_cat: CatPlayer) -> String:
+	return ""
+
+
+## E pressed: ask the host for the nearest press-E item in reach.
+func interact(cat: CatPlayer) -> void:
+	var best_id := _nearest_press_e_item(cat)
+	if best_id >= 0:
+		request_pickup.rpc_id(1, cat.player_id, best_id)
+
+
+## A street item right by you comes before anything else (E near an item and the car = item).
+func interact_priority() -> int:
+	return 30
+
+
+## The world ID of the nearest press-E (not walk-into) item within reach, or -1.
+func _nearest_press_e_item(cat: CatPlayer) -> int:
 	var best_id := -1
 	var best_distance := interact_radius
 	for id in world:
@@ -664,10 +689,7 @@ func try_interact(cat: CatPlayer) -> bool:
 		if not data.auto_pickup and distance < best_distance:
 			best_id = id
 			best_distance = distance
-	if best_id >= 0:
-		request_pickup.rpc_id(1, cat.player_id, best_id)
-		return true
-	return false
+	return best_id
 
 
 ## G pressed: drop what's in the paws (right paw first, or the 2-paw item) a step in front

@@ -44,6 +44,7 @@ Meow-City/
 │   ├── enemy.gd               <- Enemy: what every enemy shares (health, shot, explode, network) (§16)
 │   ├── roomba.gd              <- one VAC-COP (extends Enemy): patrol, chase, bonk, vacuum loot
 │   ├── hit.gd                 <- Hit: one way for anything to get shot (§16)
+│   ├── interactable.gd        <- Interactable: one way for anything to be used with E (§16)
 │   ├── motion.gd              <- Motion: small helpers (distance along the ground, network gliding)
 │   ├── level_kit.gd           <- LevelKit: boxes, lights, signs, PS1 materials for code-built places (§16)
 │   ├── roomba_patrol.gd       <- puts VAC-COPs in the city and replaces destroyed ones
@@ -256,8 +257,9 @@ Arcade-style: each physics step it nudges velocity directly instead of simulatin
   `_update_look_around()` and `_turn_camera()` (offsets `look_yaw` / `look_pitch`).
 
 ### The interaction (E to enter/exit)
-1. `DoorZone` notices a cat walking in → sets that cat's `nearby_car`.
-2. The cat presses E → it asks the **host** (`request_enter`). The host checks that the car is
+1. `DoorZone` notices a cat walking in → sets that cat's `nearby_car` (the HUD shows "[E] GET IN").
+2. The cat presses E (the car is usable like anything else, §16 "Pressing E") → it asks the
+   **host** (`request_enter`). The host checks that the car is
    empty and the cat is within 5 m, then tells everyone who the driver is (`set_driver`).
 3. Every computer hides that cat (`enter_car`); the driver's computer moves its Camera3D onto the
    car's `CameraRig/SpringArm3D` and starts simulating the car.
@@ -616,8 +618,8 @@ Test runs save to `test_profiles\` instead, so they never touch your real saves.
 - Don: `scenes/npcs/don_catleone.tscn`, an NPC (see **NPCs** below), placed under **Hub** in
   `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
 - The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, §13),
-  drawn sharp at full resolution. It also shows the "[E] TALK TO ..." prompt whenever your cat
-  is near any NPC.
+  drawn sharp at full resolution. The "[E] TALK TO ..." line above it is the HUD's prompt for
+  anything usable (§16 "Pressing E").
 - NPC names over their heads: each NPC's **NameTag** (Label3D) sets where the name floats and
   its colour (**Modulate**); the HUD draws it sharp (§13). Its text comes from **Npc Name**.
 
@@ -1651,7 +1653,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Popup            <- big "EXTRACTED +$150" that fades out
     │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
-    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH"
+    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH" / "[E] GET IN" (hud.gd)
     │   └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
     ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
     └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
@@ -1807,7 +1809,7 @@ once there's a wishlist page.
 
 The game already has "add a card, no code" systems for items (§9), NPCs and quests (§8), cat
 accessories (§11) and sounds (§12). This section covers the frameworks for the bigger pieces:
-new game systems, game events, money, new enemies, new things you can shoot, and new places to build.
+new game systems, game events, money, things you press E on, new enemies, new things you can shoot, and new places to build.
 
 ### Game systems (`scripts/game_systems.gd`, class **GameSystems**)
 A **game system** is a node under **Main** that the host runs and that keeps something for every
@@ -1874,6 +1876,27 @@ The exit pays your loot this way, the Black Markitten charges this way, and your
 (`player_profile.gd`) saves whatever the wallet says. A new way to earn or pay (selling scrap,
 feeding the MAINFRAME) needs nothing else. Want to react when cash changes? Connect
 `Wallet.instance.cash_changed` (it fires on every computer).
+
+### Pressing E (`scripts/interactable.gd`, class **Interactable**)
+Everything you can use with E goes through one system: street items, NPCs, payphones, the stash
+lockers and the car. The cat just asks "what's the best thing in reach?" and uses it; the HUD
+shows that thing's line ("[E] TALK TO DON CATLEONE", "[E] OPEN STASH", "[E] GET IN"). When two are
+in reach, the higher **priority** wins (items 30, NPCs 20, stash 10, car 0), then the nearer one.
+
+**Making something new usable, no code for the "where" part** (e.g. a MAINFRAME terminal):
+1. Right-click the node it belongs to > **Add Child Node** > search **Interactable** > Create.
+2. Move it to the spot. In the Inspector set **Prompt** (e.g. `FEED THE MAINFRAME`), **Radius**
+   (how close you must be) and **Priority**.
+3. Node dock (next to the Inspector) > **Signals** > double-click **used** > connect it to the
+   script that should react. That function gets the cat that pressed E.
+
+The stash lockers are made exactly like that, in code (`_build_stash()` in `scripts/hub.gd`).
+**A thing with its own idea of "in reach"** (like the car's door zone or the street items) can
+instead join the group `interactables` and write the answers itself:
+`interact_distance(cat)` (metres, or -1 = not now), `interact_prompt(cat)` (the line, "" = none),
+`interact(cat)`, and optionally `interact_priority()`. See the bottom of `scripts/getaway_car.gd`.
+**Multiplayer:** this runs on the computer of the player who pressed E. Anything everyone must
+see, or that changes items or cash, asks the host with an `@rpc` (like buying or picking up).
 
 ### Getting shot (`scripts/hit.gd`, class **Hit**)
 When a gun fires, it finds what the bolt hit and hands it a **Hit**: who shot, which gun, the

@@ -331,9 +331,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(min_pitch_degrees),
 			deg_to_rad(max_pitch_degrees)
 		)
-	elif Seats.event_is(slot, event, "interact") and ItemManager.instance.try_interact(self):
-		# Grabbed an item lying here (the host decides). Items come before the car,
-		# so E near both picks up the item first.
+	elif Seats.event_is(slot, event, "interact") and Interactable.try_use(self):
+		# Used the best thing in reach: grab an item, talk to an NPC or payphone, open the stash,
+		# get in the car... (scripts/interactable.gd). Marking the press as used also stops the
+		# car from treating the same E as "get out" straight away.
 		get_viewport().set_input_as_handled()
 	elif Seats.event_is(slot, event, "drop"):
 		ItemManager.instance.drop_from(self)
@@ -341,18 +342,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Everyone nearby hears it (sounds/sfx/meow_1.wav, meow_2.wav... a random one each time).
 		_next_meow_at = Time.get_ticks_msec() / 1000.0 + meow_cooldown
 		Sound.play_everywhere("meow", global_position)
-	elif Seats.event_is(slot, event, "interact") and Npc.try_talk(self):
-		# Standing next to an NPC (e.g. Don Catleone in the hub): the talk box opens.
-		get_viewport().set_input_as_handled()
-	elif Seats.event_is(slot, event, "interact") and UndergroundHub.instance.near_stash(self):
-		# At THE STASH lockers in the sewers: the inventory opens with your stash in it.
-		InventoryScreen.for_seat(slot).open(self)
-		get_viewport().set_input_as_handled()
-	elif Seats.event_is(slot, event, "interact") and nearby_car != null:
-		# Ask the host for the keys — it decides, so two cats can't grab the car at once.
-		nearby_car.request_enter.rpc_id(1, player_id)
-		# Mark the E press as used so the car doesn't instantly treat it as "exit".
-		get_viewport().set_input_as_handled()
 
 
 ## Controller camera: the right stick (LOOK UP / DOWN / LEFT / RIGHT in SETTINGS > KEYS) turns

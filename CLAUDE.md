@@ -245,8 +245,7 @@ Don't add per-item pickup/sync code elsewhere. User-facing how-to: SETUP_GUIDE.m
 Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), conversation data =
 `pages: Array[NpcPage]` (first = greeting; empty choices reuse page 1's) of `NpcChoice` (text,
 message, action, go_to). Built-in actions in `Npc._run_action`; custom ones via subclass
-`_on_action` or the `action_chosen` signal. `Npc.try_talk(cat)` is called by cat_player on E;
-`NpcDialog._process` drives the "[E] TALK TO" prompt. New NPCs start from
+`_on_action` or the `action_chosen` signal. NPCs are Interactables (below): E -> `talk(cat)`. New NPCs start from
 `scenes/npcs/npc_template.tscn`. Not networked (local per peer). Test: `--talk[=NodeName] --choose=N,M`.
 Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); action `quest:<id>` starts one.
 Shops: `Shopkeeper` (`scripts/npcs/shopkeeper.gd`, extends Npc) — choice action `shop` opens BUY buttons for
@@ -257,6 +256,15 @@ LOOT TABLE: `ItemManager.loot_table` = `res://loot/city.tres` (`LootTable` of `L
 SIDEWALK/OUTSIDE_MEOW_MART/FIXED_SPOT, min_distance_from_meow_mart, respawn_seconds), placed first in `_on_city_generated`
 (own rng, `LOOT_SEED_SALT`); then `item_placers` (the heist: manholes + payphones). Never hard-code loot spots in code.
 Test: `--cash=N --talk=ComradeWhiskers --choose=0,K` (client: add `--wait=120`).
+
+## Interaction framework (E key)
+`scripts/interactable.gd` (`Interactable`): anything in group `interactables` answers `interact_distance(cat)` (-1 = not
+now), `interact_prompt(cat)` ("" = no HUD line), `interact(cat)`, optional `interact_priority()` (items 30, NPCs 20, stash 10,
+car 0). cat_player E -> `Interactable.try_use(cat)`; hud.gd `_update_prompt` shows `Interactable.prompt_for(cat)` in `Prompt`.
+`Interactable` is also a node (Prompt/Radius/Priority exports, `used(cat)` signal; `Interactable.make(parent, at, text, r, prio)`):
+the stash lockers are one. Members: ItemManager (nearest press-E street item), Npc (+ Payphone/Shopkeeper), GetawayCar
+(`nearby_car` door zone, "GET IN"). Runs on the presser's computer; game changes go through host RPCs. Never add
+interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames after `--pos`), `--talk`, `--grab`.
 
 ## Quest framework
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in

@@ -310,7 +310,7 @@ func _ready() -> void:
 				player.global_position = items.world[best].pos + Vector3(0.5, 0, 0.5)
 				for i in 20:
 					await get_tree().process_frame  # let the host see our new position first
-				items.try_interact(player)
+				Interactable.try_use(player)  # (what E does: the item is the best thing in reach)
 				for i in 10:
 					await get_tree().process_frame
 		if args.has("equip"):
@@ -461,6 +461,8 @@ func _ready() -> void:
 		InventoryScreen.for_seat(0)._set_open(true)  # same as pressing Tab
 	if args.has("press_key"):
 		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
+		for i in 10:
+			await get_tree().physics_frame  # after --pos, let areas notice the cat (the car's DoorZone)
 		for pressed in [true, false]:
 			var key := InputEventKey.new()
 			key.physical_keycode = OS.find_keycode_from_string(args["press_key"])
@@ -816,7 +818,7 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			npc = node
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
-	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Npc.try_talk(player), NpcDialog.for_cat(player).line_label.text.left(50)])
+	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):
 		# --click_choice=N: a REAL mouse click on talk-box button N (through the game screen and
 		# the HUD, like a player's click), instead of --choose's direct button press.

@@ -148,6 +148,7 @@ func _ready() -> void:
 	_chase_yaw = global_rotation.y
 	_base_pitch = camera_arm.rotation.x
 	add_to_group("cars")  # lets late-joining cats check if they're inside a car
+	add_to_group(Interactable.GROUP)  # E by the door gets in (scripts/interactable.gd)
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	sync_position = global_position
 	sync_rotation = global_rotation
@@ -414,6 +415,25 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 			state.angular_velocity.y = 0.0
 
 	state.linear_velocity = velocity
+
+
+# --- The E key (scripts/interactable.gd): a cat by the door can get in ---
+
+func interact_distance(cat: CatPlayer) -> float:
+	return global_position.distance_to(cat.global_position) if cat.nearby_car == self else -1.0
+
+
+func interact_prompt(_cat: CatPlayer) -> String:
+	return "GET IN" if driver_id == 0 else ""
+
+
+## Ask the host for the keys: it decides, so two cats can't grab the car at once.
+func interact(cat: CatPlayer) -> void:
+	request_enter.rpc_id(1, cat.player_id)
+
+
+func interact_priority() -> int:
+	return 0
 
 
 func _on_door_zone_body_entered(body: Node3D) -> void:
