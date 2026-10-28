@@ -80,7 +80,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   the transport; Steam swaps in here; LAN discovery: hosts broadcast `Net.advert` (set by game.gd
   `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999` (old name kept on purpose so saves survive the rename to CYPURRPUNK); test runs with `--capture` use
-  defaults and never save), `Controls`, `DevCapture` (debug builds only).
+  defaults and never save), `Controls`, `Events`, `DevCapture` (debug builds only).
+- EVENTS: autoload `Events` (`scripts/events.gd`): signals `district_sealed`, `player_extracted`, `player_knocked_out`,
+  `heat_level_changed` (every computer), `item_picked_up`, `enemy_destroyed` (host only). Announce moments there instead of
+  calling other systems (RoombaPatrol listens to `district_sealed` for the swarm, `deep_clean_roombas` is on Roombas). Test: `--event_log`.
 - Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by
   name (`meow_1/_2` = random variants of "meow"); `play` (2D, local), `play_at` (3D, local: use where
   every peer already runs the code), `play_everywhere` (3D, RPC to all), `attach_loop`, `play_music` /

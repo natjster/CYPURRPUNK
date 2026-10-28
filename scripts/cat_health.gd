@@ -99,6 +99,7 @@ func _set_health(player_id: int, hp: int) -> void:
 ## Host -> the knocked-out player's computer: fall over, wait, wake up in the sewers.
 @rpc("authority", "call_local", "reliable")
 func _knocked_out(player_id: int, cause: String) -> void:
+	Events.player_knocked_out.emit(player_id, cause)  # every computer hears it (scripts/events.gd)
 	var cat := Game.instance.cat_for(player_id)
 	if cat == null or not cat.is_multiplayer_authority():
 		return

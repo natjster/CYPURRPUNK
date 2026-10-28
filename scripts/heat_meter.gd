@@ -71,6 +71,7 @@ var heat: float = 0.0
 
 var _send_timer: float = 0.0
 var _last_level: int = 1
+var _announced_level: int = 1  # every computer: the level Events.heat_level_changed last said
 
 
 func _enter_tree() -> void:
@@ -162,4 +163,7 @@ func _process(_delta: float) -> void:
 		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)
 			Sound.play("heat_up")  # sounds/sfx/heat_up.wav
 	_last_level = lvl
+	if lvl != _announced_level:
+		_announced_level = lvl
+		Events.heat_level_changed.emit(lvl)  # (scripts/events.gd)
 

@@ -11,8 +11,8 @@ extends Node3D
 ## crew destroys (up to bosses_per_district times), one more arrives every time the heat
 ## reaches one of the boss_on_levels (levels 1-4: so the first comes out as the district starts),
 ## and one always comes out for the DEEP CLEAN.
-## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN: it sets
-## deep_clean_extra, and a swarm that many strong pours in close to the cats still up top,
+## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN (Events.district_sealed):
+## we set deep_clean_extra to Deep Clean Roombas, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
 ##
 ## Only the HOST creates Roombas (start_district(), called through game_systems.gd when a game starts). Where they appear
@@ -50,6 +50,8 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 @export var boss_on_levels: Array[int] = [1, 2, 3, 4]
 
 @export_group("DEEP CLEAN swarm")
+## Extra VAC-COPs that swarm in when the hatch is sealed (the DEEP CLEAN, fish_heist.gd).
+@export var deep_clean_roombas: int = 40
 ## During the DEEP CLEAN, swarm Roombas appear between these distances (metres) from a cat up top.
 @export var swarm_min_distance: float = 15.0
 @export var swarm_max_distance: float = 40.0
@@ -62,7 +64,7 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 static var instance: RoombaPatrol
 
 ## Host: how many EXTRA Roombas the DEEP CLEAN wants out right now (0 = no deep clean).
-## Set by fish_heist.gd.
+## Set when the hatch is sealed (Events.district_sealed), back to 0 in start_district().
 var deep_clean_extra: int = 0
 
 var _respawn_at: Array[float] = []  # host: when each replacement is due
@@ -88,6 +90,13 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	_rng.randomize()
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
+	Events.district_sealed.connect(_on_district_sealed)  # (scripts/events.gd)
+
+
+## The hatch was sealed at max heat (every computer hears it): the host sends in the swarm.
+func _on_district_sealed() -> void:
+	if multiplayer.is_server() and _patrolling:
+		deep_clean_extra = deep_clean_roombas
 
 
 ## Host: clear any old Roombas and put a fresh patrol out (a new game or a new district;

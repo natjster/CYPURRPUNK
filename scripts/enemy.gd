@@ -168,6 +168,7 @@ func explode() -> void:
 	Sound.play_everywhere(explode_sound, global_position)
 	print("[Enemy] %s exploded" % name)
 	destroyed.emit(self)
+	Events.enemy_destroyed.emit(self)  # host only (scripts/events.gd)
 	queue_free()  # the spawner removes it on everyone's screen
 
 

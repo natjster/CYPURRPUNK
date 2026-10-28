@@ -30,6 +30,7 @@ Meow-City/
 │   ├── settings.gd            <- autoload "Settings": every player setting, saved to disk
 │   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
 │   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
+│   ├── events.gd              <- autoload "Events": the big moments (sealed, extracted, knocked out...) (§16)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -775,9 +776,9 @@ called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = 
   - **Manholes**: Exit Opens At Heat (75), Seal Warning At Heat (90), Exit Radius (how close you
     must get), Exit Min Distance (from the centre).
   - **Payphones**: Payphones (how many), Payphone Spacing, Payphone Min Distance.
-  - **The DEEP CLEAN**: Deep Clean Seconds (30), Deep Clean Roombas (40), New District Delay.
-- Select **Roombas** > **DEEP CLEAN swarm**: Swarm Min/Max Distance (how close to you they
-  appear), Swarm Sight Multiplier.
+  - **The DEEP CLEAN**: Deep Clean Seconds (30), New District Delay.
+- Select **Roombas** > **DEEP CLEAN swarm**: Deep Clean Roombas (40, how many swarm in), Swarm
+  Min/Max Distance (how close to you they appear), Swarm Sight Multiplier.
 - How long a district lasts: **Heat** > Heat Per Second (see **HEAT** below).
 - What loot pays, how heavy / noisy it is: open its card in `items/` (see §9, **Loot settings**).
 - How much you can carry: **Bag Size** on the **Items** node.
@@ -904,8 +905,8 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Level).
 - Select **Roombas**: **Reinforce Seconds**, and under **MEGA VAC-COP**: Boss Spawn Distance,
   **Boss Every Kills** (3), **Bosses Per District** (4), **Boss On Levels** ([1, 2, 3, 4]: remove a
-  number to skip that level's boss); under **DEEP CLEAN swarm**: Swarm Min/Max
-  Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
+  number to skip that level's boss); under **DEEP CLEAN swarm**: Deep Clean
+  Roombas, Swarm Min/Max Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
 - The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
   with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On
   Destroy** (`golden_koi`), Heat Scaling (off: the boss doesn't get faster with heat).
@@ -1787,7 +1788,7 @@ once there's a wishlist page.
 
 The game already has "add a card, no code" systems for items (§9), NPCs and quests (§8), cat
 accessories (§11) and sounds (§12). This section covers the frameworks for the bigger pieces:
-new game systems, money, new enemies, new things you can shoot, and new places to build.
+new game systems, game events, money, new enemies, new things you can shoot, and new places to build.
 
 ### Game systems (`scripts/game_systems.gd`, class **GameSystems**)
 A **game system** is a node under **Main** that the host runs and that keeps something for every
@@ -1811,6 +1812,33 @@ Each one joins the group `game_systems` and answers any of three calls. game.gd 
 
 The calls go top to bottom in the scene tree order of `main.tscn`. **Items** must stay above the
 systems that read items (it sends the items a late joiner needs first).
+
+### Game events (`scripts/events.gd`, the autoload **Events**)
+The big moments of a raid are announced in one place. The system where something happens just
+says so; anything that cares listens. Nobody has to know who else is listening.
+
+| Event | When | Heard on |
+|---|---|---|
+| `district_sealed()` | max heat: the hatch seals, the DEEP CLEAN starts | every computer |
+| `player_extracted(player_id, loot_value, quest_bonus)` | a player climbed down the exit | every computer |
+| `player_knocked_out(player_id, cause)` | a cat hit 0 HP | every computer |
+| `heat_level_changed(level)` | the heat went up (or down) a level | every computer |
+| `item_picked_up(player_id, item_id)` | someone grabbed or bought an item | host only |
+| `enemy_destroyed(enemy)` | a VAC-COP (or any enemy) blew up | host only |
+
+**Listening** (e.g. the planned MAINFRAME losing a chunk when a district is sealed):
+```
+func _ready() -> void:
+	Events.district_sealed.connect(_on_district_sealed)
+
+func _on_district_sealed() -> void:
+	if multiplayer.is_server():   # game rules: only the host changes them
+		print("the MAINFRAME loses a chunk")
+```
+The Roomba patrol already works this way: it sends in the DEEP CLEAN swarm when it hears
+`district_sealed`. **A new event:** add a `signal` line to `events.gd` (with a comment saying who
+hears it) and call `Events.my_event.emit(...)` where it happens.
+**Testing:** add `--event_log` to a test run to print every event as it fires (`[Events] ...`).
 
 ### Money (`scripts/wallet.gd`, class **Wallet**, the **Wallet** node)
 Every player's cash lives in one place. The host is the only one who changes it; everyone has a

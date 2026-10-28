@@ -313,6 +313,7 @@ func _give(player_id: int, world_id: int) -> void:
 		var cat := _cat(player_id)
 		var who: String = cat.player_name if cat != null and cat.player_name != "" else "SOMEONE"
 		_announce.rpc(data.pickup_announcement % who)
+	Events.item_picked_up.emit(player_id, world[world_id].item)  # host only (scripts/events.gd)
 	_put_in_inventory(player_id, world[world_id].item, world[world_id].pos)
 	_remove_world.rpc(world_id)
 	if world_id < _spawns.size() and _spawns[world_id].respawn > 0.0:
@@ -401,6 +402,7 @@ func request_buy(player_id: int, item_id: String) -> void:
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
 	else:
 		_put_in_inventory(player_id, item_id, cat.global_position)
+		Events.item_picked_up.emit(player_id, item_id)  # host only (scripts/events.gd)
 		print("[Items] Player %d bought %s for $%d" % [player_id, item_id, data.price])
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, "Bought %s for $%d." % [data.display_name, data.price])
 

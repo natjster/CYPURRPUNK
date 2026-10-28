@@ -74,8 +74,6 @@ extends Node3D
 ## Once the hatch is sealed, the swarm hunts whoever is still up top for this many seconds.
 ## Then anyone still standing is knocked out anyway (loot lost), and a new district is built.
 @export var deep_clean_seconds: float = 30.0
-## Extra VAC-COPs that swarm in for the DEEP CLEAN.
-@export var deep_clean_roombas: int = 40
 ## After the DEEP CLEAN, wait this long (seconds) before building the next district, so
 ## knocked-out cats are back in the sewers first.
 @export var new_district_delay: float = 6.0
@@ -261,8 +259,7 @@ func _physics_process(delta: float) -> void:
 	# Max heat: seal the hatch and start the DEEP CLEAN.
 	if not sealed and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
 		_deep_clean_ends_at = _clock + deep_clean_seconds
-		RoombaPatrol.instance.deep_clean_extra = deep_clean_roombas
-		_set_state.rpc(true, exit_revealed)
+		_set_state.rpc(true, exit_revealed)  # (announces Events.district_sealed: the swarm comes)
 		print("[Heist] Hatch SEALED: the DEEP CLEAN begins")
 	if sealed:
 		_run_deep_clean()
@@ -311,7 +308,6 @@ func _run_deep_clean() -> void:
 		_new_district_at = _clock + new_district_delay
 	if _new_district_at >= 0.0 and _clock >= _new_district_at:
 		_new_district_at = -1.0
-		RoombaPatrol.instance.deep_clean_extra = 0
 		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
 
 
@@ -334,6 +330,7 @@ func _set_state(is_sealed: bool, revealed: bool) -> void:
 	if newly_sealed:
 		Sound.play("boss_siren")
 		Hud.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
+		Events.district_sealed.emit()  # (scripts/events.gd: the Roomba patrol sends the swarm)
 
 
 # --- What the host tells everyone (runs on every computer) ---
@@ -341,6 +338,7 @@ func _set_state(is_sealed: bool, revealed: bool) -> void:
 ## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now.
 @rpc("authority", "call_local", "reliable")
 func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
+	Events.player_extracted.emit(player_id, earned, quest_bonus)  # (scripts/events.gd)
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
 	var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"

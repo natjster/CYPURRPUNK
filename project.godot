@@ -24,6 +24,7 @@ Settings="*res://scripts/settings.gd"
 Seats="*res://scripts/seats.gd"
 Sound="*res://scripts/sound.gd"
 Net="*res://scripts/net.gd"
+Events="*res://scripts/events.gd"
 DevCapture="*res://scripts/dev_capture.gd"
 
 [display]
