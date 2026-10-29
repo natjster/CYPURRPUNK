@@ -238,7 +238,11 @@ func has_been_up(player_id: int) -> bool:
 
 
 ## Has EVERY player in the game used their trip up? (Nobody left who could go up.)
+## No players at all (the start menu) = false: otherwise the heat raced up behind the menu,
+## playing the heat alarm over and over (heat_meter.gd).
 func everyone_has_been_up() -> bool:
+	if Game.instance.player_ids().is_empty():
+		return false
 	for player_id in Game.instance.player_ids():
 		if not went_up.has(player_id):
 			return false

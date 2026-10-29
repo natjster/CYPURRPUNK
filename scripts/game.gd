@@ -100,9 +100,10 @@ func _ready() -> void:
 		main_menu.show_status.call_deferred(leave_reason)
 		leave_reason = ""
 	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
-	city.generate(PREVIEW_SEED)
+	city.generate(PREVIEW_SEED, true)  # (true: Meow-Mart by the centre, in the menu camera's view)
 	for each_car in cars():
 		each_car.park()
+	car.park_for_menu()  # the Catleone car waits in the menu shot (games park it in its corner)
 	_handle_test_shortcuts()
 
 
@@ -219,10 +220,12 @@ func new_district() -> void:
 	_district_news.rpc()
 
 
-## Host -> everyone: Don's news about the new district.
+## Host -> everyone: the news about the new district, from each player's own gang boss
+## (Don or Pawnie: Boss Name on their hub, scripts/hub.gd).
 @rpc("authority", "call_local", "reliable")
 func _district_news() -> void:
-	Hud.show_message("DON CATLEONE: We're movin' to a new part of town. Hatch is ready when you are.", 5.0)
+	for cat in playing_cats():
+		Hud.show_message("%s: We're movin' to a new part of town. Hatch is ready when you are." % UndergroundHub.of(cat).boss_name, 5.0, cat.slot)
 
 
 ## Host → one player: "build city number X". Every computer builds the identical city.

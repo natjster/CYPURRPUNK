@@ -83,7 +83,9 @@ func _init() -> void:
 
 
 ## Throw away the old city (if any) and build a new one from this seed.
-func generate(new_seed: int) -> void:
+## showcase = true: the START MENU's city (game.gd): Meow-Mart goes on the lot by the centre
+## crossroads, where the menu camera looks, instead of a random one. Districts are never showcases.
+func generate(new_seed: int, showcase: bool = false) -> void:
 	city_seed = new_seed
 	_rng.seed = new_seed
 	for child in get_children():
@@ -95,6 +97,11 @@ func generate(new_seed: int) -> void:
 	var mart_block := Vector3((_rng.randi_range(0, blocks_per_side - 1) + 0.5 - blocks_per_side / 2.0) * pitch, 0,
 		(_rng.randi_range(0, blocks_per_side - 1) + 0.5 - blocks_per_side / 2.0) * pitch)
 	_meow_mart_lot = mart_block + Vector3(_rng.randi_range(0, 1) * 2 - 1, 0, _rng.randi_range(0, 1) * 2 - 1) * block_size * 0.25
+	if showcase:
+		# The start menu: the lot on the north-west corner of the centre crossroads (in view).
+		# (The random numbers above are still drawn, so the rest of the city is the same.)
+		var corner := -(street_width * 0.5 + block_size * 0.25)
+		_meow_mart_lot = Vector3(corner, 0, corner)
 	_build_ground(city_half_width, pitch)
 	for bx in blocks_per_side:
 		for bz in blocks_per_side:

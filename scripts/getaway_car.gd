@@ -362,6 +362,16 @@ func park() -> void:
 	sync_rotation = global_rotation
 
 
+## The start menu only: wait by the centre crossroads (in the menu camera's shot, outside
+## Meow-Mart). When a game starts, start_district parks it in its gang's corner.
+func park_for_menu() -> void:
+	global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	sync_position = global_position
+	sync_rotation = global_rotation
+
+
 ## Where this car waits: park_distance up the north-south street from its gang's entry manhole
 ## (fish_heist.gd entry_position), nose pointing towards the middle of the city. No gang (-1),
 ## or no heist yet: the old spot by the centre crossroads.

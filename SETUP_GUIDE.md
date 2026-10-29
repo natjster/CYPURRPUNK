@@ -537,6 +537,10 @@ number, the **city seed**. Same number = exact same city.
 - **Always in the same place, whatever the seed:** each gang's **entry manhole** (Catleone
   Family: the south-west corner crossroads, Burrow Gang: the north-east one) and the car, which
   parks near the centre crossroads.
+- **The start menu's city** (city #1999, `generate(seed, true)` in `game.gd`) is a showcase:
+  Meow-Mart sits on the lot by the centre crossroads and the Catleone car waits outside it, right
+  in the menu camera's view. Nothing runs behind the menu (no heat, no VAC-COPs): only the city
+  music and the rain play.
 - **Points of interest, somewhere different every district:** **Meow-Mart** (a random lot), the
   **exit manhole** and the **payphones** (placed by `fish_heist.gd`, see §8).
 
