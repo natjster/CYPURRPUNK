@@ -941,7 +941,7 @@ Every cat has **100 HP**, shown as the **health bar** top-left under your cash a
   The **revive meter** fills your health bar in **green**: the bar over your head on their
   screen, and your own bar top-left (it says **REVIVING**).
   Your bleed-out clock stops while they do. Letting go or walking off cancels it. Done: you're
-  back up with **35 HP** and all your loot ("BACK ON YOUR PAWS!").
+  back up with **35 HP** and all your loot ("MITTENS picked you up.").
 - Nobody comes in **25 seconds**, or you **hold E for 1.5 s to give up**: you're knocked out (below).
 - **Playing solo, or everyone else is down too?** Nobody could come, so there's no waiting: you're
   knocked out straight away.
