@@ -17,7 +17,8 @@ extends CanvasLayer
 ##       ├── Bars         <- health bars over enemies / hurt cats (scripts/ui/hud_health_bars.gd)
 ##       ├── Damage       <- damage numbers off things you shoot (scripts/ui/hud_damage_numbers.gd)
 ##       ├── Top          <- stays up while you talk / shop: Health (your health bar, top-left,
-##       │                   scripts/ui/hud_health_bar.gd), Heat (the red/blue heat bar, top-right,
+##       │                   scripts/ui/hud_health_bar.gd), Feed (under it: "CLAWD DOWNED MITTENS",
+##       │                   Hud.feed), Heat (the red/blue heat bar, top-right,
 ##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
 ##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
 ##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
@@ -32,6 +33,7 @@ extends CanvasLayer
 ##   Hud.damage_number(where, 38, false, seat) a damage number popping off a world position
 ##   Hud.show_message("DON: Go get 'em.", 4)  the line of text in the middle, for N seconds
 ##   Hud.popup("EXTRACTED +$80", 2.5)         the big text that fades out (e.g. extraction)
+##   Hud.feed("CLAWD DOWNED MITTENS", color)   a line in the FEED (top-left, every player; fades)
 ##   Hud.set_in_game(true)                    the whole HUD on (in a game) / off (start menu)
 ##   Hud.element("Scoreboard")                the node itself, for anything else
 ##
@@ -65,6 +67,13 @@ var seat: int = 0
 
 ## How long the big popup takes to fade away at the end (seconds).
 @export var popup_fade_seconds: float = 1.0
+## The FEED (downs, knockouts, revives, robberies): how long a line stays (seconds) and how many
+## lines show at once (the oldest goes first).
+@export var feed_seconds: float = 7.0
+@export var feed_lines: int = 5
+
+## The feed's lines on this HUD: [{"text", "color", "left"}], oldest first.
+var _feed: Array = []
 
 ## True while we're in a game (Hud.set_in_game).
 var in_game: bool = false
@@ -152,6 +161,17 @@ static func popup(text: String, seconds: float = 2.5, seat_number: int = -1) -> 
 		hud._popup_time = seconds
 
 
+## A line in the FEED, top-left under the health bar (e.g. "CLAWD DOWNED MITTENS"), on EVERY
+## player's HUD on this computer. color = the line's colour (cat_health.gd uses the gang colour).
+## Lines fade after feed_seconds.
+static func feed(text: String, color: Color = Color.WHITE) -> void:
+	for hud in _targets(-1):
+		hud._feed.append({"text": text, "color": color, "left": hud.feed_seconds})
+		while hud._feed.size() > hud.feed_lines:
+			hud._feed.pop_front()
+		hud._draw_feed()
+
+
 ## A damage number popping off the world position "where" (Cyberpunk-style), on this player's
 ## HUD only. crit = a critical hit (bigger, yellow). See scripts/ui/hud_damage_numbers.gd.
 static func damage_number(where: Vector3, amount: int, crit: bool = false, seat_number: int = 0) -> void:
@@ -227,10 +247,33 @@ func _process(delta: float) -> void:
 		popup_label.visible = _popup_time > 0.0
 		popup_label.modulate.a = clampf(_popup_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
 
+	# The feed: count each line down, drop the old ones.
+	if not _feed.is_empty():
+		for line in _feed:
+			line.left -= delta
+		var before := _feed.size()
+		_feed = _feed.filter(func(line): return line.left > 0.0)
+		if _feed.size() != before or _feed.any(func(line): return line.left < 1.0):
+			_draw_feed()
+
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
 	frame.visible = in_game and not menu_open()
 	middle.visible = not wants_input(seat)
 	_update_prompt()
+
+
+## Write the feed's lines into Frame/Top/Feed (a RichTextLabel: each line its own colour,
+## fading out in its last second).
+func _draw_feed() -> void:
+	var label := element("Feed", seat) as RichTextLabel
+	if label == null:
+		return
+	var text := ""
+	for line in _feed:
+		var color: Color = line.color
+		color.a = clampf(line.left, 0.0, 1.0)
+		text += "[color=#%s]%s[/color]\n" % [color.to_html(true), line.text]
+	label.text = text
 
 
 ## "[E] TALK TO DON CATLEONE", "[E] OPEN STASH", "[E] GET IN"...: what E would do for OUR

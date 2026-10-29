@@ -568,9 +568,28 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
   friend health bar, the other gang a red one (and their DOWNED beacon isn't shown to you far
   off / through walls). **Only gang-mates can revive you**: if you're the only one of your gang
   in the game, a knockdown knocks you out straight away.
-- **Not yet (next PvP phases):** guns still only shove other cats (no PvP damage yet); both gangs
-  come up the same entry manhole and share one exit and one payphone call (the payphone voice is
-  still Don's); no team scoreboard.
+- **PvP (guns hurt the other gang):** a bolt that hits a cat of the OTHER gang takes the gun's
+  damage (pistol 40, Purr-Tommy 25, crits more) and shoves it; the shooter sees the damage number.
+  Bolts on your OWN gang do nothing at all (friendly fire is off). Nobody can be hurt in the
+  sewers or inside the car. A rival at 0 HP goes **DOWNED** like after a VAC-COP bonk (or straight
+  out if nobody in their gang could save them); **shooting a downed rival finishes them off**
+  (knocked out: everything they carry spills on the street).
+- **Robbing:** walk up to a downed rival who has loot and **HOLD E** for 2 seconds
+  (`HOLD: ROB MITTENS` -> `ROBBING MITTENS...`). Their bar fills **red** ("BEING ROBBED!") and they
+  see "CLAWD IS ROBBING YOU!". Done: their loot bag goes into yours (what doesn't fit drops on the
+  street next to them); they stay downed, so their gang can still pick them up, empty-pawed.
+- **The feed** (top-left, under your health bar, every player): `CLAWD DOWNED MITTENS`,
+  `CLAWD KNOCKED OUT MITTENS`, `WHISKERS REVIVED MITTENS`, `CLAWD ROBBED MITTENS`,
+  `A VAC-COP DOWNED ...`, in the gang colour. Lines fade after 7 seconds.
+- **The host referees every shot:** a client only says "I hit that rival for 38". The host
+  ignores it unless the two cats are in different gangs, both up top, the target isn't in the
+  car, they're within 75 m, and the damage is at most 120.
+- **Tuning** (select **Health** in `main.tscn`, group **PvP (the other gang)**): **Rob Seconds**
+  (2), **Shots Finish Downed** (on), **Pvp Max Range** (75), **Pvp Max Damage** (120). How hard a
+  gun hits is its **Damage** in `scenes/items/pistol.tscn` / `tommy_gun.tscn` (the same number it
+  does to VAC-COPs). The feed: **Feed Seconds** / **Feed Lines** on the HUD root in `hud.tscn`.
+- **Not yet (next PvP phases):** both gangs come up the same entry manhole and share one exit and
+  one payphone call (the payphone voice is still Don's); no team scoreboard or spawn protection.
 - **The story gag:** ask any boss **WHO LET OVERCLEAN IN?** Don says Pawnie & Clawd were on a date
   in the Mainframe and leaned on the big red button, then sold the city for a can of tuna. Pawnie
   says Don fell asleep on the button, then sold the city for a can of tuna ("PREMIUM tuna. Didn't
@@ -591,7 +610,15 @@ x = 400, and give it its own leader and shopkeeper.
 
 **Test:** `--teams=1` (you play for the Burrow Gang), `--teams=0,1 --add_local=1` (P1 Catleone,
 P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture cat` lines print
-`team=`.
+`team=`. PvP:
+- `--teams=0,1,1 --add_local=2 --deploy --hold_all --give=pistol --shoot_rival=5` = you shoot the
+  nearest rival 5 times: prints `hp=60`, `hp=20`, `downed=true`, then knocked out.
+- `--teams=0,0 --add_local=1 ... --shoot_rival=3 --shoot_friend` = shooting your own gang: `hp=100`.
+- `--teams=0,1,1 --add_local=2 --deploy --hold_all --down=1 --down_loot=fish,golden_koi --revive=150`
+  = you rob a downed rival: `their_bag=[]  our_bag=["fish", "golden_koi"]`.
+- Online: a host `--teams=0,0 --add_local=1 --wait=500 --deploy --hold_all --frames=400`, then a
+  client `--join --teams=1 --give=pistol --deploy --shoot_rival=5` (a client's `--give` asks the
+  host's test tool).
 
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
@@ -1032,7 +1059,7 @@ How much a bonk hurts: **Bonk Damage** on the Roomba (above).
 **Something new that hurts cats** (a trap, a guard dog...): on the host, call
 `CatHealth.instance.damage(player_id, 20, "A GUARD DOG")`. The last part is shown on the
 knocked-out screen. Add `, true` at the end to skip the downed stage (straight to knocked out).
-Guns don't hurt cats (no player-vs-player damage yet).
+Guns hurt cats of the OTHER gang only (PvP: see "Two gangs" above).
 
 **Multiplayer:** the host decides all damage, downs, revives and knockouts and tells everyone,
 like cash. The reviver's computer only asks the host ("I'm holding E on Mittens").
@@ -1960,6 +1987,7 @@ says so; anything that cares listens. Nobody has to know who else is listening.
 | `player_extracted(player_id, loot_value, quest_bonus)` | a player climbed down the exit | every computer |
 | `player_downed(player_id, cause)` | a cat hit 0 HP and waits for a revive | every computer |
 | `player_revived(player_id, by)` | a teammate picked a downed cat back up | every computer |
+| `player_robbed(player_id, by)` | a rival robbed a downed cat's loot bag | every computer |
 | `player_knocked_out(player_id, cause)` | a cat is out for good (bled out, gave up, solo, DEEP CLEAN): loot spills | every computer |
 | `heat_level_changed(level)` | the heat went up (or down) a level | every computer |
 | `item_picked_up(player_id, item_id)` | someone grabbed or bought an item | host only |

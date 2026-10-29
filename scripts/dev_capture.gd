@@ -47,7 +47,11 @@ extends Node
 ##   --down=S          (host, after --deploy) the cat in slot S (0 = ours; 1.. with --add_local) stands
 ##                     1.5 m in front of us and takes 100 damage: DOWNED (or knocked out if nobody could help).
 ##                     --bleed_out=SEC changes how long it waits. Then --hold=interact on slot 0 = give up.
+##   --down_loot=A,B   (with --down) put this loot in the downed cat's bag first (to test robbing)
+##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
+##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
 ##   --revive=N        (with --down=S, S > 0) our cat presses E on it and holds the button N frames
+##                     (a cat of the OTHER gang = we ROB it instead)
 ##                     (180 = the 3 s revive); prints health / downed state before and after
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --deploy_again=N  N frames after the above, ask Don AGAIN (one trip per district: refused once
@@ -229,6 +233,11 @@ func _ready() -> void:
 			# (host) put items straight into our paws/backpack, e.g. --give=pistol,catnip
 			for item_id in args["give"].split(","):
 				ItemManager.instance._put_in_inventory(player.player_id, item_id, player.global_position)
+		elif args.has("give"):
+			# (client) ask the host's test tool to do it (only works if the host runs one too)
+			_test_give.rpc_id(1, player.player_id, args["give"])
+			for i in 20:
+				await get_tree().process_frame
 		if args.has("to_stash") or args.has("from_stash"):
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
@@ -408,6 +417,8 @@ func _ready() -> void:
 				await get_tree().physics_frame
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
 			await _down_and_revive(scene, player, args)
+		if args.has("shoot_rival"):
+			await _shoot_rival(scene, player, args)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.
@@ -745,6 +756,53 @@ func _describe(steps: Array) -> String:
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
 
 
+## Test only (a client's --give): the host's test tool puts the items in that player's paws.
+@rpc("any_peer", "reliable")
+func _test_give(player_id: int, item_list: String) -> void:
+	if multiplayer.is_server() and PlayerId.sender_owns(player_id):
+		for item_id in item_list.split(","):
+			ItemManager.instance._put_in_inventory(player_id, item_id, Vector3.ZERO)
+
+
+## --shoot_rival=N [--rival_wait=F]: stand 4 m from the nearest cat of the OTHER gang (waits up to
+## F frames for one, default 600) and hit it N times with the gun in our right paw (--give=pistol),
+## exactly like a real bolt does (Hit -> receive_hit). Prints its health after each hit.
+func _shoot_rival(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	var health := CatHealth.instance
+	var rival: CatPlayer = null
+	for i in int(args.get("rival_wait", "600")):
+		for other in scene.players.get_children():
+			var cat := other as CatPlayer
+			# (--shoot_friend: aim at our own gang instead, to check friendly fire is off)
+			if cat != player and (cat.team != player.team) != args.has("shoot_friend") \
+					and Game.instance.is_up_top(cat.player_id) and not health.is_down(cat.player_id) \
+					and (rival == null or cat.global_position.distance_to(player.global_position) < rival.global_position.distance_to(player.global_position)):
+				rival = cat
+		if rival != null:
+			break
+		await get_tree().physics_frame
+	if rival == null:
+		print("DevCapture shoot: no rival up top to shoot")
+		return
+	player.teleport_to(rival.global_position + Vector3(4, 0.2, 0), 0.0)
+	for i in 20:
+		await get_tree().physics_frame  # let the host see our new position first
+	var gun := ItemManager.instance.held_item(player, 0) as Weapon
+	for shot in int(args["shoot_rival"]):
+		var hit := Hit.new()
+		hit.shooter = player
+		hit.weapon = gun
+		hit.damage = gun.damage if gun != null else 40
+		hit.direction = (rival.global_position - player.global_position).normalized()
+		hit.position = rival.global_position + Vector3.UP * 0.5
+		var number := rival.receive_hit(hit) if gun != null else false
+		for i in 15:
+			await get_tree().physics_frame
+		print("DevCapture shoot %d at %s (gang %d): number=%s hp=%d downed=%s knocked_out_or_down=%s" % [shot + 1,
+			rival.display_name(), rival.team, number, health.get_health(rival.player_id), health.is_downed(rival.player_id),
+			health.is_down(rival.player_id)])
+
+
 ## --down=S [--revive=N] [--bleed_out=SEC]: knock the cat in slot S down in front of us, then
 ## (with --revive) press and hold E on it like a teammate would. Prints what happened.
 func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
@@ -771,16 +829,19 @@ func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture down: no cat to down / revive")
 		return
 	var report := func(label: String) -> void:
-		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d knocked_out=%s items=%s" % [
+		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d robbed=%s knocked_out=%s their_bag=%s our_bag=%s" % [
 			label, victim.name, health.get_health(victim.player_id), health.is_downed(victim.player_id),
-			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), victim.knocked_out,
-			ItemManager.instance.inventories.get(victim.player_id, {})])
+			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), health.is_being_robbed(victim.player_id),
+			victim.knocked_out, ItemManager.instance.get_inventory(victim.player_id).bag, ItemManager.instance.get_inventory(player.player_id).bag])
 	if multiplayer.is_server():
 		if victim != player:
 			var ahead := -player.camera_pivot.global_basis.z
 			victim.teleport_to(player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * 1.5, 0.0)
 		for i in 10:
 			await get_tree().physics_frame
+		if args.has("down_loot"):
+			for item_id in args["down_loot"].split(","):
+				ItemManager.instance._put_in_inventory(victim.player_id, item_id, victim.global_position)
 		health.damage(victim.player_id, 100, "A TEST")
 		for i in 5:
 			await get_tree().physics_frame

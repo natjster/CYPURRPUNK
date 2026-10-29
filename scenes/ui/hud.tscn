@@ -114,6 +114,20 @@ theme_override_font_sizes/font_size = 18
 text = "YOU $0"
 horizontal_alignment = 2
 
+[node name="Feed" type="RichTextLabel" parent="Frame/Top"]
+modulate = Color(1, 1, 1, 0.9)
+layout_mode = 0
+offset_left = 24.0
+offset_top = 64.0
+offset_right = 520.0
+offset_bottom = 200.0
+mouse_filter = 2
+bbcode_enabled = true
+scroll_active = false
+theme_override_font_sizes/normal_font_size = 17
+theme_override_constants/outline_size = 6
+theme_override_colors/font_outline_color = Color(0.04, 0.01, 0.08, 1)
+
 [node name="Middle" type="Control" parent="Frame"]
 layout_mode = 1
 anchors_preset = 15

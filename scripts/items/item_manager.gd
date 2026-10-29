@@ -538,6 +538,26 @@ func take_bag(player_id: int) -> Array:
 	return bag
 
 
+## Host: a rival ROBS a downed cat (cat_health.gd): the victim's loot bag goes into the robber's,
+## as far as it fits; the rest drops on the street next to the victim. Returns how many pieces
+## the robber got.
+func steal_bag(victim_id: int, robber_id: int) -> int:
+	var victim := _cat(victim_id)
+	var at: Vector3 = victim.global_position if victim != null else Vector3.ZERO
+	var taken := 0
+	var loot := take_bag(victim_id)
+	for i in loot.size():
+		var data: ItemData = catalog[loot[i]]
+		if _can_take(robber_id, data):
+			_put_in_inventory(robber_id, loot[i], at)
+			taken += 1
+		else:
+			_spawn_dropped(loot[i], _ground_below(at) + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
+	if taken > 0:
+		Events.item_picked_up.emit(robber_id, loot[0])  # (host only: scripts/events.gd)
+	return taken
+
+
 ## Host: take ONE piece of loot (the last one picked up) out of a player's bag.
 ## Returns its item id, or "" if the bag was empty. (A Roomba bonk calls this.)
 func take_one_loot(player_id: int) -> String:

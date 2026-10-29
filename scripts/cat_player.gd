@@ -196,12 +196,17 @@ func health_bar_info() -> Dictionary:
 	if health == null:
 		return {}
 	if health.is_downed(player_id):
-		var reviving := health.reviver_of(player_id) != 0
-		return {"hp": health.bleed_out_left(player_id), "max": health.bleed_out_seconds,
-			"position": global_position + Vector3.UP * 1.0, "show": true,
-			"name": "REVIVING..." if reviving else "DOWNED %d" % ceili(health.bleed_out_left(player_id)),
+		var robbed := health.is_being_robbed(player_id)
+		var label := "DOWNED %d" % ceili(health.bleed_out_left(player_id))
+		if health.reviver_of(player_id) != 0:
+			label = "BEING ROBBED!" if robbed else "REVIVING..."
+		var info := {"hp": health.bleed_out_left(player_id), "max": health.bleed_out_seconds,
+			"position": global_position + Vector3.UP * 1.0, "show": true, "name": label,
 			"progress": health.revive_progress(player_id),
 			"see_from": health.downed_seen_from, "through_walls": true}
+		if robbed:
+			info["progress_color"] = Color(1, 0.25, 0.2)  # a rival's robbery fills it red
+		return info
 	var hp := health.get_health(player_id)
 	return {"hp": hp, "max": health.max_health, "position": global_position + Vector3.UP * 1.3,
 		"show": hp < health.max_health, "name": ""}
@@ -213,23 +218,29 @@ func is_downed() -> bool:
 	return CatHealth.instance != null and CatHealth.instance.is_downed(player_id)
 
 
-# --- A DOWNED cat is something teammates can use with E: "HOLD: REVIVE <NAME>" ---
-# (scripts/interactable.gd; the rules are all in cat_health.gd.)
+## The name everyone sees over this cat (a stand-in like "CAT 123" if the player left it empty).
+func display_name() -> String:
+	return $NameTag.text
+
+
+# --- A DOWNED cat is something other cats can use with E (scripts/interactable.gd) ---
+# Your own gang: "HOLD: REVIVE <NAME>". The other gang: "HOLD: ROB <NAME>" (their loot bag).
+# (The rules are all in cat_health.gd.)
 
 func interact_distance(helper: CatPlayer) -> float:
-	return CatHealth.instance.revive_distance(self, helper) if CatHealth.instance != null else -1.0
+	return CatHealth.instance.downed_distance(self, helper) if CatHealth.instance != null else -1.0
 
 
 func interact_prompt(helper: CatPlayer) -> String:
-	return CatHealth.instance.revive_prompt(self, helper)
+	return CatHealth.instance.downed_prompt(self, helper)
 
 
 func interact(helper: CatPlayer) -> void:
-	CatHealth.instance.start_revive(self, helper)
+	CatHealth.instance.start_hold(self, helper)
 
 
 func interact_priority() -> int:
-	return 40  # beats items (30): picking up a friend comes first
+	return 40  # beats items (30): picking up a friend (or robbing a rival) comes first
 
 
 func _ready() -> void:
@@ -601,8 +612,17 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 ## The hit framework (scripts/hit.gd): another cat's bolt hit us. Runs on the SHOOTER's
 ## computer; our OWN computer moves us, so ask it to do the shove. (No damage number.)
 func receive_hit(hit: Hit) -> bool:
+	# Our OWN gang's bolts do nothing at all (friendly fire is off: scripts/teams.gd).
+	if hit.shooter != null and hit.shooter.team == team:
+		return false
+	# The other gang (or a test with no shooter): a shove...
 	get_zapped.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.cat_knockback + Vector3.UP * hit.weapon.cat_hop)
-	return false
+	if hit.shooter == null or CatHealth.instance == null or UndergroundHub.is_in_hub(global_position):
+		return false
+	# ...and real damage: the host checks the shot and takes the HP off (cat_health.gd).
+	var standing := CatHealth.instance.get_health(player_id) > 0  # (asked BEFORE: on the host it's instant)
+	CatHealth.instance.request_shot.rpc_id(1, hit.shooter.player_id, player_id, hit.damage)
+	return standing  # a damage number, unless they were already down
 
 
 @rpc("any_peer", "call_local", "unreliable")

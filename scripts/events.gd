@@ -35,6 +35,9 @@ signal player_downed(player_id: int, cause: String)
 ## EVERY computer: a downed player was picked back up by teammate "by" (cat_health.gd).
 signal player_revived(player_id: int, by: int)
 
+## EVERY computer: a rival "by" robbed this downed player's loot bag (cat_health.gd).
+signal player_robbed(player_id: int, by: int)
+
 ## A player is KNOCKED OUT for good (bled out, gave up, nobody could help, or the DEEP CLEAN):
 ## their loot spills and they go back to the sewers. EVERY computer. cause = e.g. "A VAC-COP"
 ## (cat_health.gd).

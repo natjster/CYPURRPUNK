@@ -20,7 +20,8 @@ extends Control
 ## ("show" false or an empty Dictionary = no bar right now.) Roombas (roomba.gd) and cats
 ## (cat_player.gd) are the examples. Two optional extras: "see_from": 150.0 (metres, instead of
 ## max_distance) and "through_walls": true (a DOWNED cat uses both, so friends can find it).
-## And "progress": 0..1 fills the bar in revive_color over the top (a downed cat's REVIVE METER).
+## And "progress": 0..1 fills the bar in revive_color over the top (a downed cat's REVIVE METER;
+## "progress_color" changes the colour, e.g. red while a rival robs it).
 
 ## The group a node joins to get a floating bar.
 const GROUP := "hud_health_bars"
@@ -153,7 +154,8 @@ func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, gam
 	_draw_list.append({
 		"rect": Rect2((on_screen - Vector2(width * 0.5, height)).round(), Vector2(width, height)),
 		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha * fade,
-		"name": info.get("name", ""), "boss": boss, "friend": friend, "progress": float(info.get("progress", 0.0))})
+		"name": info.get("name", ""), "boss": boss, "friend": friend, "progress": float(info.get("progress", 0.0)),
+		"progress_color": info.get("progress_color", revive_color)})
 
 
 func _draw() -> void:
@@ -171,7 +173,7 @@ func _draw() -> void:
 		# Revive meter: fills the whole bar from the left over the top while a friend revives.
 		if bar.progress > 0.0:
 			draw_rect(rect, Color(back_color, back_color.a * a))
-			draw_rect(Rect2(rect.position, Vector2(w * bar.progress, rect.size.y)), Color(revive_color, a))
+			draw_rect(Rect2(rect.position, Vector2(w * bar.progress, rect.size.y)), Color(bar.progress_color, a))
 		draw_rect(rect, Color(friend_color if bar.friend else frame_color, frame_color.a * a), false, 1.0)
 		# Name above the bar (left-aligned, like Cyberpunk). The boss's is bigger and gold.
 		var label: String = bar.name

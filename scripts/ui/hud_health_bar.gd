@@ -26,6 +26,8 @@ extends Control
 @export var frame_color: Color = Color(1.0, 0.35, 0.45, 0.9)
 ## The revive meter filling the bar while a friend picks you up.
 @export var revive_color: Color = Color(0.45, 1.0, 0.5)
+## ...and the meter while a rival robs you.
+@export var rob_color: Color = Color(1, 0.25, 0.2)
 
 @export_group("Shape")
 ## How thick the bar is (HUD units; the screen is 720 tall).
@@ -48,6 +50,8 @@ var downed: bool = false
 ## 0..1 while a friend revives this (downed) player: the REVIVE METER fills the bar in
 ## revive_color and it says "REVIVING". Set every frame by cat_health.gd.
 var revive_progress: float = 0.0
+## True while that meter is a RIVAL ROBBING us (fills red, says "ROBBED") instead of a revive.
+var being_robbed: bool = false
 var _hp: float = 100.0
 var _max: float = 100.0
 ## What's drawn: the red fill (catches up with _hp when healing) and the chip (trails when hurt).
@@ -121,11 +125,15 @@ func _draw() -> void:
 	if fraction > _shown:
 		draw_rect(Rect2(bar_left + bar_w * _shown, bar_top, bar_w * (fraction - _shown), bar_thickness), heal_color)
 	if revive_progress > 0.0:  # a friend is picking us up: the revive meter fills from the left
-		draw_rect(Rect2(bar_left, bar_top, bar_w * revive_progress, bar_thickness), revive_color)
+		draw_rect(Rect2(bar_left, bar_top, bar_w * revive_progress, bar_thickness), rob_color if being_robbed else revive_color)
 	draw_rect(Rect2(bar_left, bar_top, bar_w, bar_thickness), Color.WHITE if _hurt_flash > 0.0 else frame_color, false, 1.0)
 
 	if _hp <= 0.0:
-		var ko := ("REVIVING" if revive_progress > 0.0 else "DOWNED") if downed else "KNOCKED OUT"
+		var ko := "KNOCKED OUT"
+		if downed:
+			ko = "DOWNED"
+			if revive_progress > 0.0:
+				ko = "BEING ROBBED" if being_robbed else "REVIVING"
 		var ko_size := 18
 		var ko_w := font.get_string_size(ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size).x
 		var ko_pos := Vector2(bar_left + (bar_w - ko_w) * 0.5, bar_top - 4.0)

@@ -117,8 +117,15 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   "team"; name tag colour). One `UndergroundHub` per gang: `Hub` (team 0, Don + Comrade Whiskers) and `GangHub` (team 1,
   x=200, Pawnie + Clawd shopkeeper; exports team/leader/shopkeeper/leader_glow/boss_name/lines). Use `UndergroundHub.of(cat)`
   / `for_team(t)` for spawn/return/deploy/stash; `instance` = team 0 and alone runs mood/music. Only gang-mates revive
-  (`_anyone_could_help`/`_can_revive`/`revive_distance` check team); HudHealthBars friend = same team. Not yet: PvP
-  damage, per-team entry/exit/payphone voice, team score. Test: `--teams=0,1 --add_local=1`, `--talk=Pawnie`.
+  (`_anyone_could_help`/`_can_hold`/`downed_distance` check team); HudHealthBars friend = same team.
+  PvP (phase 3): `CatPlayer.receive_hit` = own gang nothing; rival = shove + `CatHealth.request_shot(shooter, target, dmg)`
+  (host checks gangs, up top, not in car, `pvp_max_range`, clamps `pvp_max_damage`; downed target = `_knock_out` if
+  `shots_finish_downed`). Holding E on a downed RIVAL with loot = rob (`reviving[id].rob`, `rob_seconds`, `_rob` ->
+  `ItemManager.steal_bag`, event `player_robbed`, red meter via health_bar_info `progress_color`). `CatPlayer.display_name()`.
+  FEED: `Hud.feed(text, color)` -> `Frame/Top/Feed` RichTextLabel (downs/KOs/revives/robs, gang colour).
+  Not yet: per-team entry/exit/payphone voice, team score, spawn protection.
+  Test: `--teams=0,1,1 --add_local=2 --deploy --hold_all --give=pistol --shoot_rival=5 [--shoot_friend]`,
+  `--down=1 --down_loot=fish --revive=150` (rob); a client's `--give` goes through the host's DevCapture `_test_give`.
 - Extraction loop: cats spawn in the hub `Hub` (`scripts/hub.gd`, `UndergroundHub.instance`), a fixed
   code-built sewer at y=-200 (anything below y=-100 is "in the hub" = safe zone, guns don't fire).
   Don Catleone (`scenes/npcs/don_catleone.tscn`) is an `Npc`; his "send_up_top" action calls
@@ -167,7 +174,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `damage(player_id, n, cause, instant=false)` (Roomba `bonk_damage`). 0 HP = DOWNED (`downed` {id: bleed secs left},
   `is_downed`; keeps loot, crawls at `crawl_speed`, no jump/drop/items/E) unless `instant` (DEEP CLEAN) or nobody else
   is on their feet (`_anyone_could_help`; solo = instant). Revive: a downed CatPlayer is an Interactable (priority 40,
-  methods hand on to `revive_distance/revive_prompt/start_revive`); reviver holds interact -> `request_revive(reviver, downed, on)`;
+  methods hand on to `downed_distance/downed_prompt/start_hold`); reviver holds interact -> `request_hold(helper, downed, on)`;
   host times it (`reviving` {downed: {by, left}}, bleed clock paused) -> `_revive` (`revive_health`). Bleed out /
   `request_give_up` (downed holds interact) -> `_knock_out` = `drop_everything` + `_knocked_out` RPC (owner flops via
   `CatPlayer.knocked_out`, then `hub.return_cat`). `is_down` = 0 HP (downed OR knocked out). Host heals cats in the hub.
