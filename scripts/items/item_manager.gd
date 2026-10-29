@@ -848,7 +848,6 @@ func _rebuild_paws(cat: CatPlayer, hands: Array) -> void:
 		if hand == 1:
 			offset.x = -offset.x  # mirror for the left paw
 		node.position = offset
-		node.set_meta("hold_home", offset)  # cat_player.gd swings it around this spot (_animate_paws)
 		node.scale = Vector3.ONE * data.hold_scale
 		var held := node as HeldItem
 		if held != null:

@@ -22,9 +22,6 @@ properties/4/replication_mode = 2
 properties/5/path = NodePath(".:team")
 properties/5/spawn = true
 properties/5/replication_mode = 2
-properties/6/path = NodePath(".:sync_aim")
-properties/6/spawn = true
-properties/6/replication_mode = 1
 
 [sub_resource type="CapsuleShape3D" id="Shape_cat"]
 radius = 0.3

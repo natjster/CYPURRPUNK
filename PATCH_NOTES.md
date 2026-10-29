@@ -18,7 +18,6 @@ gives it to you, and starts a fresh draft.
 - **Jedi flip:** a catdip double jump is now a front flip.
 
 ## 🔧 Changes
-- **Guns look new:** they're half the size and float next to your cat like hands. Walking or standing, they're up and aimed at your crosshair. During zoomies they swing at your sides.
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 
 ## 🐛 Fixes

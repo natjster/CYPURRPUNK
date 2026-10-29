@@ -207,7 +207,7 @@ camera (its child) would whip around every time the cat turned.
 - **While the pause menu is open** the cat ignores the keyboard (`PauseMenu.is_open`).
 
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
-(groups: Movement / Camera / Zoomies Juice / Running Animation / Paw Swing / Double Jump Flip /
+(groups: Movement / Camera / Zoomies Juice / Running Animation / Double Jump Flip /
 Network Smoothing) — no code editing needed.
 
 **Running Animation**: the cat's `LegL`/`LegR` (in `scenes/cat_model.tscn`) swing back and forth
@@ -215,18 +215,6 @@ while it runs, and its `Tail` sways side to side all the time, faster the faster
 Knobs: Leg Swing (how far), Leg Swing Speed (steps per second at walking speed), Tail Swish
 (how far), Tail Idle Speed (sway speed standing still), Tail Speed Per Mps (extra sway speed per
 unit of running speed). Other players' cats animate the same way on your screen automatically.
-
-**Paw Swing** (held items float next to the cat like Mii hands: no arms):
-- **Walking or standing:** held up, ready to shoot, pointing at YOUR CROSSHAIR. The cat still faces
-  where it walks; aim behind it and the guns stop at its side (**Max Aim Turn Degrees**, 90).
-- **Running (zoomies):** down at your sides, pointing the way the cat faces, swinging like arms.
-- **Firing:** always held up and aimed, even while running.
-- **Dual wielding** (an item in each paw) pushes them a little further out to the sides.
-- Knobs: Paw Swing Distance / Paw Swing Tilt (the running swing), Dual Wield Spread,
-  Ready Paw Raise / Ready Paw Forward (the ready-to-shoot spot), Max Aim Turn Degrees, Paw Idle Bob.
-- Each item's normal spot is still its card's **Hold Offset** / **Hold Scale** (§9). Where the
-  camera points is sent to everyone (`sync_aim` in the MultiplayerSynchronizer), so other players
-  see your guns aim where you aim.
 
 **Double Jump Flip**: one front flip on every mid-air (catdip) jump, spinning around the cat's middle
 with its legs tucked. Knobs: Flip Seconds (how long), Flip Turns (1 = one full flip), Flip Pivot

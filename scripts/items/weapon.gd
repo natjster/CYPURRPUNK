@@ -157,8 +157,6 @@ func show_shot(end: Vector3, shot_heat: float) -> void:
 	if holder == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(holder.player_id):
 		return  # only the holder may fire
 	shots_seen += 1
-	# Every computer: hold the gun out steady while it fires (cat_player.gd _animate_paws).
-	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.3
 	var start := _muzzle.global_position if _muzzle != null else global_position
 	var length := start.distance_to(end)
 	if length < 0.05:
