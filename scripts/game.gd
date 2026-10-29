@@ -47,6 +47,8 @@ static var leave_reason: String = ""
 var extra_local_players := {}
 
 @onready var players: Node3D = $Players
+## The Catleone Family's car. There's one car per gang (GetawayCar, GangCar): use cars() / car_of()
+## for anything that should work with every car.
 @onready var car: GetawayCar = $GetawayCar
 @onready var city: CityGenerator = $City
 @onready var main_menu: MainMenu = $PS1Overlay/Lobby
@@ -98,7 +100,8 @@ func _ready() -> void:
 		leave_reason = ""
 	Hud.set_in_game(false)  # the HUD (scenes/ui/hud.tscn) waits for a game to start
 	city.generate(PREVIEW_SEED)
-	car.park()
+	for each_car in cars():
+		each_car.park()
 	_handle_test_shortcuts()
 
 
@@ -238,6 +241,14 @@ func _process(_delta: float) -> void:
 ## The balance scales with it: more VAC-COPs, faster heat, faster-growing loot, an extra beam.
 func player_count() -> int:
 	return players.get_child_count()
+
+
+## Every getaway car in the game (one per gang, parked in its gang's corner: getaway_car.gd).
+func cars() -> Array[GetawayCar]:
+	var list: Array[GetawayCar] = []
+	for node in get_tree().get_nodes_in_group("cars"):
+		list.append(node as GetawayCar)
+	return list
 
 
 ## The car this player is in right now (driving OR riding along), or null (they're on foot).

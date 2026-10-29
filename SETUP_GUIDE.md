@@ -221,6 +221,16 @@ Keys are handled by the **Controls** framework (`scripts/controls.gd`) — playe
 
 ## 3. The arcade getaway car
 
+**One car per gang.** `main.tscn` has two copies of the same car scene: **GetawayCar** (Team 0,
+parked 10 m up the street from the Catleone Family's manhole in the south-west corner) and
+**GangCar** (Team 1, by the Burrow Gang's manhole in the north-east corner). They're identical:
+**anyone can drive either one**, a gang only decides where it waits. Every district (and after
+its last rider extracts) a car goes back to its own spot. Select a car and look under
+**Parking** in the Inspector: **Team** (-1 = the old spot by the centre), **Park Distance**.
+To add a third car: right-click GangCar > Duplicate. Roombas get run over by any car.
+(Code: `Game.instance.cars()` lists them; `Game.instance.car_of(player_id)` = the one a player
+is in.) Test: `--teams=1 --deploy --drive --hold=move_forward` drives the Burrow car.
+
 ### Node tree (`scenes/getaway_car.tscn`)
 ```
 GetawayCar (RigidBody3D)            script: getaway_car.gd
@@ -419,6 +429,12 @@ copies glide smoothly in between). To change it: open `scenes/player.tscn` (or
 **Replication Interval** (seconds between updates: 0.033 = 30/sec, 0 = every frame).
 Measured: a full 8-player game (2 computers x 4) = the host sends about **12 KB/s**; with 8
 separate computers about 85 KB/s. Easy for any home network or Wi-Fi.
+Second stress test (2026-10-29, after PvP): 8 players on 2 computers x 4, both gangs, heat 80,
+both exits open, both main players shooting rivals, a payphone call, mass knockouts: same city,
+manholes and gangs on both computers, 59-60 fps, the client received about 25 KB/s, no errors.
+It found cats sent home at the same moment from two computers landing on the same spot (one got
+shoved metres up into the air): each player now starts looking for a free spot at a different
+place (`hub.gd free_spawn_position`).
 Stress test (2026-10-29): 8 players on 4 computers (4 + 2 + 1 + 1, both gangs), heat held at 95
 (about 38 VAC-COPs incl. 3 MEGA VAC-COPs), everyone up top: the host sent **about 89 KB/s** and
 received 19 KB/s; each other computer received **about 29 KB/s**. All 4 game windows (on ONE PC)
@@ -495,7 +511,7 @@ quests, cash and HP, and the heat. Then their cat appears.
 
 ### Known limitations (planned for later)
 1. **The host is trusted.** Fine for friends; a public game would need anti-cheat checks.
-2. **One getaway car** for up to 8 players: first come, first served (no passengers yet).
+2. **One getaway car per gang** (4 seats each: a driver and 3 passengers), first come, first served.
 3. **Your own cat's camera** moves at the physics rate (60/sec). On a 120 Hz+ monitor this can
    look slightly stuttery; Godot's built-in "physics interpolation" setting can fix that later.
 

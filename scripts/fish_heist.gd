@@ -82,7 +82,6 @@ const PAYPHONE_SCENE: PackedScene = preload("res://scenes/props/payphone.tscn")
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
-@onready var car: GetawayCar = $"../GetawayCar"
 
 ## Where each gang's exit manhole is in the current district (by team number: exit_for(team)).
 var exit_positions: Array[Vector3] = []
@@ -270,12 +269,13 @@ func exit_direction_name(team: int) -> String:
 	return names[posmod(roundi(angle / (TAU / 8.0)), 8)]
 
 
-## The gangs that have at least one player in the game right now.
-func _gangs_in_game() -> Array[int]:
+## The gangs that have at least one player UP TOP right now (the only ones who still need a call:
+## a gang that's all home, or all knocked out, can't use its exit any more).
+func _gangs_up_top() -> Array[int]:
 	var gangs: Array[int] = []
 	for player_id in Game.instance.player_ids():
 		var team := Teams.team_of(player_id)
-		if not team in gangs:
+		if not team in gangs and Game.instance.is_up_top(player_id):
 			gangs.append(team)
 	return gangs
 
@@ -288,9 +288,9 @@ func _process(_delta: float) -> void:
 	var open := exit_is_open()
 	for exit in _exits:
 		exit.set_open(open)
-	# The phones ring once the exits are open, until every gang in the game has called its boss.
+	# The phones ring once the exits are open, until every gang still up top has called its boss.
 	var someone_waiting := false
-	for team in _gangs_in_game():
+	for team in _gangs_up_top():
 		someone_waiting = someone_waiting or not is_revealed(team)
 	for phone in _payphones:
 		phone.set_ringing(open and someone_waiting)
@@ -357,7 +357,8 @@ func _run_deep_clean() -> void:
 		_deep_clean_ends_at = _clock
 	if _deep_clean_ends_at >= 0.0 and _clock >= _deep_clean_ends_at:
 		_deep_clean_ends_at = -1.0
-		car.empty_car()  # nobody escapes in the car either (driver or passengers)
+		for each_car in Game.instance.cars():
+			each_car.empty_car()  # nobody escapes in a car either (drivers or passengers)
 		for player_id in Game.instance.player_ids():
 			if Game.instance.is_up_top(player_id):
 				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN", true)  # (true: no downed stage)

@@ -182,8 +182,13 @@ func near_stash(cat: CatPlayer) -> bool:
 ## Where cat number n appears when it joins: rows of three on the walkway, facing Don.
 ## A spawn spot nobody else is standing on (up to 12 spots: 3 across, 4 rows), so 8 cats
 ## arriving at once don't land on top of each other.
+## Each player starts looking at a different spot (from their player ID): two computers sending
+## cats home at the same moment can't see each other's choice yet, and two cats landing on the
+## same spot used to shove one of them metres up into the air.
 func free_spawn_position(cat: CatPlayer) -> Vector3:
-	for n in 12:
+	var first := posmod(hash(cat.player_id), 12) if cat != null else 0
+	for i in 12:
+		var n := (first + i) % 12
 		var spot := spawn_position(n)
 		var taken := false
 		for other in Game.instance.players.get_children():

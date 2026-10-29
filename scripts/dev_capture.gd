@@ -307,10 +307,16 @@ func _ready() -> void:
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
-			(scene.get_node("GetawayCar") as GetawayCar).request_enter.rpc_id(1, player.player_id)
+			# Walk up to our gang's car first (each gang's car parks in its own corner).
+			var my_car := _car_for(player)
+			if my_car.global_position.distance_to(player.global_position) > 4.0:
+				player.teleport_to(my_car.global_position + my_car.global_basis.x * -2.5, 0.0)
+				for i in 20:
+					await get_tree().process_frame
+			my_car.request_enter.rpc_id(1, player.player_id)
 			if args.has("ride_along"):
 				# Split screen: these couch slots walk up to the car and press E too (passenger seats).
-				var car := scene.get_node("GetawayCar") as GetawayCar
+				var car := _car_for(player)
 				for i in 20:
 					await get_tree().process_frame  # the driver gets in first
 				for ride_slot in args["ride_along"].split(","):
@@ -333,7 +339,7 @@ func _ready() -> void:
 			if args.has("car_mouse"):
 				for i in 20:
 					await get_tree().process_frame  # wait until we're behind the wheel
-				var car := scene.get_node("GetawayCar") as GetawayCar
+				var car := _car_for(player)
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 				var motion := InputEventMouseMotion.new()
 				motion.relative = Vector2(float(args["car_mouse"]), 0)
@@ -343,7 +349,7 @@ func _ready() -> void:
 					await get_tree().process_frame
 				print("DevCapture car_mouse: driver=%d look_yaw=%.2f look_pitch=%.2f" % [car.driver_id, car.look_yaw, car.look_pitch])
 		if args.has("car_watch"):
-			_watch_car_camera(scene.get_node("GetawayCar") as GetawayCar, int(args["car_watch"]))
+			_watch_car_camera(_car_for(player), int(args["car_watch"]))
 		if args.has("grab"):
 			# For each item named: stand next to the nearest one and press E (send what E sends).
 			var items := ItemManager.instance
@@ -464,7 +470,7 @@ func _ready() -> void:
 				Input.parse_input_event(_pad_event(pad, true))
 			for i in int(args.get("hold_frames", "60")):
 				await get_tree().process_frame
-			var car := scene.get_node("GetawayCar") as GetawayCar
+			var car := _car_for(player)
 			var held: Array = []
 			for entry in Controls.ACTIONS:
 				if Input.is_action_pressed(entry.action):
@@ -499,13 +505,13 @@ func _ready() -> void:
 		if args.has("exit_after"):
 			for i in int(args["exit_after"]):
 				await get_tree().process_frame
-			(scene.get_node("GetawayCar") as GetawayCar).request_exit.rpc_id(1, player.player_id)
+			(_car_for(player)).request_exit.rpc_id(1, player.player_id)
 		if args.has("goto_dropoff_after"):
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
 			var beam := FishHeist.instance.exit_for(int(args.get("exit_team", player.team))) + Vector3(0.5, 0, 0.5)  # (needs --heat=80: open)
-			var car := scene.get_node("GetawayCar") as GetawayCar
+			var car := _car_for(player)
 			if car.has_occupant(player.player_id):
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
 			else:
@@ -686,9 +692,9 @@ func _ready() -> void:
 			if roomba is Roomba and not roomba.is_queued_for_deletion():
 				lines.append("%s %s %s hp=%d stomach=%s" % [roomba.name, Roomba.State.keys()[roomba.state], roomba.global_position.snapped(Vector3.ONE * 0.1), roomba.health, roomba.stomach])
 		print("DevCapture roombas (%d): %s" % [lines.size(), " | ".join(lines)])
-	var car := scene.get_node_or_null("GetawayCar") as GetawayCar
-	if car != null:
-		print("DevCapture car: position=%s driver=%d passengers=%s frozen=%s" % [car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
+	for car in (scene as Game).cars():
+		print("DevCapture car %s (gang %d): position=%s driver=%d passengers=%s frozen=%s" % [car.name, car.team,
+			car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():
@@ -755,6 +761,21 @@ func _describe(steps: Array) -> String:
 		biggest = maxf(biggest, step)
 		total += step
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
+
+
+## The car the --drive / --ride_along / --exit_after tests use: the one this cat is in, else its
+## own gang's car (getaway_car.gd team), else the nearest.
+func _car_for(player: CatPlayer) -> GetawayCar:
+	var inside := Game.instance.car_of(player.player_id)
+	if inside != null:
+		return inside
+	var best: GetawayCar = null
+	for car in Game.instance.cars():
+		if car.team == player.team:
+			return car
+		if best == null or car.global_position.distance_to(player.global_position) < best.global_position.distance_to(player.global_position):
+			best = car
+	return best
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.

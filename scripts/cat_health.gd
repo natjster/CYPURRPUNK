@@ -168,12 +168,15 @@ func damage(player_id: int, amount: int, cause: String, instant: bool = false) -
 		_go_down(player_id, cause)
 
 
-## Host: is there any other cat IN THE SAME GANG still on its feet (up top OR down in the sewers,
-## who could climb up)? If not, a downed cat would only wait for nothing. (Only gang-mates can
-## revive you: scripts/teams.gd.)
+## Host: is there any other cat IN THE SAME GANG who could still come and help: on its feet, and
+## either up top already or down in the sewers with its trip up still unused (fish_heist.gd
+## went_up)? If not, a downed cat would only wait for nothing. (Only gang-mates can revive you:
+## scripts/teams.gd.)
 func _anyone_could_help(player_id: int) -> bool:
 	for other_id in Game.instance.player_ids():
-		if other_id != player_id and not is_down(other_id) and Teams.same_team(other_id, player_id):
+		if other_id == player_id or is_down(other_id) or not Teams.same_team(other_id, player_id):
+			continue
+		if Game.instance.is_up_top(other_id) or not FishHeist.instance.has_been_up(other_id):
 			return true
 	return false
 

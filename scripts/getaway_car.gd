@@ -23,6 +23,14 @@ extends RigidBody3D
 ## Passengers: once someone drives, other cats by the door get "RIDE ALONG" (E); they share the
 ## driver's chase view and press E again to hop out (see "Passengers" in the Inspector).
 
+@export_group("Parking")
+## Which gang's corner this car waits in (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang;
+## -1 = the old spot by the centre crossroads). Only decides WHERE it parks: anyone can drive it.
+## main.tscn has one car per gang: GetawayCar (0) and GangCar (1).
+@export var team: int = -1
+## How far (metres) up the street from its gang's entry manhole it parks, towards the middle.
+@export var park_distance: float = 10.0
+
 @export_group("Engine")
 @export var max_speed: float = 26.0          ## m/s (~95 km/h)
 @export var engine_accel: float = 14.0
@@ -347,11 +355,24 @@ func set_driver(player_id: int) -> void:
 ## Host (and start menu): back to the parking spot, stopped. Also used when the driver
 ## extracts, so the car is waiting for the next trip up.
 func park() -> void:
-	global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
+	global_transform = parking_spot()
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	sync_position = global_position
 	sync_rotation = global_rotation
+
+
+## Where this car waits: park_distance up the north-south street from its gang's entry manhole
+## (fish_heist.gd entry_position), nose pointing towards the middle of the city. No gang (-1),
+## or no heist yet: the old spot by the centre crossroads.
+func parking_spot() -> Transform3D:
+	if team < 0 or FishHeist.instance == null or FishHeist.instance.city == null:
+		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)
+	var manhole := FishHeist.instance.entry_position(team)
+	var north_south := -signf(manhole.z) if manhole.z != 0.0 else -1.0  # +1 = drive south, -1 = north
+	var spot := manhole + Vector3(0, 0.5, north_south * park_distance)
+	# The car's nose is -Z: facing north is no turn, facing south is a half turn.
+	return Transform3D(Basis(Vector3.UP, 0.0 if north_south < 0.0 else PI), spot)
 
 
 # --- Game system hooks (scripts/game_systems.gd) ---

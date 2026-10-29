@@ -78,7 +78,8 @@ var stomach: Array = []
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var _flash_time: float = 0.0
-var _last_car_position: Vector3
+## Host: where each car was last time we looked (car instance id -> position), to work out its speed.
+var _last_car_positions := {}
 
 @onready var model: Node3D = get_node_or_null("Model")
 @onready var _flash_mesh: MeshInstance3D = get_node_or_null(flash_mesh)
@@ -92,7 +93,8 @@ func _ready() -> void:
 	if model != null:
 		sync_yaw = model.rotation.y
 	if is_multiplayer_authority():
-		_last_car_position = Game.instance.car.global_position
+		for car in Game.instance.cars():
+			_last_car_positions[car.get_instance_id()] = car.global_position
 	else:
 		set_physics_process(false)  # only the host thinks; we just glide (see _process)
 
@@ -139,15 +141,20 @@ func _on_hurt(_shooter: CatPlayer) -> void:
 	pass
 
 
-## Host: did the getaway car just run us over? Call it from your brain every physics frame.
-## (The host's copy of the car may be frozen and gliding when someone else drives, so measure
+## Host: did a getaway car (any gang's) just run us over? Call it from your brain every physics
+## frame. (The host's copy of a car may be frozen and gliding when someone else drives, so measure
 ## its speed from how far it moved.)
 func run_over_by_car(delta: float) -> bool:
-	var car := Game.instance.car
-	var car_speed := car.global_position.distance_to(_last_car_position) / maxf(delta, 0.001)
-	_last_car_position = car.global_position
-	return car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
-		and Motion.flat_distance(car.global_position, global_position) < car_smash_radius
+	var hit := false
+	for car in Game.instance.cars():
+		var id := car.get_instance_id()
+		var last: Vector3 = _last_car_positions.get(id, car.global_position)
+		var car_speed := car.global_position.distance_to(last) / maxf(delta, 0.001)
+		_last_car_positions[id] = car.global_position
+		if car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
+				and Motion.flat_distance(car.global_position, global_position) < car_smash_radius:
+			hit = true
+	return hit
 
 
 ## Host: boom. Spit out everything inside, tell the spawner, disappear everywhere.

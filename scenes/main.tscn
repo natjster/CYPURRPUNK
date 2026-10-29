@@ -132,7 +132,13 @@ current = true
 fov = 70.0
 
 [node name="GetawayCar" parent="." instance=ExtResource("2_car")]
-position = Vector3(5, 0.5, -4)
+position = Vector3(-72, 0.5, 62)
+team = 0
+
+[node name="GangCar" parent="." instance=ExtResource("2_car")]
+position = Vector3(72, 0.5, -62)
+rotation = Vector3(0, 3.14159, 0)
+team = 1
 
 [node name="Items" type="Node3D" parent="."]
 script = ExtResource("11_items")

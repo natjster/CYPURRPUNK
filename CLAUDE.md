@@ -208,6 +208,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Only `CatModel` rotates; body never does (camera is a child). Remote copies start with `sync_position = position`
   (else they snap to (0,0,0) = the city for a moment, and the host marked new joiners `went_up`).
   8-player stress test recipe: SETUP_GUIDE §6 (host `--add_local=3 --heat=95`, clients 2+1+1, `--net_stats`).
+- CARS: one per gang in main.tscn (`GetawayCar` team 0, `GangCar` team 1; car export `team` only picks the parking
+  spot `parking_spot()` = `park_distance` up the N-S street from `FishHeist.entry_position(team)`; -1 = `CAR_SPAWN`).
+  Never assume one car: `Game.instance.cars()` / `car_of(id)`; Enemy.run_over_by_car checks every car. DevCapture `_car_for`.
 - `scenes/getaway_car.tscn` + `scripts/getaway_car.gd` (`GetawayCar`): arcade RigidBody3D. Authority =
   driver (host when empty); non-authority copies are frozen (kinematic) and glide to `sync_*`.
   Enter/exit go through host-validated RPCs (`request_enter`/`request_exit(player_id)` → `set_driver`).
