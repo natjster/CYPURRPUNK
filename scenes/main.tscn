@@ -27,6 +27,8 @@
 [ext_resource type="Script" path="res://scripts/ui/ps1_overlay.gd" id="27_overlay"]
 [ext_resource type="Script" path="res://scripts/heat_meter.gd" id="28_heat"]
 [ext_resource type="Script" path="res://scripts/wallet.gd" id="29_wallet"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/pawnie.tscn" id="30_pawnie"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/clawd.tscn" id="31_clawd"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -160,9 +162,11 @@ script = ExtResource("20_roombas")
 _spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn", "res://scenes/roomba_boss.tscn")
 spawn_path = NodePath("../Roombas")
 
-[node name="Hub" type="Node3D" parent="."]
+[node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(0, -200, 0)
 script = ExtResource("17_hub")
+leader = NodePath("DonCatleone")
+shopkeeper = NodePath("ComradeWhiskers")
 
 [node name="DonCatleone" parent="Hub" instance=ExtResource("18_don")]
 position = Vector3(8, 0, -16)
@@ -172,6 +176,24 @@ position = Vector3(10.3, 0, 9)
 rotation = Vector3(0, -1.5708, 0)
 
 [node name="ComradeWhiskers" parent="Hub" instance=ExtResource("23_whiskers")]
+position = Vector3(-12, 0, -10)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="GangHub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
+position = Vector3(200, -200, 0)
+script = ExtResource("17_hub")
+team = 1
+leader = NodePath("Pawnie")
+shopkeeper = NodePath("Clawd")
+leader_glow = Color(1, 0.55, 0.1, 1)
+boss_name = "PAWNIE"
+line_sealed = "Hatch is sealed, sugar. Sit tight - we're movin' to a new district."
+line_had_your_trip = "You had your fun up there, sugar. That hatch is shut. Sit tight till we hit the next district."
+
+[node name="Pawnie" parent="GangHub" instance=ExtResource("30_pawnie")]
+position = Vector3(8, 0, -16)
+
+[node name="Clawd" parent="GangHub" instance=ExtResource("31_clawd")]
 position = Vector3(-12, 0, -10)
 rotation = Vector3(0, 1.5708, 0)
 

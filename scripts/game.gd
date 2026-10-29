@@ -326,8 +326,10 @@ func local_cats() -> Array[CatPlayer]:
 func local_player_info(slot: int) -> Dictionary:
 	if slot == 0:
 		var cat := Settings.current_cat()
-		return {"name": local_player_name, "look": cat.get("look", {}), "cat_id": str(cat.get("id", ""))}
-	return extra_local_players.get(slot, {"name": "PLAYER %d" % (slot + 1), "look": {}, "cat_id": ""})
+		return {"name": local_player_name, "look": cat.get("look", {}), "cat_id": str(cat.get("id", "")),
+			"team": Teams.picked(0)}
+	return extra_local_players.get(slot, {"name": "PLAYER %d" % (slot + 1), "look": {}, "cat_id": "",
+		"team": Teams.picked(slot)})
 
 
 ## Split screen: one more player on this computer joins the game in "slot" (1, 2 or 3), playing
@@ -336,6 +338,8 @@ func local_player_info(slot: int) -> Dictionary:
 func add_local_player(slot: int, info: Dictionary) -> void:
 	if slot < 1 or slot >= PlayerId.MAX_LOCAL or extra_local_players.has(slot):
 		return
+	if not info.has("team"):
+		info["team"] = Teams.picked(slot)  # the gang they picked on the landing page (teams.gd)
 	extra_local_players[slot] = info
 	_request_add_player.rpc_id(1, slot)
 	$Profile.restore(PlayerId.make(multiplayer.get_unique_id(), slot), str(info.get("cat_id", "")), str(info.get("name", "")))

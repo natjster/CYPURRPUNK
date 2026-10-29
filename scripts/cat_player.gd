@@ -111,6 +111,15 @@ var look: Dictionary = {}:
 		if is_node_ready():
 			_apply_look()
 
+## Which gang this cat plays for this game (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow
+## Gang). The owner sets it from the landing-page pick; the synchronizer sends it to everyone.
+## It decides which sewer the cat lives in (UndergroundHub.of) and its name colour.
+var team: int = Teams.CATLEONE:
+	set(value):
+		team = value
+		if is_node_ready():
+			_update_name_tag()
+
 ## Where the owner says this cat is. Sent over the network.
 var sync_position: Vector3
 ## How the owner's cat model is turned/leaning. Sent over the network.
@@ -252,6 +261,8 @@ func _ready() -> void:
 		var info := Game.instance.local_player_info(slot)
 		player_name = info.get("name", "")
 		look = info.get("look", {})
+		team = int(info.get("team", Teams.CATLEONE))
+		_update_name_tag()  # (couch players next to us see our tag in our gang's colour)
 		if slot == 0:
 			# Our first player's cat: its camera is the main screen's, and it gets the mouse.
 			# (Couch players 2-4 see through a copy of their cat's camera on their own part of
@@ -263,7 +274,7 @@ func _ready() -> void:
 		# Start in the sewers. The OWNER places its own cat here: the host's spawn spot
 		# doesn't reach a joining player (the network only sends a new cat's starting
 		# values when the host owns it), so without this a joiner would start up top.
-		teleport_to(UndergroundHub.instance.free_spawn_position(self), 0.0)
+		teleport_to(UndergroundHub.of(self).free_spawn_position(self), 0.0)  # OUR gang's sewer
 		# (_process does the controller's right-stick camera for our own cat.)
 	else:
 		# Someone else's cat: no input, no physics — _process glides it to the synced spot.
@@ -329,7 +340,9 @@ func _on_settings_changed() -> void:
 
 
 ## Show the chosen name, or a stand-in if the player left the name box empty.
+## It's drawn in the cat's GANG colour (scripts/teams.gd), so you can tell friend from rival.
 func _update_name_tag() -> void:
+	$NameTag.modulate = Color(Teams.color_of(team), 0.9)
 	if not player_name.is_empty():
 		$NameTag.text = player_name
 	else:

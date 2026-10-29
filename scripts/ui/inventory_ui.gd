@@ -208,7 +208,7 @@ func _process(_delta: float) -> void:
 	if cat == null or not is_instance_valid(cat):
 		_set_open(false)
 		return
-	var at_stash := UndergroundHub.instance.near_stash(cat)
+	var at_stash := UndergroundHub.of(cat).near_stash(cat)
 	var inventory := items.get_inventory(cat.player_id)
 	var key := str(inventory) + str(at_stash)
 	if key == _last_key:

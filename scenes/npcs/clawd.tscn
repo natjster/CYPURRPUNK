@@ -1,0 +1,306 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/shopkeeper.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_shop"]
+script = ExtResource("4_choice")
+text = "SHOW ME THE GOODS"
+action = "shop"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
+[sub_resource type="Resource" id="Choice_bye"]
+script = ExtResource("4_choice")
+text = "LATER, CLAWD"
+message = "Keep your head down. And keep your paws off my hat."
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("Clawd. Guns, gear, getaway snacks. Pawnie does the talkin'.", "You lookin' to buy or lookin' at my hat? Hat's not for sale.", "Make it quick, pal. I got bullets to count. I lost count. Again.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_shop"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_bye")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("Clawd. Driver, shooter, Pawnie's better half. She'd say worse half. She'd be wrong. Everything I sell fell off a VAC-COP. Usually after I shot it.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("Pawnie tell you about the big red button? ...Yeah. Catleone did that. We were NOT on a date at the Mainframe that night. We were... guardin' it. Real close up. With candles. Look, you buyin' or not?")
+
+[sub_resource type="CapsuleShape3D" id="Shape_don"]
+radius = 0.45
+height = 1.5
+
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.36, 0.24, 0.16, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_hat"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.08, 0.06, 0.1, 1)
+shader_parameter/specular = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_band"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.6, 0.15, 1)
+shader_parameter/emission_color = Color(1, 0.6, 0.15, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_gold"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.8, 0.25, 1)
+shader_parameter/specular = 1.0
+shader_parameter/roughness = 0.2
+
+[sub_resource type="ShaderMaterial" id="Mat_cigar"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.4, 0.22, 0.1, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_ember"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.4, 0.1, 1)
+shader_parameter/emission_color = Color(1, 0.35, 0.05, 1)
+shader_parameter/emission_energy = 6.0
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.9, 0.75, 0.1, 1)
+shader_parameter/emission_color = Color(0.9, 0.75, 0.1, 1)
+shader_parameter/emission_energy = 1.5
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.5, 0.25, 0.3, 1)
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.3
+height = 0.55
+radial_segments = 8
+rings = 5
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.17
+bottom_radius = 0.3
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.08
+bottom_radius = 0.09
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.17, 0.2, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.045
+height = 0.07
+radial_segments = 6
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.035
+bottom_radius = 0.06
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_brim"]
+top_radius = 0.36
+bottom_radius = 0.36
+height = 0.04
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_crown"]
+top_radius = 0.19
+bottom_radius = 0.22
+height = 0.22
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_band"]
+top_radius = 0.225
+bottom_radius = 0.225
+height = 0.05
+radial_segments = 8
+rings = 1
+
+[sub_resource type="TorusMesh" id="Mesh_chain"]
+inner_radius = 0.17
+outer_radius = 0.21
+rings = 8
+ring_segments = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_cigar"]
+top_radius = 0.022
+bottom_radius = 0.022
+height = 0.22
+radial_segments = 5
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_ember"]
+size = Vector3(0.05, 0.05, 0.03)
+
+[node name="Clawd" type="StaticBody3D"]
+script = ExtResource("1_script")
+shop_lines = PackedStringArray("Cash first, questions never. You got $%d.", "All fell off a VAC-COP. You got $%d.", "Pick somethin' loud. You got $%d.")
+talk_radius = 3.5
+npc_name = "CLAWD"
+pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_blame")])
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.75, 0)
+shape = SubResource("Shape_don")
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(0, 3.14159, 0)
+scale = Vector3(1.25, 1.25, 1.25)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.39, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Belly" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.37, -0.13)
+scale = Vector3(1.2, 1.4, 0.8)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Chain" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.6, -0.02)
+rotation = Vector3(0.35, 0, 0)
+mesh = SubResource("Mesh_chain")
+surface_material_override/0 = SubResource("Mat_gold")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.13, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.13, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.82, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.2, 1.04, 0.02)
+rotation = Vector3(0, 0, 0.55)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.2, 1.04, 0.02)
+rotation = Vector3(0, 0, -0.55)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="HatBrim" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.06, 0)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_brim")
+surface_material_override/0 = SubResource("Mat_hat")
+
+[node name="HatCrown" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.19, 0.015)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_crown")
+surface_material_override/0 = SubResource("Mat_hat")
+
+[node name="HatBand" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 1.11, 0.005)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_band")
+surface_material_override/0 = SubResource("Mat_band")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.73, -0.25)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.79, -0.36)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.11, 0.87, -0.265)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.11, 0.87, -0.265)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Cigar" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.09, 0.69, -0.42)
+rotation = Vector3(1.4, 0.35, 0)
+mesh = SubResource("Mesh_cigar")
+surface_material_override/0 = SubResource("Mat_cigar")
+
+[node name="Ember" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.13, 0.67, -0.52)
+mesh = SubResource("Mesh_ember")
+surface_material_override/0 = SubResource("Mat_ember")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0.32)
+rotation = Vector3(0.65, 0, 0)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
+position = Vector3(0, 2.05, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(1, 0.65, 0.15, 1)
+outline_size = 6
+text = "CLAWD"
+font_size = 32
+pixel_size = 0.009

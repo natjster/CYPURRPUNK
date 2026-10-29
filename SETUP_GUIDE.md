@@ -39,7 +39,8 @@ Meow-City/
 │   ├── city_generator.gd      <- builds the whole city from one number
 │   ├── fish_heist.gd          <- fish spots, manholes, payphones, the DEEP CLEAN, the exit arrow
 │   ├── wallet.gd              <- Wallet: every player's cash + the sewer scoreboard (§16)
-│   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start (§8)
+│   ├── hub.gd                 <- THE SEWERS: the underground hub where cats start, one per gang (§8)
+│   ├── teams.gd               <- the two gangs: Catleone Family / Burrow Gang (§8)
 │   ├── npcs/                  <- the NPC framework: npc.gd, npc_page.gd, npc_choice.gd (§8)
 │   ├── quests/                <- the quest system: quest_data.gd, quest_manager.gd (§8)
 │   ├── enemy.gd               <- Enemy: what every enemy shares (health, shot, explode, network) (§16)
@@ -545,17 +546,60 @@ THE SEWERS (hub, safe)  --Don sends you up the entry manhole-->  THE CITY (grab 
   and the rebellion moves to a NEW DISTRICT (a new city seed).
 ```
 
+### Two gangs, two sewers (`scripts/teams.gd`, class **Teams**)
+Two rebellions hide under the city, and each blames the other for letting OVERCLEAN take over:
+
+| Gang | Boss (sends you up) | Shop | Sewer node in `main.tscn` | Colour |
+|---|---|---|---|---|
+| **CATLEONE FAMILY** (team 0) | Don Catleone | Comrade Whiskers (Black Markitten) | **Hub**, at (0, -200, 0) | pink |
+| **BURROW GANG** (team 1) | **Pawnie** (red beret) | **Clawd** (fedora, sells the same gear) | **GangHub**, at (200, -200, 0) | orange |
+
+- **Picking:** every player picks a gang for each game on the landing page (P1: the **P1 GANG**
+  button; P2-4: **LB / RB**). SOLO always plays for the Catleone Family. Online, each computer
+  picks for its own players.
+- **What a gang does so far:** you start in your gang's sewer, come home to it (extracting or
+  knocked out), and use its stash and shop. The two sewers are sealed boxes 200 m apart: you can't
+  walk into the other one. Names over heads are in **your gang's colour**; gang-mates get the cyan
+  friend health bar, the other gang a red one (and their DOWNED beacon isn't shown to you far
+  off / through walls). **Only gang-mates can revive you**: if you're the only one of your gang
+  in the game, a knockdown knocks you out straight away.
+- **Not yet (next PvP phases):** guns still only shove other cats (no PvP damage yet); both gangs
+  come up the same entry manhole and share one exit and one payphone call (the payphone voice is
+  still Don's); no team scoreboard.
+- **The story gag:** ask any boss **WHO LET OVERCLEAN IN?** Don says Pawnie & Clawd were on a date
+  in the Mainframe and leaned on the big red button, then sold the city for a can of tuna. Pawnie
+  says Don fell asleep on the button, then sold the city for a can of tuna ("PREMIUM tuna. Didn't
+  even share."). Clawd insists they were NOT on a date. They were "guardin' it. Real close up.
+  With candles."
+
+**The second sewer** is the same `hub.gd` with its own settings: select **GangHub** in `main.tscn`
+and look under **Gang** in the Inspector: **Team** (1), **Leader** (Pawnie: whoever sends cats up
+and gets the glowing corner), **Shopkeeper** (Clawd: the stall is built around him), **Leader
+Glow**, **Boss Name**, and the two lines the boss says when they won't send you up (**Line
+Sealed**, **Line Had Your Trip**). Don's **Hub** has the same settings. Their talk is in
+`scenes/npcs/pawnie.tscn` and `clawd.tscn` (Pages, like every NPC). Clawd is a Shopkeeper
+(`shopkeeper.gd`), like Comrade Whiskers.
+
+**Add a third gang:** add a name and colour to `NAMES` / `COLORS` in `scripts/teams.gd`, then
+copy **GangHub** in `main.tscn` (right-click > Duplicate), set its **Team** to 2, move it to
+x = 400, and give it its own leader and shopkeeper.
+
+**Test:** `--teams=1` (you play for the Burrow Gang), `--teams=0,1 --add_local=1` (P1 Catleone,
+P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture cat` lines print
+`team=`.
+
 ### The underground hub ("THE SEWERS")
-Every cat starts here when you HOST or JOIN. It's a sewer tunnel with a murky channel down the
+Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
 middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
 west wall; decoration for now — later it's where scrap buys server-wide buffs) and a ladder up
 to the surface. The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
 sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
 
 **Don Catleone** — the boss cat in the fedora with the cigar, at the north end under a pink
-glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives four choices:
-**SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **HOW DOES
-THIS WORK?** and **NEVER MIND** (or Esc).
+glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives five choices:
+**SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **WHO LET
+OVERCLEAN IN?** (his side of the story: it was Pawnie & Clawd), **HOW DOES THIS WORK?** and
+**NEVER MIND** (or Esc).
 
 **Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
 by the cardboard shanties on the east wall. Extremely needy. She gives you the **MITTENS' FISH**
@@ -1217,9 +1261,10 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   The landing page:
   ```
   [<] P1  WHISKERS [>]       <- player 1: A on < / > = pick your cat, A on the name = make / edit cats
-  P2   < MITTENS >           <- a friend pressed START on their controller; left / right = their cat
+  [P1 GANG: CATLEONE FAMILY] <- player 1: A = switch gang (§8 "Two gangs")
+  P2  < MITTENS >  BURROW GANG <- a friend pressed START on their controller; left / right = their cat
                                 (players 2-4 have no highlight on this page, so their stick picks),
-                                A = edit it (MY CAT), B = leave
+                                LB / RB = their gang, A = edit it (MY CAT), B = leave
   P3   PRESS START TO JOIN
   P4   PRESS START TO JOIN
   [START GAME]  [BACK]       (ONLINE CO-OP: [NEXT])
@@ -1304,8 +1349,10 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   **left / right** on their own controller: one of your saved cats (MY CAT) that nobody else
   picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.). **A** = edit their cat
   in MY CAT (colours, hat, shades...; a NEW CAT is made right then so there's one to dress); only
-  their controller drives that screen, DONE or B comes back. **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
-  right), or presses A on it to make / edit cats. Their controllers don't move player 1's menu.
+  their controller drives that screen, DONE or B comes back. **LB / RB** = switch their gang.
+  **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
+  right), or presses A on it to make / edit cats, and switches gang on the **P1 GANG** button.
+  Their controllers don't move player 1's menu.
   LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
   JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone
   up. Two players never play the same cat: each cat has its own cash and stash.

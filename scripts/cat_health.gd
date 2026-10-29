@@ -142,11 +142,12 @@ func damage(player_id: int, amount: int, cause: String, instant: bool = false) -
 		_go_down(player_id, cause)
 
 
-## Host: is there any other cat in the game still on its feet (up top OR down in the sewers, who
-## could climb up)? If not, a downed cat would only wait for nothing.
+## Host: is there any other cat IN THE SAME GANG still on its feet (up top OR down in the sewers,
+## who could climb up)? If not, a downed cat would only wait for nothing. (Only gang-mates can
+## revive you: scripts/teams.gd.)
 func _anyone_could_help(player_id: int) -> bool:
 	for other_id in Game.instance.player_ids():
-		if other_id != player_id and not is_down(other_id):
+		if other_id != player_id and not is_down(other_id) and Teams.same_team(other_id, player_id):
 			return true
 	return false
 
@@ -231,6 +232,8 @@ func _can_revive(reviver_id: int, downed_id: int, slack: float) -> bool:
 	var patient := Game.instance.cat_for(downed_id)
 	if reviver == null or patient == null or reviver == patient or not is_downed(downed_id):
 		return false
+	if reviver.team != patient.team:
+		return false  # only your own gang picks you up
 	if is_down(reviver_id) or Game.instance.car_of(reviver_id) != null:
 		return false
 	return reviver.global_position.distance_to(patient.global_position) <= revive_radius + slack
@@ -331,7 +334,7 @@ func _knocked_out(player_id: int, cause: String) -> void:
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):
 		cat.knocked_out = false
-		UndergroundHub.instance.return_cat(cat)  # wake up down the drain (and get healed there)
+		UndergroundHub.of(cat).return_cat(cat)  # wake up down the drain (and get healed there)
 
 
 ## Host -> a computer that just joined (network ID "peer"): everyone's HP, who's downed, revives.
@@ -372,6 +375,8 @@ func _forget_player(player_id: int) -> void:
 func revive_distance(patient: CatPlayer, helper: CatPlayer) -> float:
 	if patient == helper or not is_downed(patient.player_id) or is_down(helper.player_id):
 		return -1.0
+	if patient.team != helper.team:
+		return -1.0  # a rival gang's cat: not yours to pick up (PvP phase: rob them instead?)
 	var by := reviver_of(patient.player_id)
 	if by != 0 and by != helper.player_id:
 		return -1.0  # someone else is already on it

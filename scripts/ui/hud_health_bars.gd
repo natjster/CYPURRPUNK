@@ -81,6 +81,13 @@ func _process(delta: float) -> void:
 			if node == me or not node.has_method("health_bar_info"):
 				continue
 			var info: Dictionary = node.health_bar_info()
+			# Cats of OUR gang get the cyan friend bar; the other gang's get the red one, and
+			# their DOWNED beacon isn't shown far off / through walls (that's for their friends).
+			var friend: bool = node is CatPlayer and (me == null or (node as CatPlayer).team == me.team)
+			if node is CatPlayer and not friend:
+				info = info.duplicate()
+				info.erase("see_from")
+				info.erase("through_walls")
 			var id: int = node.get_instance_id()
 			seen[id] = true
 			var anim: Dictionary = _anim.get(id, {})
@@ -93,7 +100,7 @@ func _process(delta: float) -> void:
 			var visible_now := _wanted(info, node, camera, me, too_far)
 			anim.alpha = move_toward(anim.alpha, 1.0 if visible_now else 0.0, delta * 5.0)
 			if anim.alpha > 0.0 and not info.is_empty():
-				_add_to_draw_list(info, anim, camera, game_size, node is CatPlayer, boss, too_far)
+				_add_to_draw_list(info, anim, camera, game_size, friend, boss, too_far)
 	for id in _anim.keys():
 		if not seen.has(id):
 			_anim.erase(id)

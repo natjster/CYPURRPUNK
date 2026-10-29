@@ -112,6 +112,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   triangles makes textures shear and swim. DevCapture `--no_affine` / `--no_snap` help diagnose.
   Never stack visible surfaces a few cm apart (e.g. sidewalk over street): they z-fight and
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
+- GANGS (PvP phase 1): `scripts/teams.gd` static `Teams` (0 CATLEONE / 1 BURROW, NAMES/COLORS, `picks[seat]` set on the
+  landing page: P1 GANG button, P2-4 LB/RB; SOLO resets to 0). `CatPlayer.team` (synced, set from `local_player_info`
+  "team"; name tag colour). One `UndergroundHub` per gang: `Hub` (team 0, Don + Comrade Whiskers) and `GangHub` (team 1,
+  x=200, Pawnie + Clawd shopkeeper; exports team/leader/shopkeeper/leader_glow/boss_name/lines). Use `UndergroundHub.of(cat)`
+  / `for_team(t)` for spawn/return/deploy/stash; `instance` = team 0 and alone runs mood/music. Only gang-mates revive
+  (`_anyone_could_help`/`_can_revive`/`revive_distance` check team); HudHealthBars friend = same team. Not yet: PvP
+  damage, per-team entry/exit/payphone voice, team score. Test: `--teams=0,1 --add_local=1`, `--talk=Pawnie`.
 - Extraction loop: cats spawn in the hub `Hub` (`scripts/hub.gd`, `UndergroundHub.instance`), a fixed
   code-built sewer at y=-200 (anything below y=-100 is "in the hub" = safe zone, guns don't fire).
   Don Catleone (`scenes/npcs/don_catleone.tscn`) is an `Npc`; his "send_up_top" action calls

@@ -26,12 +26,40 @@ extends Node3D
 ## on your screen only (_update_mood). Back up top, the night city returns.
 ## Split screen: each player's screen gets the fog of where ITS camera is (environment_for),
 ## the moon shines while anyone on this computer is up top, and the music follows them too.
+##
+## TWO GANGS, TWO SEWERS (scripts/teams.gd): every gang has its own copy of this tunnel.
+##   "Hub"     (Team 0) = Don Catleone's, at (0, -200, 0)
+##   "GangHub" (Team 1) = Pawnie & Clawd's, at (200, -200, 0): same tunnel, its own leader (Pawnie)
+##                        and shopkeeper (Clawd), set in the Inspector (Leader / Shopkeeper).
+## The tunnels are sealed boxes far apart, so nobody can walk into the other gang's.
+## Find a cat's sewer with UndergroundHub.of(cat); UndergroundHub.instance is the Team 0 one
+## (it also runs the fog / music, which are shared by the whole world).
 
-## The one hub, so cats, items and the heist can find it (UndergroundHub.instance).
+## The Team 0 hub (Don's). It also runs the mood and music for the whole world.
 static var instance: UndergroundHub
+## Every gang's hub, by team number (Teams.CATLEONE, Teams.BURROW...).
+static var by_team := {}
 
 ## Anything below this height is "in the hub" (the city floor is at 0, the hub at -200).
 const DEPTH_LINE: float = -100.0
+
+@export_group("Gang")
+## Which gang lives here (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang).
+@export var team: int = Teams.CATLEONE
+## The boss who sends cats up top (a "send_up_top" choice in their talk). Their corner gets a
+## glow and crates. Left empty = a child node called DonCatleone.
+@export var leader: Npc
+## The shopkeeper: their stall is built around them (the Black Markitten). Left empty = a child
+## node called ComradeWhiskers.
+@export var shopkeeper: Npc
+## The colour of the glow over the leader's corner.
+@export var leader_glow: Color = Color(1, 0.4, 0.8)
+## The name on messages from the boss when they won't send you up.
+@export var boss_name: String = "DON CATLEONE"
+## What the boss says when the hatch is sealed (DEEP CLEAN)...
+@export_multiline var line_sealed: String = "Hatch is sealed, kid. Sit tight - we're movin' to a new district."
+## ...and when you've already had your one trip up this district.
+@export_multiline var line_had_your_trip: String = "You had your shot up there, kid. That hatch is shut behind ya. Sit tight till we hit the next district."
 
 @export_group("Size")
 ## Half the tunnel's width (metres, east-west).
@@ -71,10 +99,8 @@ const DEPTH_LINE: float = -100.0
 @export var hub_ambience: String = "sewer"
 @export var city_ambience: String = "rain"
 
-## Don Catleone: only used here to decorate his corner (lights, crates).
-@onready var npc: Npc = $DonCatleone
-## Comrade Whiskers: only used here to build his shop, the Black Markitten, around him.
-@onready var shopkeeper: Npc = $ComradeWhiskers
+## The leader (Don Catleone in Team 0's): only used here to decorate their corner (lights, crates).
+var npc: Npc
 @onready var _environment: Environment = $"../WorldEnvironment".environment
 @onready var _moonlight: Light3D = $"../Moonlight"
 @onready var _rain: GPUParticles3D = $"../Rain"
@@ -97,10 +123,17 @@ var _neon: ShaderMaterial
 
 
 func _enter_tree() -> void:
-	instance = self
+	by_team[team] = self
+	if team == Teams.CATLEONE:
+		instance = self
 
 
 func _ready() -> void:
+	npc = leader if leader != null else get_node_or_null("DonCatleone") as Npc
+	if shopkeeper == null:
+		shopkeeper = get_node_or_null("ComradeWhiskers") as Npc
+	if self != instance:
+		set_process(false)  # the fog / music are the whole world's: Team 0's hub runs them
 	_make_materials()
 	_build_tunnel()
 	_build_props()
@@ -113,9 +146,20 @@ func _ready() -> void:
 	Settings.changed.connect(func(): _other_mood = null)  # e.g. VOLUMETRIC FOG changed: copy it again
 
 
-## True if this spot is down in the hub (the safe zone).
+## True if this spot is down in a hub, any gang's (the safe zone).
 static func is_in_hub(where: Vector3) -> bool:
 	return where.y < DEPTH_LINE
+
+
+## The sewer this gang lives in (Team 0's if there's no hub for it).
+static func for_team(team_number: int) -> UndergroundHub:
+	var hub: UndergroundHub = by_team.get(team_number)
+	return hub if hub != null and is_instance_valid(hub) else instance
+
+
+## This cat's own gang's sewer: where it starts, comes home to, and has its stash.
+static func of(cat: CatPlayer) -> UndergroundHub:
+	return for_team(cat.team) if cat != null else instance
 
 
 # --- Moving cats between the hub and the city (called on the cat OWNER's computer) ---
@@ -148,11 +192,11 @@ func spawn_position(n: int) -> Vector3:
 func deploy(cat: CatPlayer) -> void:
 	if FishHeist.instance.sealed:
 		# The DEEP CLEAN is on up there: wait for the next district.
-		Hud.show_message("DON CATLEONE: Hatch is sealed, kid. Sit tight - we're movin' to a new district.", 4.0, cat.slot)
+		Hud.show_message("%s: %s" % [boss_name, line_sealed], 4.0, cat.slot)
 		return
 	if FishHeist.instance.has_been_up(cat.player_id):
 		# One trip per district (fish_heist.gd went_up): extracted or flattened, you've had yours.
-		Hud.show_message("DON CATLEONE: You had your shot up there, kid. That hatch is shut behind ya. Sit tight till we hit the next district.", 5.0, cat.slot)
+		Hud.show_message("%s: %s" % [boss_name, line_had_your_trip], 5.0, cat.slot)
 		return
 	var spread := Vector3(randf_range(-3, 3), 0, randf_range(0, 3))  # don't land on each other
 	cat.teleport_to(surface_spot + spread, 0.0)
@@ -289,9 +333,9 @@ func _build_props() -> void:
 	for y in range(1, int(height)):
 		LevelKit.add_box(self, Vector3(-w + 6, y, -l + 0.15), Vector3(1.0, 0.06, 0.06), _metal, false)
 
-	# Don Catleone's corner: a pink glow over his spot and crates for a desk.
+	# The leader's corner (Don Catleone's): a glow over their spot and crates for a desk.
 	var don := npc.position
-	LevelKit.add_light(self, Vector3(don.x, 3.0, don.z + 1.0), Color(1, 0.4, 0.8), 3.0, 8.0)
+	LevelKit.add_light(self, Vector3(don.x, 3.0, don.z + 1.0), leader_glow, 3.0, 8.0)
 	LevelKit.add_light(self, Vector3(don.x - 1.0, 1.6, don.z + 2.0), Color(1, 0.85, 0.6), 2.0, 5.0)  # lights his face
 	LevelKit.add_box(self, Vector3(don.x + 2.2, 0.45, don.z + 0.3), Vector3(1.4, 0.9, 0.9), _crate, true)
 	LevelKit.add_box(self, Vector3(don.x + 2.2, 1.2, don.z + 0.3), Vector3(0.9, 0.6, 0.7), _crate, true)

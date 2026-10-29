@@ -581,7 +581,7 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 	var cat := _cat(player_id)
 	var inventory := get_inventory(player_id).duplicate(true)
 	var stash: Array = inventory.get("stash", [])
-	if cat == null or not UndergroundHub.instance.near_stash(cat) or stash.size() >= stash_size:
+	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or stash.size() >= stash_size:
 		return
 	var item_id := ""
 	if where == "hand":
@@ -607,7 +607,7 @@ func request_from_stash(player_id: int, index: int) -> void:
 	var cat := _cat(player_id)
 	var inventory := get_inventory(player_id).duplicate(true)
 	var stash: Array = inventory.get("stash", [])
-	if cat == null or not UndergroundHub.instance.near_stash(cat) or index < 0 or index >= stash.size():
+	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or index < 0 or index >= stash.size():
 		return
 	if inventory.pack.size() >= pack_size:
 		return  # backpack full (the screen tells the player)

@@ -23,8 +23,9 @@ extends Control
 ##       MULTIPLAYER -> LOCAL CO-OP / ONLINE CO-OP (CoopScreen)
 ##         either one -> the LANDING PAGE (LandingScreen): everyone on this computer gathers
 ##           [<] P1  WHISKERS [>]      <- player 1: A on < / > = pick cat, A on the name = make / edit cats
-##           P2  < MITTENS >           <- joined with START on their controller (left / right = cat,
-##                                        A = edit it in MY CAT, B = leave)
+##           [P1 GANG: CATLEONE FAMILY] <- A = switch gang (scripts/teams.gd)
+##           P2  < MITTENS >  BURROW GANG <- joined with START on their controller (left / right = cat,
+##                                        LB / RB = gang, A = edit it in MY CAT, B = leave)
 ##           P3  PRESS START TO JOIN
 ##           [START GAME] / [NEXT]  [BACK]
 ##           LOCAL:  START GAME = everyone into the sewers on this computer (no network)
@@ -80,6 +81,7 @@ var coop_screen: VBoxContainer
 var landing_screen: VBoxContainer
 var _landing_title: Label
 var _p1_button: Button          # "P1  WHISKERS" (A = make / edit cats), with < > buttons beside it
+var _p1_team_button: Button     # "GANG: CATLEONE FAMILY" (A = switch gang, scripts/teams.gd)
 ## On-screen keyboards for the city # and address boxes (controller typing: on_screen_keyboard.gd).
 var _seed_keyboard: OnScreenKeyboard
 var _address_keyboard: OnScreenKeyboard
@@ -234,6 +236,11 @@ func _input(event: InputEvent) -> void:
 			Seats.cycle_lobby_cat(seat, -1)
 		elif event.is_action_pressed("ui_right"):
 			Seats.cycle_lobby_cat(seat, 1)
+		elif event.is_action_pressed("ui_tab_left") or event.is_action_pressed("ui_tab_right"):
+			# LB / RB: switch gang (scripts/teams.gd). (Only if they're sitting in the lobby.)
+			if Seats.lobby_cat_name(seat) != "":
+				Teams.cycle_pick(seat, -1 if event.is_action_pressed("ui_tab_left") else 1)
+				_refresh_landing()
 		elif event.is_action_pressed("ui_accept") and landing_screen.visible:
 			Seats.lobby_cat_for_editing(seat)  # (makes a NEW CAT first if that's what they picked)
 			_cat_from = "landing"
@@ -295,6 +302,8 @@ func _build_landing_screen() -> void:
 	p1_right.custom_minimum_size.x = 16
 	p1_left.focus_neighbor_left = p1_left.get_path_to(p1_left)
 	p1_right.focus_neighbor_right = p1_right.get_path_to(p1_right)
+	# Player 1's gang (scripts/teams.gd): A on it switches Catleone Family <-> Burrow Gang.
+	_p1_team_button = _menu_button(landing_screen, "", _on_p1_team_pressed, 13)
 	for seat in range(1, PlayerId.MAX_LOCAL):
 		var row := Label.new()
 		row.custom_minimum_size = Vector2(0, 13)
@@ -323,15 +332,24 @@ func _refresh_landing() -> void:
 		return
 	var my_name := str(Settings.current_cat().get("name", ""))
 	_p1_button.text = "P1   %s" % (my_name.to_upper() if my_name != "" else "MAKE YOUR CAT")
+	_p1_team_button.text = "P1 GANG: %s" % Teams.name_of(Teams.picked(0))
+	_p1_team_button.add_theme_color_override("font_color", Teams.color_of(Teams.picked(0)))
 	for i in _seat_labels.size():
 		var seat := i + 1
 		var cat := Seats.lobby_cat_name(seat)
-		_seat_labels[i].text = "P%d   < %s >" % [seat + 1, cat] if cat != "" \
+		_seat_labels[i].text = "P%d  < %s >  %s" % [seat + 1, cat, Teams.name_of(Teams.picked(seat))] if cat != "" \
 			else "P%d   PRESS %s TO JOIN" % [seat + 1, Controls.display_name("Pad Start")]
 		_seat_labels[i].modulate.a = 1.0 if cat != "" else 0.55
 	# (Players 2-4 have no highlight on this page, so their left / right picks their cat.)
-	_landing_hint.text = "P2-4: LEFT / RIGHT = PICK CAT   %s = EDIT   %s = LEAVE" % [
+	_landing_hint.text = "P2-4: LEFT/RIGHT = CAT  %s/%s = GANG  %s = EDIT  %s = LEAVE" % [
+		Controls.display_name("Pad LB"), Controls.display_name("Pad RB"),
 		Controls.display_name("Pad A"), Controls.display_name("Pad B")]
+
+
+## A on player 1's gang button: switch to the other gang (scripts/teams.gd).
+func _on_p1_team_pressed() -> void:
+	Teams.cycle_pick(0)
+	_refresh_landing()
 
 
 ## A on player 1's row: make or restyle cats (CHOOSE YOUR CAT), then back here.
@@ -356,6 +374,7 @@ func _on_landing_start() -> void:
 func _on_solo_pressed() -> void:
 	Seats.clear_lobby()
 	Seats.coop = false  # SOLO: every controller is player 1's, nobody joins
+	Teams.picks[0] = Teams.CATLEONE  # SOLO: you start in Don's sewer (gangs are picked in co-op)
 	_cat_from = "solo"
 	hide_screens()
 	cat_pressed.emit()

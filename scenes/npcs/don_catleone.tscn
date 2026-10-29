@@ -16,6 +16,11 @@ script = ExtResource("4_choice")
 text = "WHO ARE YOU?"
 go_to = "about"
 
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
 [sub_resource type="Resource" id="Choice_how"]
 script = ExtResource("4_choice")
 text = "HOW DOES THIS WORK?"
@@ -29,12 +34,17 @@ text = "NEVER MIND"
 script = ExtResource("3_page")
 id = "hello"
 lines = PackedStringArray("Ayyy, look what crawled outta the litter box. You want work? I got work.", "Welcome to the Sewers, kid. Nobody shoots down here. Nobody. Capisce?", "The city up there is crawlin' with fish, and nobody's guardin' 'em. Well. Almost nobody.", "You come to me, on the day of my nap, and you ask for a JOB?")
-choices = Array[ExtResource("4_choice")]([SubResource("Choice_up"), SubResource("Choice_who"), SubResource("Choice_how"), SubResource("Choice_bye")])
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_up"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_how"), SubResource("Choice_bye")])
 
 [sub_resource type="Resource" id="Page_about"]
 script = ExtResource("3_page")
 id = "about"
 lines = PackedStringArray("Don Catleone. I run these pipes. Nine lives, kid - I spent eight of 'em gettin' here. Don't make me spend the ninth on you.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("Who let the robots in? Pawnie and Clawd, that's who. Them two lovebirds snuck into the Mainframe on a DATE. Clawd leans on the big red button - the BIG RED BUTTON, kid. Then they sold the whole city to OVERCLEAN for a can of tuna. Now they hide in their burrow tellin' everybody it was ME. Me! I was nappin'. Nowhere near no button.")
 
 [sub_resource type="Resource" id="Page_howto"]
 script = ExtResource("3_page")
@@ -184,7 +194,7 @@ size = Vector3(0.05, 0.05, 0.03)
 [node name="DonCatleone" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "DON CATLEONE"
-pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_howto")])
+pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_howto")])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 position = Vector3(0, 0.75, 0)

@@ -172,9 +172,9 @@ func _run_action(action: String, cat: CatPlayer) -> void:
 	else:
 		match action:
 			"send_up_top":
-				UndergroundHub.instance.deploy(cat)
+				UndergroundHub.of(cat).deploy(cat)  # (the cat's own gang's sewer: hub.gd)
 			"return_to_hub":
-				UndergroundHub.instance.return_cat(cat)
+				UndergroundHub.of(cat).return_cat(cat)
 			_:
 				_on_action(action, cat)
 	action_chosen.emit(action, cat)

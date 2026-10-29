@@ -8,6 +8,7 @@ extends Node
 ##   --capture=PATH    where to save the PNG (relative to the project folder)
 ##   --solo / --host / --join   start a game (otherwise you get the start menu)
 ##   --wait=N          wait N frames after our cat appears before doing anything else
+##   --teams=A,B,..    the gang of seat 0, 1, 2... (0 = Catleone Family, 1 = Burrow Gang: teams.gd)
 ##   --add_local=N     split screen: N more players join in on this computer (slots 1..N,
 ##                     named COUCH 2, COUCH 3... with random looks; their cats stand still)
 ##   --as_local=S      (with --add_local) every action below (--pos, --give, --grab, --drive,
@@ -130,6 +131,12 @@ func _ready() -> void:
 		var parts: PackedStringArray = args["setting"].split(":")
 		Settings.set_value(parts[0], str_to_var(parts[1]))
 
+	# --teams=1,0,1  the gang each seat plays for (scripts/teams.gd), as if picked on the landing page.
+	if args.has("teams"):
+		var gangs: PackedStringArray = args["teams"].split(",")
+		for seat in mini(gangs.size(), Teams.picks.size()):
+			Teams.picks[seat] = int(gangs[seat])
+
 	if args.has("saved_cats"):
 		var look_rng := RandomNumberGenerator.new()
 		for cat_name in args["saved_cats"].split(","):
@@ -226,7 +233,7 @@ func _ready() -> void:
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
 			#   --from_stash=0             (stash slot 0 into the backpack)
-			var hub := (scene as Game).hub
+			var hub := UndergroundHub.of(player)
 			player.teleport_to(hub.to_global(hub.stash_spot), 0.0)
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -242,11 +249,11 @@ func _ready() -> void:
 					await get_tree().process_frame
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
-			(scene as Game).hub.deploy(player)
+			UndergroundHub.of(player).deploy(player)
 			if args.has("hold_all"):  # split-screen trailer shots: the couch players go up too
 				for cat in scene.local_cats():
 					if cat != player:
-						(scene as Game).hub.deploy(cat)
+						UndergroundHub.of(cat).deploy(cat)
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
 		if args.has("pos"):
@@ -406,7 +413,7 @@ func _ready() -> void:
 			# he should refuse once we've been up). Prints where we ended up.
 			for i in int(args["deploy_again"]):
 				await get_tree().physics_frame
-			(scene as Game).hub.deploy(player)
+			UndergroundHub.of(player).deploy(player)
 			for i in 10:
 				await get_tree().physics_frame
 			print("DevCapture deploy_again: went_up=%s in_hub=%s heat=%.1f" % [FishHeist.instance.has_been_up(player.player_id),
@@ -664,7 +671,7 @@ func _ready() -> void:
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():
-			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.player_id), cat.knocked_out])
+			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s team=%d" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.player_id), cat.knocked_out, cat.team])
 			# What it's wearing, as seen on THIS computer (fur colour as hex + accessories).
 			var model: Node3D = cat.cat_model
 			var worn := PackedStringArray()
@@ -912,7 +919,7 @@ func _film_camera(player: CatPlayer, args: Dictionary) -> void:
 
 
 func _talk(player: CatPlayer, args: Dictionary) -> void:
-	var npc: Npc = Game.instance.hub.npc
+	var npc: Npc = UndergroundHub.of(player).npc  # (our own gang's boss)
 	for node in get_tree().get_nodes_in_group(Npc.GROUP):
 		if node.name == args["talk"]:
 			npc = node

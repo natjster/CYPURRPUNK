@@ -341,7 +341,7 @@ func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
 	Seats.rumble(player_id, 0.5, 0.2, 0.3)  # a happy buzz on their controller
 	var cat := Game.instance.cat_for(player_id)
 	if cat != null:
-		UndergroundHub.instance.return_cat(cat)  # down the drain we go
+		UndergroundHub.of(cat).return_cat(cat)  # down the drain we go
 
 
 ## Host -> everyone: this player has used their one trip up in this district.
