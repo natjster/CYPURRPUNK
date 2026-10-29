@@ -43,6 +43,11 @@ extends Node
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
 ##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
 ##                     add --kill_bosses to destroy bosses too
+##   --down=S          (host, after --deploy) the cat in slot S (0 = ours; 1.. with --add_local) stands
+##                     1.5 m in front of us and takes 100 damage: DOWNED (or knocked out if nobody could help).
+##                     --bleed_out=SEC changes how long it waits. Then --hold=interact on slot 0 = give up.
+##   --revive=N        (with --down=S, S > 0) our cat presses E on it and holds the button N frames
+##                     (180 = the 3 s revive); prints health / downed state before and after
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
@@ -392,6 +397,8 @@ func _ready() -> void:
 						victim.take_hit(0, 500)
 						break
 				await get_tree().physics_frame
+		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
+			await _down_and_revive(scene, player, args)
 		if args.has("hold"):
 			# Pretend a key is held down, e.g. --hold=move_forward --hold_frames=60
 			for i in int(args.get("hold_delay", "30")):
@@ -708,6 +715,61 @@ func _describe(steps: Array) -> String:
 		biggest = maxf(biggest, step)
 		total += step
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
+
+
+## --down=S [--revive=N] [--bleed_out=SEC]: knock the cat in slot S down in front of us, then
+## (with --revive) press and hold E on it like a teammate would. Prints what happened.
+func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	var health := CatHealth.instance
+	if args.has("bleed_out"):
+		health.bleed_out_seconds = float(args["bleed_out"])
+	var victim: CatPlayer = null
+	if multiplayer.is_server():
+		victim = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["down"])))
+	else:
+		# A client with --revive=N: wait (up to ~10 s) for any downed cat, then walk up to it.
+		for i in 600:
+			for other in scene.players.get_children():
+				if health.is_downed((other as CatPlayer).player_id):
+					victim = other
+			if victim != null:
+				break
+			await get_tree().physics_frame
+		if victim != null:
+			player.teleport_to(victim.global_position + Vector3(1.0, 0.2, 0), 0.0)
+			for i in 20:
+				await get_tree().physics_frame  # let the host see our new position first
+	if victim == null:
+		print("DevCapture down: no cat to down / revive")
+		return
+	var report := func(label: String) -> void:
+		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d knocked_out=%s items=%s" % [
+			label, victim.name, health.get_health(victim.player_id), health.is_downed(victim.player_id),
+			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), victim.knocked_out,
+			ItemManager.instance.inventories.get(victim.player_id, {})])
+	if multiplayer.is_server():
+		if victim != player:
+			var ahead := -player.camera_pivot.global_basis.z
+			victim.teleport_to(player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * 1.5, 0.0)
+		for i in 10:
+			await get_tree().physics_frame
+		health.damage(victim.player_id, 100, "A TEST")
+		for i in 5:
+			await get_tree().physics_frame
+	report.call("after hit")
+	if victim != player:
+		print("DevCapture down prompt for us: \"%s\"" % Interactable.prompt_for(player))
+	if args.has("revive") and victim != player:
+		Interactable.try_use(player)  # what pressing E does...
+		Input.action_press(Seats.action(player.slot, "interact"))  # ...and keep holding it
+		for i in int(args["revive"]):
+			await get_tree().physics_frame
+			if i == 60:
+				report.call("1 s into revive (prompt \"%s\")" % Interactable.prompt_for(player))
+		Input.action_release(Seats.action(player.slot, "interact"))
+		for i in 10:
+			await get_tree().physics_frame
+		report.call("after revive")
 
 
 ## The Roomba --bait_roomba / --zap_roomba act on: the nearest one, or the MEGA VAC-COP

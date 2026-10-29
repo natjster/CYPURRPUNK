@@ -179,13 +179,46 @@ func reads_input() -> bool:
 ## For the floating health bars over OTHER players' heads (scripts/ui/hud_health_bars.gd):
 ## a slim cyan bar just under the name, only once this cat is hurt. (Your own health is the big
 ## bar top-left of your HUD instead.)
+## DOWNED: the bar shows the bleed-out time draining instead, with "DOWNED" over it, and it's
+## seen from far away and through walls so friends can find you.
 func health_bar_info() -> Dictionary:
 	var health := CatHealth.instance
 	if health == null:
 		return {}
+	if health.is_downed(player_id):
+		var reviving := health.reviver_of(player_id) != 0
+		return {"hp": health.bleed_out_left(player_id), "max": health.bleed_out_seconds,
+			"position": global_position + Vector3.UP * 1.0, "show": true,
+			"name": "REVIVING..." if reviving else "DOWNED %d" % ceili(health.bleed_out_left(player_id)),
+			"see_from": health.downed_seen_from, "through_walls": true}
 	var hp := health.get_health(player_id)
 	return {"hp": hp, "max": health.max_health, "position": global_position + Vector3.UP * 1.3,
 		"show": hp < health.max_health, "name": ""}
+
+
+## True while this cat is DOWNED (0 HP, waiting for a teammate: scripts/cat_health.gd).
+## It can only crawl and meow.
+func is_downed() -> bool:
+	return CatHealth.instance != null and CatHealth.instance.is_downed(player_id)
+
+
+# --- A DOWNED cat is something teammates can use with E: "HOLD: REVIVE <NAME>" ---
+# (scripts/interactable.gd; the rules are all in cat_health.gd.)
+
+func interact_distance(helper: CatPlayer) -> float:
+	return CatHealth.instance.revive_distance(self, helper) if CatHealth.instance != null else -1.0
+
+
+func interact_prompt(helper: CatPlayer) -> String:
+	return CatHealth.instance.revive_prompt(self, helper)
+
+
+func interact(helper: CatPlayer) -> void:
+	CatHealth.instance.start_revive(self, helper)
+
+
+func interact_priority() -> int:
+	return 40  # beats items (30): picking up a friend comes first
 
 
 func _ready() -> void:
@@ -209,6 +242,7 @@ func _ready() -> void:
 		# Where the tail's thick end joins the body: the sway hinges here so it stays put.
 		_tail_base = _tail.position + _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
+	add_to_group(Interactable.GROUP)  # teammates can revive us with E while we're downed
 
 	if is_multiplayer_authority():
 		# One of OUR cats: its name and look come from the player sitting at this slot
@@ -336,7 +370,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		# get in the car... (scripts/interactable.gd). Marking the press as used also stops the
 		# car from treating the same E as "get out" straight away.
 		get_viewport().set_input_as_handled()
-	elif Seats.event_is(slot, event, "drop"):
+	elif Seats.event_is(slot, event, "drop") and not is_downed():  # (downed: hold on to your loot!)
 		ItemManager.instance.drop_from(self)
 	elif Seats.event_is(slot, event, "meow") and Time.get_ticks_msec() / 1000.0 >= _next_meow_at:
 		# Everyone nearby hears it (sounds/sfx/meow_1.wav, meow_2.wav... a random one each time).
@@ -379,8 +413,11 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		_air_jumps_left = air_jumps
 
+	# DOWNED cats can only crawl: no jumping, no zoomies (Downed and Revives on the Health node).
+	var downed := is_downed()
+
 	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
-	if Seats.is_just_pressed(slot, "jump") and not _input_blocked():
+	if Seats.is_just_pressed(slot, "jump") and not _input_blocked() and not downed:
 		if is_on_floor():
 			velocity.y = jump_velocity
 			Sound.play_everywhere("jump", global_position, -6.0)
@@ -407,8 +444,10 @@ func _physics_process(delta: float) -> void:
 		speed_boost = 1.0
 
 	# Zoomies = holding Shift while actually moving (or being boosted).
-	var is_zooming := (Seats.is_pressed(slot, "sprint") or speed_boost > 1.0) and direction != Vector3.ZERO
+	var is_zooming := (Seats.is_pressed(slot, "sprint") or speed_boost > 1.0) and direction != Vector3.ZERO and not downed
 	var target_speed := zoomies_speed if is_zooming else walk_speed
+	if downed:
+		target_speed = walk_speed * CatHealth.instance.crawl_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
 	var heavy := ItemManager.instance.carry_speed(player_id) if ItemManager.instance != null else 1.0
 	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy
@@ -430,8 +469,8 @@ func _physics_process(delta: float) -> void:
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
 
 	_update_zoomies_juice(is_zooming, input_dir.x, delta)
-	# Knocked out: flop over onto its side (and back up when it wakes).
-	cat_model.rotation.z = lerp(cat_model.rotation.z, PI / 2.0 if knocked_out else 0.0, 1.0 - exp(-10.0 * delta))
+	# Downed / knocked out: flop over onto its side (and back up when revived or it wakes).
+	cat_model.rotation.z = lerp(cat_model.rotation.z, PI / 2.0 if knocked_out or downed else 0.0, 1.0 - exp(-10.0 * delta))
 
 	# Publish where we are for the other players.
 	sync_position = position

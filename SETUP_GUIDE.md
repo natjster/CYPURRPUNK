@@ -52,7 +52,7 @@ Meow-City/
 │   ├── rain_follow.gd         <- keeps the rain above the active camera
 │   ├── items/                 <- the item system (§9)
 │   ├── cat/                   <- the character creator framework: cat_look, cat_part, cat_palette (§11)
-│   ├── cat_health.gd          <- HP and knockouts (§8)
+│   ├── cat_health.gd          <- HP, downed cats, revives and knockouts (§8)
 │   ├── player_profile.gd      <- saves your cash + stash between games (§8)
 │   ├── player_id.gd           <- PlayerId: player numbers vs computer numbers, for split screen (§6)
 │   ├── seats.gd               <- autoload "Seats": which controller belongs to which couch player (§10)
@@ -928,11 +928,25 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Destroy** (`golden_koi`), Heat Scaling (off: the boss doesn't get faster with heat).
 - How much heat an item adds when grabbed: **Heat On Pickup** on its card.
 
-### Health & knockouts (the risk in "extraction")
+### Health, downed cats, revives & knockouts (the risk in "extraction")
 Every cat has **100 HP**, shown as the **health bar** top-left under your cash and loot (see
 **Health bars & damage numbers** below). Each VAC-COP bonk takes 34, the MEGA VAC-COP's 67.
 
-At **0 HP you're KNOCKED OUT**:
+**At 0 HP you're DOWNED first, not out** (when there's a teammate who could save you):
+- You flop on your side but **keep everything you carry**. You can only **crawl** (slowly) and
+  **meow** for help. VAC-COPs leave you alone. Your screen says `DOWNED! 25` and counts down.
+- Every other player gets a message (`MITTENS IS DOWN! Find them and hold [E] to revive.`), and
+  over your head a cyan **DOWNED** bar drains as you bleed out. They can see it **from far away
+  and through walls**.
+- A teammate walks up and **HOLDS E** (Pad X) for **3 seconds** (`REVIVING MITTENS [####------]`).
+  Your bleed-out clock stops while they do. Letting go or walking off cancels it. Done: you're
+  back up with **35 HP** and all your loot ("BACK ON YOUR PAWS!").
+- Nobody comes in **25 seconds**, or you **hold E for 1.5 s to give up**: you're knocked out (below).
+- **Playing solo, or everyone else is down too?** Nobody could come, so there's no waiting: you're
+  knocked out straight away.
+- The **DEEP CLEAN** (max heat) knocks out everyone still up top at once, downed or not.
+
+**KNOCKED OUT**:
 1. **Everything you carry drops on the street where you fell**: the gear in your paws, your
    backpack, and the fish in your loot bag. Anyone can grab it: you on your next trip up, a
    friend, or a rival.
@@ -947,15 +961,33 @@ So gear you take up top is at risk every time. Gear left in **the stash** (below
 
 **Where it lives:** `scripts/cat_health.gd` on the **Health** node in `main.tscn`; the health bar
 is **Frame > Top > Health** in `scenes/ui/hud.tscn` (script `scripts/ui/hud_health_bar.gd`, §13). The fall-over is `knocked_out` in `cat_player.gd`.
+A downed cat is something teammates "use" with E (§16 **Pressing E**): `cat_player.gd` answers the
+E questions and hands them to `cat_health.gd`, where all the revive rules are.
 
 **Tuning** (select **Health** in `main.tscn`): **Max Health**, **Knockout Seconds** (how long
-you lie there). How much a bonk hurts: **Bonk Damage** on the Roomba (above).
+you lie there). Under **Downed and Revives**: **Bleed Out Seconds** (25), **Revive Seconds** (how
+long to hold, 3), **Revive Radius** / **Revive Slack** (how close you must be / how far you may
+drift while holding), **Revive Health** (35), **Crawl Speed** (0.25 = a quarter of walking, 0 = no
+crawling), **Give Up Seconds** (1.5), **Downed Seen From** (how far the DOWNED bar shows, 150 m).
+How much a bonk hurts: **Bonk Damage** on the Roomba (above).
 
 **Something new that hurts cats** (a trap, a guard dog...): on the host, call
 `CatHealth.instance.damage(player_id, 20, "A GUARD DOG")`. The last part is shown on the
-knocked-out screen. Guns don't hurt cats (no player-vs-player damage yet).
+knocked-out screen. Add `, true` at the end to skip the downed stage (straight to knocked out).
+Guns don't hurt cats (no player-vs-player damage yet).
 
-**Multiplayer:** the host decides all damage and knockouts and tells everyone, like cash.
+**Multiplayer:** the host decides all damage, downs, revives and knockouts and tells everyone,
+like cash. The reviver's computer only asks the host ("I'm holding E on Mittens").
+
+**Test downed / revive without playing** (the cat in slot S goes down 1.5 m in front of you):
+- `--host --add_local=1 --deploy --down=1 --revive=200` = couch player 2 goes down, you hold E on
+  them: prints `REVIVING COUCH 2 [###-------]`, then `hp=35 downed=false`. (`--revive=60` = let go
+  too early: still downed.)
+- `--down=1 --bleed_out=2 --frames=240` = nobody helps: `was knocked out` after 2 s.
+- `--down=0 --add_local=1 --hold=interact --hold_frames=120` = you go down and give up.
+- `--down=0` with no `--add_local` = solo: knocked out straight away.
+- Online: a `--host --wait=400 --deploy --down=0 --frames=500` window, then a
+  `--join --deploy --revive=220` one: the client walks to the downed host cat and revives it.
 
 **Test it without playing:** `--give=pistol,catnip --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3
 --frames=1500` gives you gear, grabs the fish at Meow-Mart, lets a VAC-COP beat you up and
@@ -967,7 +999,10 @@ Everything here is drawn by the HUD layer (sharp at your real resolution, not pi
 
 - **Your health bar** (top-left corner): a number box (`87`) and a thin, plain red bar. When you're hurt the bit you lost turns **white-yellow** and drains away after a
   moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
-  pulses; at 0 it says **KNOCKED OUT**.
+  pulses; at 0 it says **DOWNED** (while a friend can still revive you), then **KNOCKED OUT**.
+- **A downed teammate** gets a cyan bar that drains as they bleed out, with `DOWNED 18` (or
+  `REVIVING...`) over it, seen from far away and through walls. Any bar can do this: give
+  `health_bar_info()` the extra keys `"see_from": 150.0` and `"through_walls": true`.
   Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
   Heal, Back, Frame), **Shape** (Bar Thickness, Number Box Width, Number Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
   Transform**.
@@ -1546,7 +1581,9 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `explode` | a VAC-COP explodes | everyone nearby |
 | `engine_loop` (loops) | the getaway car; pitch follows the speed | everyone nearby |
 | `car_door` | getting in / out of the car | everyone nearby |
-| `hurt` / `knockout` | you lose HP / hit 0 HP | just you |
+| `hurt` / `knockout` | you lose HP / you're knocked out for good | just you |
+| `downed` | you hit 0 HP and are waiting for a revive (placeholder "wah-wahh") | just you |
+| `revive` | a downed cat is picked back up (placeholder rising blip) | everyone nearby |
 | `extract` | you climb down the exit manhole | just you |
 | `phone_ring` (loops) | payphones while the exit is open and nobody has called Don yet | everyone nearby |
 | `koi_grab` | someone grabs a golden koi | everyone (2D) |
@@ -1856,7 +1893,9 @@ says so; anything that cares listens. Nobody has to know who else is listening.
 |---|---|---|
 | `district_sealed()` | max heat: the hatch seals, the DEEP CLEAN starts | every computer |
 | `player_extracted(player_id, loot_value, quest_bonus)` | a player climbed down the exit | every computer |
-| `player_knocked_out(player_id, cause)` | a cat hit 0 HP | every computer |
+| `player_downed(player_id, cause)` | a cat hit 0 HP and waits for a revive | every computer |
+| `player_revived(player_id, by)` | a teammate picked a downed cat back up | every computer |
+| `player_knocked_out(player_id, cause)` | a cat is out for good (bled out, gave up, solo, DEEP CLEAN): loot spills | every computer |
 | `heat_level_changed(level)` | the heat went up (or down) a level | every computer |
 | `item_picked_up(player_id, item_id)` | someone grabbed or bought an item | host only |
 | `enemy_destroyed(enemy)` | a VAC-COP (or any enemy) blew up | host only |

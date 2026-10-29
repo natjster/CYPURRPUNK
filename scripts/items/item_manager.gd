@@ -286,8 +286,8 @@ func _use_held_items(delta: float) -> void:
 	if Game.instance == null:
 		return
 	for cat in Game.instance.local_cats():
-		if not cat.reads_input() or not cat.is_controlled or cat.knocked_out:
-			continue
+		if not cat.reads_input() or not cat.is_controlled or cat.knocked_out or cat.is_downed():
+			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
 		var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
 		var allowed := _can_use_items(cat)
 		for hand in 2:

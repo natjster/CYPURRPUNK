@@ -241,5 +241,12 @@ func _update_prompt() -> void:
 	var text := Interactable.prompt_for(cat) if cat != null and cat.reads_input() else ""
 	show_element("Prompt", text != "", seat)
 	if text != "":
-		var key := Controls.display_name(Controls.binding("interact", Controls.PAD_SLOT)) if Seats.uses_pad(seat) 			else Controls.key_text("interact")
-		set_text("Prompt", "[%s] %s" % [key, text], seat)
+		set_text("Prompt", "[%s] %s" % [key_for("interact", seat), text], seat)
+
+
+## The button name to show THIS player for an action: their controller button if they play
+## with one ("Pad X"), otherwise the keyboard key ("E"). Use it in any on-screen hint.
+static func key_for(action: String, seat_number: int = 0) -> String:
+	if Seats.uses_pad(seat_number):
+		return Controls.display_name(Controls.binding(action, Controls.PAD_SLOT))
+	return Controls.key_text(action)

@@ -153,9 +153,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
 - Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
-  `damage(peer, n, cause)` (Roomba `bonk_damage`); 0 HP = `ItemManager.drop_everything` + `_knocked_out`
-  RPC to owner (`CatPlayer.knocked_out` flop, then `hub.return_cat`). Host heals cats in the hub.
-  Roombas/extraction ignore `is_down` cats. Test: `--give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3 --frames=1500`.
+  `damage(player_id, n, cause, instant=false)` (Roomba `bonk_damage`). 0 HP = DOWNED (`downed` {id: bleed secs left},
+  `is_downed`; keeps loot, crawls at `crawl_speed`, no jump/drop/items/E) unless `instant` (DEEP CLEAN) or nobody else
+  is on their feet (`_anyone_could_help`; solo = instant). Revive: a downed CatPlayer is an Interactable (priority 40,
+  methods hand on to `revive_distance/revive_prompt/start_revive`); reviver holds interact -> `request_revive(reviver, downed, on)`;
+  host times it (`reviving` {downed: {by, left}}, bleed clock paused) -> `_revive` (`revive_health`). Bleed out /
+  `request_give_up` (downed holds interact) -> `_knock_out` = `drop_everything` + `_knocked_out` RPC (owner flops via
+  `CatPlayer.knocked_out`, then `hub.return_cat`). `is_down` = 0 HP (downed OR knocked out). Host heals cats in the hub.
+  Events `player_downed`/`player_revived`/`player_knocked_out`. Downed bar uses health_bar_info `see_from`/`through_walls`.
+  `Hud.key_for(action, seat)` = pad-aware button name. Roombas/extraction ignore `is_down` cats.
+  Test: `--add_local=1 --deploy --down=1 [--revive=200 | --bleed_out=2]`; client `--join --deploy --revive=220`.
+  Old: `--give=pistol --pos=-12,0,-6.5 --yaw=180 --bait_roomba=3 --frames=1500`.
   HP is 100 (Roomba 100, boss 600, bonk 34/67). Cyberpunk-style bars, all on the HUD: own bar = `HudHealthBar`
   (`Frame/Top/Health`, fed by cat_health `_process`); floating bars = `HudHealthBars` (`Frame/Bars`) for nodes in
   group `hud_health_bars` with `health_bar_info() -> {hp, max, position, show, name, boss}` (Roomba, other cats;

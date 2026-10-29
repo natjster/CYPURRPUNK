@@ -271,7 +271,7 @@ func _run_deep_clean() -> void:
 		car.empty_car()  # nobody escapes in the car either (driver or passengers)
 		for player_id in Game.instance.player_ids():
 			if Game.instance.is_up_top(player_id):
-				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN")
+				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN", true)  # (true: no downed stage)
 		_new_district_at = _clock + new_district_delay
 	if _new_district_at >= 0.0 and _clock >= _new_district_at:
 		_new_district_at = -1.0

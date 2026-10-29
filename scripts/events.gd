@@ -28,7 +28,16 @@ signal district_sealed()
 ## quest_bonus = extra cash from quests finished just now (fish_heist.gd).
 signal player_extracted(player_id: int, loot_value: int, quest_bonus: int)
 
-## EVERY computer: a player hit 0 HP. cause = who did it, e.g. "A VAC-COP" (cat_health.gd).
+## EVERY computer: a player hit 0 HP and is DOWNED, waiting for a teammate to revive them.
+## cause = who did it, e.g. "A VAC-COP" (cat_health.gd).
+signal player_downed(player_id: int, cause: String)
+
+## EVERY computer: a downed player was picked back up by teammate "by" (cat_health.gd).
+signal player_revived(player_id: int, by: int)
+
+## A player is KNOCKED OUT for good (bled out, gave up, nobody could help, or the DEEP CLEAN):
+## their loot spills and they go back to the sewers. EVERY computer. cause = e.g. "A VAC-COP"
+## (cat_health.gd).
 signal player_knocked_out(player_id: int, cause: String)
 
 ## EVERY computer: the heat went up or down a level (1..5; 5 = max). (heat_meter.gd)

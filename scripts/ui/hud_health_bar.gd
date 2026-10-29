@@ -11,7 +11,7 @@ extends Control
 ##     (the "chip"), so you can see how big the hit was.
 ##   - When you heal, the new bit flashes CYAN as it fills in.
 ##   - Below low_health (30%) the bar pulses and the number turns bright.
-##   - 0 HP: "KNOCKED OUT" across the bar.
+##   - 0 HP: "DOWNED" across the bar while a friend can still revive you, then "KNOCKED OUT".
 ##
 ## Move / resize it in hud.tscn like any Control (select Health, drag it, or change Layout >
 ## Transform). Colours and timings are below (Inspector, with Health selected).
@@ -40,6 +40,9 @@ extends Control
 ## Below this fraction of health the bar pulses.
 @export var low_health: float = 0.3
 
+## True while this player is DOWNED (waiting for a revive): the bar says "DOWNED" instead of
+## "KNOCKED OUT". Set every frame by cat_health.gd.
+var downed: bool = false
 var _hp: float = 100.0
 var _max: float = 100.0
 ## What's drawn: the red fill (catches up with _hp when healing) and the chip (trails when hurt).
@@ -115,7 +118,7 @@ func _draw() -> void:
 	draw_rect(Rect2(bar_left, bar_top, bar_w, bar_thickness), Color.WHITE if _hurt_flash > 0.0 else frame_color, false, 1.0)
 
 	if _hp <= 0.0:
-		var ko := "KNOCKED OUT"
+		var ko := "DOWNED" if downed else "KNOCKED OUT"
 		var ko_size := 18
 		var ko_w := font.get_string_size(ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size).x
 		var ko_pos := Vector2(bar_left + (bar_w - ko_w) * 0.5, bar_top - 4.0)

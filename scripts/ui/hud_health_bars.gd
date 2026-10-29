@@ -18,7 +18,8 @@ extends Control
 ##       return {"hp": health, "max": max_health, "position": global_position + Vector3.UP,
 ##               "show": health < max_health, "name": "GUARD DOG", "boss": false}
 ## ("show" false or an empty Dictionary = no bar right now.) Roombas (roomba.gd) and cats
-## (cat_player.gd) are the examples.
+## (cat_player.gd) are the examples. Two optional extras: "see_from": 150.0 (metres, instead of
+## max_distance) and "through_walls": true (a DOWNED cat uses both, so friends can find it).
 
 ## The group a node joins to get a floating bar.
 const GROUP := "hud_health_bars"
@@ -85,10 +86,11 @@ func _process(delta: float) -> void:
 				_anim[id] = anim
 			_animate(anim, info, delta)
 			var boss: bool = info.get("boss", false)
-			var visible_now := _wanted(info, node, camera, me, boss_distance if boss else max_distance)
+			var too_far: float = info.get("see_from", boss_distance if boss else max_distance)
+			var visible_now := _wanted(info, node, camera, me, too_far)
 			anim.alpha = move_toward(anim.alpha, 1.0 if visible_now else 0.0, delta * 5.0)
 			if anim.alpha > 0.0 and not info.is_empty():
-				_add_to_draw_list(info, anim, camera, game_size, node is CatPlayer, boss)
+				_add_to_draw_list(info, anim, camera, game_size, node is CatPlayer, boss, too_far)
 	for id in _anim.keys():
 		if not seen.has(id):
 			_anim.erase(id)
@@ -121,13 +123,13 @@ func _wanted(info: Dictionary, node: Node, camera: Camera3D, me: CatPlayer, too_
 		return false
 	if camera.global_position.distance_to(where) > too_far:
 		return false
-	if hide_behind_walls and _behind_wall(camera, where, node, me):
+	if hide_behind_walls and not info.get("through_walls", false) and _behind_wall(camera, where, node, me):
 		return false
 	return true
 
 
 ## A bar floating over the thing (bosses: boss_size times bigger, seen out to boss_distance).
-func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, game_size: Vector2, friend: bool, boss: bool = false) -> void:
+func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, game_size: Vector2, friend: bool, boss: bool, too_far: float) -> void:
 	var where: Vector3 = info.position
 	if camera.is_position_behind(where):
 		return
@@ -137,7 +139,7 @@ func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, gam
 	var width := clampf(world_width * big * units_per_metre, min_width * big, max_width * big)
 	var height := bar_height * (0.7 if friend else big)
 	var on_screen := camera.unproject_position(where) * (size / game_size)
-	var fade := clampf(((boss_distance if boss else max_distance) - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
+	var fade := clampf((too_far - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
 	_draw_list.append({
 		"rect": Rect2((on_screen - Vector2(width * 0.5, height)).round(), Vector2(width, height)),
 		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha * fade,
