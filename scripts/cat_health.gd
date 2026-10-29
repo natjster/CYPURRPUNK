@@ -314,8 +314,7 @@ func _revived(player_id: int, by: int) -> void:
 		Seats.rumble(player_id, 0.3, 0.3, 0.3)
 		Hud.popup("BACK ON YOUR PAWS!", 2.0, cat.slot)
 		Hud.show_message("%s picked you up." % (helper.player_name if helper != null else "A friend"), 2.5, cat.slot)
-	if PlayerId.is_local(by) and helper != null:
-		Hud.popup("REVIVED!", 2.0, helper.slot)
+	# (No popup for the reviver: the green meter filling up and the cat standing back up say enough.)
 
 
 ## Host -> everyone: this player is knocked out. Their own computer makes them fall over, wait,
