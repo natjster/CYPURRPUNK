@@ -11,6 +11,10 @@ gives it to you, and starts a fresh draft.
 ## NEXT UPDATE (draft, not posted yet)
 
 ```text
+## 🐾 New
+- **NEON BAT:** the first melee weapon! $20 at both shops. Hold to keep swinging: it smacks everything right in front of you and knocks it back. Works on VAC-COPs and the rival gang (never your own). One paw, so you can hold two.
+- **Starting money:** new cats start with $100, so you can gear up before your first trip. Cats you already have with less get topped up to $100 once.
+
 ## 🔧 Changes
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 

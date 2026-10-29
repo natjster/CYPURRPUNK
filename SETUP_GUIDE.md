@@ -725,6 +725,11 @@ game.
 What you're **carrying is not saved**: anything in your paws, backpack or loot bag is lost when
 you quit (it drops on the floor in that game). So stash your gear before you leave!
 
+**Starting money:** a new cat starts with **$100**, so it can shop before its first trip up (a
+Neon Bat is $20, a Paw-Pistol $60). A cat that already existed with less is topped up to $100
+**once** (the save remembers it: `starter = true`). Change the amount: select **Profile** in
+`main.tscn` > **Starting Cash** (0 = start broke).
+
 - Save files: `%APPDATA%\MeowCity1999\profiles\<cat id>.cfg`, one per cat (the id is a code like
   `cat_1761400000_42`, made when you create the cat; it's in `settings.cfg` next to the name).
   Deleting a cat in CHOOSE YOUR CAT deletes its file too. Two copies of the game on one PC should
@@ -1198,6 +1203,7 @@ Markitten in the sewers (§8).
 |---|---|---|---|
 | **Purr-Tommy 2099** | 2 | shop, $200 | Hold Left Mouse: plasma bolts; overheats (below) |
 | **Paw-Pistol** | 1 | shop, $60 | One shot per click; buy two to dual wield |
+| **Neon Bat** | 1 | shop, $20 | MELEE: hold the use button to keep swinging; hits everything right in front of you (below) |
 | **Catnip** | 1 | shop, $25 | Click: 8 s of super zoomies (used up) |
 | **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
 | **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
@@ -1236,6 +1242,26 @@ scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
 The HUD pieces for items are **Crosshair** and **Held** in `scenes/ui/hud.tscn` (§13); they only
 show while you hold something that wants them.
+
+### Melee: the Neon Bat (`scripts/items/melee_weapon.gd`, class **MeleeWeapon**)
+A melee weapon is a gun whose "shot" is a short **swing**: same item system, same shops, same
+use buttons, and the same hit rules (VAC-COPs lose health, the OTHER gang's cats take damage and
+get knocked back, a downed rival is finished off, your own gang is ignored, it doesn't work in the
+sewers). Each swing hits **everything** in a box right in front of you (so two VAC-COPs side by
+side both get it), tall enough to reach the ground even while you're bouncing or jumping.
+- **Feel / balance** (open `scenes/items/neon_bat.tscn`, select the root **NeonBat**):
+  **Fire Rate** = swings per second (2.2), **Automatic** (on = hold to keep swinging),
+  **Max Range** = reach (2.6 m), **Damage** (40: three hits for a VAC-COP, fewer with crits),
+  **Crit Chance** (12%), **Cat Knockback** / **Car Impulse** (how hard it shoves), and under
+  **Swing**: **Swing Radius** (how wide, to each side), **Swing Height**, **Swing Time** /
+  **Swing Angle** (the animation), **Swing Sound** (`sounds/sfx/swing.wav`, a placeholder whoosh)
+  and **Hit Sound** (`bonk`).
+- **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
+- **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, reshape
+  the meshes under **Model** (the swing rotates **Model**), change the numbers, give the card a
+  new **Id**, and add that id to the shopkeeper's **Stock** (`scripts/npcs/shopkeeper.gd`).
+- Test: `--give=neon_bat --deploy --bait_roomba=1.6 --hold=shoot --hold_frames=8` (one swing at
+  a VAC-COP; the `DevCapture roombas` line shows its health).
 
 ### Adding a new weapon — no code needed
 The **Paw-Pistol** was made exactly this way (`scenes/items/pistol.tscn` + `items/pistol.tres`).

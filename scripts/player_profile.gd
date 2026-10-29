@@ -22,10 +22,17 @@ extends Node
 ##      "done" (_restore_done).
 ##   3. From then on, whenever OUR cash or stash changes, we save the file again (_process).
 ##      (Not before step 2, or a fresh $0 could overwrite your save while it loads.)
+## A new cat (or an old one that never had it) gets starting_cash in step 1, once.
 ## The host trusts what players send, same as the rest of the game: fine between friends.
 ##
 ## Test runs (DevCapture, "--capture=...") use user://test_profiles/ instead, so tests never
 ## touch your real saves. --fresh_profile starts that test save from scratch.
+
+## STARTING MONEY: a brand-new cat starts with this much cash, so it can buy something at the
+## shop (a NEON BAT is $20, a PAW-PISTOL $60) before its first trip up. A cat that was made
+## before this existed (or had less) is topped up to it ONCE; after that it's yours to spend.
+## (Select Profile in main.tscn to change it. 0 = start broke.)
+@export var starting_cash: int = 100
 
 const PROFILES_FOLDER: String = "user://profiles/"
 const TEST_PROFILES_FOLDER: String = "user://test_profiles/"
@@ -54,14 +61,20 @@ func restore(player_id: int, cat_id: String, player_name: String) -> void:
 	var config := ConfigFile.new()
 	var cash := 0
 	var stash: Array = []
+	var got_starter := false  # has this cat had its starting money yet? (saved as "starter")
 	if config.load(path) == OK:
 		cash = int(config.get_value("progress", "cash", 0))
+		got_starter = bool(config.get_value("progress", "starter", false))
 		var saved: Variant = config.get_value("progress", "stash", [])
 		if saved is Array:
 			stash = saved
 		print("[Profile] Loaded %s: $%d, stash %s" % [path, cash, stash])
 	else:
 		print("[Profile] No save yet at %s: starting fresh" % path)
+	if not got_starter and cash < starting_cash:
+		cash = starting_cash  # (once: _save marks it as given)
+		print("[Profile] Starting money: $%d" % cash)
+	_local[player_id]["save_now"] = not got_starter  # write "starter" as soon as the host has it
 	_request_restore.rpc_id(1, player_id, cash, stash)
 
 
@@ -128,7 +141,9 @@ func _restore_done(player_id: int) -> void:
 	if not _local.has(player_id):
 		return
 	_local[player_id].restored = true
-	_local[player_id].saved_key = _current_key(player_id)  # nothing new to save yet
+	# Nothing new to save yet... unless this cat just got its starting money (save that now,
+	# or it would get it again next time).
+	_local[player_id].saved_key = "" if _local[player_id].get("save_now", false) else _current_key(player_id)
 
 
 # --- Saving (our own computer only) ---
@@ -157,4 +172,5 @@ func _save(player_id: int, path: String) -> void:
 	var config := ConfigFile.new()
 	config.set_value("progress", "cash", _cash_of(player_id))
 	config.set_value("progress", "stash", ItemManager.instance.get_stash(player_id))
+	config.set_value("progress", "starter", true)  # this cat has had its starting money
 	config.save(path)

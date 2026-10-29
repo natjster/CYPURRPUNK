@@ -1,0 +1,101 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/melee_weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_bat"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.16, 0.14, 0.22, 1)
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_grip"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.08, 0.06, 0.1, 1)
+shader_parameter/specular = 0.2
+shader_parameter/roughness = 0.8
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.3, 1, 0.9, 1)
+shader_parameter/emission_color = Color(0.3, 1, 0.9, 1)
+shader_parameter/emission_energy = 3.5
+
+[sub_resource type="CylinderMesh" id="Mesh_barrel"]
+top_radius = 0.055
+bottom_radius = 0.032
+height = 0.42
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_handle"]
+top_radius = 0.026
+bottom_radius = 0.026
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_knob"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.03
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_ring"]
+top_radius = 0.058
+bottom_radius = 0.054
+height = 0.025
+radial_segments = 7
+rings = 1
+
+[node name="NeonBat" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 2.2
+max_range = 2.6
+spread_degrees = 0.0
+cat_knockback = 11.0
+cat_hop = 3.0
+car_impulse = 150.0
+damage = 40
+crit_chance = 0.12
+bolt_color = Color(0.3, 1, 0.9, 1)
+hot_color = Color(0.3, 1, 0.9, 1)
+hud_name = "NEON BAT"
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(-0.7, 0, 0)
+
+[node name="Handle" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.0, 0)
+mesh = SubResource("Mesh_handle")
+surface_material_override/0 = SubResource("Mat_grip")
+
+[node name="Knob" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.11, 0)
+mesh = SubResource("Mesh_knob")
+surface_material_override/0 = SubResource("Mat_bat")
+
+[node name="Barrel" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.31, 0)
+mesh = SubResource("Mesh_barrel")
+surface_material_override/0 = SubResource("Mat_bat")
+
+[node name="GlowRing1" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.25, 0)
+mesh = SubResource("Mesh_ring")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="GlowRing2" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0)
+mesh = SubResource("Mesh_ring")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Glow" type="OmniLight3D" parent="Model"]
+position = Vector3(0, 0.35, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.6
+omni_range = 1.2

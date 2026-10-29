@@ -295,6 +295,11 @@ World item IDs: city-placed items 0..N in placement order (deterministic), drops
 Other systems place items by joining group `item_placers` and implementing `place_items()`.
 Don't add per-item pickup/sync code elsewhere. User-facing how-to: SETUP_GUIDE.md section 9.
 
+MELEE: `scripts/items/melee_weapon.gd` (`MeleeWeapon extends Weapon`, overrides `_fire` with a forward BoxShape
+query (`swing_radius`/`swing_height`, `max_range` deep, reaches below the feet for flat Roombas), skips own-gang cats,
+rpc `show_swing` tweens `Model`). Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
+(100) for new saves / once for older ones (`progress/starter` key; `save_now` forces the first save).
+
 ## NPC framework
 Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), conversation data =
 `pages: Array[NpcPage]` (first = greeting; empty choices reuse page 1's) of `NpcChoice` (text,

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/neon_bat.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "neon_bat"
+display_name = "NEON BAT"
+description = "Hold to keep swinging. Hits everything right in front of you and knocks it back. 1 paw: hold two!"
+kind = 1
+price = 20
+hands = 1
+hold_offset = Vector3(0.3, 0.45, -0.22)
+hold_scale = 1.2
+shoulder_camera = false
+scene = ExtResource("2_scene")
+auto_pickup = false
+world_scale = 2.0
+glow_color = Color(0.3, 1, 0.9, 1)
