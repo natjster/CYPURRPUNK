@@ -61,6 +61,15 @@ const DEPTH_LINE: float = -100.0
 ## ...and when you've already had your one trip up this district.
 @export_multiline var line_had_your_trip: String = "You had your shot up there, kid. That hatch is shut behind ya. Sit tight till we hit the next district."
 
+@export_group("Payphone (the boss on the line)")
+## What this gang's boss says when one of their cats calls from a payphone up top
+## (scripts/npcs/payphone.gd). Before the exits open (no way down yet; no hint where)...
+@export_multiline var phone_too_early: String = "Kid! You're still kickin'. Listen - there ain't a way back down yet. Every pipe we know, OVERCLEAN's got plugged. My boys are diggin' as fast as their little paws go. Grab what you can and keep your head down. When we break through, every phone in town's gonna ring."
+## ...once they're open (the gang's exit arrow switches on; {where} = "north-east" etc.)...
+@export_multiline var phone_exit_open: String = "THERE you are! The boys broke through - there's a hole open, {where} side. I put it on your map. Get down here before the vacuums find it too!"
+## ...and after the hatch is sealed (the DEEP CLEAN).
+@export_multiline var phone_sealed: String = "...kid? They found our hole. We had to seal it. I'm sorry. Nobody's comin'. Make 'em remember you."
+
 @export_group("Size")
 ## Half the tunnel's width (metres, east-west).
 @export var half_width: float = 14.0
@@ -74,8 +83,9 @@ const DEPTH_LINE: float = -100.0
 @export_group("Spawning")
 ## Where new cats appear, relative to the Hub node (south end, west walkway).
 @export var spawn_spot: Vector3 = Vector3(-8, 0, 14)
-## Where Don Catleone sends you in the city (the centre crossroads).
-@export var surface_spot: Vector3 = Vector3(0, 0, 4)
+## How far (metres) from this gang's ENTRY manhole you pop out, towards the middle of the city.
+## (Where each gang's manhole is: fish_heist.gd entry_position - opposite corners.)
+@export var surface_distance: float = 3.5
 
 @export_group("Stash")
 ## Where you stand to use THE STASH (the lockers on the east wall), relative to the Hub node.
@@ -198,8 +208,12 @@ func deploy(cat: CatPlayer) -> void:
 		# One trip per district (fish_heist.gd went_up): extracted or flattened, you've had yours.
 		Hud.show_message("%s: %s" % [boss_name, line_had_your_trip], 5.0, cat.slot)
 		return
-	var spread := Vector3(randf_range(-3, 3), 0, randf_range(0, 3))  # don't land on each other
-	cat.teleport_to(surface_spot + spread, 0.0)
+	# Up our gang's own ENTRY manhole (its corner of the city), a few steps towards the middle,
+	# facing the middle.
+	var manhole := FishHeist.instance.entry_position(team)
+	var to_middle := (Vector3.ZERO - manhole).normalized() if manhole.length() > 1.0 else Vector3.FORWARD
+	var spread := Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))  # don't land on each other
+	cat.teleport_to(manhole + to_middle * surface_distance + spread, atan2(-to_middle.x, -to_middle.z))
 	print("[Hub] %s went up to the city" % cat.name)
 
 

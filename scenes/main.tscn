@@ -189,6 +189,9 @@ leader_glow = Color(1, 0.55, 0.1, 1)
 boss_name = "PAWNIE"
 line_sealed = "Hatch is sealed, sugar. Sit tight - we're movin' to a new district."
 line_had_your_trip = "You had your fun up there, sugar. That hatch is shut. Sit tight till we hit the next district."
+phone_too_early = "Sugar! You're alive. Good. Listen - there's no way back down yet. OVERCLEAN's plugged every pipe we know, and Clawd's diggin' with a spoon. Don't ask. Grab what you can. When we break through, every phone in town's gonna ring."
+phone_exit_open = "There's my favourite stray! Clawd broke through - spoon and all. The hole's on the {where} side, it's on your map. Get home before a Catleone sniffs it out!"
+phone_sealed = "...sugar? They found our hole. We sealed it. I'm sorry. Nobody's comin'. Go out like a legend."
 
 [node name="Pawnie" parent="GangHub" instance=ExtResource("30_pawnie")]
 position = Vector3(8, 0, -16)

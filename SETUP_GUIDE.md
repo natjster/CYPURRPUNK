@@ -515,8 +515,9 @@ number, the **city seed**. Same number = exact same city.
   (taller towards downtown, glowing windows, sometimes a rooftop box and a neon sign with coloured
   light) or an empty yard with crates, dumpsters and trash bags. Street lamps sit at every
   crossroads and halfway along each block. Invisible walls stop you driving off the edge.
-- **Always in the same place, whatever the seed:** cats come up the **entry manhole** in the
-  centre crossroads and the car parks just north of it.
+- **Always in the same place, whatever the seed:** each gang's **entry manhole** (Catleone
+  Family: the south-west corner crossroads, Burrow Gang: the north-east one) and the car, which
+  parks near the centre crossroads.
 - **Points of interest, somewhere different every district:** **Meow-Mart** (a random lot), the
   **exit manhole** and the **payphones** (placed by `fish_heist.gd`, see §8).
 
@@ -588,8 +589,21 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
   (2), **Shots Finish Downed** (on), **Pvp Max Range** (75), **Pvp Max Damage** (120). How hard a
   gun hits is its **Damage** in `scenes/items/pistol.tscn` / `tommy_gun.tscn` (the same number it
   does to VAC-COPs). The feed: **Feed Seconds** / **Feed Lines** on the HUD root in `hud.tscn`.
-- **Not yet (next PvP phases):** both gangs come up the same entry manhole and share one exit and
-  one payphone call (the payphone voice is still Don's); no team scoreboard or spawn protection.
+- **Each gang's own way in and out (phase 4):**
+  - **Entry manholes in opposite corners:** the Catleone Family comes up the **south-west**
+    corner crossroads, the Burrow Gang the **north-east** one (`entry_position` in
+    `fish_heist.gd`, worked out from the city size so it's always on a street). You pop out a
+    few steps towards the middle, facing it (**Surface Distance** on each hub). The getaway car
+    waits in the middle, for whoever gets there first.
+  - **One exit per gang:** at 75 heat BOTH exits open, each somewhere random (at least 60 m from
+    every entry and 45 m from each other: **Exit Min Distance** / **Exit Spacing** on the Heist
+    node). Each glows in its gang's colour (pink / orange). Only YOUR gang's exit takes you down;
+    the rival's is just a hole in the road to you. (Ambush their exit!)
+  - **Payphones put you through to YOUR boss:** Don for the Catleones, Pawnie for the Burrow Gang.
+    A call shows the exit arrow to the caller's gang only. The phones keep ringing until every
+    gang in the game has called. The bosses' phone lines are on the hubs: select **Hub** or
+    **GangHub** > **Payphone (the boss on the line)**.
+- **Not yet (next PvP phase):** no team scoreboard or end-of-district results, no spawn protection.
 - **The story gag:** ask any boss **WHO LET OVERCLEAN IN?** Don says Pawnie & Clawd were on a date
   in the Mainframe and leaned on the big red button, then sold the city for a can of tuna. Pawnie
   says Don fell asleep on the button, then sold the city for a can of tuna ("PREMIUM tuna. Didn't
@@ -629,7 +643,7 @@ sign (every NPC still has its name floating over its head). It's a **safe zone**
 
 **Don Catleone** — the boss cat in the fedora with the cigar, at the north end under a pink
 glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives five choices:
-**SEND ME UP TOP** (you pop out at the city's centre crossroads), **WHO ARE YOU?**, **WHO LET
+**SEND ME UP TOP** (you pop out of the Catleones' manhole, the south-west corner), **WHO ARE YOU?**, **WHO LET
 OVERCLEAN IN?** (his side of the story: it was Pawnie & Clawd), **HOW DOES THIS WORK?** and
 **NEVER MIND** (or Esc).
 
@@ -810,21 +824,22 @@ everyone's home (or the heat maxes out) he seals that hole for good and the rebe
 new district. In the code that just means a new city seed: the whole city is generated again.
 
 **How a district plays:**
-1. Talk to Don > **SEND ME UP TOP**: you climb out of the **entry manhole** in the centre
-   crossroads. It's **one-way**: there's no going back down it.
+1. Talk to Don (or Pawnie) > **SEND ME UP TOP**: you climb out of your gang's **entry manhole**
+   (Catleones: the south-west corner, Burrow Gang: the north-east). It's **one-way**: there's no
+   going back down it.
    **ONE TRIP PER DISTRICT:** once you've been up, Don won't send you again until the next
    district, whether you extracted or got knocked out ("You had your shot up there, kid..."). The
    sewer HUD line says **THE SEWERS - WAIT FOR THE NEXT DISTRICT**. (Who has been up:
    `went_up` in `fish_heist.gd`, decided by the host.)
 2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **10 minutes** from a
    fresh district to max if you cause no trouble; gunfights speed it up).
-3. At **75 heat** Don's crew breaks through: the **exit manhole** opens somewhere random in the
-   city (the lid slides off and a green glow comes out of the hole). At the same moment every
-   **payphone** in the district starts **ringing** (bell sound, blinking light).
+3. At **75 heat** the crews break through: each gang's **exit manhole** opens somewhere random in
+   the city (the lid slides off and a glow in the gang's colour comes out of the hole). At the
+   same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
 4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
-   Don. He tells you which side of town the exit is on, and the **HUD arrow to the exit switches
-   on for the whole crew**. (Call before 75 and he says there's no way down yet: his boys are still
-   digging. No hint where.)
+   your boss. They tell you which side of town your exit is on, and the **HUD arrow to it
+   switches on for your whole gang** (not the rival's). (Call before 75 and they say there's no
+   way down yet: the crew is still digging. No hint where.)
 5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. That was
    your trip for this district.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).

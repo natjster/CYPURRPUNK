@@ -1,30 +1,24 @@
 class_name Payphone
 extends Npc
-## CYPURRPUNK — a PAYPHONE on the sidewalk. Use it (E) to call Don Catleone in the sewers.
+## CYPURRPUNK — a PAYPHONE on the sidewalk. Use it (E) to call YOUR gang's boss in the sewers:
+## Don Catleone for the Catleone Family, Pawnie for the Burrow Gang (scripts/teams.gd).
 ## fish_heist.gd puts a few in every district (scenes/props/payphone.tscn), in random spots, so
-## you have to find them by exploring.
+## you have to find them by exploring. Both gangs use the same phones.
 ##
-## What Don says depends on the heat (fish_heist.gd):
-##   - Before the EXIT manhole opens (heat under 3/4): his crew is still digging for a way back
+## What the boss says depends on the heat (fish_heist.gd):
+##   - Before the EXIT manholes open (heat under 3/4): their crew is still digging for a way back
 ##     down. No hint where - there IS no way down yet.
-##   - Once it's open (they broke through), every payphone in the district RINGS
-##     (sounds/sfx/phone_ring.wav) until someone picks one up. Calling then tells you where the
-##     exit is, and the HUD arrow to it switches on for the whole crew.
+##   - Once they're open (the crews broke through), every payphone in the district RINGS
+##     (sounds/sfx/phone_ring.wav) until every gang in the game has called. Calling then tells
+##     you where YOUR gang's exit is, and the HUD arrow to it switches on for your gang only.
 ##   - After the hatch is sealed: nobody's coming. Good luck.
 ##
-## The lines are in the Inspector (select Payphone in payphone.tscn). Write {where} in a line and
-## it's replaced by the direction, e.g. "north-east". The talk box shows the caller as npc_name.
+## The LINES belong to each boss, not the phone: select Hub (Don) or GangHub (Pawnie) in main.tscn
+## and look under "Payphone (the boss on the line)" in the Inspector (scripts/hub.gd). Write {where}
+## in a line and it's replaced by the direction, e.g. "north-east".
 ##
 ## Multiplayer: like every NPC, the payphone isn't networked. The CALL asks the host to switch
-## the arrow on for everyone (FishHeist.request_reveal_exit).
-
-@export_group("What Don says")
-## Calling before the exit is open.
-@export_multiline var line_too_early: String = "Kid! You're still kickin'. Listen - there ain't a way back down yet. Every pipe we know, OVERCLEAN's got plugged. My boys are diggin' as fast as their little paws go. Grab what you can and keep your head down. When we break through, every phone in town's gonna ring."
-## Calling once the exit is open: the arrow switches on.
-@export_multiline var line_exit_open: String = "THERE you are! The boys broke through - there's a hole open, {where} side. I put it on your map. Get down here before the vacuums find it too!"
-## Calling after the hatch was sealed (the DEEP CLEAN).
-@export_multiline var line_sealed: String = "...kid? They found our hole. We had to seal it. I'm sorry. Nobody's comin'. Make 'em remember you."
+## the arrow on for the caller's gang (FishHeist.request_reveal_exit).
 
 ## A small light on top that blinks while the phone rings.
 @onready var _ring_light: OmniLight3D = get_node_or_null("RingLight")
@@ -35,7 +29,7 @@ var _ringing: bool = false
 func _ready() -> void:
 	look_at_players = false  # it's a phone
 	if pages.is_empty():
-		# The lines above are used instead of Pages; this one stops the "no Pages" warning.
+		# The bosses' lines (hub.gd) are used instead of Pages; this one stops the "no Pages" warning.
 		var page := NpcPage.new()
 		page.lines = PackedStringArray(["*click*"])
 		pages.append(page)
@@ -43,19 +37,20 @@ func _ready() -> void:
 	set_ringing(false)
 
 
-## Pick up the phone: Don's line depends on the heat (see the top of this file).
+## Pick up the phone: your own boss answers, and what they say depends on the heat.
 func talk(cat: CatPlayer) -> void:
 	var heist := FishHeist.instance
-	var where := heist.exit_direction_name()  # (only used once the exit is open: {where})
-	var line := line_too_early
+	var boss := UndergroundHub.of(cat)
+	var where := heist.exit_direction_name(cat.team)  # (only used once the exit is open: {where})
+	var line := boss.phone_too_early
 	if heist.sealed:
-		line = line_sealed
+		line = boss.phone_sealed
 	elif heist.exit_is_open():
-		line = line_exit_open
-		heist.request_reveal_exit.rpc_id(1, cat.player_id)  # the host switches the arrow on
+		line = boss.phone_exit_open
+		heist.request_reveal_exit.rpc_id(1, cat.player_id)  # the host switches our gang's arrow on
 	Sound.play("click")
 	var dialog := NpcDialog.for_cat(cat)
-	dialog.open("DON CATLEONE (PHONE)", line.replace("{where}", where), [["HANG UP", dialog.close]])
+	dialog.open("%s (PHONE)" % boss.boss_name, line.replace("{where}", where), [["HANG UP", dialog.close]])
 
 
 ## Ring (bell sound + blinking light) or stop. fish_heist.gd calls this on every computer.

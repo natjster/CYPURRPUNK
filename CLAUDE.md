@@ -123,7 +123,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `shots_finish_downed`). Holding E on a downed RIVAL with loot = rob (`reviving[id].rob`, `rob_seconds`, `_rob` ->
   `ItemManager.steal_bag`, event `player_robbed`, red meter via health_bar_info `progress_color`). `CatPlayer.display_name()`.
   FEED: `Hud.feed(text, color)` -> `Frame/Top/Feed` RichTextLabel (downs/KOs/revives/robs, gang colour).
-  Not yet: per-team entry/exit/payphone voice, team score, spawn protection.
+  Phase 4: `FishHeist.entry_position(team)` (outermost corner crossroads: 0 SW, 1 NE; hub.deploy pops out
+  `surface_distance` towards the middle), `exit_positions[team]` / `exit_for(team)` (heist rng, `exit_min_distance` from
+  every entry, `exit_spacing` apart; Manhole `glow_color` = gang colour), `revealed[team]` / `is_revealed(team)` via
+  `request_reveal_exit` (caller's gang) and `_set_state(sealed, revealed_array)`; extraction only at your own gang's exit;
+  phones ring until every gang in the game has called. Phone lines live on the hubs (`phone_too_early/exit_open/sealed`,
+  payphone title = `boss_name`). Test: `--near_exit=3 --exit_team=1`, `--teams=1 --heat=80 --talk=Payphone0`.
+  Not yet: team score / results, spawn protection.
   Test: `--teams=0,1,1 --add_local=2 --deploy --hold_all --give=pistol --shoot_rival=5 [--shoot_friend]`,
   `--down=1 --down_loot=fish --revive=150` (rob); a client's `--give` goes through the host's DevCapture `_test_give`.
 - Extraction loop: cats spawn in the hub `Hub` (`scripts/hub.gd`, `UndergroundHub.instance`), a fixed
@@ -161,10 +167,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   up top; `hub.deploy` refuses `has_been_up` (extracted or KO'd). Heat races home (`heat_per_second_when_all_home`) when all
   are in the hub and (exit open OR `everyone_has_been_up()`). Story: Don's crew digs for a way down; exit at 75 = they broke
   through; payphone too-early line has NO direction hint. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
-- Districts (`fish_heist.gd`): ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
-  the centre (one-way), EXIT manhole at `FishHeist.exit_position` (street spot from the heist rng), open while
+- Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
+  `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
   `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,
-  `scripts/npcs/payphone.gd`, `Npc.prompt_verb` "USE") ring while open + not `exit_revealed`; a call ->
+  `scripts/npcs/payphone.gd`, `Npc.prompt_verb` "USE") ring while open + some gang not `is_revealed`; a call ->
   `request_reveal_exit` -> host `_set_state(sealed, revealed)`; HUD `DropOff` arrow only when revealed.
   Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,

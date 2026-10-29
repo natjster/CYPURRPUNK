@@ -9,9 +9,16 @@ extends Node3D
 ## everyone's home (or the heat maxes out) he seals that hole for good, and the rebellion moves
 ## on to a new district (in the code: a new city seed is generated).
 ##
+## TWO GANGS (scripts/teams.gd): each gang has its OWN entry manhole (opposite corners of the city,
+## entry_position: Catleone Family south-west, Burrow Gang north-east, so nobody pops up in the
+## rival's lap), its OWN exit (exit_for, glowing in its gang colour; you can only climb down your
+## own), and its OWN payphone call (a call shows the exit arrow to the caller's gang only, and the
+## boss on the line is your own: Don or Pawnie). The getaway car waits in the middle, for whoever
+## gets there first.
+##
 ## How a district plays:
-##   - Cats start in the underground hub (hub.gd). Don Catleone sends them up the ENTRY manhole
-##     in the centre crossroads. It's one-way: the only way back down is the EXIT manhole.
+##   - Cats start in their gang's hub (hub.gd). The boss sends them up their gang's ENTRY manhole.
+##     It's one-way: the only way back down is their gang's EXIT manhole.
 ##   - ONE TRIP PER DISTRICT: once a cat has been up top (went_up), Don won't send it up again
 ##     until the next district, whether it extracted or got knocked out.
 ##   - Loot lies around the city, worth different amounts (each item card's cash_value):
@@ -20,10 +27,11 @@ extends Node3D
 ##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
-##   - At 3/4 heat (exit_opens_at_heat) Don's crew breaks through: the EXIT manhole opens,
-##     somewhere random, and every PAYPHONE in the district rings. Payphones
-##     (scripts/npcs/payphone.gd) are scattered too: call Don on one and he tells you where the
-##     exit is; the HUD arrow switches on for the crew.
+##   - At 3/4 heat (exit_opens_at_heat) both gangs' crews break through: each gang's EXIT manhole
+##     opens, somewhere random, and every PAYPHONE in the district rings. Payphones
+##     (scripts/npcs/payphone.gd) are scattered too: call your boss on one and they tell you where
+##     your exit is; the HUD arrow switches on for your gang. The phones ring until every gang
+##     in the game has called.
 ##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash
 ##     (the Wallet, scripts/wallet.gd), quests done at that moment pay their bonus, and you climb
 ##     down to the hub. That was your trip: wait there for the next district.
@@ -36,23 +44,25 @@ extends Node3D
 ## empties their loot bag and tells everyone with an RPC. The extracted player's own computer
 ## then moves their cat down to the hub (owners always move their own cat).
 ## Manholes and payphones are placed from the city seed with their OWN random generator,
-## so every computer places them identically and buildings never move. Whether the exit has been
-## found (exit_revealed) and whether the hatch is sealed are decided by the host (_set_state).
+## so every computer places them identically and buildings never move. Which gangs have found
+## their exit (revealed) and whether the hatch is sealed are decided by the host (_set_state).
 
 @export_group("Manholes (the way in and out)")
 ## The EXIT manhole opens (lid off, climb down) once the heat reaches this (out of 100).
 @export var exit_opens_at_heat: float = 75.0
 ## How close (metres) to the middle of the open exit manhole you must get to climb down.
 @export var exit_radius: float = 1.6
-## The exit is at least this far (metres) from the centre, where you come up.
+## Every exit is at least this far (metres) from every gang's entry manhole...
 @export var exit_min_distance: float = 60.0
+## ...and the gangs' exits are at least this far from each other.
+@export var exit_spacing: float = 45.0
 
 @export_group("Payphones")
 ## How many payphones each district has (call Don on one to find the exit).
 @export var payphones: int = 3
 ## Payphones are at least this far (metres) from each other...
 @export var payphone_spacing: float = 45.0
-## ...and from the centre, where you come up.
+## ...and from every entry manhole, where cats come up.
 @export var payphone_min_distance: float = 25.0
 
 @export_group("The DEEP CLEAN (max heat)")
@@ -69,17 +79,16 @@ static var instance: FishHeist
 ## Mixed into the city seed so heist placement has its own random numbers.
 const HEIST_SEED_SALT: int = 7331
 const PAYPHONE_SCENE: PackedScene = preload("res://scenes/props/payphone.tscn")
-## Where the entry manhole is: the middle of the centre crossroads, where Don sends you up.
-const ENTRY_POSITION: Vector3 = Vector3(0, 0, 0)
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
 @onready var car: GetawayCar = $"../GetawayCar"
 
-## Where the exit manhole is in the current district.
-var exit_position: Vector3
-## True once someone called Don on a payphone: the HUD arrow points at the exit (whole crew).
-var exit_revealed: bool = false
+## Where each gang's exit manhole is in the current district (by team number: exit_for(team)).
+var exit_positions: Array[Vector3] = []
+## Per gang: true once someone in that gang called their boss on a payphone (the HUD arrow then
+## points that gang at its exit). By team number: is_revealed(team).
+var revealed: Array[bool] = []
 ## True from max heat until the new district is built: the hatch is shut, nobody gets out.
 var sealed: bool = false
 ## Player ID -> true for everyone who has been up top in THIS district (their one trip is used:
@@ -88,8 +97,7 @@ var sealed: bool = false
 var went_up := {}
 
 var _built: Array[Node] = []  # manholes and payphones, so a new district can clear them
-var _entry: Manhole
-var _exit: Manhole
+var _exits: Array[Manhole] = []  # by team number
 var _payphones: Array[Payphone] = []
 var _clock: float = 0.0
 ## Host: player ID -> time until we ignore that cat at the exit (it's on its way down).
@@ -117,7 +125,9 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 		node.queue_free()
 	_built.clear()
 	_payphones.clear()
-	exit_revealed = false
+	_exits.clear()
+	exit_positions.clear()
+	revealed.clear()
 	sealed = false
 	went_up.clear()  # a new district: everyone gets a trip up again
 	_deep_clean_ends_at = -1.0
@@ -126,14 +136,26 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + HEIST_SEED_SALT)
 
-	# The manholes: the way up (centre) and the way back (a random street far from the centre).
-	_entry = _add_manhole(ENTRY_POSITION)
-	exit_position = _random_street_spot(rng)
-	for attempt in 40:
-		if Motion.flat_distance(exit_position, ENTRY_POSITION) >= exit_min_distance:
-			break
-		exit_position = _random_street_spot(rng)
-	_exit = _add_manhole(exit_position)
+	# The manholes. Every gang's way UP (its own corner of the city)...
+	var entries: Array[Vector3] = []
+	for team in Teams.count():
+		entries.append(entry_position(team))
+		_add_manhole(entries[team], Teams.color_of(team))
+	# ...and its way back DOWN: a random street far from every entry and from the other exits.
+	for team in Teams.count():
+		var spot := _random_street_spot(rng)
+		for attempt in 60:
+			var ok := true
+			for entry in entries:
+				ok = ok and Motion.flat_distance(spot, entry) >= exit_min_distance
+			for other in exit_positions:
+				ok = ok and Motion.flat_distance(spot, other) >= exit_spacing
+			if ok:
+				break
+			spot = _random_street_spot(rng)
+		exit_positions.append(spot)
+		revealed.append(false)
+		_exits.append(_add_manhole(spot, Teams.color_of(team)))
 
 	# The payphones: on sidewalks, spread out, facing the street.
 	var phone_spots: Array[Vector3] = []
@@ -142,7 +164,9 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 			if phone_spots.size() >= payphones:
 				break
 			var spot := items.random_sidewalk_spot(rng)
-			var ok: bool = Motion.flat_distance(spot, ENTRY_POSITION) >= payphone_min_distance or spacing == 0.0
+			var ok: bool = true
+			for entry in entries:
+				ok = ok and (Motion.flat_distance(spot, entry) >= payphone_min_distance or spacing == 0.0)
 			for other in phone_spots:
 				ok = ok and spot.distance_to(other) >= spacing
 			if ok:
@@ -156,14 +180,28 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 		phone.rotation.y = atan2(outward.x, outward.z)
 		_add_built(phone)
 		_payphones.append(phone)
-	print("[Heist] District #%d: exit manhole at %s, %d payphones" % [city_seed, exit_position, _payphones.size()])
+	print("[Heist] District #%d: entries %s, exits %s, %d payphones" % [city_seed, entries, exit_positions, _payphones.size()])
 
 
-func _add_manhole(at: Vector3) -> Manhole:
+func _add_manhole(at: Vector3, glow: Color) -> Manhole:
 	var manhole := Manhole.new()
 	manhole.position = at
+	manhole.glow_color = glow
 	_add_built(manhole)
 	return manhole
+
+
+## Where a gang's ENTRY manhole is: the middle of the city's outermost crossroads, a different
+## corner for each gang (0 = south-west, 1 = north-east; a third gang would get the middle).
+## Worked out from the city's size, so it's always on a street.
+func entry_position(team: int) -> Vector3:
+	var reach := (city.blocks_per_side / 2.0 - 1.0) * (city.block_size + city.street_width)
+	match team:
+		Teams.CATLEONE:
+			return Vector3(-reach, 0, reach)
+		Teams.BURROW:
+			return Vector3(reach, 0, -reach)
+	return Vector3.ZERO
 
 
 func _add_built(node: Node3D) -> void:
@@ -209,35 +247,60 @@ func everyone_has_been_up() -> bool:
 
 
 ## Can you climb down the exit right now? (Heat high enough, hatch not sealed yet.)
+## (Every gang's exit opens at the same moment.)
 func exit_is_open() -> bool:
 	return not sealed and HeatMeter.instance != null and HeatMeter.instance.heat >= exit_opens_at_heat
 
 
-## "north-east" etc.: which side of town the exit is on, seen from the centre (north = -Z, the way
-## you face when you come up the entry manhole).
-func exit_direction_name() -> String:
+## Where this gang's exit manhole is.
+func exit_for(team: int) -> Vector3:
+	return exit_positions[clampi(team, 0, exit_positions.size() - 1)] if not exit_positions.is_empty() else Vector3.ZERO
+
+
+## Has this gang called their boss yet (so its exit arrow is on)?
+func is_revealed(team: int) -> bool:
+	return team >= 0 and team < revealed.size() and revealed[team]
+
+
+## "north-east" etc.: which side of town this gang's exit is on, seen from the centre (north = -Z).
+func exit_direction_name(team: int) -> String:
 	var names := ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"]
-	var angle := atan2(exit_position.x, -exit_position.z)  # 0 = north, turning towards east
+	var at := exit_for(team)
+	var angle := atan2(at.x, -at.z)  # 0 = north, turning towards east
 	return names[posmod(roundi(angle / (TAU / 8.0)), 8)]
+
+
+## The gangs that have at least one player in the game right now.
+func _gangs_in_game() -> Array[int]:
+	var gangs: Array[int] = []
+	for player_id in Game.instance.player_ids():
+		var team := Teams.team_of(player_id)
+		if not team in gangs:
+			gangs.append(team)
+	return gangs
 
 
 # --- Every frame (every computer): how things look and sound ---
 
 func _process(_delta: float) -> void:
-	if _exit == null:
+	if _exits.is_empty():
 		return
 	var open := exit_is_open()
-	_exit.set_open(open)
-	# The phones ring once the exit is open, until somebody picks up.
+	for exit in _exits:
+		exit.set_open(open)
+	# The phones ring once the exits are open, until every gang in the game has called its boss.
+	var someone_waiting := false
+	for team in _gangs_in_game():
+		someone_waiting = someone_waiting or not is_revealed(team)
 	for phone in _payphones:
-		phone.set_ringing(open and not exit_revealed)
+		phone.set_ringing(open and someone_waiting)
 	_update_hud()
 
 
 # --- The referee (host only) ---
 
 func _physics_process(delta: float) -> void:
-	if not multiplayer.is_server() or _exit == null:
+	if not multiplayer.is_server() or _exits.is_empty():
 		return
 	_clock += delta
 
@@ -249,7 +312,7 @@ func _physics_process(delta: float) -> void:
 	# Max heat: seal the hatch and start the DEEP CLEAN.
 	if not sealed and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
 		_deep_clean_ends_at = _clock + deep_clean_seconds
-		_set_state.rpc(true, exit_revealed)  # (announces Events.district_sealed: the swarm comes)
+		_set_state.rpc(true, revealed)  # (announces Events.district_sealed: the swarm comes)
 		print("[Heist] Hatch SEALED: the DEEP CLEAN begins")
 	if sealed:
 		_run_deep_clean()
@@ -265,7 +328,8 @@ func _physics_process(delta: float) -> void:
 			continue
 		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: no flopping into the hole to save your stuff
-		if Motion.flat_distance(where, exit_position) >= exit_radius + (1.5 if their_car != null else 0.0):
+		# Only YOUR gang's exit takes you down (the rival's is just a hole in the road to you).
+		if Motion.flat_distance(where, exit_for(Teams.team_of(player_id))) >= exit_radius + (1.5 if their_car != null else 0.0):
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
 		_extract_wait[player_id] = _clock + 3.0
@@ -278,7 +342,7 @@ func _physics_process(delta: float) -> void:
 		if their_car != null:
 			their_car.remove_occupant(player_id)  # out of the car first...
 			# ...and once the last cat is out it waits at its parking spot for the next trip up.
-			# (Everyone in the car is at the beam, so the passengers extract this same frame.)
+			# (Passengers of the same gang extract this same frame; a rival riding along stays in.)
 			if their_car.driver_id == 0 and their_car.passenger_ids.is_empty():
 				their_car.park()
 		Wallet.instance.earn(player_id, earned + quest_bonus, "extracted %d loot" % loot.size())
@@ -303,22 +367,26 @@ func _run_deep_clean() -> void:
 		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
 
 
-## A payphone call (any computer -> host): switch the exit arrow on for the whole crew.
+## A payphone call (any computer -> host): switch the exit arrow on for the CALLER'S gang.
 @rpc("any_peer", "call_local", "reliable")
 func request_reveal_exit(player_id: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
-	if exit_is_open() and not exit_revealed:
-		print("[Heist] Player %d called Don: the exit is revealed" % player_id)
-		_set_state.rpc(sealed, true)
+	var team := Teams.team_of(player_id)
+	if exit_is_open() and not is_revealed(team) and team < revealed.size():
+		print("[Heist] Player %d called their boss: the %s's exit is revealed" % [player_id, Teams.name_of(team)])
+		var now := revealed.duplicate()
+		now[team] = true
+		_set_state.rpc(sealed, now)
 
 
-## Host -> everyone: is the hatch sealed, and does the crew know where the exit is?
+## Host -> everyone: is the hatch sealed, and which gangs know where their exit is?
 @rpc("authority", "call_local", "reliable")
-func _set_state(is_sealed: bool, revealed: bool) -> void:
+func _set_state(is_sealed: bool, gangs_revealed: Array) -> void:
 	var newly_sealed := is_sealed and not sealed
 	sealed = is_sealed
-	exit_revealed = revealed
+	for team in mini(gangs_revealed.size(), revealed.size()):
+		revealed[team] = gangs_revealed[team]
 	if newly_sealed:
 		Sound.play("boss_siren")
 		Hud.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
@@ -350,10 +418,10 @@ func _mark_went_up(player_id: int) -> void:
 	went_up[player_id] = true
 
 
-## Host -> a computer that just joined (network ID "peer"): whether the exit is found / the
+## Host -> a computer that just joined (network ID "peer"): which gangs found their exit, the
 ## hatch sealed, and who has already been up.
 func send_state_to(peer: int) -> void:
-	_set_state.rpc_id(peer, sealed, exit_revealed)
+	_set_state.rpc_id(peer, sealed, revealed)
 	for player_id in went_up:
 		_mark_went_up.rpc_id(peer, player_id)
 
@@ -373,20 +441,20 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var seat := my_cat.slot
 	var where := Game.instance.player_position(me)
 	var in_sewers := not Game.instance.is_up_top(me)
-	# The arrow to the exit only shows once Don has told the crew where it is (a payphone call).
+	# The arrow to OUR gang's exit only shows once our boss has told us where it is (a payphone call).
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE", seat)
 	else:
-		var show_arrow := exit_revealed and exit_is_open()
+		var show_arrow := is_revealed(my_cat.team) and exit_is_open()
 		Hud.show_element("DropOff", show_arrow, seat)
 		if show_arrow:
-			Hud.set_text("DropOff", _direction_text(where, GameScreen.instance.camera_for_seat(seat)), seat)
+			Hud.set_text("DropOff", _direction_text(where, exit_for(my_cat.team), GameScreen.instance.camera_for_seat(seat)), seat)
 
 
-## "EXIT > 120m": distance and rough direction to the exit manhole from where the camera looks.
-func _direction_text(where: Vector3, camera: Camera3D) -> String:
-	var to_exit := exit_position - where
+## "EXIT > 120m": distance and rough direction to an exit manhole from where the camera looks.
+func _direction_text(where: Vector3, exit_at: Vector3, camera: Camera3D) -> String:
+	var to_exit := exit_at - where
 	var arrow := "^"
 	if camera != null:
 		var look := -camera.global_transform.basis.z

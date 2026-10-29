@@ -24,6 +24,9 @@ const HEIGHT: float = 0.1
 ## Colour of the glow that comes up out of an open manhole.
 const GLOW_COLOR: Color = Color(0.3, 1, 0.5)
 
+## The glow colour for THIS manhole (set before it's added; fish_heist.gd gives each gang's exit
+## its gang colour, so you can tell yours from the rival's).
+var glow_color: Color = GLOW_COLOR
 ## True = lid off, glowing, and you can climb down.
 var is_open: bool = false
 
@@ -42,7 +45,7 @@ func _ready() -> void:
 	_lid_aside.rotation.y = 0.7
 
 	_glow = OmniLight3D.new()
-	_glow.light_color = GLOW_COLOR
+	_glow.light_color = glow_color
 	_glow.light_energy = 2.5
 	_glow.light_volumetric_fog_energy = 3.0  # a green haze rising out of the hole
 	_glow.omni_range = 6.0

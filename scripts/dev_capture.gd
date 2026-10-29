@@ -73,7 +73,8 @@ extends Node
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
 ##   --goto_dropoff_after=N   jump onto the exit manhole after N more frames (in the car if driving;
 ##                     it's only open with --heat=80 or more)
-##   --near_exit=D     stand D metres south of the exit manhole, facing it
+##   --near_exit=D     stand D metres south of our gang's exit manhole, facing it
+##   --exit_team=N     (with --near_exit / --goto_dropoff_after) use gang N's exit instead of ours
 ##   --mouse_test      check mouse-look gets the mouse through the game screen (prints how far it turned)
 ##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
@@ -271,7 +272,7 @@ func _ready() -> void:
 		if args.has("near_exit"):
 			# --near_exit=D: stand D metres south of the EXIT manhole, facing it (then
 			# --hold=move_forward walks onto it; it only lets you down with --heat=80 or more).
-			var exit_at := FishHeist.instance.exit_position
+			var exit_at := FishHeist.instance.exit_for(int(args.get("exit_team", player.team)))  # (our gang's, or --exit_team's)
 			player.global_position = exit_at + Vector3(0, 0.5, float(args["near_exit"]))
 			player.camera_pivot.rotation.y = 0.0
 			print("DevCapture near_exit: exit manhole at %s" % exit_at)
@@ -503,7 +504,7 @@ func _ready() -> void:
 			# Wait, then jump our cat into the fish drop-off.
 			for i in int(args["goto_dropoff_after"]):
 				await get_tree().process_frame
-			var beam := FishHeist.instance.exit_position + Vector3(0.5, 0, 0.5)  # (needs --heat=80: open)
+			var beam := FishHeist.instance.exit_for(int(args.get("exit_team", player.team))) + Vector3(0.5, 0, 0.5)  # (needs --heat=80: open)
 			var car := scene.get_node("GetawayCar") as GetawayCar
 			if car.has_occupant(player.player_id):
 				car.global_position = beam + Vector3(0, 0.5, 0)  # driving: take the car there
@@ -656,7 +657,7 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
-		print("DevCapture heist: exit=%s open=%s revealed=%s sealed=%s cash=%s" % [heist.exit_position, heist.exit_is_open(), heist.exit_revealed, heist.sealed, Wallet.instance.cash])
+		print("DevCapture heist: entries=%s exits=%s open=%s revealed=%s sealed=%s cash=%s" % [[heist.entry_position(0), heist.entry_position(1)], heist.exit_positions, heist.exit_is_open(), heist.revealed, heist.sealed, Wallet.instance.cash])
 	if HeatMeter.instance != null:
 		var regulars := 0
 		var bosses := 0
