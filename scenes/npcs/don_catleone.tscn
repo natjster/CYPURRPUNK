@@ -39,7 +39,7 @@ lines = PackedStringArray("Don Catleone. I run these pipes. Nine lives, kid - I 
 [sub_resource type="Resource" id="Page_howto"]
 script = ExtResource("3_page")
 id = "howto"
-lines = PackedStringArray("OVERCLEAN runs the streets now, kid. Us strays eat rats down here. Not no more. You go up the hatch, you grab every fish that ain't nailed down. The way up is one-way - when the heat's up, the EXIT hatch opens somewhere in town. Find a payphone and call me, I'll tell you where. And if the heat maxes out? I seal the hatch. Whoever's still up there... gets vacuumed.")
+lines = PackedStringArray("OVERCLEAN runs the streets now, kid. Us strays eat rats down here. Not no more. I send you up ONE time - the hatch shuts behind ya. Up there, you grab every fish that ain't nailed down. Meantime my boys dig for a new way back down. Every pipe we know, OVERCLEAN's got plugged, so it takes a while. When they break through, every payphone in town rings. Pick one up, I'll tell you where the hole is. Once you're all home, I seal it behind ya. And if the vacuums come in force first? I seal it anyway. Whoever's still up there... gets vacuumed.", "And if you get flattened up there? You're done for the night, kid. No second trip till we move to a new district.")
 
 [sub_resource type="CapsuleShape3D" id="Shape_don"]
 radius = 0.45

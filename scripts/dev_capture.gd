@@ -49,6 +49,8 @@ extends Node
 ##   --revive=N        (with --down=S, S > 0) our cat presses E on it and holds the button N frames
 ##                     (180 = the 3 s revive); prints health / downed state before and after
 ##   --deploy          ask Don to send us up top (cat moves from the hub to the city)
+##   --deploy_again=N  N frames after the above, ask Don AGAIN (one trip per district: refused once
+##                     you've been up); prints went_up / in_hub / heat
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
@@ -399,6 +401,16 @@ func _ready() -> void:
 				await get_tree().physics_frame
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
 			await _down_and_revive(scene, player, args)
+		if args.has("deploy_again"):
+			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
+			# he should refuse once we've been up). Prints where we ended up.
+			for i in int(args["deploy_again"]):
+				await get_tree().physics_frame
+			(scene as Game).hub.deploy(player)
+			for i in 10:
+				await get_tree().physics_frame
+			print("DevCapture deploy_again: went_up=%s in_hub=%s heat=%.1f" % [FishHeist.instance.has_been_up(player.player_id),
+				UndergroundHub.is_in_hub(player.global_position), HeatMeter.instance.heat])
 		if args.has("hold"):
 			# Pretend a key is held down, e.g. --hold=move_forward --hold_frames=60
 			for i in int(args.get("hold_delay", "30")):

@@ -4,27 +4,29 @@ extends Node3D
 ## Attach to the "Heist" node in main.tscn.
 ##
 ## THE STORY: OVERCLEAN, the AI, runs the city with its VAC-COP Roombas. The cat rebellion hides
-## in the sewers. Each raid is on one DISTRICT (a city built from a seed). When the heat maxes out,
-## Don Catleone seals that district's hatch and the rebellion moves on to a new district (in the
-## code: a new city seed is generated).
+## in the sewers. Each raid is on one DISTRICT (a city built from a seed). Don Catleone sends his
+## cats up ONCE; the hatch shuts behind them and his crew digs for a new way back down. When
+## everyone's home (or the heat maxes out) he seals that hole for good, and the rebellion moves
+## on to a new district (in the code: a new city seed is generated).
 ##
 ## How a district plays:
 ##   - Cats start in the underground hub (hub.gd). Don Catleone sends them up the ENTRY manhole
 ##     in the centre crossroads. It's one-way: the only way back down is the EXIT manhole.
+##   - ONE TRIP PER DISTRICT: once a cat has been up top (went_up), Don won't send it up again
+##     until the next district, whether it extracted or got knocked out.
 ##   - Loot lies around the city, worth different amounts (each item card's cash_value):
 ##       SARDINE $20 (everywhere), FISH $50 (outside Meow-Mart and on some sidewalks), and the
 ##       GOLDEN KOI $400: only one in the city, far from Meow-Mart, glowing gold. It's HEAVY
-##       (slows you), NOISY (Roombas spot you from further) and grabbing it raises the HEAT
-##       (scripts/heat_meter.gd). Greed has a price! Taken loot grows back after a while.
+##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
-##   - At 3/4 heat (exit_opens_at_heat) the EXIT manhole opens, somewhere random, and every
-##     PAYPHONE in the district rings. Payphones (scripts/npcs/payphone.gd) are scattered too:
-##     call Don on one and he tells you where the exit is; the HUD arrow switches on for the crew.
+##   - At 3/4 heat (exit_opens_at_heat) Don's crew breaks through: the EXIT manhole opens,
+##     somewhere random, and every PAYPHONE in the district rings. Payphones
+##     (scripts/npcs/payphone.gd) are scattered too: call Don on one and he tells you where the
+##     exit is; the HUD arrow switches on for the crew.
 ##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash
-##     (the Wallet, scripts/wallet.gd), quests
-##     done at that moment pay their bonus, and you climb down to the hub. You can go up again
-##     (same district, same heat) as many times as you like - until it maxes out.
+##     (the Wallet, scripts/wallet.gd), quests done at that moment pay their bonus, and you climb
+##     down to the hub. That was your trip: wait there for the next district.
 ##   - (The HUD heat bar shows how close you are.) At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
 ##     VAC-COPs plus the MEGA VAC-COP. Anyone left up top is as good as dead (after
 ##     deep_clean_seconds they're knocked out no matter what, losing what they carry).
@@ -80,6 +82,10 @@ var exit_position: Vector3
 var exit_revealed: bool = false
 ## True from max heat until the new district is built: the hatch is shut, nobody gets out.
 var sealed: bool = false
+## Player ID -> true for everyone who has been up top in THIS district (their one trip is used:
+## Don won't send them up again until the next one). Set by the host (_mark_went_up), copied to
+## everyone; emptied for every new district (place_items).
+var went_up := {}
 
 var _built: Array[Node] = []  # manholes and payphones, so a new district can clear them
 var _entry: Manhole
@@ -113,6 +119,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	_payphones.clear()
 	exit_revealed = false
 	sealed = false
+	went_up.clear()  # a new district: everyone gets a trip up again
 	_deep_clean_ends_at = -1.0
 	_new_district_at = -1.0
 
@@ -188,6 +195,19 @@ func _street_side_of(spot: Vector3) -> Vector3:
 
 # --- Questions anyone can ask ---
 
+## Has this player already had their one trip up in this district?
+func has_been_up(player_id: int) -> bool:
+	return went_up.has(player_id)
+
+
+## Has EVERY player in the game used their trip up? (Nobody left who could go up.)
+func everyone_has_been_up() -> bool:
+	for player_id in Game.instance.player_ids():
+		if not went_up.has(player_id):
+			return false
+	return true
+
+
 ## Can you climb down the exit right now? (Heat high enough, hatch not sealed yet.)
 func exit_is_open() -> bool:
 	return not sealed and HeatMeter.instance != null and HeatMeter.instance.heat >= exit_opens_at_heat
@@ -220,6 +240,11 @@ func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or _exit == null:
 		return
 	_clock += delta
+
+	# One trip per district: note everyone who has made it up top.
+	for player_id in Game.instance.player_ids():
+		if not went_up.has(player_id) and Game.instance.is_up_top(player_id):
+			_mark_went_up.rpc(player_id)
 
 	# Max heat: seal the hatch and start the DEEP CLEAN.
 	if not sealed and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
@@ -319,10 +344,18 @@ func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
 		UndergroundHub.instance.return_cat(cat)  # down the drain we go
 
 
+## Host -> everyone: this player has used their one trip up in this district.
+@rpc("authority", "call_local", "reliable")
+func _mark_went_up(player_id: int) -> void:
+	went_up[player_id] = true
+
+
 ## Host -> a computer that just joined (network ID "peer"): whether the exit is found / the
-## hatch sealed.
+## hatch sealed, and who has already been up.
 func send_state_to(peer: int) -> void:
 	_set_state.rpc_id(peer, sealed, exit_revealed)
+	for player_id in went_up:
+		_mark_went_up.rpc_id(peer, player_id)
 
 
 # --- HUD (the arrow to the exit: scenes/ui/hud.tscn. Everyone's cash is the Wallet's.) ---
@@ -343,7 +376,7 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	# The arrow to the exit only shows once Don has told the crew where it is (a payphone call).
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)
-		Hud.set_text("DropOff", "THE SEWERS - SAFE ZONE", seat)
+		Hud.set_text("DropOff", "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE", seat)
 	else:
 		var show_arrow := exit_revealed and exit_is_open()
 		Hud.show_element("DropOff", show_arrow, seat)

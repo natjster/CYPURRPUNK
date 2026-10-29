@@ -150,6 +150,10 @@ func deploy(cat: CatPlayer) -> void:
 		# The DEEP CLEAN is on up there: wait for the next district.
 		Hud.show_message("DON CATLEONE: Hatch is sealed, kid. Sit tight - we're movin' to a new district.", 4.0, cat.slot)
 		return
+	if FishHeist.instance.has_been_up(cat.player_id):
+		# One trip per district (fish_heist.gd went_up): extracted or flattened, you've had yours.
+		Hud.show_message("DON CATLEONE: You had your shot up there, kid. That hatch is shut behind ya. Sit tight till we hit the next district.", 5.0, cat.slot)
+		return
 	var spread := Vector3(randf_range(-3, 3), 0, randf_range(0, 3))  # don't land on each other
 	cat.teleport_to(surface_spot + spread, 0.0)
 	print("[Hub] %s went up to the city" % cat.name)

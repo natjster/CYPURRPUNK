@@ -728,27 +728,34 @@ turns green — on your screen only. Go back up and the rainy night city returns
 ### Fish Heist: districts, manholes and payphones
 
 **The story:** OVERCLEAN, the AI, runs the city with its VAC-COP Roombas. The cat rebellion hides
-in the sewers (eating rats - nobody likes rats). Each raid is on one **district**. When the heat
-maxes out, Don Catleone seals that district's hatch and the rebellion moves to a new one. In the
-code that just means a new city seed: the whole city is generated again.
+in the sewers (eating rats - nobody likes rats). Each raid is on one **district**. Don sends his
+cats up **once**; the hatch shuts behind them while his crew digs for a new way back down. Once
+everyone's home (or the heat maxes out) he seals that hole for good and the rebellion moves to a
+new district. In the code that just means a new city seed: the whole city is generated again.
 
 **How a district plays:**
 1. Talk to Don > **SEND ME UP TOP**: you climb out of the **entry manhole** in the centre
    crossroads. It's **one-way**: there's no going back down it.
+   **ONE TRIP PER DISTRICT:** once you've been up, Don won't send you again until the next
+   district, whether you extracted or got knocked out ("You had your shot up there, kid..."). The
+   sewer HUD line says **THE SEWERS - WAIT FOR THE NEXT DISTRICT**. (Who has been up:
+   `went_up` in `fish_heist.gd`, decided by the host.)
 2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **10 minutes** from a
-   fresh district to max if you cause no trouble; the golden koi and gunfights speed it up).
-3. At **75 heat** the **exit manhole** opens somewhere random in the city: the lid slides off and
-   a green glow comes out of the hole. At the same moment every **payphone** in the district
-   starts **ringing** (bell sound, blinking light).
+   fresh district to max if you cause no trouble; gunfights speed it up).
+3. At **75 heat** Don's crew breaks through: the **exit manhole** opens somewhere random in the
+   city (the lid slides off and a green glow comes out of the hole). At the same moment every
+   **payphone** in the district starts **ringing** (bell sound, blinking light).
 4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
    Don. He tells you which side of town the exit is on, and the **HUD arrow to the exit switches
-   on for the whole crew**. (Call before 75 and he only says "not yet" and which side it's on.)
-5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. You can
-   go up again into the **same district at the same heat** as many times as you like.
+   on for the whole crew**. (Call before 75 and he says there's no way down yet: his boys are still
+   digging. No hint where.)
+5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. That was
+   your trip for this district.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
-   **Everyone home?** Once the exit is open and every cat is back in the hub (extracted or knocked
-   out), the heat races to 100 (**Heat Per Second When All Home** on the Heat node, 5/s) and the
-   DEEP CLEAN skips its 30-second wait, so the next district comes in a few seconds.
+   **Everyone home?** Once every cat is back in the hub (extracted or knocked out) and either the
+   exit is open or everyone has used their trip, the heat races to 100 (**Heat Per Second When
+   All Home** on the Heat node, 5/s) and the DEEP CLEAN skips its 30-second wait, so the next
+   district comes quickly.
 7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
    swarm of **40 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
    away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
@@ -762,7 +769,7 @@ code that just means a new city seed: the whole city is generated again.
 |---|---|---|---|---|
 | **Sardine** | $20 | 1 | 8 on random sidewalks | none: small fry |
 | **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
-| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it adds **+20 HEAT** and plays a sound for everyone |
+| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it plays a sound for everyone |
 
 Fish and sardines grow back after 20 seconds, the koi after 2 minutes. If you drove onto the exit,
 the getaway car goes back to its parking spot.
@@ -877,8 +884,9 @@ red and blue) is **shared by every player**:
 
 - It's the **district's clock**: it creeps up **0.167 per second** while any cat is in the city
   (about **10 minutes** from 0 to 100 if you cause no trouble; the exit opens at about 7.5).
-- Trouble adds more: **+20** for grabbing the golden koi, **+0.5** per gun hit on a Roomba, **+3**
-  per Roomba destroyed.
+- Trouble adds more: **+0.5** per gun hit on a Roomba, **+3** per Roomba destroyed. (The golden
+  koi doesn't add heat any more: it's already heavy and noisy. To bring it back, set **Heat On
+  Pickup** on `items/golden_koi.tres`, e.g. 20.)
 - It **never cools down** by itself (extracting and going home don't lower it). Only a new
   district resets it to 0. (The Cooling Down numbers on the Heat node are 0; raise them if you
   ever want cooling back.)
@@ -1072,7 +1080,7 @@ Markitten in the sewers (§8).
 | **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
 | **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
-| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy, noisy and raises the HEAT (§8) |
+| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy and noisy (§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
 it (`HEAT [####------]`). About 3 s of non-stop fire overheats it: it blinks and won't fire until

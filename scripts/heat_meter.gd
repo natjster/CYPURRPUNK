@@ -6,8 +6,8 @@ extends Node
 ##
 ## How it plays:
 ##   - Heat goes 0..100. It creeps up every second while any cat is up in the city.
-##   - Trouble adds heat on top: grabbing the golden koi (its item card's heat_on_pickup),
-##     shooting Roombas, blowing them up.
+##   - Trouble adds heat on top: shooting Roombas, blowing them up, and grabbing any item whose
+##     card has a heat_on_pickup (none do right now; the golden koi used to).
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
 ##     that drive faster and spot cats from further away.
 ##   - At 75 heat the EXIT manhole opens (fish_heist.gd).
@@ -15,7 +15,8 @@ extends Node
 ##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
 ##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
 ##     district's clock. Going home doesn't reset it - only a new district does.
-##   - Once the exit is open, if EVERY cat is back in the hub, the heat races to 100
+##   - Once the exit is open (or every cat has used its one trip up), if EVERY cat is back in the
+##     hub, the heat races to 100
 ##     (heat_per_second_when_all_home) so the next district comes quickly.
 ##   - The HUD shows it as the red/blue flashing HEAT bar, top-right (scripts/ui/hud_heat_bar.gd,
 ##     fed from _process below). Players also HEAR it go up (the heat_up / boss_siren sounds).
@@ -44,8 +45,8 @@ const MAX_LEVEL: int = 5
 ## Heat added each time a Roomba is destroyed.
 @export var heat_per_roomba_destroyed: float = 3.0
 
-## Once the exit is open and EVERY cat is back down in the hub (all extracted or knocked out),
-## the heat races up by this much per second instead, so the DEEP CLEAN and the next district
+## Once the exit is open (or every cat has used its one trip up) and EVERY cat is back down in
+## the hub (all extracted or knocked out), the heat races up by this much per second instead, so the DEEP CLEAN and the next district
 ## come quickly instead of everyone waiting. (5 = from 75 to 100 in 5 seconds; 0 = off.)
 @export var heat_per_second_when_all_home: float = 5.0
 
@@ -126,8 +127,10 @@ func _physics_process(delta: float) -> void:
 	if cats_up > 0:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
 		heat = minf(heat + heat_per_second * crowd * delta, MAX_HEAT)
-	elif heat < MAX_HEAT and FishHeist.instance != null and FishHeist.instance.exit_is_open():
-		# Everyone's done (extracted / knocked out) after the exit opened: hurry to the next district.
+	elif heat < MAX_HEAT and FishHeist.instance != null \
+			and (FishHeist.instance.exit_is_open() or FishHeist.instance.everyone_has_been_up()):
+		# Everyone's done (extracted / knocked out) after the exit opened, or every cat has used
+		# its one trip up (all knocked out early): hurry to the next district.
 		heat = minf(heat + heat_per_second_when_all_home * delta, MAX_HEAT)
 	else:
 		heat = maxf(heat - cool_per_second_when_empty * delta, 0.0)

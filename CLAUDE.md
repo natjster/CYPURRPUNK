@@ -143,6 +143,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100). Exit open + every cat in the hub
   = `heat_per_second_when_all_home` (5/s) and `_run_deep_clean` ends at once when `_anyone_up_top()` is false.
   Boss is also on collision layer 3; the car's mask = 1+3 and `_integrate_forces` stops it dead on boss contact.
+- ONE TRIP PER DISTRICT: host marks `FishHeist.went_up` (`_mark_went_up` RPC, cleared in `place_items`) when a player is
+  up top; `hub.deploy` refuses `has_been_up` (extracted or KO'd). Heat races home (`heat_per_second_when_all_home`) when all
+  are in the hub and (exit open OR `everyone_has_been_up()`). Story: Don's crew digs for a way down; exit at 75 = they broke
+  through; payphone too-early line has NO direction hint. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
 - Districts (`fish_heist.gd`): ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   the centre (one-way), EXIT manhole at `FishHeist.exit_position` (street spot from the heist rng), open while
   `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,
