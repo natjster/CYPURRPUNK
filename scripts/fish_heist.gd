@@ -135,13 +135,16 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + HEIST_SEED_SALT)
 
-	# The manholes. Every gang's way UP (its own corner of the city)...
+	# The manholes. Every gang's way UP (its own corner of the city; SOLO: one, in the centre)...
 	var entries: Array[Vector3] = []
 	for team in Teams.count():
 		entries.append(entry_position(team))
-		_add_manhole(entries[team], Teams.color_of(team))
+		if team == 0 or entries[team] != entries[0]:  # (solo: don't stack two lids on one spot)
+			_add_manhole(entries[team], Teams.color_of(team))
 	# ...and its way back DOWN: a random street far from every entry and from the other exits.
-	for team in Teams.count():
+	# (SOLO: just one exit, the Catleone Family's. exit_for() hands it to anyone who asks.)
+	var solo := Game.instance != null and Game.instance.is_solo()
+	for team in (1 if solo else Teams.count()):
 		var spot := _random_street_spot(rng)
 		for attempt in 60:
 			var ok := true
@@ -194,6 +197,13 @@ func _add_manhole(at: Vector3, glow: Color) -> Manhole:
 ## corner for each gang (0 = south-west, 1 = north-east; a third gang would get the middle).
 ## Worked out from the city's size, so it's always on a street.
 func entry_position(team: int) -> Vector3:
+	if Game.instance != null and Game.instance.is_solo():
+		return Vector3.ZERO  # SOLO: the classic single manhole in the centre crossroads (game.gd)
+	return corner_position(team)
+
+
+## A gang's own corner crossroads (where its manhole is in co-op; its car parks near it).
+func corner_position(team: int) -> Vector3:
 	var reach := (city.blocks_per_side / 2.0 - 1.0) * (city.block_size + city.street_width)
 	match team:
 		Teams.CATLEONE:

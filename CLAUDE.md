@@ -210,6 +210,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Only `CatModel` rotates; body never does (camera is a child). Remote copies start with `sync_position = position`
   (else they snap to (0,0,0) = the city for a moment, and the host marked new joiners `went_up`).
   8-player stress test recipe: SETUP_GUIDE §6 (host `--add_local=3 --heat=95`, clients 2+1+1, `--net_stats`).
+- SOLO (`Game.is_solo()` = `not Seats.coop`; local co-op also starts via solo_game, so never use "offline" for this):
+  classic layout: `entry_position` = centre, one exit, GangCar freed in `_begin_game`, GetawayCar at CAR_SPAWN.
+  `FishHeist.corner_position(team)` = a gang's corner regardless. Move cars ONLY via `_teleport` (done in
+  `_integrate_forces`; plain `global_transform =` on a resting RigidBody is undone by physics).
 - CARS: one per gang in main.tscn (`GetawayCar` team 0, `GangCar` team 1; car export `team` only picks the parking
   spot `parking_spot()` = `park_distance` up the N-S street from `FishHeist.entry_position(team)`; -1 = `CAR_SPAWN`).
   Never assume one car: `Game.instance.cars()` / `car_of(id)`; Enemy.run_over_by_car checks every car. DevCapture `_car_for`.

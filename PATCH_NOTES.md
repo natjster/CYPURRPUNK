@@ -11,7 +11,11 @@ gives it to you, and starts a fresh draft.
 ## NEXT UPDATE (draft, not posted yet)
 
 ```text
-(nothing yet)
+## 🔧 Changes
+- **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
+
+## 🐛 Fixes
+- Cars could get stuck in the middle of town at the start of a game instead of waiting at your gang's corner.
 ```
 
 ## Posted updates

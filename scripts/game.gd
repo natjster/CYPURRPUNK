@@ -143,8 +143,23 @@ func host_game(city_seed: int) -> void:
 	_begin_game(city_seed)
 
 
+## Is this a SOLO game (picked SOLO on the menu: one player, no gangs fighting)? Then the city
+## keeps the classic layout: one entry manhole in the centre crossroads and ONE car parked by it
+## (fish_heist.gd entry_position, getaway_car.gd parking_spot). LOCAL / ONLINE CO-OP use the
+## two-gang layout (a manhole and a car in each gang's corner).
+func is_solo() -> bool:
+	return not Seats.coop
+
+
 ## Host (or solo): build the city and start.
 func _begin_game(city_seed: int) -> void:
+	if is_solo():
+		# Only the Catleone car: the Burrow Gang's (GangCar) isn't needed with one player.
+		# (It's back next time: leaving a game reloads the whole scene.)
+		for each_car in cars():
+			if each_car.team > 0:
+				each_car.remove_from_group("cars")
+				each_car.queue_free()
 	city.generate(city_seed)
 	_start_playing()
 	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player

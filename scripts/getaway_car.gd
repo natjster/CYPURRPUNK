@@ -26,7 +26,8 @@ extends RigidBody3D
 @export_group("Parking")
 ## Which gang's corner this car waits in (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang;
 ## -1 = the old spot by the centre crossroads). Only decides WHERE it parks: anyone can drive it.
-## main.tscn has one car per gang: GetawayCar (0) and GangCar (1).
+## main.tscn has one car per gang: GetawayCar (0) and GangCar (1). In a SOLO game only GetawayCar
+## is kept, parked by the centre crossroads (game.gd is_solo).
 @export var team: int = -1
 ## How far (metres) up the street from its gang's entry manhole it parks, towards the middle.
 @export var park_distance: float = 10.0
@@ -131,6 +132,8 @@ var handbrake: bool = false
 ## Where the car's simulator (driver, or host when empty) says it is. Sent over the network.
 var sync_position: Vector3
 var sync_rotation: Vector3
+## A move waiting for the next physics step (park): a Transform3D, or null (see _teleport).
+var _pending_teleport: Variant = null
 
 ## Driver's look-around: how far the camera is turned away from straight behind the car
 ## (radians, left/right and up/down). 0, 0 = the normal chase view.
@@ -355,21 +358,26 @@ func set_driver(player_id: int) -> void:
 ## Host (and start menu): back to the parking spot, stopped. Also used when the driver
 ## extracts, so the car is waiting for the next trip up.
 func park() -> void:
-	global_transform = parking_spot()
+	_teleport(parking_spot())
+
+
+## Move the car somewhere else, stopped. A RigidBody that's been resting ignores a plain
+## "global_transform =" (the physics engine puts it straight back: cars stayed on the menu's
+## centre spot instead of going to their corners), so the move is ALSO done inside the next
+## physics step (_integrate_forces), which the engine respects.
+func _teleport(where: Transform3D) -> void:
+	global_transform = where  # (frozen copies on other computers, and anything reading it this frame)
+	_pending_teleport = where
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
-	sync_position = global_position
-	sync_rotation = global_rotation
+	sync_position = where.origin
+	sync_rotation = where.basis.get_euler()
 
 
 ## The start menu only: wait by the centre crossroads (in the menu camera's shot, outside
 ## Meow-Mart). When a game starts, start_district parks it in its gang's corner.
 func park_for_menu() -> void:
-	global_transform = Transform3D(Basis(), CityGenerator.CAR_SPAWN)
-	linear_velocity = Vector3.ZERO
-	angular_velocity = Vector3.ZERO
-	sync_position = global_position
-	sync_rotation = global_rotation
+	_teleport(Transform3D(Basis(), CityGenerator.CAR_SPAWN))
 
 
 ## Where this car waits: park_distance up the north-south street from its gang's entry manhole
@@ -378,7 +386,9 @@ func park_for_menu() -> void:
 func parking_spot() -> Transform3D:
 	if team < 0 or FishHeist.instance == null or FishHeist.instance.city == null:
 		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)
-	var manhole := FishHeist.instance.entry_position(team)
+	if team == 0 and Game.instance != null and Game.instance.is_solo():
+		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)  # SOLO: the classic spot by the centre (game.gd)
+	var manhole := FishHeist.instance.corner_position(team)  # (its gang's corner, solo or not)
 	var north_south := -signf(manhole.z) if manhole.z != 0.0 else -1.0  # +1 = drive south, -1 = north
 	var spot := manhole + Vector3(0, 0.5, north_south * park_distance)
 	# The car's nose is -Z: facing north is no turn, facing south is a half turn.
@@ -476,6 +486,13 @@ func _update_engine_sound(delta: float) -> void:
 
 ## Runs every physics step. "state" lets us read/write the car's velocity safely.
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _pending_teleport != null:
+		# park() / park_for_menu(): jump there, stopped (see _teleport).
+		state.transform = _pending_teleport
+		state.linear_velocity = Vector3.ZERO
+		state.angular_velocity = Vector3.ZERO
+		_pending_teleport = null
+		return
 	var dt := state.step
 	var forward := -state.transform.basis.z  # Godot's forward is -Z
 	var right := state.transform.basis.x

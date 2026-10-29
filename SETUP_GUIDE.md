@@ -221,6 +221,12 @@ Keys are handled by the **Controls** framework (`scripts/controls.gd`) — playe
 
 ## 3. The arcade getaway car
 
+**SOLO games keep the classic layout:** ONE car (GetawayCar), parked by the centre crossroads,
+next to the single manhole you come up (the Burrow car is removed for that game). The rest of
+this paragraph is about LOCAL / ONLINE CO-OP.
+(Moving a parked car is done inside its physics step, `_teleport` in `getaway_car.gd`: a resting
+RigidBody ignores a plain "global_transform =", which once left both cars stuck in the middle.)
+
 **One car per gang.** `main.tscn` has two copies of the same car scene: **GetawayCar** (Team 0,
 parked 10 m up the street from the Catleone Family's manhole in the south-west corner) and
 **GangCar** (Team 1, by the Burrow Gang's manhole in the north-east corner). They're identical:
@@ -613,6 +619,8 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
   gun hits is its **Damage** in `scenes/items/pistol.tscn` / `tommy_gun.tscn` (the same number it
   does to VAC-COPs). The feed: **Feed Seconds** / **Feed Lines** on the HUD root in `hud.tscn`.
 - **Each gang's own way in and out (phase 4):**
+  - **SOLO is different:** one manhole in the centre crossroads, one car beside it, one exit
+    (`Game.is_solo()`: you picked SOLO on the menu). Everything below is LOCAL / ONLINE CO-OP.
   - **Entry manholes in opposite corners:** the Catleone Family comes up the **south-west**
     corner crossroads, the Burrow Gang the **north-east** one (`entry_position` in
     `fish_heist.gd`, worked out from the city size so it's always on a street). You pop out a
