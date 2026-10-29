@@ -241,6 +241,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`jump@1`) are built from Controls.bindings; gameplay input MUST go through `Seats.is_pressed/is_just_pressed/
   get_axis/get_vector(cat.slot, ...)` / `Seats.event_is(slot, event, ...)` (plain actions = any device, menus only).
   Rebuilding seat actions releases held buttons: only rebuild when bindings/pads change (`_built_from`).
+  Landing page: START on PLAYER 1's own pad = `_give_p1_pad_to_new_player` (pads[0] = -1, P1 keeps keyboard+mouse,
+  the pad joins the lobby; `_joining` hides that START from menus). Test: `--menu=mode --pad_press=0:D-Pad_Down,0:A,0:A,0:Start`.
   NO DROP-IN / DROP-OUT mid-game (user's call: couch players only join on the landing page, where gangs are picked):
   in a game, START on an unclaimed pad only `_take_over_unplugged`; no DROP OUT (PlayerPause seats > 0 have no leave,
   PauseMenu LeaveButton only for opened_by 0). Tests seat couch players with `Seats.test_seat_player(device)`

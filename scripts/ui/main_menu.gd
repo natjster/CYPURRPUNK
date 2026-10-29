@@ -344,6 +344,10 @@ func _refresh_landing() -> void:
 	_landing_hint.text = "P2-4: LEFT/RIGHT = CAT  %s/%s = GANG  %s = EDIT  %s = LEAVE" % [
 		Controls.display_name("Pad LB"), Controls.display_name("Pad RB"),
 		Controls.display_name("Pad A"), Controls.display_name("Pad B")]
+	if Seats.pads[0] != -1:
+		# Player 1 has been using a controller: its START hands it to a new player (scripts/seats.gd).
+		_landing_hint.text += "\nP1: %s ON YOUR CONTROLLER = GIVE IT TO A NEW PLAYER (YOU KEEP THE KEYBOARD)" % \
+			Controls.display_name("Pad Start")
 
 
 ## A on player 1's gang button: switch to the other gang (scripts/teams.gd).

@@ -616,8 +616,8 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
   - **Entry manholes in opposite corners:** the Catleone Family comes up the **south-west**
     corner crossroads, the Burrow Gang the **north-east** one (`entry_position` in
     `fish_heist.gd`, worked out from the city size so it's always on a street). You pop out a
-    few steps towards the middle, facing it (**Surface Distance** on each hub). The getaway car
-    waits in the middle, for whoever gets there first.
+    few steps up the street towards the middle, facing up it (**Surface Distance** on each hub),
+    with your gang's car parked right in front of you (§3).
   - **One exit per gang:** at 75 heat BOTH exits open, each somewhere random (at least 60 m from
     every entry and 45 m from each other: **Exit Min Distance** / **Exit Spacing** on the Heist
     node). Each glows in its gang's colour (pink / orange). Only YOUR gang's exit takes you down;
@@ -1420,6 +1420,10 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.). **A** = edit their cat
   in MY CAT (colours, hat, shades...; a NEW CAT is made right then so there's one to dress); only
   their controller drives that screen, DONE or B comes back. **LB / RB** = switch their gang.
+  **Been using a controller in the menus yourself?** It's player 1's then, so its START can't
+  "join" like a spare one... except here: on the landing page, **START on player 1's controller
+  hands it to a new player** (P2 sits down on it) and player 1 carries on with the keyboard +
+  mouse. (The landing page shows a reminder line while player 1 has a controller.)
   **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
   right), or presses A on it to make / edit cats, and switches gang on the **P1 GANG** button.
   Their controllers don't move player 1's menu.

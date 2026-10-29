@@ -19,6 +19,8 @@ extends Node
 ## (or NEW CAT) and their gang with LB / RB, B = leave again. When the game starts (local, host or
 ## join) they all come along (start_lobby_players). On the landing page a controller WITHOUT a seat
 ## does nothing but START (so it can't press player 1's buttons).
+## Player 1 has been using a controller in the menus? START on it on the landing page hands it to
+## a new player (_give_p1_pad_to_new_player); player 1 carries on with the keyboard + mouse.
 ## There is NO drop-in / drop-out during a game: the couch is fixed once it starts (so everyone
 ## picked their gang). The only thing START on a spare controller does in a game is take over the
 ## seat of a player whose controller got UNPLUGGED (_take_over_unplugged).
@@ -224,6 +226,12 @@ func rumble(player_id: int, weak: float, strong: float, seconds: float) -> void:
 ## over their seat); in a SOLO game it's player 1's anyway.
 func _on_window_input(event: InputEvent) -> void:
 	var is_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
+	# The couch lobby: START on PLAYER 1's own controller (the one they've been using in the
+	# menus) hands that controller to a NEW player; player 1 carries on with keyboard + mouse.
+	if is_pad and _in_lobby() and coop and pads[0] == event.device and event is InputEventJoypadButton \
+			and event.pressed and event.button_index == JOY_BUTTON_START and taken.find(false) != -1:
+		_give_p1_pad_to_new_player(event.device)
+		return
 	if is_pad and not pads.has(event.device):
 		var pressed_button: bool = event is InputEventJoypadButton and event.pressed
 		var pushed_stick: bool = event is InputEventJoypadMotion and absf(event.axis_value) >= 0.5
@@ -330,6 +338,21 @@ func cycle_p1_cat(direction: int) -> void:
 
 
 ## START on a free controller in the lobby: a new player sits down with the next free cat.
+## Landing page: player 1 pressed START on their own controller. It stops being theirs (they keep
+## the keyboard + mouse) and a new lobby player sits down on it, like any spare controller.
+func _give_p1_pad_to_new_player(device: int) -> void:
+	pads[0] = -1
+	Controls.using_pad = false  # player 1's prompts show keys again
+	_joining = device  # (this START press itself is nobody's: it mustn't press a menu button)
+	_join_lobby(device)
+	_finish_joining.call_deferred()
+	print("[Seats] Player 1 handed controller %d to a new player (player 1 is on keyboard + mouse)" % device)
+
+
+func _finish_joining() -> void:
+	_joining = -1
+
+
 func _join_lobby(device: int) -> void:
 	var seat := taken.find(false)
 	if seat == -1:

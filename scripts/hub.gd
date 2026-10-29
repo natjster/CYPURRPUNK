@@ -83,7 +83,8 @@ const DEPTH_LINE: float = -100.0
 @export_group("Spawning")
 ## Where new cats appear, relative to the Hub node (south end, west walkway).
 @export var spawn_spot: Vector3 = Vector3(-8, 0, 14)
-## How far (metres) from this gang's ENTRY manhole you pop out, towards the middle of the city.
+## How far (metres) from this gang's ENTRY manhole you pop out, up the street towards the middle
+## of the city (your gang's car is parked further up that street, right in front of you).
 ## (Where each gang's manhole is: fish_heist.gd entry_position - opposite corners.)
 @export var surface_distance: float = 3.5
 
@@ -213,12 +214,13 @@ func deploy(cat: CatPlayer) -> void:
 		# One trip per district (fish_heist.gd went_up): extracted or flattened, you've had yours.
 		Hud.show_message("%s: %s" % [boss_name, line_had_your_trip], 5.0, cat.slot)
 		return
-	# Up our gang's own ENTRY manhole (its corner of the city), a few steps towards the middle,
-	# facing the middle.
+	# Up our gang's own ENTRY manhole (its corner of the city), a few steps up the north-south
+	# street towards the middle, facing up that street: our gang's car is parked right ahead
+	# (getaway_car.gd parking_spot uses the same street).
 	var manhole := FishHeist.instance.entry_position(team)
-	var to_middle := (Vector3.ZERO - manhole).normalized() if manhole.length() > 1.0 else Vector3.FORWARD
-	var spread := Vector3(randf_range(-2, 2), 0, randf_range(-2, 2))  # don't land on each other
-	cat.teleport_to(manhole + to_middle * surface_distance + spread, atan2(-to_middle.x, -to_middle.z))
+	var up_street := Vector3(0, 0, -signf(manhole.z) if manhole.z != 0.0 else -1.0)
+	var spread := Vector3(randf_range(-2.5, 2.5), 0, randf_range(-1, 1))  # side by side, not on each other
+	cat.teleport_to(manhole + up_street * surface_distance + spread, atan2(-up_street.x, -up_street.z))
 	print("[Hub] %s went up to the city" % cat.name)
 
 
