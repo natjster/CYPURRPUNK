@@ -606,15 +606,24 @@ func _ready() -> void:
 		connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
 		connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
 		var started := Time.get_ticks_msec()
+		var peer := multiplayer.multiplayer_peer
 		for i in int(args["net_stats"]):
 			await get_tree().process_frame
+			if multiplayer.multiplayer_peer != peer:
+				break  # the game ended under us (e.g. the host quit first): stop measuring
 		var seconds := (Time.get_ticks_msec() - started) / 1000.0
-		var sent := connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
-		var received := connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
-		print("DevCapture net: sent %.1f KB/s, received %.1f KB/s over %.1f s | players=%d roombas=%d computers=%d" % [
-			sent / 1024.0 / seconds, received / 1024.0 / seconds, seconds, Game.instance.player_count(),
-			Game.instance.get_node("Roombas").get_child_count(), multiplayer.get_peers().size() + 1])
-	print("DevCapture fps=%d" % Engine.get_frames_per_second())
+		if multiplayer.multiplayer_peer != peer or peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+			print("DevCapture net: the game ended after %.1f s (host left?), no measurement" % seconds)
+		else:
+			var sent := connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
+			var received := connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
+			print("DevCapture net: sent %.1f KB/s, received %.1f KB/s over %.1f s | players=%d roombas=%d computers=%d" % [
+				sent / 1024.0 / seconds, received / 1024.0 / seconds, seconds, Game.instance.player_count(),
+				Game.instance.get_node("Roombas").get_child_count(), multiplayer.get_peers().size() + 1])
+		scene = Game.instance  # (a fresh one if the game ended and the start menu came back)
+	print("DevCapture fps=%d process=%.1fms physics=%.1fms objects=%d" % [Engine.get_frames_per_second(),
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
 	# Which players' HUDs still show a middle-of-screen message / popup (split screen).
 	var showing: Array = []
 	for seat in PlayerId.MAX_LOCAL:

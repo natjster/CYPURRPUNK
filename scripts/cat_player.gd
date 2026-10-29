@@ -281,6 +281,12 @@ func _ready() -> void:
 		set_physics_process(false)
 		set_process_unhandled_input(false)
 		_update_name_tag()
+		# No position from its owner yet? Stay where we were made (down in the sewers) until it
+		# arrives. Otherwise the copy jumps to (0, 0, 0) - the middle of the CITY - for a moment,
+		# and the host would think a player who just joined had already been up top (their one
+		# trip used up: fish_heist.gd went_up), and Roombas could chase a cat that isn't there.
+		if sync_position == Vector3.ZERO:
+			sync_position = position
 		# Joined while this cat was already in a car? Hide it now.
 		for node in get_tree().get_nodes_in_group("cars"):
 			var car := node as GetawayCar

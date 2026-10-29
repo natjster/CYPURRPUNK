@@ -419,6 +419,11 @@ copies glide smoothly in between). To change it: open `scenes/player.tscn` (or
 **Replication Interval** (seconds between updates: 0.033 = 30/sec, 0 = every frame).
 Measured: a full 8-player game (2 computers x 4) = the host sends about **12 KB/s**; with 8
 separate computers about 85 KB/s. Easy for any home network or Wi-Fi.
+Stress test (2026-10-29): 8 players on 4 computers (4 + 2 + 1 + 1, both gangs), heat held at 95
+(about 38 VAC-COPs incl. 3 MEGA VAC-COPs), everyone up top: the host sent **about 89 KB/s** and
+received 19 KB/s; each other computer received **about 29 KB/s**. All 4 game windows (on ONE PC)
+held **60 fps**; the host's physics took about 3 ms a frame. Every computer had the same city and
+saw all 8 cats with the right gang. A 9th computer was turned away ("That game is full").
 Test: `--net_stats=600` prints KB/s sent / received; `--track=150` shows how smoothly other
 players' cats move on screen.
 
