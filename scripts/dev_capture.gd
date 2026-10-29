@@ -14,8 +14,11 @@ extends Node
 ##   --as_local=S      (with --add_local) every action below (--pos, --give, --grab, --drive,
 ##                     --goto_dropoff_after, --bait_roomba, --talk...) uses the cat in slot S instead
 ##   --remove_local=S  (at the very end, before the snap) the player in slot S drops out
-##   --join_pad=N      couch co-op: press START on fake controller N (1, 2, 3) right after our cat
-##                     appears = a new player drops in on it (scripts/seats.gd). Repeat: --join_pad=1,2
+##   --join_pad=N      couch co-op: seat a player on fake controller N (1, 2, 3) right after our cat
+##                     appears, as if they'd joined in the lobby (tests only: there's no drop-in
+##                     mid-game, scripts/seats.gd). Repeat: --join_pad=1,2
+##   --spare_start=D   a REAL START press on spare controller D mid-game (should do nothing; with
+##                     --unplug first it takes over the unplugged seat)
 ##   --pad_device=N    which fake controller --pad and --pad_press use (default 0)
 ##   --net_stats=N     measure network data sent / received per second over N frames (before the snap)
 ##   --unplug=D        (after --join_pad) controller D is unplugged; add --replug to plug it back in
@@ -175,19 +178,17 @@ func _ready() -> void:
 			if args.has("as_local"):
 				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
 		if player != null and args.has("join_pad"):
-			# Couch co-op: START on another controller = a new player drops in (scripts/seats.gd).
+			# Couch co-op: seat a player on fake controller N, as if they'd joined in the lobby.
+			# (Players can't drop in mid-game any more: Seats.test_seat_player is for tests only.)
 			# (Only in co-op games: a test started with --solo is turned into a local co-op one.)
 			Seats.coop = true
 			Seats.game_started()
 			for i in 20:
 				await get_tree().process_frame
 			for device in args["join_pad"].split(","):
-				for pressed in [true, false]:
-					var start := _pad_event("Start", pressed)
-					start.device = int(device)
-					Input.parse_input_event(start)
-					for i in 3:
-						await get_tree().process_frame
+				Seats.test_seat_player(int(device))
+				for i in 3:
+					await get_tree().process_frame
 			for i in 60:  # wait for the host to make their cats
 				if scene.local_cats().size() > args["join_pad"].split(",").size():
 					break
@@ -196,6 +197,24 @@ func _ready() -> void:
 				scene.local_cats().map(func(c): return "%s slot %d \"%s\" reads_input=%s" % [c.name, c.slot, c.player_name, c.reads_input()])])
 			if args.has("as_local"):
 				player = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["as_local"])))
+		if player != null and args.has("spare_start"):
+			# --spare_start=D: a REAL START press on spare controller D during a co-op game.
+			# (No drop-in: nothing should happen unless someone's controller is unplugged.)
+			Seats.coop = true
+			Seats.game_started()
+			for i in 20:
+				await get_tree().process_frame
+			var before: int = scene.local_cats().size()
+			for pressed in [true, false]:
+				var start := _pad_event("Start", pressed)
+				start.device = int(args["spare_start"])
+				Input.parse_input_event(start)
+				for i in 3:
+					await get_tree().process_frame
+			for i in 60:
+				await get_tree().process_frame
+			print("DevCapture spare_start: cats before=%d after=%d pads=%s taken=%s paused=%s" % [before,
+				scene.local_cats().size(), Seats.pads, Seats.taken, PauseMenu.is_open])
 
 	# Diagnostics: switch PS1 effects off on the city's materials for this run only.
 	#   --no_affine        perspective-correct textures

@@ -13,15 +13,15 @@ extends Node
 ##   - SOLO game: there's only one player, so EVERY controller drives player 1. No joining.
 ##   - LOCAL / ONLINE CO-OP (coop = true): every other seat has exactly one controller.
 ##
-## JOINING (co-op only): press START on a controller that has no seat
-##   - on the start menu's LANDING PAGE (MULTIPLAYER > LOCAL / ONLINE CO-OP; also still on the
-##     HOST / JOIN screen after it) = the COUCH LOBBY: the new player picks one of your saved cats
-##     with left / right (or NEW CAT), B = leave again. When the game starts (local, host or join)
-##     they all come along (start_lobby_players). On the landing page a controller WITHOUT a seat
-##     does nothing but START (so it can't press player 1's buttons).
-##   - during a co-op game = drop in straight away, playing your next saved cat nobody is using
-##     (a new one called "PLAYER 2" is made if there isn't one). They leave again with their own
-##     pause menu's DROP OUT (that drops only them, not the whole computer).
+## JOINING (co-op only), ONLY BEFORE THE GAME: press START on a controller that has no seat on the
+## start menu's LANDING PAGE (MULTIPLAYER > LOCAL / ONLINE CO-OP; also still on the HOST / JOIN
+## screen after it) = the COUCH LOBBY: the new player picks one of your saved cats with left / right
+## (or NEW CAT) and their gang with LB / RB, B = leave again. When the game starts (local, host or
+## join) they all come along (start_lobby_players). On the landing page a controller WITHOUT a seat
+## does nothing but START (so it can't press player 1's buttons).
+## There is NO drop-in / drop-out during a game: the couch is fixed once it starts (so everyone
+## picked their gang). The only thing START on a spare controller does in a game is take over the
+## seat of a player whose controller got UNPLUGGED (_take_over_unplugged).
 ## Two players never play the same cat (each cat has its own cash and stash).
 ##
 ## HOW SCRIPTS READ A SEAT'S BUTTONS: every control in Controls.ACTIONS also exists once per seat,
@@ -46,7 +46,7 @@ var taken: Array[bool] = []
 var coop: bool = false
 ## True once a game has started (game_started), until we're back at the title (reset).
 var _playing: bool = false
-## A controller whose START is joining a new player right now (its press opens no menu).
+## A controller whose START is taking over an unplugged player's seat right now (its press opens no menu).
 var _joining: int = -1
 ## The couch lobby (start menu): seat -> the saved cat id they picked ("" = a NEW CAT, made
 ## when the game starts).
@@ -217,25 +217,11 @@ func rumble(player_id: int, weak: float, strong: float, seconds: float) -> void:
 		Input.start_joy_vibration(pads[seat], weak, strong, seconds)
 
 
-# --- Joining in and leaving ---
-
-## A player in seat 1-3 leaves (their pause menu's LEAVE GAME). Seat 0 leaves the whole game instead.
-func leave(seat: int) -> void:
-	if seat <= 0 or not taken[seat]:
-		return
-	var who := str(Game.instance.local_player_info(seat).get("name", "PLAYER %d" % (seat + 1)))
-	Game.instance.remove_local_player(seat)
-	taken[seat] = false
-	pads[seat] = -1
-	_rebuild_actions()
-	Hud.show_message("PLAYER %d (%s) LEFT" % [seat + 1, who], 3.0)
-	changed.emit()
-
-
 ## Every key / click / controller press passes through here first (before menus and cats).
 ## A controller with no seat: in the start menu (before the landing page) its first press makes it
-## player 1's; on the landing page / in a co-op game only its START does something (join);
-## in a SOLO game it's player 1's anyway.
+## player 1's; on the landing page only its START does something (join the couch lobby); in a
+## co-op game only its START does something, and only if someone's controller is unplugged (take
+## over their seat); in a SOLO game it's player 1's anyway.
 func _on_window_input(event: InputEvent) -> void:
 	var is_pad := event is InputEventJoypadButton or event is InputEventJoypadMotion
 	if is_pad and not pads.has(event.device):
@@ -261,19 +247,19 @@ func _seatless_press(device: int, is_start: bool) -> void:
 			print("[Seats] Controller %d is player 1's" % device)
 			changed.emit()
 		return  # (any other controller in the start menu is ignored)
-	if coop and is_start:
+	if coop and is_start and not _unplugged.is_empty():
 		# Deferred: this START must not also open a pause menu (pause menus ignore controllers
 		# with no seat, and this one doesn't have one until after this event).
 		_joining = device
-		_join.call_deferred(device)
+		_take_over_unplugged.call_deferred(device)
+	# (No drop-in: START on a spare controller doesn't add a player mid-game.)
 
 
-## A new player drops in on controller "device".
-func _join(device: int) -> void:
+## Someone's controller is unplugged: the spare controller "device" takes over their seat (and cat).
+func _take_over_unplugged(device: int) -> void:
 	_joining = -1
 	if pads.has(device) or not _in_game() or not coop:
 		return
-	# Someone's controller is unplugged? This new one takes over their seat (and cat).
 	for lost in _unplugged.keys():
 		pads[lost] = device
 		_unplugged.erase(lost)
@@ -283,21 +269,27 @@ func _join(device: int) -> void:
 		print("[Seats] Controller %d took over player %d's seat" % [device, lost + 1])
 		changed.emit()
 		return
+
+
+## TESTS ONLY (the test tool's --join_pad, scripts/dev_capture.gd): seat a new couch player on
+## controller "device" in a running game, as if they had joined in the lobby. Players can't do
+## this (no drop-in during a game).
+func test_seat_player(device: int) -> void:
+	if pads.has(device) or not _in_game():
+		return
 	var seat := -1
 	for free in range(1, PlayerId.MAX_LOCAL):
 		if not taken[free] and not Game.instance.extra_local_players.has(free):
 			seat = free
 			break
 	if seat == -1:
-		Hud.show_message("%d PLAYERS IS THE MOST ON ONE COMPUTER" % PlayerId.MAX_LOCAL, 3.0)
 		return
 	var cat := _cat_for_new_player(seat)
 	pads[seat] = device
 	taken[seat] = true
 	_rebuild_actions()
 	Game.instance.add_local_player(seat, {"name": cat.get("name", ""), "look": cat.get("look", {}), "cat_id": cat.get("id", "")})
-	Hud.show_message("PLAYER %d JOINED AS %s!  (%s > DROP OUT to leave)" % [seat + 1, cat.get("name", ""), Controls.display_name("Pad Start")], 4.0)
-	print("[Seats] Controller %d joined as player %d (%s)" % [device, seat + 1, cat.get("name", "")])
+	print("[Seats] (test) Controller %d seated as player %d (%s)" % [device, seat + 1, cat.get("name", "")])
 	changed.emit()
 
 
@@ -451,7 +443,7 @@ func refused(seat: int) -> void:
 	changed.emit()
 
 
-## The saved cat a drop-in player plays: the next one in MY CAT that nobody here is playing,
+## The saved cat a test-seated player plays: the next one in MY CAT that nobody here is playing,
 ## or a brand-new one ("PLAYER 2") if they're all taken.
 func _cat_for_new_player(seat: int) -> Dictionary:
 	var in_use: Array = [Settings.current_cat_id]
@@ -470,7 +462,7 @@ func _cat_for_new_player(seat: int) -> Dictionary:
 
 ## A controller was unplugged / plugged in (or ran out of battery). Its player's game pauses
 ## (only theirs, in split screen) until it's back. They keep their seat: the same controller
-## plugged back in carries on, or START on another free controller takes the seat over (_join).
+## plugged back in carries on, or START on another free controller takes the seat over (_take_over_unplugged).
 func _on_joy_connection_changed(device: int, connected: bool) -> void:
 	if not _in_game():
 		return

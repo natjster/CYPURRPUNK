@@ -24,8 +24,8 @@ static var is_open: bool = false
 
 ## Esc only opens the pause menu once a game has started (game.gd turns this on).
 var enabled: bool = false
-## Which player on this computer opened it (their seat, scripts/seats.gd). For a couch player
-## (seat 1-3), LEAVE GAME drops only them out; for player 1 it leaves the whole game.
+## Which player on this computer opened it (their seat, scripts/seats.gd). Only player 1 gets
+## LEAVE GAME (it takes this whole computer out); couch players can't drop out mid-game.
 var opened_by: int = 0
 
 
@@ -46,7 +46,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	var seat := Seats.seat_of_event(event)
 	if not enabled or seat == -1:
-		return  # (-1 = a controller nobody has: its START joins a new player, scripts/seats.gd)
+		return  # (-1 = a controller nobody has: scripts/seats.gd decides what its START does)
 	if visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
 		close()
@@ -59,8 +59,8 @@ func _input(event: InputEvent) -> void:
 
 func open() -> void:
 	is_open = true
-	# A couch player's pause menu drops only them out of the game.
-	$Panel/VBox/LeaveButton.text = "LEAVE GAME" if opened_by == 0 else "DROP OUT (PLAYER %d)" % (opened_by + 1)
+	# Only player 1 can leave the game (it takes everyone on this computer along).
+	$Panel/VBox/LeaveButton.visible = opened_by == 0
 	# MY CAT restyles the cat of whoever opened the menu (game.gd passes opened_by on).
 	show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -76,11 +76,7 @@ func close() -> void:
 
 
 func _on_leave_pressed() -> void:
-	if opened_by > 0:
-		Seats.leave(opened_by)  # just that couch player
-		opened_by = 0
-		close()
-	else:
+	if opened_by == 0:
 		leave_pressed.emit()
 
 

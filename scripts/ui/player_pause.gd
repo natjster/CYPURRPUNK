@@ -15,7 +15,8 @@ extends Control
 ##                their controller; DONE comes back here)
 ##   Player 1:    SETTINGS / LEAVE GAME / QUIT TO DESKTOP
 ##                (SETTINGS opens the big pause menu: those screens are shared)
-##   Players 2-4: DROP OUT (just them: scripts/seats.gd)
+##   Players 2-4: nothing else: there's no dropping out mid-game (the couch is set on the landing
+##                page; when player 1 leaves the game, everyone on this computer goes with them)
 ##
 ## It also opens by itself when that player's controller is unplugged (open(reason)), and closes
 ## by itself when it's back.
@@ -137,10 +138,7 @@ func open(reason: String = "") -> void:
 			close()
 			game.pause_menu.leave_pressed.emit())  # this whole computer leaves (game.gd)
 		_add_button("QUIT TO DESKTOP", get_tree().quit)
-	else:
-		_add_button("DROP OUT", func():
-			close()
-			Seats.leave(seat))  # just this player
+	# (Players 2-4 have no DROP OUT: the couch is fixed for the whole game, scripts/seats.gd.)
 	is_open = true
 	show()
 	if seat == 0:

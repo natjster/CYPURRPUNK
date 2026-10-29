@@ -479,15 +479,16 @@ keeps two numbers apart (`scripts/player_id.gd`, class **PlayerId**):
   for, and the host checks that player belongs to the computer that asked
   (`PlayerId.sender_owns(id)`), so nobody can move someone else's stuff.
 - **Each couch player plays their own saved cat**, with its own cash and stash file (§8, "The stash
-  & saved progress"). A couch player can drop out on their own; the computer stays in the game
-  until it quits, which removes all of its players.
+  & saved progress"). The couch is fixed for the whole game (no dropping in or out mid-game): a
+  computer's players all come in together from the landing page, and leave together when player 1
+  quits.
 - **In code:** `PlayerId.make(network_id, seat)`, `PlayerId.peer_of(id)` (which computer),
   `PlayerId.slot_of(id)` (which seat, 0-3), `PlayerId.is_local(id)` (on this computer?),
   `PlayerId.first_local()`. A cat knows its own: `cat.player_id`, `cat.slot`.
-  `Game.instance.add_local_player(seat, {"name", "look", "cat_id"})` /
-  `remove_local_player(seat)` add or drop a couch player.
-- **Controllers:** couch players join with START on their own controller (§10, "Couch co-op"),
-  and each gets their own part of the screen (§13).
+  `Game.instance.add_local_player(seat, {"name", "look", "cat_id", "team"})` adds a couch player
+  when the game starts (`remove_local_player(seat)` is only used by tests now).
+- **Controllers:** couch players join with START on their own controller on the landing page,
+  BEFORE the game (§10, "Couch co-op"), and each gets their own part of the screen (§13).
   Test them with DevCapture (these test players have no controller, so they stand still):
   `--add_local=1` (one more player joins in), `--as_local=1` (the test actions use that cat:
   `--grab`, `--goto_dropoff_after`, `--bait_roomba`...), `--remove_local=1` (they drop out).
@@ -504,7 +505,9 @@ players' cats and the car **glide** toward the latest position every frame.
 - Measured with a simulated laggy connection (10 updates/sec): raw updates stood still on 126 of
   150 frames and jumped up to 52 cm at once; the cat on screen moved every frame, max 14 cm.
 
-### Joining mid-game
+### Joining mid-game (another computer)
+(A whole COMPUTER can still join a game in progress over the network, with the players it set
+up on its landing page. Couch players can't drop in to a running game: §10.)
 A player who joins late gets the city number first, then every **game system** (§16) sends what
 it knows: who is driving the car, every item (on the street and in everyone's paws/bags), everyone's
 quests, cash and HP, and the heat. Then their cat appears.
@@ -1419,9 +1422,10 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
   JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone
   up. Two players never play the same cat: each cat has its own cash and stash.
-- **Joining mid-game (LOCAL / ONLINE CO-OP games only):** press **START** on a controller
-  nobody is using: a new player drops in (in the sewers) with your next saved cat nobody is
-  using (or a new "PLAYER 2"). In a SOLO game nobody can join: every controller is player 1's.
+- **No drop-in / drop-out during a game:** everyone sits down on the landing page (where they
+  also pick their gang), and the couch stays the same until player 1 leaves the game. START on a
+  spare controller mid-game does nothing, EXCEPT when someone's controller is unplugged: then it
+  takes over that player's seat (below). In a SOLO game every controller is player 1's.
 - **Full games:** a game holds 8 players. A couch player who doesn't fit is told "THE GAME IS
   FULL"; a whole computer that doesn't fit goes back to the start menu with "That game is full."
 - **Pausing (each player their own):** with 2+ players, **START** (Esc for player 1) opens a small
@@ -1429,8 +1433,7 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   Everyone's has **MY CAT**: restyle (colours, hat, shades...) the cat THEY play. It takes the
   whole screen while open and only that player's controller drives it; DONE (or B) goes back to
   their pause menu. Player 1's also has SETTINGS (the big pause menu: settings are shared) /
-  LEAVE GAME / QUIT TO DESKTOP. Players 2-4's: **DROP OUT** (only they leave: what they carry
-  drops where they stand, their stash is safe).
+  LEAVE GAME / QUIT TO DESKTOP. Players 2-4's have no leave button (no dropping out).
   Player 1's LEAVE GAME ends the game for this whole computer. Alone, START opens the normal
   big pause menu as always. (`scripts/ui/player_pause.gd`, in every player's HUD.)
 - **Each player's own controller settings:** in their pause menu, **STICK SPEED**, **INVERT

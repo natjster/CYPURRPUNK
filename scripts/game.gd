@@ -16,8 +16,9 @@ extends Node3D
 ##     The MultiplayerSpawner node copies those cats to everyone's game.
 ##   - Each cat is moved by its owner and synced to the others (see cat_player.gd).
 ##   - A cat is named after its PLAYER ID (scripts/player_id.gd). One computer can have up to
-##     4 players (split screen): the first one joins with the computer, more join in with
-##     add_local_player() and can drop out again with remove_local_player().
+##     4 players (split screen): the first one joins with the computer, the couch players from
+##     the landing page come in with add_local_player() when the game starts (no dropping in or
+##     out mid-game; remove_local_player() is only used by tests).
 ##   - The city is generated from a seed number (see city_generator.gd). The host
 ##     sends just that number to each player, and everyone builds the same city.
 ##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
