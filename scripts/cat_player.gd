@@ -180,7 +180,8 @@ func reads_input() -> bool:
 ## a slim cyan bar just under the name, only once this cat is hurt. (Your own health is the big
 ## bar top-left of your HUD instead.)
 ## DOWNED: the bar shows the bleed-out time draining instead, with "DOWNED" over it, and it's
-## seen from far away and through walls so friends can find you.
+## seen from far away and through walls so friends can find you. While a friend revives you,
+## the REVIVE METER fills it ("progress").
 func health_bar_info() -> Dictionary:
 	var health := CatHealth.instance
 	if health == null:
@@ -190,6 +191,7 @@ func health_bar_info() -> Dictionary:
 		return {"hp": health.bleed_out_left(player_id), "max": health.bleed_out_seconds,
 			"position": global_position + Vector3.UP * 1.0, "show": true,
 			"name": "REVIVING..." if reviving else "DOWNED %d" % ceili(health.bleed_out_left(player_id)),
+			"progress": health.revive_progress(player_id),
 			"see_from": health.downed_seen_from, "through_walls": true}
 	var hp := health.get_health(player_id)
 	return {"hp": hp, "max": health.max_health, "position": global_position + Vector3.UP * 1.3,

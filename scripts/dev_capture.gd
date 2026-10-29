@@ -766,6 +766,8 @@ func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			await get_tree().physics_frame
 			if i == 60:
 				report.call("1 s into revive (prompt \"%s\")" % Interactable.prompt_for(player))
+			if i == 100 and args.has("revive_snap"):  # --revive_snap=PATH: a picture mid-revive
+				get_tree().root.get_texture().get_image().save_png("res://" + args["revive_snap"])
 		Input.action_release(Seats.action(player.slot, "interact"))
 		for i in 10:
 			await get_tree().physics_frame

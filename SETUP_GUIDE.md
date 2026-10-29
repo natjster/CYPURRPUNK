@@ -935,10 +935,11 @@ Every cat has **100 HP**, shown as the **health bar** top-left under your cash a
 **At 0 HP you're DOWNED first, not out** (when there's a teammate who could save you):
 - You flop on your side but **keep everything you carry**. You can only **crawl** (slowly) and
   **meow** for help. VAC-COPs leave you alone. Your screen says `DOWNED! 25` and counts down.
-- Every other player gets a message (`MITTENS IS DOWN! Find them and hold [E] to revive.`), and
-  over your head a cyan **DOWNED** bar drains as you bleed out. They can see it **from far away
-  and through walls**.
-- A teammate walks up and **HOLDS E** (Pad X) for **3 seconds** (`REVIVING MITTENS [####------]`).
+- Over your head a cyan **DOWNED** bar drains as you bleed out. Teammates can see it **from far
+  away and through walls** (there's no "IS DOWN!" message: the bar is how they find you).
+- A teammate walks up and **HOLDS E** (Pad X) for **3 seconds** (prompt: `REVIVING MITTENS...`).
+  The **revive meter** fills your health bar in **green**: the bar over your head on their
+  screen, and your own bar top-left (it says **REVIVING**).
   Your bleed-out clock stops while they do. Letting go or walking off cancels it. Done: you're
   back up with **35 HP** and all your loot ("BACK ON YOUR PAWS!").
 - Nobody comes in **25 seconds**, or you **hold E for 1.5 s to give up**: you're knocked out (below).
@@ -981,7 +982,8 @@ like cash. The reviver's computer only asks the host ("I'm holding E on Mittens"
 
 **Test downed / revive without playing** (the cat in slot S goes down 1.5 m in front of you):
 - `--host --add_local=1 --deploy --down=1 --revive=200` = couch player 2 goes down, you hold E on
-  them: prints `REVIVING COUCH 2 [###-------]`, then `hp=35 downed=false`. (`--revive=60` = let go
+  them: prints `REVIVING COUCH 2...`, then `hp=35 downed=false` (`--revive_snap=shots/x.png` saves a
+  picture mid-revive). (`--revive=60` = let go
   too early: still downed.)
 - `--down=1 --bleed_out=2 --frames=240` = nobody helps: `was knocked out` after 2 s.
 - `--down=0 --add_local=1 --hold=interact --hold_frames=120` = you go down and give up.
@@ -1001,8 +1003,11 @@ Everything here is drawn by the HUD layer (sharp at your real resolution, not pi
   moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
   pulses; at 0 it says **DOWNED** (while a friend can still revive you), then **KNOCKED OUT**.
 - **A downed teammate** gets a cyan bar that drains as they bleed out, with `DOWNED 18` (or
-  `REVIVING...`) over it, seen from far away and through walls. Any bar can do this: give
-  `health_bar_info()` the extra keys `"see_from": 150.0` and `"through_walls": true`.
+  `REVIVING...`) over it, seen from far away and through walls. While someone revives them, a
+  **green revive meter** fills the bar (your own bar top-left fills the same way when it's you).
+  Any bar can do this: give `health_bar_info()` the extra keys `"see_from": 150.0`,
+  `"through_walls": true` and `"progress": 0.5` (0..1). The green is **Revive Color** on both
+  **Frame > Bars** and **Frame > Top > Health** in `hud.tscn`.
   Tuning: open `scenes/ui/hud.tscn`, select **Frame > Top > Health**: **Colours** (Fill, Chip,
   Heal, Back, Frame), **Shape** (Bar Thickness, Number Box Width, Number Font Size), **Feel** (Chip Delay, Drain Speed, Low Health). Move / resize it with **Layout >
   Transform**.

@@ -285,17 +285,12 @@ func _set_downed(player_id: int, seconds: float, cause: String) -> void:
 	downed[player_id] = seconds
 	Events.player_downed.emit(player_id, cause)  # every computer hears it (scripts/events.gd)
 	var cat := Game.instance.cat_for(player_id)
-	var who := cat.player_name if cat != null and cat.player_name != "" else "A CAT"
 	if PlayerId.is_local(player_id):
 		Seats.rumble(player_id, 0.6, 0.9, 0.5)
 		Sound.play("downed")
 	if cat != null:
 		Sound.play_at("meow", cat.global_position)  # a sad little meow everyone nearby hears
-	# Tell every OTHER player on this computer (they're the ones who can help).
-	for helper in Game.instance.playing_cats():
-		if helper.player_id != player_id:
-			Hud.show_message("%s IS DOWN! Find them and hold [%s] to revive." % [who, Hud.key_for("interact", helper.slot)],
-				4.0, helper.slot)
+	# (Teammates find you by the DOWNED bar over your head: cat_player.gd health_bar_info.)
 
 
 ## Host -> everyone: "by" is reviving this downed player, "seconds" of holding to go (by 0 = stopped).
@@ -387,11 +382,12 @@ func revive_distance(patient: CatPlayer, helper: CatPlayer) -> float:
 	return distance if distance <= reach else -1.0
 
 
-## The HUD prompt line for "helper" next to downed "patient".
+## The HUD prompt line for "helper" next to downed "patient". (The revive meter itself fills
+## the downed cat's health bar: cat_player.gd health_bar_info.)
 func revive_prompt(patient: CatPlayer, helper: CatPlayer) -> String:
 	var who := patient.player_name if patient.player_name != "" else "CAT"
 	if reviver_of(patient.player_id) == helper.player_id:
-		return "REVIVING %s  %s" % [who, _progress_bar(revive_progress(patient.player_id))]
+		return "REVIVING %s..." % who
 	return "HOLD: REVIVE %s" % who
 
 
@@ -422,6 +418,7 @@ func _process(delta: float) -> void:
 		var bar := Hud.element("Health", cat.slot) as HudHealthBar
 		if bar != null:
 			bar.downed = is_downed(cat.player_id)
+			bar.revive_progress = revive_progress(cat.player_id)  # a friend's revive fills our own bar
 			bar.set_health(get_health(cat.player_id), max_health)
 		_watch_revive_button(cat)
 		if is_downed(cat.player_id):
@@ -450,8 +447,7 @@ func _downed_hud(cat: CatPlayer, delta: float) -> void:
 	var text: String
 	if by != 0:
 		var helper := Game.instance.cat_for(by)
-		text = "%s IS REVIVING YOU  %s" % [helper.player_name if helper != null else "A FRIEND",
-			_progress_bar(revive_progress(cat.player_id))]
+		text = "%s IS REVIVING YOU..." % (helper.player_name if helper != null else "A FRIEND")
 		_give_up_held.erase(cat.slot)
 	else:
 		var held: float = _give_up_held.get(cat.slot, 0.0)

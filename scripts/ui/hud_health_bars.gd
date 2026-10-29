@@ -20,6 +20,7 @@ extends Control
 ## ("show" false or an empty Dictionary = no bar right now.) Roombas (roomba.gd) and cats
 ## (cat_player.gd) are the examples. Two optional extras: "see_from": 150.0 (metres, instead of
 ## max_distance) and "through_walls": true (a DOWNED cat uses both, so friends can find it).
+## And "progress": 0..1 fills the bar in revive_color over the top (a downed cat's REVIVE METER).
 
 ## The group a node joins to get a floating bar.
 const GROUP := "hud_health_bars"
@@ -54,6 +55,8 @@ const GROUP := "hud_health_bars"
 @export var name_color: Color = Color(1.0, 0.75, 0.75)
 ## Other players' cats (friends) get a cyan bar instead of red.
 @export var friend_color: Color = Color(0.35, 1.0, 1.0)
+## The revive meter filling a downed cat's bar while a friend holds the button.
+@export var revive_color: Color = Color(0.45, 1.0, 0.5)
 
 ## Instance id -> {shown, chip, wait, alpha} (each bar's animation).
 var _anim := {}
@@ -143,7 +146,7 @@ func _add_to_draw_list(info: Dictionary, anim: Dictionary, camera: Camera3D, gam
 	_draw_list.append({
 		"rect": Rect2((on_screen - Vector2(width * 0.5, height)).round(), Vector2(width, height)),
 		"shown": anim.shown, "chip": anim.chip, "alpha": anim.alpha * fade,
-		"name": info.get("name", ""), "boss": boss, "friend": friend})
+		"name": info.get("name", ""), "boss": boss, "friend": friend, "progress": float(info.get("progress", 0.0))})
 
 
 func _draw() -> void:
@@ -158,6 +161,10 @@ func _draw() -> void:
 		draw_rect(Rect2(rect.position, Vector2(w * bar.shown, rect.size.y)), Color(fill, a))
 		if bar.chip > bar.shown:
 			draw_rect(Rect2(rect.position.x + w * bar.shown, rect.position.y, w * (bar.chip - bar.shown), rect.size.y), Color(chip_color, a))
+		# Revive meter: fills the whole bar from the left over the top while a friend revives.
+		if bar.progress > 0.0:
+			draw_rect(rect, Color(back_color, back_color.a * a))
+			draw_rect(Rect2(rect.position, Vector2(w * bar.progress, rect.size.y)), Color(revive_color, a))
 		draw_rect(rect, Color(friend_color if bar.friend else frame_color, frame_color.a * a), false, 1.0)
 		# Name above the bar (left-aligned, like Cyberpunk). The boss's is bigger and gold.
 		var label: String = bar.name
