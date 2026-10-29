@@ -32,6 +32,10 @@ enum Kind { LOOT, HELD }
 @export var hold_scale: float = 1.0
 ## Over-the-shoulder camera while holding it (nice for aiming weapons).
 @export var shoulder_camera: bool = false
+## QUICK USE item (catnip, catdip): picking it up puts it in one of your two QUICK USE slots
+## (keys 1 / 2, d-pad left / right) instead of your paws, stacked with others of its kind.
+## Its scene's script must have a quick_use(cat) function (see scripts/items/catnip.gd).
+@export var quick_use: bool = false
 
 @export_group("Loot")
 ## Cash paid for each one delivered to the drop-off.

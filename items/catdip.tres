@@ -13,6 +13,7 @@ price = 35
 hands = 1
 hold_offset = Vector3(0.24, 0.42, -0.22)
 hold_scale = 1.6
+quick_use = true
 scene = ExtResource("2_scene")
 auto_pickup = false
 world_scale = 2.2

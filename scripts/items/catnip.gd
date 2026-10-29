@@ -10,8 +10,13 @@ extends HeldItem
 
 func use_tick(_trigger_down: bool, trigger_pressed: bool, _delta: float) -> void:
 	if trigger_pressed:
-		holder.start_boost(speed_multiplier, duration)
+		quick_use(holder)
 		consume()
+
+
+## Sniffed from a QUICK USE slot (key 1 / 2), or from the paw above.
+func quick_use(cat: CatPlayer) -> void:
+	cat.start_boost(speed_multiplier, duration)
 
 
 func hud_text() -> String:

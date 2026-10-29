@@ -7,6 +7,8 @@ extends Control
 ## screen is 720 tall); tweak them with the exports below (select Inventory in hud.tscn).
 ##
 ##   PAWS      what you're holding. Click = put it in the backpack.
+##   QUICK USE two slots for catnip / catdip (keys 1 / 2, d-pad left / right in the game).
+##             Click = put one back in the backpack. Clicking catnip in the backpack moves it here.
 ##   BACKPACK  held items you're carrying but not using. Click = take it into your paws.
 ##   LOOT BAG  fish etc. Paid out at the exit manhole.
 ##   Right-click any item = drop it on the ground in front of you.
@@ -27,6 +29,7 @@ extends Control
 ##   ├── Dim (ColorRect)                   <- darkens the game behind it
 ##   └── Centre (CenterContainer) > Panel (PanelContainer) > VBox
 ##       ├── Title, Paws (left + right paw slots)
+##       ├── Quick (QUICK USE 1 + 2 slots)
 ##       ├── PackTitle + PackGrid           (3 slots per row)
 ##       ├── BagTitle + BagGrid  / StashTitle + StashGrid   (only one of the two is shown)
 ##       └── Info (hints, item descriptions, "Backpack is full.")
@@ -52,6 +55,8 @@ var _focus := SeatFocus.new()
 @export var columns: int = 3
 
 var _paw_buttons: Array[Button] = []    # [left paw, right paw] as shown on screen
+var _quick_buttons: Array[Button] = []  # [quick use 1, quick use 2]
+var _quick_titles: Array[Label] = []
 var _pack_buttons: Array[Button] = []
 var _bag_buttons: Array[Button] = []
 var _stash_buttons: Array[Button] = []
@@ -123,6 +128,22 @@ func _build() -> void:
 		_paw_buttons.append(button)
 		paws.add_child(column)
 
+	# The two QUICK USE slots, the same way (titles show their keys: filled in by _process).
+	var quick := HBoxContainer.new()
+	quick.name = "Quick"
+	quick.alignment = BoxContainer.ALIGNMENT_CENTER
+	quick.add_theme_constant_override("separation", 24)
+	box.add_child(quick)
+	for slot in 2:
+		var column := VBoxContainer.new()
+		var title := _label("QUICK USE %d" % (slot + 1), title_font_size - 2, Color(1, 0.85, 0.4))
+		column.add_child(title)
+		_quick_titles.append(title)
+		var button := _slot("quick", slot)
+		column.add_child(button)
+		_quick_buttons.append(button)
+		quick.add_child(column)
+
 	_pack_title = _label("BACKPACK", title_font_size, Color(0.6, 0.85, 1))
 	box.add_child(_pack_title)
 	box.add_child(_grid(_pack_buttons, "pack", items.pack_size))
@@ -192,7 +213,7 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
 		# A highlighted slot for the d-pad / arrows to move around from (left paw first).
-		_focus.set_buttons(_paw_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
+		_focus.set_buttons(_paw_buttons + _quick_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
 	else:
 		_focus.clear()
 		var first := Game.instance.my_cat() if Game.instance != null else null
@@ -223,6 +244,12 @@ func _process(_delta: float) -> void:
 	_fill(_paw_buttons[1], hands[0])
 	if hands[0] != "" and (items.catalog[hands[0]] as ItemData).hands == 2:
 		_paw_buttons[1].text = "BOTH PAWS"  # a 2-paw item fills both slots
+	var quick := items.quick_slots(cat.player_id)
+	for i in 2:
+		_fill(_quick_buttons[i], quick[i][0] if not quick[i].is_empty() else "")
+		if quick[i].size() > 1:
+			_quick_buttons[i].text += "  x%d" % quick[i].size()
+		_quick_titles[i].text = "QUICK USE %d  [%s]" % [i + 1, Controls.key_text("quick_%d" % (i + 1))]
 	for i in _pack_buttons.size():
 		_fill(_pack_buttons[i], inventory.pack[i] if i < inventory.pack.size() else "")
 	for i in _bag_buttons.size():
@@ -352,7 +379,12 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 			items.request_to_stash.rpc_id(1, cat.player_id, where, index)
 	else:
 		if where == "pack":
-			items.request_equip.rpc_id(1, cat.player_id, index)
+			items.request_equip.rpc_id(1, cat.player_id, index)  # (catnip etc. go to a QUICK USE slot)
+		elif where == "quick":
+			if inventory.pack.size() >= items.pack_size:
+				_info.text = "Backpack is full."
+			else:
+				items.request_quick_to_pack.rpc_id(1, cat.player_id, index)
 		elif where == "hand":
 			if inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."

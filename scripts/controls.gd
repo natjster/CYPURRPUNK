@@ -53,6 +53,8 @@ const ACTIONS: Array = [
 	{"action": "drop", "label": "DROP", "context": "foot", "keys": ["G"], "pad": "Pad D-Pad Down"},
 	{"action": "shoot", "label": "USE RIGHT PAW", "context": "foot", "keys": ["Mouse Left"], "pad": "Pad RT"},
 	{"action": "use_left", "label": "USE LEFT PAW", "context": "foot", "keys": ["Mouse Right"], "pad": "Pad LT"},
+	{"action": "quick_1", "label": "QUICK USE 1", "context": "foot", "keys": ["1"], "pad": "Pad D-Pad Left"},
+	{"action": "quick_2", "label": "QUICK USE 2", "context": "foot", "keys": ["2"], "pad": "Pad D-Pad Right"},
 	{"action": "inventory", "label": "INVENTORY", "context": "any", "keys": ["Tab", "I"], "pad": "Pad Y"},
 	{"action": "meow", "label": "MEOW", "context": "foot", "keys": ["M"], "pad": "Pad B"},
 	{"action": "gas", "label": "GAS (TRIGGER)", "context": "car", "keys": [], "pad": "Pad RT"},

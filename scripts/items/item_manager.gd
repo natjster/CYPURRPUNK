@@ -8,6 +8,8 @@ extends Node3D
 ##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
 ##   - pickups (walk-into for auto_pickup items, E for the rest), drops (G), using up (catnip)
 ##   - each cat's PAWS (right + left; a 2-paw item takes both), BACKPACK and LOOT BAG
+##   - two QUICK USE slots per cat (keys 1 / 2, d-pad left / right): catnip and catdip go
+##     there when picked up or bought (ItemData.quick_use), stacked, and are used with one press
 ##   - each player's STASH: safe lockers in the sewers, saved between games (player_profile.gd)
 ##   - shows held items in paws and loot stacked on the cat, on every computer
 ##   - Left Mouse uses the right-paw item, Right Mouse the left-paw item
@@ -39,6 +41,8 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var bag_size: int = 3
 ## Backpack slots for held items you aren't using right now (open the inventory: Tab or I).
 @export var pack_size: int = 6
+## How many of the same item stack in one QUICK USE slot (3 = up to 3 catnip on key 1).
+@export var quick_stack_size: int = 3
 ## Slots in each player's STASH, the safe lockers down in the sewers (gear only, no loot).
 ## What's in the stash never drops when you're knocked out, and is saved between games.
 @export var stash_size: int = 9
@@ -63,9 +67,10 @@ var catalog := {}
 ## World item ID -> {"item": item id, "pos": Vector3}. Items lying on the street.
 var world := {}
 ## Player ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids],
-##                "stash": [held item ids]}.
+##                "stash": [held item ids], "quick": [[ids in slot 1], [ids in slot 2]]}.
 ## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is the backpack.
 ## "stash" is the safe locker in the sewers (see request_to_stash / player_profile.gd).
+## "quick" = the two QUICK USE slots: each a stack of the SAME item, e.g. ["catnip", "catnip"].
 var inventories := {}
 
 var _world_nodes := {}   # world item ID -> Node3D on the street
@@ -75,10 +80,19 @@ var _clock: float = 0.0
 ## Host: world item ID -> player ID of the cat that dropped it. That cat can't auto-grab it
 ## again until it steps away (otherwise dropping a fish would instantly pick it back up).
 var _dropped_by := {}
+## Item id -> a spare copy of its scene's script, NOT in the world: quick-use items call its
+## quick_use(cat) (so catnip's speed/duration still come from its own Inspector numbers).
+var _quick_effects := {}
 
 
 func _enter_tree() -> void:
 	instance = self
+
+
+func _exit_tree() -> void:
+	for effect in _quick_effects.values():
+		effect.free()  # the spare quick-use scripts were never in the world
+	_quick_effects.clear()
 
 
 func _ready() -> void:
@@ -290,6 +304,10 @@ func _use_held_items(delta: float) -> void:
 			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
 		var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
 		var allowed := _can_use_items(cat)
+		# QUICK USE keys (1 / 2, d-pad left / right): the host takes one out and we use it.
+		for slot in 2:
+			if allowed and Seats.is_just_pressed(cat.slot, "quick_%d" % (slot + 1)) and not quick_slots(cat.player_id)[slot].is_empty():
+				request_quick_use.rpc_id(1, cat.player_id, slot)
 		for hand in 2:
 			var held := held_item(cat, hand)
 			if held == null or (safe_zone and held is Weapon):
@@ -350,6 +368,8 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 
 	if data.kind == ItemData.Kind.LOOT:
 		inventory.bag.append(item_id)
+	elif data.quick_use and _add_to_quick(inventory, item_id):
+		pass                                                # catnip etc.: into a QUICK USE slot
 	else:
 		var hands: Array = inventory.hands
 		var pack: Array = inventory.pack
@@ -373,6 +393,23 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 		inventory.hands = hands
 		inventory.pack = pack
 	_set_inventory.rpc(player_id, inventory)
+
+
+## Put one quick-use item into a QUICK USE slot of this inventory (changes it): on top of a
+## stack of the same item with room, else into an empty slot. False = both slots are taken.
+func _add_to_quick(inventory: Dictionary, item_id: String) -> bool:
+	var quick := quick_slots_of(inventory)
+	for slot in quick:
+		if not slot.is_empty() and slot[0] == item_id and slot.size() < quick_stack_size:
+			slot.append(item_id)
+			inventory.quick = quick
+			return true
+	for slot in quick:
+		if slot.is_empty():
+			slot.append(item_id)
+			inventory.quick = quick
+			return true
+	return false
 
 
 ## Host: put an item on the street with a brand-new world ID.
@@ -446,6 +483,51 @@ func request_consume(player_id: int, hand: int) -> void:
 	_set_inventory.rpc(player_id, inventory)
 
 
+## A player pressed a QUICK USE key (slot 0 = key 1, slot 1 = key 2). Host only: takes one out
+## of that slot and tells the owner's computer to use it (_quick_used).
+@rpc("any_peer", "call_local", "reliable")
+func request_quick_use(player_id: int, slot: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or CatHealth.instance.is_down(player_id):
+		return
+	var inventory := get_inventory(player_id).duplicate(true)
+	var item_id := _pop_quick(inventory, slot)
+	if item_id == "":
+		return
+	_set_inventory.rpc(player_id, inventory)
+	_quick_used.rpc_id(PlayerId.peer_of(player_id), player_id, item_id)
+
+
+## Host -> the owner's computer: one quick-use item was taken out of a slot, so use it now.
+@rpc("authority", "call_local", "reliable")
+func _quick_used(player_id: int, item_id: String) -> void:
+	var cat := _cat(player_id)
+	var data: ItemData = catalog.get(item_id)
+	if cat == null or data == null or not cat.is_multiplayer_authority():
+		return
+	if not _quick_effects.has(item_id):
+		_quick_effects[item_id] = data.scene.instantiate()  # (kept out of the world, just for its script)
+	var effect := _quick_effects[item_id] as HeldItem
+	if effect != null:
+		effect.quick_use(cat)
+	print("[Items] Player %d quick-used %s" % [player_id, item_id])
+	Sound.play_everywhere("quick_use", cat.global_position, -4.0)  # sounds/sfx/quick_use.wav (if there is one)
+
+
+## Inventory screen: click a QUICK USE slot = put one of it back in the backpack. Host only.
+@rpc("any_peer", "call_local", "reliable")
+func request_quick_to_pack(player_id: int, slot: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
+		return
+	var inventory := get_inventory(player_id).duplicate(true)
+	if inventory.pack.size() >= pack_size:
+		return
+	var item_id := _pop_quick(inventory, slot)
+	if item_id == "":
+		return
+	inventory.pack.append(item_id)
+	_set_inventory.rpc(player_id, inventory)
+
+
 ## Inventory screen: take a backpack item into the paws. Whatever was in the way goes into
 ## the backpack (or drops if the backpack is full). Host only.
 @rpc("any_peer", "call_local", "reliable")
@@ -459,6 +541,10 @@ func request_equip(player_id: int, pack_index: int) -> void:
 		return
 	var item_id: String = pack.pop_at(pack_index)
 	var data: ItemData = catalog[item_id]
+	if data.quick_use and _add_to_quick(inventory, item_id):
+		inventory.pack = pack
+		_set_inventory.rpc(player_id, inventory)  # catnip etc. go to a QUICK USE slot, not the paws
+		return
 	var hands: Array = inventory.hands
 	var put_away: Array = []
 	if data.hands == 2 or _is_two_handed(hands):
@@ -521,6 +607,8 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 			inventory.hands[clampi(index, 0, 1)] = ""
 	elif where in ["pack", "bag"] and index >= 0 and index < inventory[where].size():
 		item_id = inventory[where].pop_at(index)
+	elif where == "quick":
+		item_id = _pop_quick(inventory, index)  # one off the top of that stack
 	if item_id == "":
 		return
 	_spawn_dropped(item_id, ground, player_id)
@@ -580,6 +668,8 @@ func drop_on_street(item_id: String, at: Vector3) -> void:
 func drop_everything(player_id: int, at: Vector3) -> void:
 	var inventory := get_inventory(player_id).duplicate(true)
 	var dropped := _held_ids(inventory.hands) + Array(inventory.bag) + Array(inventory.pack)
+	for stack in quick_slots_of(inventory):
+		dropped += Array(stack)
 	var ground := _ground_below(at)  # a bonked cat may still be flying through the air
 	for i in dropped.size():
 		_spawn_dropped(dropped[i], ground + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
@@ -587,6 +677,7 @@ func drop_everything(player_id: int, at: Vector3) -> void:
 		inventory.hands = ["", ""]
 		inventory.bag = []
 		inventory.pack = []
+		inventory.quick = [[], []]
 		_set_inventory.rpc(player_id, inventory)
 
 
@@ -612,6 +703,8 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 			inventory.hands[clampi(index, 0, 1)] = ""
 	elif where == "pack" and index >= 0 and index < inventory.pack.size():
 		item_id = inventory.pack.pop_at(index)
+	elif where == "quick":
+		item_id = _pop_quick(inventory, index)
 	if item_id == "":
 		return
 	stash.append(item_id)
@@ -755,6 +848,7 @@ func _rebuild_paws(cat: CatPlayer, hands: Array) -> void:
 		if hand == 1:
 			offset.x = -offset.x  # mirror for the left paw
 		node.position = offset
+		node.set_meta("hold_home", offset)  # cat_player.gd swings it around this spot (_animate_paws)
 		node.scale = Vector3.ONE * data.hold_scale
 		var held := node as HeldItem
 		if held != null:
@@ -802,6 +896,11 @@ func _update_hud_for(cat: CatPlayer) -> void:
 				var text := held.hud_text()
 				lines.append(("%s %s" % [labels[hand], text]) if text != "" else labels[hand])
 				wants_crosshair = wants_crosshair or held.wants_crosshair()
+		var quick := quick_slots(cat.player_id)
+		for slot in 2:  # QUICK USE slots, e.g. "1: CATNIP x2"
+			if not quick[slot].is_empty():
+				var data: ItemData = catalog[quick[slot][0]]
+				lines.append("%s: %s x%d" % [Controls.key_text("quick_%d" % (slot + 1)), data.display_name, quick[slot].size()])
 	Hud.show_element("Held", not lines.is_empty(), cat.slot)
 	Hud.set_text("Held", "  |  ".join(lines), cat.slot)
 	Hud.show_element("Crosshair", wants_crosshair, cat.slot)
@@ -810,7 +909,31 @@ func _update_hud_for(cat: CatPlayer) -> void:
 # --- Helpers anyone can use ---
 
 func get_inventory(player_id: int) -> Dictionary:
-	return inventories.get(player_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": []})
+	return inventories.get(player_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": [], "quick": [[], []]})
+
+
+## A player's two QUICK USE slots: [[ids in slot 1], [ids in slot 2]] (each a stack of one item).
+func quick_slots(player_id: int) -> Array:
+	return quick_slots_of(get_inventory(player_id))
+
+
+## The QUICK USE slots of an inventory dictionary (always two, even in an old one without them).
+func quick_slots_of(inventory: Dictionary) -> Array:
+	var quick: Array = inventory.get("quick", [])
+	while quick.size() < 2:
+		quick.append([])
+	return quick
+
+
+## Take the top item off QUICK USE stack "slot" of this inventory (changes it). "" = empty.
+func _pop_quick(inventory: Dictionary, slot: int) -> String:
+	var quick := quick_slots_of(inventory)
+	var stack: Array = quick[clampi(slot, 0, 1)]
+	if stack.is_empty():
+		return ""
+	var item_id: String = stack.pop_back()
+	inventory.quick = quick
+	return item_id
 
 
 ## What's in a player's stash (the safe lockers in the sewers).

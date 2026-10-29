@@ -124,6 +124,11 @@ var team: int = Teams.CATLEONE:
 var sync_position: Vector3
 ## How the owner's cat model is turned/leaning. Sent over the network.
 var sync_model_rotation: Vector3
+## Where the owner's camera looks (x = up/down, y = left/right, in radians), so everyone can
+## point this cat's guns at its crosshair (_animate_paws). Sent over the network.
+var sync_aim: Vector2
+## Other players' cats: sync_aim eased smoothly (what _animate_paws uses on every computer).
+var _aim: Vector2
 
 @export_group("Sounds")
 ## Seconds between footsteps at walking speed (faster running = quicker steps).
@@ -161,6 +166,43 @@ const TAIL_HALF_LENGTH := 0.225  # half of Mesh_tail's height (0.45) in cat_mode
 var _leg_phase: float = 0.0
 var _tail_phase: float = 0.0
 var _leg_amount: float = 0.0  # 0 = legs still, 1 = full swing (eases in and out)
+
+@export_group("Paw Swing")
+## Held items float next to the cat like Mii hands (no arms!).
+## RUNNING (zoomies): at your sides, pointing the way the cat faces, swinging like arms.
+## WALKING / STANDING: held up, ready to shoot, pointing at the crosshair.
+## How far (metres) a held item swings forward / back at your side while running.
+@export var paw_swing_distance: float = 0.14
+## How much a held item tips up / down as it swings (radians, 0.6 = about 35 degrees).
+@export var paw_swing_tilt: float = 0.6
+## DUAL WIELDING (an item in each paw): how far (metres) they're pushed out to your sides.
+@export var dual_wield_spread: float = 0.06
+## READY TO SHOOT (walking / standing): how far (metres) the items are raised...
+@export var ready_paw_raise: float = 0.08
+## ...and pushed forward.
+@export var ready_paw_forward: float = 0.1
+## The guns turn toward the crosshair, but at most this far from the cat's nose (degrees).
+## 90 = they stop at the cat's side when you aim behind it.
+@export var max_aim_turn_degrees: float = 90.0
+## A gentle floaty up-and-down bob while held up (metres).
+@export var paw_idle_bob: float = 0.015
+
+@export_group("Double Jump Flip")
+## The FRONT FLIP you do on a catdip double jump (like a Jedi double jump).
+## How long the flip takes (seconds).
+@export var flip_seconds: float = 0.5
+## How many times the cat spins round (1 = one full front flip).
+@export var flip_turns: float = 1.0
+## The point the cat spins around, in metres above its feet (about the middle of the body).
+@export var flip_pivot_height: float = 0.45
+## How far the legs tuck forward during the flip (radians, 1.2 = about 70 degrees).
+@export var flip_leg_tuck: float = 1.2
+
+var _lean_x: float = 0.0          # the zoomies lean, before the flip is added on top
+var _flip_time_left: float = 0.0  # owner only: > 0 while flipping
+var _run_paws: float = 0.0        # 0 = guns up, ready to shoot; 1 = at your sides (running)
+var _firing_paws: float = 0.0     # 1 = firing: guns up even while running
+var _bob_phase: float = 0.0
 
 @export_group("Network Smoothing")
 ## How quickly other players' cats catch up to their real position.
@@ -316,6 +358,7 @@ func _process(delta: float) -> void:
 	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
 	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
 	cat_model.rotation.z = lerp_angle(cat_model.rotation.z, sync_model_rotation.z, weight)  # knocked-out flop
+	_aim = Vector2(lerp_angle(_aim.x, sync_aim.x, weight), lerp_angle(_aim.y, sync_aim.y, weight))
 	_update_footsteps(delta, false)
 
 
@@ -456,6 +499,7 @@ func _physics_process(delta: float) -> void:
 		elif _air_jumps_left > 0:
 			velocity.y = jump_velocity
 			_air_jumps_left -= 1
+			_flip_time_left = flip_seconds  # FRONT FLIP! (_update_zoomies_juice spins the model)
 			Sound.play_everywhere("jump", global_position, -6.0)
 
 	# Read WASD (or the controller's left stick) as a 2D direction (x = left/right, y = forward/back).
@@ -507,6 +551,8 @@ func _physics_process(delta: float) -> void:
 	# Publish where we are for the other players.
 	sync_position = position
 	sync_model_rotation = cat_model.rotation
+	_aim = Vector2(spring_arm.rotation.x, camera_pivot.rotation.y)  # where our crosshair points
+	sync_aim = _aim
 	_update_footsteps(delta, is_on_floor())
 
 
@@ -541,8 +587,11 @@ func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
 		delta * 6.0)
 	_leg_phase += delta * TAU * leg_swing_speed * maxf(speed / walk_speed, 0.6)
 	var swing := sin(_leg_phase) * leg_swing * _leg_amount
-	_swing_leg(_leg_l, _leg_l_home, swing)
-	_swing_leg(_leg_r, _leg_r_home, -swing)
+	var flipping := _spin_around_middle()
+	var tuck := flipping * flip_leg_tuck  # mid-flip: both legs tucked forward, like a ball
+	_swing_leg(_leg_l, _leg_l_home, swing + tuck)
+	_swing_leg(_leg_r, _leg_r_home, -swing + tuck)
+	_animate_paws(delta, speed)
 	# Tail: always swaying, faster with speed.
 	_tail_phase += delta * (tail_idle_speed + speed * tail_speed_per_mps)
 	if _tail != null:
@@ -550,6 +599,75 @@ func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
 		# Turn around the tail's root, not its middle: slide it so the root stays centred on
 		# the body and only the tip swings side to side.
 		_tail.position = _tail_base - _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
+
+
+## FRONT FLIP: the cat model is spun nose-over-tail (its rotation.x) by _update_zoomies_juice on
+## the owner's computer, and that rotation reaches everyone with the model's other turns. Spun
+## around its FEET it would swing through the floor, so every computer slides the model so it
+## spins around its MIDDLE instead (flip_pivot_height). The small zoomies lean is left alone.
+## Returns how "mid-flip" the cat is: 0 = upright, 1 = well into a spin.
+func _spin_around_middle() -> float:
+	var pitch := wrapf(cat_model.rotation.x, -PI, PI)
+	var flipping := clampf((absf(pitch) - 0.35) / 0.4, 0.0, 1.0)  # (the lean is only 0.26)
+	var middle := Vector3.UP * flip_pivot_height
+	var shift := middle - middle.rotated(Vector3.RIGHT, pitch)  # keeps the middle where it was
+	cat_model.position = (shift * flipping).rotated(Vector3.UP, cat_model.rotation.y)
+	return flipping
+
+
+## HELD ITEMS FLOAT LIKE MII HANDS: no arms, the items just hover by the cat as if held.
+## Worked out from speed and the synced aim, so every computer animates every cat the same.
+##   running (zoomies)   at your sides, pointing the way the cat faces, swinging like arms
+##   walking / standing  held up, ready to shoot, pointing at the crosshair (sync_aim). The cat
+##                       still faces where it walks; aim behind it and the guns stop at its side
+##                       (max_aim_turn_degrees)
+##   firing              held up and aimed, even while running
+## Dual wielding pushes the two out a little to the sides (dual_wield_spread).
+## Each item's normal spot is its card's hold_offset (stored as "hold_home" by item_manager.gd).
+## Tuning: the "Paw Swing" group in the Player's Inspector.
+func _animate_paws(delta: float, speed: float) -> void:
+	var right := cat_model.get_node_or_null("HeldR") as Node3D
+	var left := cat_model.get_node_or_null("HeldL") as Node3D
+	if right == null and left == null:
+		return
+	var running := speed > walk_speed * 1.25 and not knocked_out
+	var firing := Time.get_ticks_msec() / 1000.0 < aim_until
+	_run_paws = move_toward(_run_paws, 1.0 if running else 0.0, delta * 6.0)
+	_firing_paws = move_toward(_firing_paws, 1.0 if firing else 0.0, delta * 10.0)
+	var run_amount := _run_paws * (1.0 - _firing_paws)
+	_bob_phase += delta * 2.5
+	var dual := right != null and left != null
+	var held := right as HeldItem
+	var two_paws := held != null and held.data != null and held.data.hands == 2  # the tommy gun
+	var aim_turn := _aim_turn()
+	for hand in 2:
+		var item := right if hand == 0 else left
+		if item == null or not item.has_meta("hold_home"):
+			continue
+		var home: Vector3 = item.get_meta("hold_home")
+		var side := 1.0 if hand == 0 else -1.0
+		var spread := Vector3(side * dual_wield_spread if dual else 0.0, 0.0, 0.0)
+		# READY: raised and a little forward, pointing at the crosshair, bobbing gently.
+		var ready_spot := home + spread + Vector3(0.0, ready_paw_raise + sin(_bob_phase + hand) * paw_idle_bob, -ready_paw_forward)
+		# RUNNING: down at your side, swinging forward and back, pointing straight ahead.
+		# (Right paw swings with the LEFT leg, left paw with the right one, like real arms.)
+		var phase := _leg_phase + (0.0 if hand == 0 else PI)
+		var swing := sin(phase) * _leg_amount * (0.35 if two_paws else 1.0)  # a 2-paw gun swings less
+		var run_spot := home + spread + Vector3(0.0, absf(cos(phase)) * 0.03 * _leg_amount, -swing * paw_swing_distance)
+		var run_turn := Vector3(swing * paw_swing_tilt * 0.3, 0.0, 0.0)  # (a little tip, still facing forward)
+		item.position = ready_spot.lerp(run_spot, run_amount)
+		item.rotation = aim_turn.lerp(run_turn, run_amount)
+
+
+## The turn (as a rotation inside the cat model) that points a held item at this cat's
+## crosshair: up/down as the camera looks, left/right limited to max_aim_turn_degrees.
+func _aim_turn() -> Vector3:
+	var look := Basis.from_euler(Vector3(_aim.x, _aim.y, 0.0)) * Vector3.FORWARD  # where the camera looks
+	var local := cat_model.global_basis.orthonormalized().inverse() * (global_basis * look)  # ...seen from the cat
+	var limit := deg_to_rad(max_aim_turn_degrees)
+	var yaw := clampf(atan2(-local.x, -local.z), -limit, limit)
+	var pitch := asin(clampf(local.y, -1.0, 1.0))
+	return Vector3(pitch, yaw, 0.0)
 
 
 ## Turn one leg by `angle`, hinging at its top (the hip) instead of its middle, so the paw
@@ -600,7 +718,15 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	var tilt := -strafe * deg_to_rad(zoomies_camera_tilt_degrees) if is_zooming else 0.0
 	var fov := _base_fov + zoomies_fov_boost if is_zooming else _base_fov
 
-	cat_model.rotation.x = lerp(cat_model.rotation.x, -lean, weight)
+	_lean_x = lerp(_lean_x, -lean, weight)
+	# DOUBLE JUMP FRONT FLIP: one quick spin nose-first on top of the lean, fast at the start and
+	# easing out at the end (_spin_around_middle makes it turn around the cat's middle).
+	_flip_time_left = maxf(_flip_time_left - delta, 0.0)
+	var flip := 0.0
+	if _flip_time_left > 0.0:
+		var t := 1.0 - _flip_time_left / flip_seconds
+		flip = -TAU * flip_turns * (1.0 - pow(1.0 - t, 2.0))  # (minus = nose goes down first)
+	cat_model.rotation.x = _lean_x + flip
 	camera.rotation.z = lerp(camera.rotation.z, tilt, weight)
 	camera.fov = lerp(camera.fov, fov, weight)
 	# Over-the-shoulder view while holding a weapon that asks for it. (We slide the whole
@@ -645,6 +771,8 @@ func enter_car(car: GetawayCar) -> void:
 	is_controlled = false
 	velocity = Vector3.ZERO
 	cat_model.rotation.x = 0.0
+	_lean_x = 0.0
+	_flip_time_left = 0.0
 	camera.fov = _base_fov
 
 	# Move the camera node under the car's camera arm.

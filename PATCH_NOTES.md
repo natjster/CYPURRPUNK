@@ -14,8 +14,11 @@ gives it to you, and starts a fresh draft.
 ## 🐾 New
 - **NEON BAT:** the first melee weapon! $20 at both shops. Hold to keep swinging: it smacks everything right in front of you and knocks it back. Works on VAC-COPs and the rival gang (never your own). One paw, so you can hold two.
 - **Starting money:** new cats start with $100, so you can gear up before your first trip. Cats you already have with less get topped up to $100 once.
+- **Quick use slots:** catnip and catdip now go into two quick slots (keys **1** / **2**, d-pad left / right on a controller), up to 3 of each. One press and you're zooming, no more swapping them into your paws.
+- **Jedi flip:** a catdip double jump is now a front flip.
 
 ## 🔧 Changes
+- **Guns look new:** they're half the size and float next to your cat like hands. Walking or standing, they're up and aimed at your crosshair. During zoomies they swing at your sides.
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 
 ## 🐛 Fixes

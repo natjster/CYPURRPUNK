@@ -192,7 +192,8 @@ camera (its child) would whip around every time the cat turned.
 ### What `scripts/cat_player.gd` does
 - **WASD relative to camera** — reads input, converts it using `CameraPivot`'s facing, flattens it to the ground.
 - **Smooth turning** — `lerp_angle` eases `CatModel` toward the run direction.
-- **Gravity + jump** — Space, only when on the floor (catdip adds mid-air jumps, §9).
+- **Gravity + jump** — Space, only when on the floor (catdip adds mid-air jumps, §9). A catdip
+  double jump does a **FRONT FLIP** (a Jedi-style somersault, see "Double Jump Flip" below).
 - **Zoomies (Shift)** — higher top speed, cat leans nose-forward, camera rolls when strafing, FOV widens.
 - **Mouse look** — speed and invert-Y come from the Settings menu (§10). Esc opens the pause menu
   (which frees the mouse); if the mouse gets freed another way, click the game to grab it again.
@@ -206,13 +207,30 @@ camera (its child) would whip around every time the cat turned.
 - **While the pause menu is open** the cat ignores the keyboard (`PauseMenu.is_open`).
 
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
-(groups: Movement / Camera / Zoomies Juice / Running Animation / Network Smoothing) — no code editing needed.
+(groups: Movement / Camera / Zoomies Juice / Running Animation / Paw Swing / Double Jump Flip /
+Network Smoothing) — no code editing needed.
 
 **Running Animation**: the cat's `LegL`/`LegR` (in `scenes/cat_model.tscn`) swing back and forth
 while it runs, and its `Tail` sways side to side all the time, faster the faster it runs.
 Knobs: Leg Swing (how far), Leg Swing Speed (steps per second at walking speed), Tail Swish
 (how far), Tail Idle Speed (sway speed standing still), Tail Speed Per Mps (extra sway speed per
 unit of running speed). Other players' cats animate the same way on your screen automatically.
+
+**Paw Swing** (held items float next to the cat like Mii hands: no arms):
+- **Walking or standing:** held up, ready to shoot, pointing at YOUR CROSSHAIR. The cat still faces
+  where it walks; aim behind it and the guns stop at its side (**Max Aim Turn Degrees**, 90).
+- **Running (zoomies):** down at your sides, pointing the way the cat faces, swinging like arms.
+- **Firing:** always held up and aimed, even while running.
+- **Dual wielding** (an item in each paw) pushes them a little further out to the sides.
+- Knobs: Paw Swing Distance / Paw Swing Tilt (the running swing), Dual Wield Spread,
+  Ready Paw Raise / Ready Paw Forward (the ready-to-shoot spot), Max Aim Turn Degrees, Paw Idle Bob.
+- Each item's normal spot is still its card's **Hold Offset** / **Hold Scale** (§9). Where the
+  camera points is sent to everyone (`sync_aim` in the MultiplayerSynchronizer), so other players
+  see your guns aim where you aim.
+
+**Double Jump Flip**: one front flip on every mid-air (catdip) jump, spinning around the cat's middle
+with its legs tucked. Knobs: Flip Seconds (how long), Flip Turns (1 = one full flip), Flip Pivot
+Height (the spin point, metres above the feet), Flip Leg Tuck.
 
 Keys are handled by the **Controls** framework (`scripts/controls.gd`) — players rebind them in
 **SETTINGS > KEYS**. See section 10, "Controls & key binding".
@@ -1190,6 +1208,11 @@ system, so new items need no new networking or pickup code.
   so you can hold two at once (dual wield). A **2-paw** item (the tommy gun) takes both.
   **Left Mouse** uses the right-paw item (or the 2-paw item), **Right Mouse** the left-paw item.
 - **Backpack:** held items you carry but aren't using (see the inventory screen below).
+- **QUICK USE slots:** two of them, used with **1** and **2** (controller: **d-pad left / right**).
+  Catnip and catdip go here when you pick them up or buy them (not in your paws), up to 3 of the
+  same item stacked per slot; one press uses one. The bottom of the HUD shows them ("1: CATNIP x2").
+  Any item card with **Quick Use** ticked works this way (its script needs a `quick_use(cat)`
+  function, like `scripts/items/catnip.gd`). Stack size: **Quick Stack Size** on the Items node.
 - **Loot bag:** loot (fish) goes in a bag, not your paws. It shows on your cat (mouth, then head)
   and pays out at the drop-off.
 - **E** grabs the nearest item that says "E  NAME" above it. Items marked auto-pickup (fish) are
@@ -1204,8 +1227,8 @@ Markitten in the sewers (§8).
 | **Purr-Tommy 2099** | 2 | shop, $200 | Hold Left Mouse: plasma bolts; overheats (below) |
 | **Paw-Pistol** | 1 | shop, $60 | One shot per click; buy two to dual wield |
 | **Neon Bat** | 1 | shop, $20 | MELEE: hold the use button to keep swinging; hits everything right in front of you (below) |
-| **Catnip** | 1 | shop, $25 | Click: 8 s of super zoomies (used up) |
-| **Catdip** | 1 | shop, $35 | Click: 20 s of double jump (used up) |
+| **Catnip** | quick use | shop, $25 | Press its quick key: 8 s of super zoomies (used up) |
+| **Catdip** | quick use | shop, $35 | Press its quick key: 20 s of double jump, with a front flip (used up) |
 | **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
 | **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy and noisy (§8) |
@@ -1330,12 +1353,15 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 ```
           INVENTORY
    LEFT PAW      RIGHT PAW        <- what you're holding (a 2-paw item shows BOTH PAWS)
+   QUICK USE 1   QUICK USE 2      <- catnip / catdip stacks (keys 1 / 2)
    BACKPACK 4/6  [ ][ ][ ]        <- held items you carry but aren't using
                  [ ][ ][ ]
    LOOT BAG 1/3  [ ][ ][ ]        <- fish etc., paid out at the drop-off
 ```
 - **Click a paw** = put that item in the backpack. **Click a backpack item** = take it into your
   paws (whatever was in the way goes into the backpack). **Right-click anything** = drop it.
+- **Click a quick-use slot** = put one back in the backpack. **Clicking catnip / catdip in the
+  backpack** moves it into a quick-use slot (if one has room) instead of your paws.
 - **Hover** an item to read its description (the **Description** line on its item card).
 - **Picking things up:** a held item goes into a free paw first; if your paws are busy it goes
   into the backpack; only if the backpack is full too does it swap with what's in your paw.

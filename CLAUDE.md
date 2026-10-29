@@ -294,6 +294,12 @@ Held scenes are named `HeldR`/`HeldL` under each cat's `CatModel` so their RPCs 
 World item IDs: city-placed items 0..N in placement order (deterministic), drops from 100000.
 Other systems place items by joining group `item_placers` and implementing `place_items()`.
 Don't add per-item pickup/sync code elsewhere. User-facing how-to: SETUP_GUIDE.md section 9.
+QUICK USE: inventories also hold `"quick": [[ids], [ids]]` (two stacks, `quick_stack_size`; read via `quick_slots(id)` /
+`quick_slots_of(inv)`); `ItemData.quick_use` items go there first; keys `quick_1/quick_2` -> host `request_quick_use` ->
+owner `_quick_used` calls the scene script's `HeldItem.quick_use(cat)` on a spare copy. Held items are posed every frame
+by `CatPlayer._animate_paws` around meta `hold_home` (ready = aimed at synced `sync_aim`, running = swing at sides,
+firing = `aim_until`, also set in `show_shot`); animate an item's inner `Model`, never its root. Catdip air jump = front flip
+(`_flip_time_left`, `_spin_around_middle` shifts CatModel). Test: `--give=catdip --jump_test [--flip_snap=x.png]`, `--press_key=1`.
 
 MELEE: `scripts/items/melee_weapon.gd` (`MeleeWeapon extends Weapon`, overrides `_fire` with a forward BoxShape
 query (`swing_radius`/`swing_height`, `max_range` deep, reaches below the feet for flat Roombas), skips own-gang cats,

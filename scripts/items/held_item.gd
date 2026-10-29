@@ -25,6 +25,13 @@ func use_tick(_trigger_down: bool, _trigger_pressed: bool, _delta: float) -> voi
 	pass
 
 
+## QUICK USE items (ItemData.quick_use, e.g. catnip): what happens when the player presses
+## its quick-use key. Runs on the cat's OWNER only, after the host has taken one out of the
+## slot. (This copy of the script isn't in anyone's paw: use "cat", not holder.)
+func quick_use(_cat: CatPlayer) -> void:
+	pass
+
+
 ## Text for the bottom of the screen while you hold it ("" = nothing).
 func hud_text() -> String:
 	return ""

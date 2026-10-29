@@ -71,6 +71,9 @@ extends Node
 ##   --equip=N         take backpack slot N into the paws (what clicking it in the inventory does)
 ##   --inventory       open the inventory screen (Tab) before the snap
 ##   --press_key=KEY   press and release a real key, e.g. --press_key=Tab (inventory) or Escape
+##                     (--give=catnip --press_key=1 = quick use slot 1; prints the quick slots)
+##   --jump_test       jump + double jump (needs catdip); prints the height and the front flip's
+##                     spin. --flip_snap=shots/x.png [--flip_frame=N] saves a picture mid-flip
 ##   --hold=ACTION     hold a control for --hold_frames (default 60), e.g. move_forward,
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
@@ -511,8 +514,16 @@ func _ready() -> void:
 			ItemManager.instance.drop_from(player)
 		if args.has("jump_test"):
 			# Jump, press jump again in mid-air, and report the highest point reached.
+			# (Catdip in a QUICK USE slot from --give=catdip? Use it first, like pressing its key.)
+			var quick := ItemManager.instance.quick_slots(player.player_id)
+			for slot in 2:
+				if player.air_jumps == 0 and not quick[slot].is_empty() and quick[slot][0] == "catdip":
+					ItemManager.instance.request_quick_use.rpc_id(1, player.player_id, slot)
+					for f in 20:
+						await get_tree().physics_frame
 			var ground_y := player.global_position.y
 			var peak := ground_y
+			var spin := 0.0  # how far the model turned nose-first (the double jump FRONT FLIP)
 			for i in 100:
 				if i == 0 or i == 18:
 					Input.action_press(Seats.action(player.slot, "jump"))
@@ -520,7 +531,12 @@ func _ready() -> void:
 					Input.action_release(Seats.action(player.slot, "jump"))
 				await get_tree().physics_frame
 				peak = maxf(peak, player.global_position.y)
-			print("DevCapture jump: peak height %.2f m (air jumps active: %d)" % [peak - ground_y, player.air_jumps])
+				spin = minf(spin, player.cat_model.rotation.x)
+				if args.has("flip_snap") and i == int(args.get("flip_frame", "26")):
+					# --flip_snap=shots/x.png [--flip_frame=N]: a picture mid-flip
+					await RenderingServer.frame_post_draw
+					get_tree().root.get_texture().get_image().save_png("res://" + args["flip_snap"])
+			print("DevCapture jump: peak height %.2f m (air jumps active: %d) flip %d degrees" % [peak - ground_y, player.air_jumps, roundi(rad_to_deg(-spin))])
 		if args.has("exit_after"):
 			for i in int(args["exit_after"]):
 				await get_tree().process_frame
@@ -557,7 +573,9 @@ func _ready() -> void:
 			key.pressed = pressed
 			Input.parse_input_event(key)
 			await get_tree().process_frame
-		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s" % [args["press_key"], InventoryScreen.for_seat(0).visible, NpcDialog.is_open_for(0), PauseMenu.is_open])
+		for i in 20:
+			await get_tree().physics_frame  # (a quick-use key asks the host first)
+		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s quick=%s speed_boost=%.1f air_jumps=%d" % [args["press_key"], InventoryScreen.for_seat(0).visible, NpcDialog.is_open_for(0), PauseMenu.is_open, ItemManager.instance.quick_slots(player.player_id), player.speed_boost, player.air_jumps])
 	# --menu=play / settings / pause   open that menu before the snap
 	# --settings_tab=N                  which settings tab to show (0 = DISPLAY)
 	if args.has("menu") and scene is Game:
