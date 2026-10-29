@@ -358,3 +358,12 @@ the hub, go up the entry manhole, loot, find the exit via a payphone, extract. H
 DEEP CLEAN, then a new district (new seed). PLANNED next: scrap (Roomba drop, takes bag space: money vs
 time) fed to a shared MAINFRAME in the hub that drains slowly + a chunk per sealed district; its level
 sets the next district's starting heat; mainframe at 0 = boss-fight finale (design TBD).
+
+## Patch notes (Discord)
+`PATCH_NOTES.md` holds Discord-ready update posts for the user's players. After each finished, committed change that
+players would notice (features, balance, fixes; not test tools, refactors or guide edits), add a bullet to the
+"NEXT UPDATE" draft box under New / Changes / Fixes, in plain player language (no code names, no file names), and show
+the user the new bullet(s) at the end of the turn. When the user asks for "the patch notes": turn the draft into a dated
+post under "Posted updates" (`# 😼 CYPURRPUNK — Update <date>`, a bold one-line tagline, `##` sections with emoji,
+`-` bullets, under 2000 characters; split into "part 1/2" posts if longer), paste it in chat inside a code block, and
+reset the draft to `(nothing yet)`.
