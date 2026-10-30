@@ -109,12 +109,12 @@ func _draw() -> void:
 	# --- The number box: [ 87 ] ---
 	var box := Rect2(0, 0, number_box_width, h)
 	draw_rect(box, back_color)
-	draw_rect(box, Color.WHITE if _hurt_flash > 0.0 else frame_color, false, 2.0)
+	draw_rect(box, Color.WHITE if _hurt_flash > 0.0 else frame_color, false, Hud.line(2.0))
 	var number := str(ceili(_hp))
 	var number_color := Color.WHITE if _hurt_flash > 0.0 else (fill_color.lerp(Color.WHITE, 0.5 * pulse) if low else fill_color)
 	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size)
 	var text_pos := Vector2((number_box_width - text_size.x) * 0.5, (h + text_size.y) * 0.5 - font.get_descent(number_font_size))
-	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size, 6, Color(0.04, 0.01, 0.08))
+	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size, Hud.outline(6), Color(0.04, 0.01, 0.08))
 	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size, number_color)
 
 	# --- The bar: a plain rectangle. Dark back, red fill, then the chip (just lost) and heal bits ---
@@ -126,7 +126,7 @@ func _draw() -> void:
 		draw_rect(Rect2(bar_left + bar_w * _shown, bar_top, bar_w * (fraction - _shown), bar_thickness), heal_color)
 	if revive_progress > 0.0:  # a friend is picking us up: the revive meter fills from the left
 		draw_rect(Rect2(bar_left, bar_top, bar_w * revive_progress, bar_thickness), rob_color if being_robbed else revive_color)
-	draw_rect(Rect2(bar_left, bar_top, bar_w, bar_thickness), Color.WHITE if _hurt_flash > 0.0 else frame_color, false, 1.0)
+	draw_rect(Rect2(bar_left, bar_top, bar_w, bar_thickness), Color.WHITE if _hurt_flash > 0.0 else frame_color, false, Hud.line(1.0))
 
 	if _hp <= 0.0:
 		var ko := "KNOCKED OUT"

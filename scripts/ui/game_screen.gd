@@ -7,11 +7,17 @@ extends Control
 ##      drawn inside GameView/GameViewport at PS1 size, 240 pixels tall, then blown up to fill
 ##      the window with sharp, blocky pixels.
 ##   2. The MENUS (start menu, pause, settings, MY CAT: the PS1Overlay node in main.tscn) are
-##      lifted out of the game picture when the game starts and drawn ON TOP in MenuView at your
-##      monitor's REAL resolution: the same 320x240 layout, but crisp (scripts/ui/ps1_overlay.gd).
+##      lifted out of the game picture when the game starts and drawn ON TOP in MenuView, with
+##      the same 320x240 layout (scripts/ui/ps1_overlay.gd).
 ##   3. The HUD (scenes/ui/hud.tscn, scripts/ui/hud.gd): cash, HP, prompts, crosshair... drawn
-##      ON TOP at your monitor's REAL resolution, so its text stays crisp instead of being
-##      squashed into 240 pixel rows.
+##      ON TOP, each player's in its own SubViewport.
+##
+## THE TWO UI LOOKS (SETTINGS > DISPLAY > UI STYLE, Settings.modern_ui):
+##   PS1 (default): the menus and HUDs are drawn just as small as the game picture and blown up
+##      with blocky pixels. One CRT effect (CRTOverlay) then covers EVERYTHING together: the 3D
+##      world, HUD and menus, like a real PS1 on a TV. The 3D-only CRT is switched off.
+##   MODERN: the menus and HUDs are drawn at your monitor's real resolution, so they're crisp, and
+##      only the 3D world gets the CRT effect (the 3D-only one; CRTOverlay is hidden).
 ##
 ## SPLIT SCREEN (couch co-op, scripts/seats.gd): with 2-4 players on this computer the game
 ## picture is cut into one screen per player. Player 1 keeps GameView; players 2-4 get
@@ -26,13 +32,13 @@ extends Control
 ## blurrier than playing alone: a half-height screen is drawn at double detail, then shrunk to
 ## fit (split_full_detail; turn it off for chunky PS1-style half-resolution screens).
 ## Every player also gets their OWN HUD (cash, HP, prompts, inventory, talk box) on their own
-## screen, shrunk to fit (hud_scale_for). Player 1's is the HUD node; players 2-4's are copies of
-## scenes/ui/hud.tscn made here, each in its own SubViewport ("Hud2".."Hud4") so each player
-## has their own highlighted button. Each controller's presses go to its player's HUD first.
+## screen, shrunk to fit (hud_scale_for). Player 1's is the HUD node from game_screen.tscn;
+## players 2-4's are copies of scenes/ui/hud.tscn made here. Each sits in its own SubViewport
+## ("Hud1".."Hud4"), so each player has their own highlighted button. Each player's presses go
+## to their HUD first.
 ##
 ## Node tree:
 ##   GameScreen (this script)
-##   ├── HUD                 <- the sharp overlay (a CanvasLayer, always drawn on top)
 ##   ├── Bars                <- black behind everything (the border you see in 4:3 / SHARP mode)
 ##   ├── GameView            <- shows player 1's game picture, blown up
 ##   │   └── GameViewport    <- the 320x240-ish "PS1 screen" the game is drawn into
@@ -42,11 +48,12 @@ extends Control
 ##   ├── GameView2..4        <- made by this script: players 2-4 (hidden until they join)
 ##   │   ├── GameViewport > Camera3D       <- their 3D view
 ##   │   └── Post > Dither                 <- the CRT look on top (what you see)
-##   ├── Hud2..4             <- made by this script: players 2-4's HUDs (sharp, real resolution)
-##   │   └── Viewport > HUD (scenes/ui/hud.tscn, Hud.seat = 1..3)
 ##   ├── JoinHint            <- made by this script: "PRESS START TO JOIN" in an empty corner
-##   └── MenuView            <- made by this script: the sharp menus, over the whole game picture
-##       └── MenuViewport > PS1Overlay   <- moved here from main.tscn (Lobby, PauseMenu, ...)
+##   ├── MenuView            <- made by this script: the menus, over the whole game picture
+##   │   └── MenuViewport > PS1Overlay   <- moved here from main.tscn (Lobby, PauseMenu, ...)
+##   ├── Hud1..4             <- made by this script: each player's HUD. Player 1's HUD node is
+##   │   └── Viewport > HUD     moved here from game_screen.tscn (Hud.seat = 0..3)
+##   └── CRTOverlay          <- made by this script: the CRT + dither over everything (PS1 look)
 ##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
 ## This script also passes your mouse and keyboard on to the menus, then the game inside GameViewport.
@@ -80,16 +87,20 @@ var _join_hint: Label
 ## Menus and the stick: which way each stick is pushed right now ("ui_down"..., "" = middle), so
 ## one push moves a menu highlight ONE step. Key = "device:axis". (_stick_pushed_again)
 var _menu_stick: Dictionary = {}
-## Players 2-4's HUDs, by seat (index 1-3; index 0 unused): {"view": TextureRect,
-## "viewport": SubViewport, "hud": Hud}.
-var _seat_huds: Array = [null]
+## Every player's HUD, by seat (0 = player 1): {"view": TextureRect, "viewport": SubViewport,
+## "hud": Hud}.
+var _seat_huds: Array = []
 ## What the screen was last laid out for, so it's only re-done when something changes.
 var _layout_key: String = ""
-## The sharp menus (_build_menu_view): the picture on screen, the viewport they're drawn in,
+## The menus (_build_menu_view): the picture on screen, the viewport they're drawn in,
 ## and the PS1Overlay node (from main.tscn) that holds them.
 var menu_view: TextureRect
 var menu_viewport: SubViewport
 var _menus  # PS1Overlay (scripts/ui/ps1_overlay.gd)
+## Player 1's 3D-only CRT effect (ColorDepthDither from main.tscn). Off in the PS1 UI look.
+var _game_dither: ColorRect
+## The CRT effect over the whole picture: game, HUD and menus. On in the PS1 UI look.
+var _crt_overlay: ColorRect
 
 
 func _enter_tree() -> void:
@@ -101,6 +112,10 @@ func _ready() -> void:
 	game_view.texture = game_viewport.get_texture()
 	_build_extra_panes()
 	_build_menu_view()
+	_build_huds()
+	_build_crt_overlay()
+	Settings.changed.connect(_copy_crt_settings)
+	_copy_crt_settings()
 	get_viewport().size_changed.connect(_fit)
 	Settings.changed.connect(_fit)
 	_fit()
@@ -162,30 +177,6 @@ func _build_extra_panes() -> void:
 		main.add_child(rain)
 
 		_extra_panes.append({"view": view, "viewport": viewport, "post": post, "camera": camera, "rain": rain, "dither": dither, "seat": -1})
-	Settings.changed.connect(_copy_crt_settings)
-	_copy_crt_settings()
-
-	# Players 2-4's HUDs, each in its own SubViewport (their own highlighted button).
-	for seat in range(1, PlayerId.MAX_LOCAL):
-		var hud_view := TextureRect.new()
-		hud_view.name = "Hud%d" % (seat + 1)
-		hud_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		hud_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		hud_view.hide()
-		add_child(hud_view)
-		var hud_viewport := SubViewport.new()
-		hud_viewport.name = "Viewport"
-		hud_viewport.transparent_bg = true
-		hud_viewport.size_2d_override_stretch = true  # laid out in HUD units, drawn at real resolution
-		hud_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-		hud_viewport.gui_embed_subwindows = true
-		hud_view.add_child(hud_viewport)
-		hud_view.texture = hud_viewport.get_texture()
-		var seat_hud := preload("res://scenes/ui/hud.tscn").instantiate() as Hud
-		seat_hud.seat = seat  # before it enters the tree: it registers as that player's HUD
-		hud_viewport.add_child(seat_hud)
-		_seat_huds.append({"view": hud_view, "viewport": hud_viewport, "hud": seat_hud})
-
 	_join_hint = Label.new()
 	_join_hint.name = "JoinHint"
 	_join_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -197,11 +188,10 @@ func _build_extra_panes() -> void:
 	add_child(_join_hint)
 
 
-## The sharp menus: take PS1Overlay (start menu, pause, settings, MY CAT) out of the pixel game
-## picture and draw it in its own viewport on top, at real resolution. It keeps its 320x240-ish
-## layout (size_2d_override), so nothing in the menus has to change: they're just crisp.
-## The CRT + dither effect is left behind in the game picture (a new "CRT" CanvasLayer) so the
-## 3D city still gets it, but the menus don't.
+## The menus: take PS1Overlay (start menu, pause, settings, MY CAT) out of the game picture and
+## draw it in its own viewport on top. It keeps its 320x240-ish layout (size_2d_override) in both
+## UI looks; _fit decides how many real pixels it's drawn with.
+## The 3D-only CRT + dither effect is left behind in the game picture (a new "CRT" CanvasLayer).
 func _build_menu_view() -> void:
 	var main := Game.instance
 	_menus = main.get_node("PS1Overlay")
@@ -209,21 +199,74 @@ func _build_menu_view() -> void:
 	crt.name = "CRT"
 	crt.layer = _menus.layer
 	main.add_child(crt)
-	main.get_node("PS1Overlay/ColorDepthDither").reparent(crt, false)
+	_game_dither = main.get_node("PS1Overlay/ColorDepthDither")
+	_game_dither.reparent(crt, false)
 
 	menu_view = TextureRect.new()
 	menu_view.name = "MenuView"
 	menu_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	menu_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # blocky pixels in the PS1 UI look
+	menu_view.material = _see_through_picture()
 	add_child(menu_view)
 	menu_viewport = SubViewport.new()
 	menu_viewport.name = "MenuViewport"
 	menu_viewport.transparent_bg = true  # see the game through it
-	menu_viewport.size_2d_override_stretch = true  # laid out in game pixels, drawn at real resolution
+	menu_viewport.size_2d_override_stretch = true  # laid out in game pixels, whatever size it's drawn
 	menu_viewport.gui_embed_subwindows = true
 	menu_view.add_child(menu_viewport)
 	menu_view.texture = menu_viewport.get_texture()
 	_menus.reparent(menu_viewport, false)
+
+
+## Every player's HUD, each in its own SubViewport (their own highlighted button). Player 1's is
+## the HUD node from game_screen.tscn, moved in here; players 2-4's are new copies of hud.tscn.
+## They're drawn above the menus, like the HUD always was.
+func _build_huds() -> void:
+	for seat in PlayerId.MAX_LOCAL:
+		var hud_view := TextureRect.new()
+		hud_view.name = "Hud%d" % (seat + 1)
+		hud_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hud_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hud_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # blocky pixels in the PS1 UI look
+		hud_view.material = _see_through_picture()
+		hud_view.hide()
+		add_child(hud_view)
+		var hud_viewport := SubViewport.new()
+		hud_viewport.name = "Viewport"
+		hud_viewport.transparent_bg = true
+		hud_viewport.size_2d_override_stretch = true  # laid out in HUD units, whatever size it's drawn
+		hud_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		hud_viewport.gui_embed_subwindows = true
+		hud_view.add_child(hud_viewport)
+		hud_view.texture = hud_viewport.get_texture()
+		var seat_hud: Hud = hud
+		if seat == 0:
+			hud.reparent(hud_viewport, false)
+		else:
+			seat_hud = preload("res://scenes/ui/hud.tscn").instantiate() as Hud
+			seat_hud.seat = seat  # before it enters the tree: it registers as that player's HUD
+			hud_viewport.add_child(seat_hud)
+		_seat_huds.append({"view": hud_view, "viewport": hud_viewport, "hud": seat_hud})
+
+
+## A see-through viewport's soft edges are already darkened by their own see-through-ness. This
+## stops them being darkened a second time when shown (at 240 rows, small text is nearly all edge).
+func _see_through_picture() -> CanvasItemMaterial:
+	var material := CanvasItemMaterial.new()
+	material.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+	return material
+
+
+## The CRT + 15-bit dither over the whole picture (the PS1 UI look). It's the last thing drawn, so
+## it reads everything under it from the screen. Uses a copy of player 1's material, kept in step
+## by _copy_crt_settings, and _fit tells it where the picture is on the monitor.
+func _build_crt_overlay() -> void:
+	_crt_overlay = ColorRect.new()
+	_crt_overlay.name = "CRTOverlay"
+	_crt_overlay.material = Game.instance.crt_material.duplicate()
+	_crt_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_crt_overlay)
 
 
 ## Every frame: re-cut the screen if players joined / left or a menu opened, and point the
@@ -313,6 +356,8 @@ func _fit() -> void:
 	# Centre the blown-up picture in the window (on whole pixels, so the blocks stay even).
 	var whole := Vector2(width, game_height)
 	var corner := ((window - whole * zoom) / 2.0).floor()
+	# Which UI look: see THE TWO UI LOOKS at the top of this script.
+	var ps1_ui := not Settings.modern_ui
 	# Cut it into one screen per player (game pixels): player 1 first.
 	var rects := _pane_rects(seats.size(), Vector2i(width, game_height))
 	_place(game_view, game_viewport, rects[0], corner, zoom, units_per_pixel)
@@ -322,7 +367,9 @@ func _fit() -> void:
 		pane.seat = seats[i + 1] if shown else -1
 		pane.view.visible = shown
 		pane.viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown else SubViewport.UPDATE_DISABLED
-		pane.post.render_target_update_mode = pane.viewport.render_target_update_mode
+		# PS1 UI look: show the raw 3D picture, CRTOverlay does the CRT. Modern: the CRT'd "Post" one.
+		pane.post.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown and not ps1_ui else SubViewport.UPDATE_DISABLED
+		pane.view.texture = pane.viewport.get_texture() if ps1_ui else pane.post.get_texture()
 		if shown:
 			_place(pane.view, pane.viewport, rects[i + 1], corner, zoom, units_per_pixel)
 			pane.post.size = pane.viewport.size
@@ -336,28 +383,39 @@ func _fit() -> void:
 		_join_hint.position = (corner + Vector2(rects[3].position) * zoom) * units_per_pixel
 		_join_hint.size = Vector2(rects[3].size) * zoom * units_per_pixel
 
-	# The sharp menus cover the whole game picture (all players' screens): laid out in game
-	# pixels like before (e.g. 320x240), drawn with as many real pixels as it covers.
+	# The menus cover the whole game picture (all players' screens): laid out in game pixels
+	# (e.g. 320x240). PS1 look: drawn with that few pixels too. Modern: real pixels, so sharp.
 	menu_view.position = corner * units_per_pixel
 	menu_view.size = whole * zoom * units_per_pixel
-	menu_viewport.size = Vector2i((whole * zoom).round())  # real pixels: sharp
+	menu_viewport.size = Vector2i(whole) if ps1_ui else Vector2i((whole * zoom).round())
 	menu_viewport.size_2d_override = Vector2i(whole)  # laid out in game pixels
 	_menus.fit_columns()
 
-	# Every player's HUD sits on their own screen, shrunk to fit.
-	hud.fit_to(Rect2(game_view.position, game_view.size), hud_scale_for(game_view.size))
-	for seat in range(1, PlayerId.MAX_LOCAL):
+	# One CRT effect at a time: over everything (PS1 look), or on the 3D world only (modern).
+	_game_dither.visible = not ps1_ui
+	_crt_overlay.visible = ps1_ui
+	_crt_overlay.position = menu_view.position
+	_crt_overlay.size = menu_view.size
+	var overlay := _crt_overlay.material as ShaderMaterial
+	overlay.set_shader_parameter("pixel_scale", zoom)
+	overlay.set_shader_parameter("area_offset", corner / window)
+	overlay.set_shader_parameter("area_scale", whole * zoom / window)
+
+	# Every player's HUD sits on their own screen, shrunk to fit. It's always laid out in HUD units.
+	# PS1 look: drawn with the same pixels as that player's game picture. Modern: real pixels.
+	for seat in PlayerId.MAX_LOCAL:
 		var seat_hud: Dictionary = _seat_huds[seat]
 		var pane_index := seats.find(seat)
-		var shown := pane_index > 0
+		var shown := pane_index >= 0
 		seat_hud.view.visible = shown
 		seat_hud.viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown else SubViewport.UPDATE_DISABLED
 		if not shown:
 			continue
-		var pane_view: TextureRect = _extra_panes[pane_index - 1].view
+		var pane_view: TextureRect = game_view if pane_index == 0 else _extra_panes[pane_index - 1].view
+		var pane_viewport: SubViewport = game_viewport if pane_index == 0 else _extra_panes[pane_index - 1].viewport
 		seat_hud.view.position = pane_view.position
 		seat_hud.view.size = pane_view.size
-		seat_hud.viewport.size = Vector2i((pane_view.size / units_per_pixel).round())  # real pixels: sharp
+		seat_hud.viewport.size = pane_viewport.size if ps1_ui else Vector2i((pane_view.size / units_per_pixel).round())
 		seat_hud.viewport.size_2d_override = Vector2i(pane_view.size.round())  # laid out in HUD units
 		(seat_hud.hud as Hud).fit_to(Rect2(Vector2.ZERO, pane_view.size), hud_scale_for(pane_view.size))
 
@@ -405,12 +463,16 @@ func _place(view: TextureRect, viewport: SubViewport, rect: Rect2i, corner: Vect
 	view.size = Vector2(rect.size) * zoom * units_per_pixel
 
 
-## CRT TV LOOK changed (game.gd sets player 1's CRT material): copy it to players 2-4's screens.
+## CRT TV LOOK changed (game.gd sets player 1's CRT material): copy it to players 2-4's screens
+## and the overlay.
 func _copy_crt_settings() -> void:
 	var source: ShaderMaterial = Game.instance.crt_material
+	var targets: Array[ShaderMaterial] = [_crt_overlay.material]
 	for pane in _extra_panes:
+		targets.append(pane.dither.material)
+	for target in targets:
 		for param in Game.CRT_PARAMS:
-			(pane.dither.material as ShaderMaterial).set_shader_parameter(param, source.get_shader_parameter(param))
+			target.set_shader_parameter(param, source.get_shader_parameter(param))
 
 
 ## Players 2-4's screens look through a copy of their cat's camera (wherever it is: behind the
@@ -439,10 +501,9 @@ func _follow_cameras() -> void:
 
 ## Your mouse and keys arrive here first. Pass them on to the game inside GameViewport,
 ## with mouse positions turned into game pixels (so menus and mouse-look work as before).
-## (Except while player 1's HUD window - the talk box or inventory - is open: then their keys,
-## mouse and controller stay up here for the HUD's own buttons.)
-## Split screen: players 2-4's controller presses go to THEIR HUD first (their inventory and
-## talk box), and only on to the game if their HUD didn't want them.
+## Each player's presses go to THEIR HUD first (their inventory and talk box), and only on to the
+## game if their HUD didn't want them. (Player 1's mouse only goes there while a HUD window is
+## open: otherwise it belongs to the menus and the game.)
 func _input(event: InputEvent) -> void:
 	var seat := Seats.seat_of_event(event)
 	if seat == -1:
@@ -450,17 +511,16 @@ func _input(event: InputEvent) -> void:
 		# was already handled by scripts/seats.gd.)
 		get_viewport().set_input_as_handled()
 		return
-	if seat > 0 and _seat_huds[seat].view.visible:
+	if Hud.menu_open() and seat != _menu_driver():
+		get_viewport().set_input_as_handled()  # a full-screen menu: only the player who opened it drives it
+		return
+	if _seat_huds[seat].view.visible and (Hud.wants_input(seat) or not event is InputEventMouse):
+		var hud_view: TextureRect = _seat_huds[seat].view
 		var hud_viewport: SubViewport = _seat_huds[seat].viewport
-		hud_viewport.push_input(event)
+		hud_viewport.push_input(event.xformed_by(_to_local(hud_view, Vector2(hud_viewport.size_2d_override))), true)
 		if hud_viewport.is_input_handled() or Hud.wants_input(seat):
 			get_viewport().set_input_as_handled()
 			return
-	elif seat == 0 and Hud.wants_input(0):
-		return
-	elif Hud.menu_open() and seat != _menu_driver():
-		get_viewport().set_input_as_handled()  # a full-screen menu: only the player who opened it drives it
-		return
 	if event is InputEventJoypadMotion and _in_menus() and not _stick_pushed_again(event):
 		# A held stick sends a stream of "still pushed" messages; Godot's menus would treat each
 		# one as a new press and race the highlight (or a cat's colour) along. Menus get only
@@ -472,7 +532,7 @@ func _input(event: InputEvent) -> void:
 	menu_viewport.push_input(event.xformed_by(_to_local(menu_view, Vector2(menu_viewport.size_2d_override))), true)
 	if not menu_viewport.is_input_handled():
 		game_viewport.push_input(event.xformed_by(_to_local(game_view, Vector2(game_viewport.size))), true)
-	get_viewport().set_input_as_handled()  # the HUD doesn't need them right now
+	get_viewport().set_input_as_handled()
 
 
 ## Turns a mouse position on the monitor into a position inside a picture (a TextureRect)

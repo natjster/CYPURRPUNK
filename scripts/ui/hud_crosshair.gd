@@ -45,7 +45,7 @@ extends Control
 func _draw() -> void:
 	var centre := size / 2.0
 	# Dark edge first (a slightly bigger copy), then the coloured lines on top.
-	if outline > 0.0:
+	if outline > 0.0 and Settings.modern_ui:  # (PS1 UI look: too thin to outline at 240 rows)
 		_draw_cross(centre, outline_color, outline)
 	_draw_cross(centre, color, 0.0)
 

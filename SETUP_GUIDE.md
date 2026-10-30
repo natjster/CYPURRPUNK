@@ -9,7 +9,7 @@ Meow-City/
 ├── project.godot              <- project settings (low-res, crunchy pixels, autoloads, version)
 ├── export_presets.cfg         <- how to build the game for other devices: the Android phone build (§17)
 ├── scenes/
-│   ├── game_screen.tscn       <- the top scene F5 runs: the low-res game + the sharp HUD over it (§13)
+│   ├── game_screen.tscn       <- the top scene F5 runs: the low-res game + the HUD over it (§13)
 │   ├── main.tscn              <- THE game (city, cats, menus), shown inside game_screen.tscn
 │   ├── player.tscn            <- the cat
 │   ├── cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, §11)
@@ -91,7 +91,7 @@ Already set in `project.godot`. To see/change by hand: **Project > Project Setti
 | Display > Window > Size > Viewport Height | `720` | The screen is always 720 HUD units tall |
 | Display > Window > Size > Window Width Override | `1280` | Window opens at 1280x960 (4x the game) |
 | Display > Window > Size > Window Height Override | `960` | |
-| Display > Window > Stretch > Mode | `canvas_items` | The HUD is drawn sharp at the real resolution |
+| Display > Window > Stretch > Mode | `canvas_items` | With UI STYLE = MODERN the HUD is drawn sharp at the real resolution |
 | Display > Window > Stretch > Aspect | `keep_height` | HUD units: always 720 tall, wider on wide screens |
 | Rendering > Textures > Canvas Textures > Default Texture Filter | `Nearest` | No blur |
 
@@ -114,10 +114,11 @@ puts back exact 320x240 with side bars. How it works:
   column in the middle of the screen (they were designed for 320x240), and stretches their dark
   background ColorRects edge to edge. Children named in its **Full Width Children** list (Inspector)
   are skipped: `ColorDepthDither`.
-- **The menus are SHARP** (like the HUD): you still edit them in `main.tscn` under `PS1Overlay`,
-  laid out for 320x240, but when the game starts `game_screen.gd` moves the whole `PS1Overlay`
-  out of the pixel picture into its own layer on top (`MenuView` > `MenuViewport`), drawn at your
-  monitor's real resolution. Same layout and sizes, crisp text, no CRT over them. (The MY CAT
+- **The menus get their own layer** (like the HUD): you still edit them in `main.tscn` under
+  `PS1Overlay`, laid out for 320x240, but when the game starts `game_screen.gd` moves the whole
+  `PS1Overlay` out of the game picture into a layer on top (`MenuView` > `MenuViewport`). Same
+  layout and sizes in both UI STYLEs (§13): PS1 = chunky pixels with the CRT over them, MODERN =
+  crisp text at your monitor's real resolution, no CRT over them. (The MY CAT
   preview cat is still drawn at PS1 resolution, so it stays blocky.) While the game runs, look for
   them in the Remote tree under `GameScreen/MenuView/MenuViewport/PS1Overlay`.
 - The HUD (§13) covers the game picture, whatever its shape; its labels are anchored (select one
@@ -1276,7 +1277,7 @@ prints `[Health] Player 1 was knocked out`; afterwards the pistol and catnip are
 and your cat is back in the hub with `hp=100`.
 
 ### Health bars & damage numbers (Cyberpunk-style, all drawn on the HUD)
-Everything here is drawn by the HUD layer (sharp at your real resolution, not pixelated or CRT'd).
+Everything here is drawn by the HUD layer (§13: chunky with UI STYLE = PS1, crisp with MODERN).
 
 - **Your health bar** (top-left corner): a number box (`87`) and a thin, plain red bar. When you're hurt the bit you lost turns **white-yellow** and drains away after a
   moment, so you can see how big the hit was; healing fills back in **cyan**. Under 30% the bar
@@ -1757,7 +1758,7 @@ PauseMenu (Control)               script: ui/pause_menu.gd
 SettingsMenu                      <- an instance of scenes/ui/settings_menu.tscn
 CatCreator (Control)              script: ui/cat_creator.gd  (CHOOSE YOUR CAT / MY CAT; builds itself, §11)
 ColorDepthDither (ColorRect)      <- keep this LAST so it covers everything
-(The inventory screen and the NPC talk box are in the sharp HUD instead: scenes/ui/hud.tscn, §13.)
+(The inventory screen and the NPC talk box are in the HUD instead: scenes/ui/hud.tscn, §13.)
 ```
 `scenes/ui/settings_menu.tscn`: SettingsMenu (Control, `scripts/ui/settings_menu.gd`) > Dim,
 Panel > VBox > Title, Tabs, Scroll (ScrollContainer) > Rows, Hint, Buttons (ResetButton,
@@ -1998,16 +1999,23 @@ Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] foo
 
 ---
 
-## 13. The HUD (sharp overlay)
+## 13. The HUD (overlay)
 
 The HUD is everything on screen during a game that isn't the world or a menu: cash, loot / quest
 line, HP, the extraction arrow, the scoreboard, the "[E] TALK TO..." prompt, the crosshair, what
 you're holding, messages and the big EXTRACTED popup.
 
-**It is drawn at your monitor's real resolution, on top of the game.** The game itself (3D city,
-menus, CRT + dither) is still drawn at PS1 size (240 pixels tall) and blown up with chunky pixels;
-the HUD is not part of that picture, so its text is crisp at any resolution and the CRT effect
-doesn't bend or dither it.
+**It is drawn on top of the game, and SETTINGS > DISPLAY > UI STYLE picks how it looks:**
+- **PS1** (default): the HUD and menus are drawn 240 pixels tall, like the game, and blown up with
+  chunky pixels. One CRT + dither effect (`CRTOverlay`, made by `game_screen.gd`) then covers the
+  whole picture, so the HUD and menus bend and scanline together with the 3D city.
+- **MODERN**: the HUD and menus are drawn at your monitor's real resolution, so they're crisp, and
+  only the 3D city gets the CRT effect.
+
+The layout is the same in both, still 720 HUD units tall. In PS1 style one pixel is 3 HUD units,
+so very small text (the EXIT tag on the heat bar) can't really be read: to fix a piece, make it
+bigger in `hud.tscn`. If you draw HUD pieces in code, wrap thin lines in `Hud.line(width)` and
+text outlines in `Hud.outline(width)` so they survive the low resolution.
 
 ### How the screen is put together (`scenes/game_screen.tscn`, the scene F5 runs)
 ```

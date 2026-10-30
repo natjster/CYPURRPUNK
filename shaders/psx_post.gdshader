@@ -11,6 +11,13 @@ uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 // (their camera's picture) instead of from the screen. Leave OFF everywhere else.
 uniform bool use_source_texture = false;
 uniform sampler2D source_tex : filter_nearest;
+// The CRT over the whole picture (the PS1 UI look, CRTOverlay in scripts/ui/game_screen.gd). It
+// runs at the monitor's real resolution, so it needs to know two things; leave both alone elsewhere:
+// how many screen pixels one game pixel is (keeps scanlines, dither and fringing game-pixel sized)...
+uniform float pixel_scale = 1.0;
+// ...and which part of the screen is the picture (0..1), so the glass bends around that, not the bars.
+uniform vec2 area_offset = vec2(0.0);
+uniform vec2 area_scale = vec2(1.0);
 
 group_uniforms PS1_Color;
 // Shades per color channel. 32 = authentic PS1. Try 16 or 8 for a grittier look.
@@ -50,7 +57,7 @@ float hash(vec2 p) {
 
 void fragment() {
 	// Bend the picture like curved CRT glass.
-	vec2 centered = SCREEN_UV * 2.0 - 1.0;
+	vec2 centered = (SCREEN_UV - area_offset) / area_scale * 2.0 - 1.0;
 	centered *= 1.0 + curvature * dot(centered, centered);
 	vec2 uv = centered * 0.5 + 0.5;
 
@@ -58,19 +65,21 @@ void fragment() {
 		COLOR = vec4(0.0, 0.0, 0.0, 1.0);  // outside the bent screen = black border
 	} else {
 		// Colour fringing: red and blue sampled slightly apart, more toward the edges.
-		vec2 offset = centered * chromatic_aberration * SCREEN_PIXEL_SIZE;
+		vec2 offset = centered * chromatic_aberration * SCREEN_PIXEL_SIZE * pixel_scale;
+		vec2 screen_uv = uv * area_scale + area_offset;
 		vec3 color;
-		color.r = picture(uv + offset).r;
-		color.g = picture(uv).g;
-		color.b = picture(uv - offset).b;
+		color.r = picture(screen_uv + offset).r;
+		color.g = picture(screen_uv).g;
+		color.b = picture(screen_uv - offset).b;
 
 		// Scanlines, dark corners and static.
-		ivec2 pixel = ivec2(FRAGCOORD.xy);
+		vec2 game_pixel = floor(FRAGCOORD.xy / pixel_scale);
+		ivec2 pixel = ivec2(game_pixel);
 		if (pixel.y % 2 == 1) {
 			color *= 1.0 - scanline_strength;
 		}
 		color *= 1.0 - vignette_strength * dot(centered, centered) * 0.5;
-		color += (hash(FRAGCOORD.xy + fract(TIME) * 100.0) - 0.5) * noise_strength;
+		color += (hash(game_pixel + fract(TIME) * 100.0) - 0.5) * noise_strength;
 
 		// Dither, then crush to the limited PS1 palette.
 		ivec2 cell = pixel % 4;

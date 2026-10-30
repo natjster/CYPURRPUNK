@@ -174,7 +174,7 @@ func _draw() -> void:
 		if bar.progress > 0.0:
 			draw_rect(rect, Color(back_color, back_color.a * a))
 			draw_rect(Rect2(rect.position, Vector2(w * bar.progress, rect.size.y)), Color(bar.progress_color, a))
-		draw_rect(rect, Color(friend_color if bar.friend else frame_color, frame_color.a * a), false, 1.0)
+		draw_rect(rect, Color(friend_color if bar.friend else frame_color, frame_color.a * a), false, Hud.line(1.0))
 		# Name above the bar (left-aligned, like Cyberpunk). The boss's is bigger and gold.
 		var label: String = bar.name
 		if label != "":

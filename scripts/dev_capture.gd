@@ -1145,7 +1145,9 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 		for i in 3:
 			await get_tree().process_frame  # let the talk box lay out its buttons first
 		var button := NpcDialog.for_cat(player).choices_box.get_child(int(args["click_choice"])) as Button
-		var at := get_viewport().get_final_transform() * button.get_global_rect().get_center()
+		# (The HUD has its own viewport, drawn at Hud1's spot on the screen.)
+		var hud_view := GameScreen.instance.get_node("Hud1") as Control
+		var at := get_viewport().get_final_transform() * (hud_view.position + button.get_global_rect().get_center())
 		var button_text := button.text
 		for pressed in [true, false]:
 			var click := InputEventMouseButton.new()

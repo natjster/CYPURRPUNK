@@ -137,7 +137,7 @@ func _draw() -> void:
 	# --- The number box (right side): [ 42 ] (Mainframe mode: [ 75% ]) ---
 	var box := Rect2(box_left, 0, number_box_width, h)
 	draw_rect(box, back_color)
-	draw_rect(box, frame_colour, false, 2.0)
+	draw_rect(box, frame_colour, false, Hud.line(2.0))
 	var number := str(floori(_heat))
 	var font_size := number_font_size
 	if _mainframe_mode:
@@ -148,7 +148,7 @@ func _draw() -> void:
 	var number_colour := Color.WHITE if _level_flash > 0.0 else colour.lerp(Color.WHITE, 0.25)
 	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	var text_pos := Vector2(box_left + (number_box_width - text_size.x) * 0.5, (h + text_size.y) * 0.5 - font.get_descent(font_size))
-	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, Color(0.04, 0.01, 0.08))
+	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(6), Color(0.04, 0.01, 0.08))
 	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, number_colour)
 
 	# Mainframe mode: a small "MAINFRAME" tag just above the bar's right end.
@@ -165,13 +165,13 @@ func _draw() -> void:
 	if show_level_ticks:
 		for step: float in [0.25, 0.5, 0.75]:
 			var x := bar_w * (1.0 - step)
-			draw_line(Vector2(x, bar_top - 2.0), Vector2(x, bar_top + bar_thickness + 2.0), Color(1, 1, 1, 0.5), 1.0)
-	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), frame_colour, false, 1.0)
+			draw_line(Vector2(x, bar_top - 2.0), Vector2(x, bar_top + bar_thickness + 2.0), Color(1, 1, 1, 0.5), Hud.line(1.0))
+	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), frame_colour, false, Hud.line(1.0))
 
 	# --- Up top: where YOUR gang's exit opens (a taller white tick, tagged EXIT) ---
 	if not _mainframe_mode and _exit_heat >= 0.0:
 		var exit_x := bar_w * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
-		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, 2.0)
+		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, Hud.line(2.0))
 		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size).x
 		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
 		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size, 4, Color(0.04, 0.01, 0.08))

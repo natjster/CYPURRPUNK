@@ -4,8 +4,8 @@ extends CanvasLayer
 ## or a menu (HP, the extraction arrow, everyone's cash in the sewers, prompts, crosshair, messages).
 ## Kept simple on purpose: no cash / loot / heat lines while you're up in the city.
 ##
-## It is drawn ON TOP of the game at your monitor's real resolution (see scripts/ui/game_screen.gd),
-## so its text is sharp, while the game underneath keeps its chunky 240-pixel PS1 look.
+## It is drawn ON TOP of the game, in its own SubViewport (see scripts/ui/game_screen.gd): chunky
+## 240-row pixels with the PS1 UI look, or your monitor's real resolution with UI STYLE = MODERN.
 ## The layout is a normal scene: open scenes/ui/hud.tscn and move / restyle the labels there.
 ## Positions are in "HUD units": the screen is always 720 units tall (wider on wide monitors),
 ## whatever your real resolution, so things stay the same size relative to the screen.
@@ -48,8 +48,8 @@ extends CanvasLayer
 ##
 ## SPLIT SCREEN: every player on this computer has their OWN HUD on their own part of the screen
 ## (shrunk to fit), with their own talk box and inventory. Player 1's is this scene in
-## game_screen.tscn; players 2-4's are copies made by scripts/ui/game_screen.gd (each inside its
-## own little SubViewport, so each player has their own highlighted button). Each HUD knows its
+## game_screen.tscn; players 2-4's are copies made by scripts/ui/game_screen.gd (each one sits in
+## its own little SubViewport, so each player has their own highlighted button). Each HUD knows its
 ## SEAT (0 = player 1, scripts/seats.gd). The functions below take an optional seat:
 ##   Hud.set_text("DropOff", "...", cat.slot) player 2's line (seat left out = player 1)
 ##   Hud.show_message("HI", 3, cat.slot)      only player 2 sees it
@@ -178,6 +178,18 @@ static func damage_number(where: Vector3, amount: int, crit: bool = false, seat_
 	var numbers := element("Damage", seat_number) as HudDamageNumbers
 	if numbers != null:
 		numbers.spawn(where, amount, crit)
+
+
+## How thick to draw a thin HUD line (in HUD units). In the PS1 UI look one screen pixel is 3 HUD
+## units, and anything thinner vanishes between the pixel rows. Use this for hairlines in _draw.
+static func line(width: float) -> float:
+	return width if Settings.modern_ui else maxf(width, 3.0)
+
+
+## How thick a text outline to draw in _draw. In the PS1 UI look a thick dark outline swallows
+## small text, so it stays thin there.
+static func outline(width: int) -> int:
+	return width if Settings.modern_ui else mini(width, 2)
 
 
 ## The HUDs a message goes to: one player's, or everyone's (-1).

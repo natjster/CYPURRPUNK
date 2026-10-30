@@ -9,17 +9,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   runs inside `GameView/GameViewport` (SubViewport, 240 tall, width from `Settings.widescreen`/
   `pixel_perfect`), blown up with nearest filtering; `_input` forwards events into it (push_input).
   Root window = stretch `canvas_items`, keep_height, 960x720 base ("HUD units").
-- HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport,
-  so it's sharp at real resolution and not CRT'd. Use the statics: `Hud.set_text/show_element/set_color/
+- UI LOOKS: `Settings.modern_ui` (SETTINGS > DISPLAY > UI STYLE). false (default) = PS1: `menu_viewport` and every HUD SubViewport render at game pixels
+  (size = the pane's game viewport, `size_2d_override` keeps the layout), blown up nearest, and `CRTOverlay` (top-level ColorRect, psx_post with `pixel_scale`/`area_offset`/`area_scale`) covers game+HUD+menus; the per-pane CRT is off (`_game_dither` hidden, panes show the raw viewport). true = MODERN: real-res UI, overlay hidden, per-pane CRT on. Thin lines in HUD `_draw` need `Hud.line(w)`, text outlines `Hud.outline(w)`.
+- HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport, in a SubViewport (`GameScreen._seat_huds[seat]`, seat 0 too: GameScreen._input pushes each seat's events to its HUD first; player 1's mouse only while `Hud.wants_input(0)`). Use the statics: `Hud.set_text/show_element/set_color/
   show_message/popup/set_in_game/element` by label name (Health, Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
-  GameScreen stops forwarding input so the root GUI gets it (HUD `_input` runs before GameScreen's).
+  GameScreen keeps that player's input for their HUD.
   ONE HUD PER LOCAL PLAYER: `Hud.seat`; `Hud.of(seat)`; every static takes an optional seat (labels default
-  to seat 0; `show_message`/`popup` default -1 = all). Players 2-4's HUDs are hud.tscn copies in SubViewports
-  (`GameScreen._seat_huds`, own GUI focus); GameScreen._input pushes seat>0 pad events to that HUD first.
-  HUD scripts filter `Seats.seat_of_event(e) != seat` (player 1's root HUD hears every event). Per-player
+  to seat 0; `show_message`/`popup` default -1 = all). Players 2-4's HUDs are hud.tscn copies (own GUI focus).
+  HUD scripts filter `Seats.seat_of_event(e) != seat`. Per-player
   producers loop `Game.instance.playing_cats()`; windows: `NpcDialog.for_cat(cat)/for_seat`,
   `InventoryScreen.for_seat`, `Hud.wants_input(seat)`. `hud.fit_to(rect, scale)` (`hud_scale_for`).
   Name tags use `GameScreen.camera_for_seat/screen_size_for_seat`.
@@ -93,9 +93,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,
-  then `ColorDepthDither` LAST. SHARP MENUS: at start `GameScreen._build_menu_view` reparents `ColorDepthDither`
+  then `ColorDepthDither` LAST. MENU VIEW: at start `GameScreen._build_menu_view` reparents `ColorDepthDither`
   into a new `Main/CRT` CanvasLayer and the whole `PS1Overlay` into `GameScreen/MenuView/MenuViewport`
-  (size_2d_override = game pixels, drawn at real res, no CRT); `_input` pushes events there first, then to the game
+  (size_2d_override = game pixels; see UI LOOKS); `_input` pushes events there first, then to the game
   viewport if unhandled. Menu focus lives in `GameScreen.menu_viewport` (not game_viewport). (`NpcDialog.is_open_for(seat)` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
   sees Esc first. (The HUD is not here: see `Hud` above.)
   Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
