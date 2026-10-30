@@ -15,6 +15,5 @@ hold_offset = Vector3(0.3, 0.45, -0.22)
 hold_scale = 1.3
 shoulder_camera = true
 scene = ExtResource("2_scene")
-auto_pickup = false
 world_scale = 1.8
 glow_color = Color(1, 0.3, 0.65, 1)

@@ -64,8 +64,6 @@ enum Kind { LOOT, HELD }
 ## The item's model. For held items with behaviour, the scene's root has a script that
 ## extends HeldItem (or Weapon). The same scene is shown lying on the street.
 @export var scene: PackedScene
-## Picked up just by walking into it (true), or by pressing E (false).
-@export var auto_pickup: bool = false
 ## Size when lying on the street.
 @export var world_scale: float = 1.0
 ## Colour of the little light under it on the street. Alpha 0 = no light.

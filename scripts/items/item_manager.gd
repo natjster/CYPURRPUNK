@@ -6,7 +6,7 @@ extends Node3D
 ##   - places the LOOT TABLE (res://loot/city.tres: fish, sardines, the koi) in each city,
 ##     lying on the street, and makes it grow back (gear is BOUGHT in the sewers, see request_buy)
 ##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
-##   - pickups (walk-into for auto_pickup items, E for the rest), drops (G), using up (catnip)
+##   - pickups (E), drops (G), using up (catnip)
 ##   - each cat's PAWS (right + left; a 2-paw item takes both), BACKPACK and LOOT BAG
 ##   - two QUICK USE slots per cat (keys 1 / 2, d-pad left / right): catnip and catdip go
 ##     there when picked up or bought (ItemData.quick_use), stacked, and are used with one press
@@ -46,8 +46,6 @@ const MAX_REACH_HEIGHT: float = 3.0
 ## Slots in each player's STASH, the safe lockers down in the sewers (gear, and SCRAP - no
 ## money loot). What's in the stash never drops when you're knocked out, and is saved between games.
 @export var stash_size: int = 9
-## How close (metres) a cat must be to grab an auto-pickup item by walking into it.
-@export var pickup_radius: float = 1.4
 ## How close (metres) a cat must be to grab an item with E.
 @export var interact_radius: float = 2.5
 ## How close (metres) you must be to see the floating label over a street item.
@@ -79,9 +77,6 @@ var _world_nodes := {}   # world item ID -> Node3D on the street
 var _spawns: Array = []  # host: [{"item", "pos", "respawn", "back_at"}], index = world item ID
 var _next_id: int = FIRST_DROPPED_ID
 var _clock: float = 0.0
-## Host: world item ID -> player ID of the cat that dropped it. That cat can't auto-grab it
-## again until it steps away (otherwise dropping a fish would instantly pick it back up).
-var _dropped_by := {}
 ## Item id -> a spare copy of its scene's script, NOT in the world: quick-use items call its
 ## quick_use(cat) (so catnip's speed/duration still come from its own Inspector numbers).
 var _quick_effects := {}
@@ -122,7 +117,6 @@ func _on_city_generated(city_seed: int) -> void:
 	_world_nodes.clear()
 	world.clear()
 	_spawns.clear()
-	_dropped_by.clear()
 	_next_id = FIRST_DROPPED_ID
 
 	var rng := RandomNumberGenerator.new()
@@ -217,18 +211,17 @@ func _make_item_tag(data: ItemData) -> Label3D:
 	tag.transparency = 1.0  # see-through from its first frame, before the HUD has noticed it
 	tag.position.y = 1.25
 	tag.set_meta("max_distance", item_tag_distance)
-	if data.auto_pickup:
-		# Walk-into loot: its glow colour (gold koi, cyan scrap) or warm white.
+	if data.kind == ItemData.Kind.LOOT:
+		# Loot: its glow colour (gold koi, cyan scrap) or warm white.
 		tag.modulate = data.glow_color.lightened(0.25) if data.glow_color.a > 0.0 else Color(0.95, 0.95, 1.0)
 	else:
-		# Press-E gear: plain white. The button is on the HUD prompt ("[E] PICKUP", interact_prompt).
+		# Gear: plain white. The button is on the HUD prompt ("[E] PICKUP", interact_prompt).
 		tag.modulate = Color(1, 1, 1, 0.9)
 	return tag
 
 
 func _remove_world_local(id: int) -> void:
 	world.erase(id)
-	_dropped_by.erase(id)  # gone from the street: nobody needs to "step away" from it any more
 	if _world_nodes.has(id):
 		_world_nodes[id].queue_free()
 		_world_nodes.erase(id)
@@ -269,30 +262,13 @@ func _physics_process(delta: float) -> void:
 	_use_held_items(delta)
 
 
-## Host only: grow items back, and hand auto-pickup items to cats walking into them.
+## Host only: grow items back.
 func _host_tick() -> void:
 	for i in _spawns.size():
 		var spawn: Dictionary = _spawns[i]
 		if spawn.back_at >= 0.0 and _clock >= spawn.back_at:
 			spawn.back_at = -1.0
 			_add_world.rpc(i, spawn.item, spawn.pos)
-	for node in players.get_children():
-		var cat := node as CatPlayer
-		var player_id := cat.player_id
-		if Game.instance.car_of(player_id) != null:
-			continue  # no grabbing things from inside the car
-		if CatHealth.instance.is_down(player_id):
-			continue  # knocked out: it's lying on the loot it just spilled, don't suck it back up
-		for id in world.keys():
-			var data: ItemData = catalog[world[id].item]
-			var distance := _reach_distance(cat.global_position, world[id].pos)
-			if _dropped_by.get(id, 0) == player_id:
-				if distance > pickup_radius + 0.5:
-					_dropped_by.erase(id)  # walked away: it can be grabbed again
-				continue
-			if data.auto_pickup and distance < pickup_radius and _can_take(player_id, data):
-				_give(player_id, id)
-				break  # one item per cat per frame
 
 
 ## The owner's computer: press the use buttons for whatever is in our cats' paws
@@ -415,14 +391,9 @@ func _add_to_quick(inventory: Dictionary, item_id: String) -> bool:
 
 ## Host: put an item on the street with a brand-new world ID.
 ## dropper = the cat that dropped it (it won't auto-grab it back until it steps away).
-func _spawn_dropped(item_id: String, at: Vector3, dropper: int = 0) -> void:
+func _spawn_dropped(item_id: String, at: Vector3) -> void:
 	# Keep the height: a drop in the sewers stays in the sewers (it used to pop up in the city).
 	_add_world.rpc(_next_id, item_id, at)
-	# Remember who dropped it AFTER it's on the street: putting it there clears old notes about
-	# that ID (_remove_world_local), which used to wipe this one, so a dropped fish got
-	# grabbed straight back.
-	if dropper != 0:
-		_dropped_by[_next_id] = dropper
 	_next_id += 1
 
 
@@ -612,7 +583,7 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 		item_id = _pop_quick(inventory, index)  # one off the top of that stack
 	if item_id == "":
 		return
-	_spawn_dropped(item_id, ground, player_id)
+	_spawn_dropped(item_id, ground)
 	_set_inventory.rpc(player_id, inventory)
 
 
@@ -824,10 +795,9 @@ func _receive_state(world_now: Dictionary, inventories_now: Dictionary) -> void:
 # --- Things cats call ---
 
 # The E key (scripts/interactable.gd): the street items are all one "interactable" - this node.
-# (No HUD line: each press-E item already floats its own "E PURR-TOMMY" label.)
 
 func interact_distance(cat: CatPlayer) -> float:
-	var best_id := _nearest_press_e_item(cat)
+	var best_id := _nearest_item(cat)
 	return _reach_distance(cat.global_position, world[best_id].pos) if best_id >= 0 else -1.0
 
 
@@ -835,9 +805,9 @@ func interact_prompt(_cat: CatPlayer) -> String:
 	return "PICKUP"
 
 
-## E pressed: ask the host for the nearest press-E item in reach.
+## E pressed: ask the host for the nearest item in reach.
 func interact(cat: CatPlayer) -> void:
-	var best_id := _nearest_press_e_item(cat)
+	var best_id := _nearest_item(cat)
 	if best_id >= 0:
 		request_pickup.rpc_id(1, cat.player_id, best_id)
 
@@ -847,14 +817,18 @@ func interact_priority() -> int:
 	return 30
 
 
-## The world ID of the nearest press-E (not walk-into) item within reach, or -1.
-func _nearest_press_e_item(cat: CatPlayer) -> int:
+## The world ID of the nearest item this cat could take right now, or -1. Not from inside a car,
+## and loot doesn't count with a full bag: otherwise E would do nothing there (and a fish on the
+## road would steal the E meant for getting in or out of the car).
+func _nearest_item(cat: CatPlayer) -> int:
+	if Game.instance.car_of(cat.player_id) != null:
+		return -1
 	var best_id := -1
 	var best_distance := interact_radius
 	for id in world:
 		var data: ItemData = catalog[world[id].item]
 		var distance := _reach_distance(cat.global_position, world[id].pos)
-		if not data.auto_pickup and distance < best_distance:
+		if distance < best_distance and _can_take(cat.player_id, data):
 			best_id = id
 			best_distance = distance
 	return best_id

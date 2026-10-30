@@ -38,7 +38,8 @@ gives it to you, and starts a fresh draft.
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 - **Golden Koi:** MEGA VAC-COPs no longer drop it. There's just the one hidden in the city now.
 - **Inventory at the stash:** your loot bag now stays visible above your stash.
-- **Item labels:** everything on the street now has a sharp name floating over it when you're close, including fish, gold koi and scrap. Walk up to gear and you'll get a "PICKUP" prompt with your own button (keyboard or controller), just like getting in the car.
+- **Item labels:** everything on the street now has a sharp name floating over it when you're close, including fish, gold koi and scrap.
+- **Picking things up:** no more walking over loot to grab it! Walk up to any item and press the button on the "PICKUP" prompt (it shows your own keyboard key or controller button), just like getting in the car.
 
 ## 🐛 Fixes
 - Cars could get stuck in the middle of town at the start of a game instead of waiting at your gang's corner.

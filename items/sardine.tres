@@ -12,5 +12,4 @@ kind = 0
 cash_value = 20
 bag_space = 1
 scene = ExtResource("2_scene")
-auto_pickup = true
 world_scale = 0.7

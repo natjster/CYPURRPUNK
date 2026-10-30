@@ -723,7 +723,7 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
 
 ### The Mainframe & scrap
 **SCRAP** only comes from a destroyed **MEGA VAC-COP** (it glows cyan on the street, and you grab
-it by walking over it). It's worth $0 and takes 1 loot bag space. At the exit your money loot is
+it with E). It's worth $0 and takes 1 loot bag space. At the exit your money loot is
 cashed in and scrap **stays in your bag**. A knockout loses it, like any loot.
 
 **THE MAINFRAME** is the giant CRT on the west wall of your sewer. **Each gang has its own**, with
@@ -977,7 +977,7 @@ new district. In the code that just means a new city seed: the whole city is gen
 8. A few seconds later a **new district** is built (new city, heat back to 0, fresh patrol) and
    Don can send you up again.
 
-**Loot** (walk into it to pick it up; your loot bag holds 3 spaces):
+**Loot** (press E to pick it up; your loot bag holds 3 spaces):
 
 | Loot | Worth | Bag space | Where | Catch |
 |---|---|---|---|---|
@@ -1049,7 +1049,7 @@ Then it backs off for a couple of seconds. Three bonks and you're **knocked out*
 **Getting your fish back:** destroy it. It has **100 health**: about **3 pistol shots** (40 each)
 or **4 tommy-gun bolts** (25 each), or **run it over** with the car at speed. Once you (or any
 other player) have **shot** it, a red **health bar** floats over it, and every hit pops a **damage number** off it
-(see **Health bars & damage numbers** below). It explodes and spits out everything it vacuumed — walk over the fish to grab them.
+(see **Health bars & damage numbers** below). It explodes and spits out everything it vacuumed — press E on the fish to grab them.
 A new Roomba rolls out somewhere else 15 seconds later. Cats in the car and cats in the hub are
 safe. Shoot a Roomba and it gets angry and chases *you*.
 
@@ -1341,8 +1341,8 @@ system, so new items need no new networking or pickup code.
   function, like `scripts/items/catnip.gd`). Stack size: **Quick Stack Size** on the Items node.
 - **Loot bag:** loot (fish) goes in a bag, not your paws. It shows on your cat (mouth, then head)
   and pays out at the drop-off.
-- **E** grabs the nearest item that says "E  NAME" above it. Items marked auto-pickup (fish) are
-  grabbed just by walking into them. **G** drops what's in your paws (right paw first).
+- **E** grabs the nearest item when the HUD says "[E] PICKUP", loot and gear alike. A full loot
+  bag shows no prompt for loot. **G** drops what's in your paws (right paw first).
 
 ### The items
 Only **fish** lie around the city. All gear is **bought** from Comrade Whiskers at the Black
@@ -1502,7 +1502,7 @@ it on the root of the item's scene, and write what happens in `use_tick()`. Call
 use it up. Anything other players must see goes through an `@rpc` function on that script.
 
 ### Tuning the system (select **Items** in `main.tscn`)
-Bag Size, Pack Size (backpack), Pickup Radius (walk-into), Interact Radius (E), **Loot Table**
+Bag Size, Pack Size (backpack), Interact Radius (E), Item Tag Distance, **Loot Table**
 (what lies in each city, see above), Regrow Faster Per Player.
 
 ### Inventory screen (Tab or I)
@@ -2101,10 +2101,10 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
 - Hiding the Label3D (like a cat in a car) hides the HUD name too. Your own cat's name isn't
   shown on your own screen (split screen: the other players still see it on theirs).
 - **Items on the street** get their labels here too, made in code (you won't see them in the scene
-  tree). They only show the item's name: white for press-E gear, and for walk-into loot its glow
-  colour (gold koi, cyan scrap) or warm white. How close you must be: **Items** node (in
-  `main.tscn`) > **Item Tag Distance** (18 m). Standing in reach of gear, the normal HUD prompt
-  says `[E] PICKUP` (each player's own button), like the car's `[E] GET IN`.
+  tree). They only show the item's name: white for gear, and for loot its glow colour (gold koi,
+  cyan scrap) or warm white. How close you must be: **Items** node (in `main.tscn`) > **Item Tag
+  Distance** (18 m). Standing in reach of any item, the normal HUD prompt says `[E] PICKUP` (each
+  player's own button), like the car's `[E] GET IN`. No prompt = your loot bag is full.
 
 ### Using it from a script (no node paths needed)
 ```gdscript
