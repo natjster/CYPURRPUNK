@@ -253,6 +253,8 @@ func _ready() -> void:
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				Wallet.instance.set_cash(peer_id, int(args["cash"])))
+		if args.has("grab_mouse"):
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED  # (--hold=shoot only fires with the mouse in the game)
 		if args.has("breach_seconds"):
 			Mainframe.instance.breach_seconds = float(args["breach_seconds"])
 		if args.has("breach_log"):

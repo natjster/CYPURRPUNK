@@ -816,7 +816,7 @@ so a gang can still save itself by feeding scrap before that.
 
 **Test it without playing:**
 `--mainframe=0 --breach_log=60` starts one (add `--pos=` to stand somewhere).
-`--breach_seconds=2` = the Miracle, `--breach_wipe=120` = a wipeout.
+`--breach_seconds=2` = the Miracle, `--breach_wipe=120` = a wipeout. `--grab_mouse --hold=shoot` fires a held gun.
 `--teams=0,1 --add_local=1 --mainframe=75,0` = watching the rival's feed.
 
 ### The stash & saved progress
