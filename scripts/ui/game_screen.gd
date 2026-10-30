@@ -74,6 +74,9 @@ static var instance: GameScreen
 ## Split screen: how big a player's HUD is on a smaller screen, compared to "just shrink it to
 ## fit" (1.0). Higher = bigger text (crowded), lower = smaller. Never bigger than full size.
 @export var split_hud_boost: float = 1.25
+## One player, PS1 UI look: how much bigger the whole HUD is drawn, so small text stays readable at
+## 240 pixel rows. Up to about 1.33: above that the inventory stops fitting on a 4:3 screen.
+@export var ps1_hud_scale: float = 1.33
 
 @onready var hud: Hud = $HUD
 @onready var game_view: TextureRect = $GameView
@@ -424,6 +427,8 @@ func _fit() -> void:
 ## smaller for a half or quarter screen, so the cash, HP and windows still fit.
 func hud_scale_for(screen_units: Vector2) -> float:
 	var fit := minf(screen_units.y / 720.0, screen_units.x / 960.0)
+	if not Settings.modern_ui and shown_seats().size() == 1:
+		return fit * ps1_hud_scale
 	return clampf(fit * split_hud_boost, 0.5, 1.0)
 
 

@@ -329,7 +329,7 @@ func _slot_style(edge: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.07, 0.05, 0.13, 0.95)
 	style.border_color = edge
-	style.set_border_width_all(2)
+	style.set_border_width_all(3)
 	style.set_content_margin_all(6)
 	return style
 

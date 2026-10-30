@@ -2012,10 +2012,13 @@ you're holding, messages and the big EXTRACTED popup.
 - **MODERN**: the HUD and menus are drawn at your monitor's real resolution, so they're crisp, and
   only the 3D city gets the CRT effect.
 
-The layout is the same in both, still 720 HUD units tall. In PS1 style one pixel is 3 HUD units,
-so very small text (the EXIT tag on the heat bar) can't really be read: to fix a piece, make it
-bigger in `hud.tscn`. If you draw HUD pieces in code, wrap thin lines in `Hud.line(width)` and
-text outlines in `Hud.outline(width)` so they survive the low resolution.
+The layout is the same in both, still 720 HUD units tall. PS1 style with one player draws the
+whole HUD a third bigger so its text stays readable: select **GameScreen** in `game_screen.tscn` >
+**Ps1 Hud Scale** (1.33; above that the inventory stops fitting on a 4:3 screen). Very small text
+(the EXIT tag on the heat bar) still can't really be read: to fix a piece, make it bigger in
+`hud.tscn`. If you draw HUD pieces in code, wrap thin lines in `Hud.line(width)` and text outlines
+in `Hud.outline(width)` so they survive the low resolution. Box borders need to be at least 3
+units thick (`ui/hud_theme.tres`), or some edges vanish between the pixel rows.
 
 ### How the screen is put together (`scenes/game_screen.tscn`, the scene F5 runs)
 ```
