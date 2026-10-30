@@ -50,6 +50,8 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var pickup_radius: float = 1.4
 ## How close (metres) a cat must be to grab an item with E.
 @export var interact_radius: float = 2.5
+## How close (metres) you must be to see the floating label over a street item.
+@export var item_tag_distance: float = 18.0
 
 @export_group("Placed in every city")
 ## What lies around every district: a list of "N of this item, here, grows back after S
@@ -100,7 +102,6 @@ func _ready() -> void:
 	_load_catalog()
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	city.generated.connect(_on_city_generated)
-	Controls.changed.connect(_refresh_pickup_prompts)
 
 
 func _load_catalog() -> void:
@@ -111,12 +112,6 @@ func _load_catalog() -> void:
 			if data != null and not data.id.is_empty():
 				catalog[data.id] = data
 	print("[Items] Loaded %d item cards: %s" % [catalog.size(), ", ".join(catalog.keys())])
-
-
-## The player changed their keys: rewrite the "E  PURR-TOMMY" labels above street items.
-func _refresh_pickup_prompts() -> void:
-	for prompt in get_tree().get_nodes_in_group("pickup_prompts"):
-		prompt.text = "%s  %s" % [Controls.key_text("interact"), prompt.get_meta("item_name")]
 
 
 # --- Placing items when a city is built (same result on every computer) ---
@@ -209,20 +204,28 @@ func _add_world_local(id: int, item_id: String, at: Vector3) -> void:
 		glow.distance_fade_begin = 35.0
 		glow.position.y = 0.4
 		spot.add_child(glow)
-	if not data.auto_pickup:
-		var prompt := Label3D.new()
-		prompt.text = "%s  %s" % [Controls.key_text("interact"), data.display_name]
-		prompt.set_meta("item_name", data.display_name)
-		prompt.add_to_group("pickup_prompts")  # re-labelled when the player rebinds GRAB
-		prompt.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		prompt.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-		prompt.modulate = Color(1, 1, 1, 0.9)
-		prompt.outline_size = 6
-		prompt.font_size = 32
-		prompt.pixel_size = 0.007
-		prompt.position.y = 1.25
-		spot.add_child(prompt)
+	spot.add_child(_make_item_tag(data))
 	_world_nodes[id] = spot
+
+
+## The floating label over a street item. It's only a MARKER: the HUD draws the real, sharp text
+## (scripts/ui/hud_name_tags.gd reads the Text, Modulate and metadata set here).
+func _make_item_tag(data: ItemData) -> Label3D:
+	var tag := Label3D.new()
+	tag.add_to_group(HudNameTags.GROUP)
+	tag.text = data.display_name
+	tag.transparency = 1.0  # see-through from its first frame, before the HUD has noticed it
+	tag.position.y = 1.25
+	tag.set_meta("max_distance", item_tag_distance)
+	if data.auto_pickup:
+		# Walk-into loot: just the name, in its glow colour (gold koi, cyan scrap) or warm white.
+		tag.modulate = data.glow_color.lightened(0.25) if data.glow_color.a > 0.0 else Color(0.95, 0.95, 1.0)
+	else:
+		# Press-E gear: the HUD adds the key per player, "[E] PAW-PISTOL" / "[Pad X] PAW-PISTOL".
+		tag.modulate = Color(1, 1, 1, 0.9)
+		tag.set_meta("press_e", true)
+		tag.set_meta("item_name", data.display_name)
+	return tag
 
 
 func _remove_world_local(id: int) -> void:
