@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="QuestData" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = "smash_roombas"
+title = "TIN CAN TAKEDOWN"
+description = "Smash 5 VAC-COPs yourself (gun, melee or car), then extract. A knockout resets the count."
+kind = 1
+count = 5
+reward_cash = 150
+repeatable = true

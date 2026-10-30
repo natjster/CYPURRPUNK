@@ -660,7 +660,7 @@ func receive_hit(hit: Hit) -> bool:
 		return false
 	# ...and real damage: the host checks the shot and takes the HP off (cat_health.gd).
 	var standing := CatHealth.instance.get_health(player_id) > 0  # (asked BEFORE: on the host it's instant)
-	CatHealth.instance.request_shot.rpc_id(1, hit.shooter.player_id, player_id, hit.damage)
+	CatHealth.instance.request_shot.rpc_id(1, hit.shooter.player_id, player_id, hit.damage, hit.weapon is MeleeWeapon)
 	return standing  # a damage number, unless they were already down
 
 

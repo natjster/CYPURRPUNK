@@ -28,6 +28,9 @@ gives it to you, and starts a fresh draft.
 - **Hack the rivals:** at 100%, scrap drains the rival gang's Mainframe by 25% instead, and everyone sees it in the feed.
 - **Keep it charged:** the lowest gang's Mainframe sets the city's start. At 50% and below, districts start with heat already up, and at 0% a MEGA VAC-COP is waiting up top. If every gang is at 100% when you head up, OVERCLOCK makes heat rise 20% slower.
 - **Status bar:** the top-right bar shows your gang's Mainframe in the sewers, and an EXIT mark on the heat bar shows when your exit opens.
+- **The sewers are full of characters:** 9 new cats to meet, for 5 quest givers in each gang's sewer. The Catleones get Paulie "No-Brooms", Nonna Catleone, Frankie "Espresso" and Sal "The Slapper". The Burrow gets Billy The Kitten, Bumper-Car Benny, "Gold-Tooth" Gus, Jittery Jax and Calamity Clara.
+- **4 new repeatable quests:** smash 5 VAC-COPs ($150), extract with a Golden Koi ($250 on top of its value), extract at 85+ heat ($150), and disrespect the opposition by destroying a MEGA VAC-COP, robbing a downed rival or slapping one with a melee weapon ($200). Get knocked out and your kill and disrespect progress goes back to 0.
+- **The Night of the Big Red Button:** ask around with WHO LET OVERCLEAN IN? and find out what really happened. Everyone has their own version.
 
 ## 🔧 Changes
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.

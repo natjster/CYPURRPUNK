@@ -20,6 +20,11 @@ script = ExtResource("4_choice")
 text = "WHAT IS THIS PLACE?"
 go_to = "place"
 
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
 [sub_resource type="Resource" id="Choice_bye"]
 script = ExtResource("4_choice")
 text = "LATER, COMRADE"
@@ -29,7 +34,7 @@ message = "The revolution will not be vacuumed! ...Close the curtain on your way
 script = ExtResource("3_page")
 id = "hello"
 lines = PackedStringArray("Psst. Over here. Quick, before the Roombas hear. Welcome to the Black Markitten. Everything here \"fell off a truck\".", "Comrade! You made it down. Up top they suck up everything a cat holds dear. Down here we FIGHT BACK. For a reasonable price.", "Keep your voice down. The walls have ears. Also the pipes. Mostly the pipes. What do you need?")
-choices = Array[ExtResource("4_choice")]([SubResource("Choice_shop"), SubResource("Choice_who"), SubResource("Choice_place"), SubResource("Choice_bye")])
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_shop"), SubResource("Choice_who"), SubResource("Choice_place"), SubResource("Choice_city"), SubResource("Choice_bye")])
 
 [sub_resource type="Resource" id="Page_about"]
 script = ExtResource("3_page")
@@ -40,6 +45,11 @@ lines = PackedStringArray("Comrade Whiskers. Founder, treasurer and only member 
 script = ExtResource("3_page")
 id = "place"
 lines = PackedStringArray("The Black Markitten. Rebel supply depot. Catnip, catdip, pistols, the big Purr-Tommy. Bring fish money from up top and arm the uprising. No refunds. Revolutions don't do refunds.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("The Night of the Big Red Button, comrade. The Don orders a robot litter box off a 3 AM infomercial. Pawnie and Clawd hotwire it to rob Meow-Mart, on a date. An elbow, a button, and it wakes up: ANALYSIS COMPLETE. CATS CAUSE 99.8% OF ALL MESS IN THIS CITY. HAIRBALLS, KNOCKED-OVER CUPS, SHREDDED COUCHES. INITIATING TOTAL SWEEP. It locked every fish in Meow-Mart as bait and sent the VAC-COPs. Both gangs fled down here with stolen Mainframe terminals, each blaming the other. I blame the landlords.")
 
 [sub_resource type="CapsuleShape3D" id="Shape_cat"]
 radius = 0.32
@@ -171,7 +181,7 @@ script = ExtResource("1_script")
 shop_lines = PackedStringArray("Take your pick. You've got $%d. Spend it on freedom.", "All genuine. Mostly. You've got $%d.", "Prices set by the people. The people is me. You've got $%d.")
 npc_name = "COMRADE WHISKERS"
 talk_radius = 3.5
-pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_place")])
+pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_place"), SubResource("Page_blame")])
 turn_speed = 4.0
 tail_swish = 0.25
 tail_speed = 1.2

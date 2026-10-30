@@ -346,9 +346,13 @@ interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames 
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
 progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
 `complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more.)
-Lil' Mittens (`scenes/npcs/lil_mittens.tscn`, in the Hub) gives
-`mittens_fish` (3 fish, +$100, repeatable). Test: `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
---goto_dropoff_after=20 --talk_again_after=40`.
+Five shared cards (table in SETUP_GUIDE §8), `QuestData.kind`: CARRY_ITEM (bag), DESTROY_ROOMBAS, EXTRACT_AT_HEAT
+(`heat_needed`), DISRESPECT. Kill / disrespect counts = host `tallies` from Events (`enemy_destroyed` + `Enemy.killed_by`,
+`player_robbed`, `player_slapped` from `request_shot`'s melee flag), synced in `_set_quests`, wiped by `player_knocked_out`.
+Quest givers = 5 per sewer in matching spots, both gangs use the same quest ids; pages ready/waiting/thanks/hello/ask/about/
+blame/remind (Frankie and Jax have no "ready" page: their progress is live heat). Story: SETUP_GUIDE "Night of the Big Red Button".
+Test: `--talk=PaulieNoBrooms --choose=0,0 --kill_roombas=5 --heat=80 --goto_dropoff_after=60 --talk_again_after=40`;
+`--quest=ID` skips the NPC (use it with `--deploy`, `--talk` pulls the cat back to the hub).
 
 ## Git
 Git for Windows is NOT on PATH in Claude's shell: use `& "$env:ProgramFiles\Git\cmd\git.exe"`.

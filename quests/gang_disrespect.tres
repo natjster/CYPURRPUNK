@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="QuestData" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = "gang_disrespect"
+title = "GANG DISRESPECT"
+description = "Destroy a MEGA VAC-COP, rob a downed rival, or hit a rival with a melee weapon, then extract. A knockout resets it."
+kind = 3
+count = 1
+reward_cash = 200
+repeatable = true

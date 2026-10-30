@@ -293,8 +293,9 @@ func _can_hold(helper_id: int, downed_id: int, slack: float) -> bool:
 
 ## The shooter's computer -> host: a bolt from "shooter_id" hit cat "target_id" for "amount".
 ## (cat_player.gd receive_hit sends it; only for the OTHER gang.) The host checks it makes sense.
+## melee = it was a bat / tuna swing, which counts as a slap for the gang_disrespect quest.
 @rpc("any_peer", "call_local", "reliable")
-func request_shot(shooter_id: int, target_id: int, amount: int) -> void:
+func request_shot(shooter_id: int, target_id: int, amount: int, melee: bool = false) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(shooter_id):
 		return
 	var shooter := Game.instance.cat_for(shooter_id)
@@ -307,6 +308,8 @@ func request_shot(shooter_id: int, target_id: int, amount: int) -> void:
 		return  # safe inside the car
 	if shooter.global_position.distance_to(target.global_position) > pvp_max_range:
 		return  # too far to be a real shot
+	if melee:
+		Events.player_slapped.emit(target_id, shooter_id)  # (scripts/events.gd)
 	var who := shooter.display_name()
 	if is_downed(target_id):
 		if shots_finish_downed and Time.get_ticks_msec() >= _finish_allowed_at.get(target_id, 0):

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="QuestData" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = "golden_koi_heist"
+title = "THE GOLDEN KOI"
+description = "Extract with a Golden Koi in your loot bag."
+kind = 0
+item = "golden_koi"
+count = 1
+reward_cash = 250
+repeatable = true

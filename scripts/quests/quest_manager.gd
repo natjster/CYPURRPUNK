@@ -9,8 +9,10 @@ extends Node
 ##
 ## Multiplayer: the HOST is the referee, same as items and cash.
 ##   - Taking a quest asks the host (request_start). The host tells everyone (_set_quests).
-##   - Progress isn't sent at all: it's counted from your loot bag, which every computer
-##     already knows about (ItemManager.inventories).
+##   - CARRY_ITEM progress isn't sent at all: it's counted from your loot bag, which every
+##     computer already knows about (ItemManager.inventories).
+##   - Kills / disrespect are counted by the host from Events (tallies) and sent with _set_quests.
+##     Getting knocked out wipes your tallies.
 ##   - At the exit manhole, fish_heist.gd asks the host's QuestManager for the bonus
 ##     (complete_on_extract) BEFORE the loot bag is emptied.
 ##   - Late joiners get everyone's quests (send_state_to); quitters are forgotten.
@@ -31,6 +33,8 @@ var catalog := {}
 var active := {}
 ## Player ID -> {quest id: times completed}. Same deal.
 var completed := {}
+## Player ID -> {quest id: VAC-COPs smashed / disrespect done so far}. Same deal.
+var tallies := {}
 
 
 func _enter_tree() -> void:
@@ -46,6 +50,10 @@ func _ready() -> void:
 			if data != null and not data.id.is_empty():
 				catalog[data.id] = data
 	print("[Quests] Loaded %d quest cards: %s" % [catalog.size(), ", ".join(catalog.keys())])
+	Events.enemy_destroyed.connect(_on_enemy_destroyed)
+	Events.player_robbed.connect(_on_player_robbed)
+	Events.player_slapped.connect(_on_player_slapped)
+	Events.player_knocked_out.connect(_on_player_knocked_out)
 
 
 # --- Questions anyone can ask (every computer has the answers) ---
@@ -71,10 +79,16 @@ func is_in_state(player_id: int, quest_id: String, wanted: String) -> bool:
 	return state == wanted
 
 
-## How many of the quest's items this player is carrying right now.
+## How far along this player is. Compare it with the card's Count.
 func progress(player_id: int, quest_id: String) -> int:
 	var data: QuestData = catalog[quest_id]
-	return ItemManager.instance.get_inventory(player_id).bag.count(data.item)
+	match data.kind:
+		QuestData.Kind.CARRY_ITEM:
+			return ItemManager.instance.get_inventory(player_id).bag.count(data.item)
+		QuestData.Kind.EXTRACT_AT_HEAT:
+			return 1 if HeatMeter.instance.heat >= data.heat_needed else 0
+		_:
+			return tallies.get(player_id, {}).get(quest_id, 0)
 
 
 # --- Taking a quest ---
@@ -97,15 +111,57 @@ func _request_start(player_id: int, quest_id: String) -> void:
 		return  # already on it / one-time quest already done
 	var list: Array = active.get(player_id, []).duplicate()
 	list.append(quest_id)
-	_set_quests.rpc(player_id, list, completed.get(player_id, {}))
+	var tally: Dictionary = tallies.get(player_id, {}).duplicate()
+	tally.erase(quest_id)  # a fresh start
+	_set_quests.rpc(player_id, list, completed.get(player_id, {}), tally)
 	print("[Quests] Player %d started '%s'" % [player_id, quest_id])
 
 
 ## Host -> everyone: this player's quests now.
 @rpc("authority", "call_local", "reliable")
-func _set_quests(player_id: int, active_now: Array, completed_now: Dictionary) -> void:
+func _set_quests(player_id: int, active_now: Array, completed_now: Dictionary, tally_now: Dictionary) -> void:
 	active[player_id] = active_now
 	completed[player_id] = completed_now
+	tallies[player_id] = tally_now
+
+
+# --- Counting kills and disrespect (host, from Events: scripts/events.gd) ---
+
+## Host: +1 on every active quest of this kind this player has.
+func _add_tally(player_id: int, kind: QuestData.Kind) -> void:
+	var tally: Dictionary = tallies.get(player_id, {}).duplicate()
+	var changed := false
+	for quest_id in active.get(player_id, []):
+		if (catalog[quest_id] as QuestData).kind == kind:
+			tally[quest_id] = tally.get(quest_id, 0) + 1
+			changed = true
+			print("[Quests] Player %d: '%s' now %d" % [player_id, quest_id, tally[quest_id]])
+	if changed:
+		_set_quests.rpc(player_id, active[player_id], completed.get(player_id, {}), tally)
+
+
+func _on_enemy_destroyed(enemy: Enemy) -> void:
+	if enemy.killed_by == 0:
+		return  # nobody in particular
+	_add_tally(enemy.killed_by, QuestData.Kind.DESTROY_ROOMBAS)
+	if enemy.is_boss:
+		_add_tally(enemy.killed_by, QuestData.Kind.DISRESPECT)
+
+
+func _on_player_robbed(_player_id: int, by: int) -> void:
+	if multiplayer.is_server():  # (this event fires on every computer)
+		_add_tally(by, QuestData.Kind.DISRESPECT)
+
+
+func _on_player_slapped(_player_id: int, by: int) -> void:
+	_add_tally(by, QuestData.Kind.DISRESPECT)
+
+
+## Knocked out: everything you hadn't extracted yet is gone, and that includes kill counts.
+func _on_player_knocked_out(player_id: int, _cause: String) -> void:
+	if multiplayer.is_server() and not tallies.get(player_id, {}).is_empty():
+		print("[Quests] Player %d was knocked out: kill counts reset" % player_id)
+		_set_quests.rpc(player_id, active.get(player_id, []), completed.get(player_id, {}), {})
 
 
 # --- Finishing quests (host, at the exit manhole) ---
@@ -118,17 +174,19 @@ func complete_on_extract(player_id: int) -> Array:
 	var titles: Array = []
 	var still_active: Array = []
 	var done: Dictionary = completed.get(player_id, {}).duplicate()
+	var tally: Dictionary = tallies.get(player_id, {}).duplicate()
 	for quest_id in active.get(player_id, []):
 		var data: QuestData = catalog[quest_id]
 		if progress(player_id, quest_id) >= data.count:
 			bonus += data.reward_cash
 			titles.append(data.title)
 			done[quest_id] = done.get(quest_id, 0) + 1
+			tally.erase(quest_id)
 			print("[Quests] Player %d completed '%s' (+$%d)" % [player_id, quest_id, data.reward_cash])
 		else:
 			still_active.append(quest_id)  # not done yet: keep it for the next trip up
 	if not titles.is_empty():
-		_set_quests.rpc(player_id, still_active, done)
+		_set_quests.rpc(player_id, still_active, done, tally)
 	return [bonus, titles]
 
 
@@ -136,13 +194,14 @@ func complete_on_extract(player_id: int) -> Array:
 
 ## Host -> a computer that just joined (network ID "peer"): everyone's quests.
 func send_state_to(peer: int) -> void:
-	_receive_state.rpc_id(peer, active, completed)
+	_receive_state.rpc_id(peer, active, completed, tallies)
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_state(active_now: Dictionary, completed_now: Dictionary) -> void:
+func _receive_state(active_now: Dictionary, completed_now: Dictionary, tallies_now: Dictionary) -> void:
 	active = active_now
 	completed = completed_now
+	tallies = tallies_now
 
 
 ## Host: a player quit. Their quests go with them.
@@ -154,3 +213,4 @@ func player_left(player_id: int, _last_position: Vector3) -> void:
 func _forget_player(player_id: int) -> void:
 	active.erase(player_id)
 	completed.erase(player_id)
+	tallies.erase(player_id)

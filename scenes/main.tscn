@@ -30,6 +30,15 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/pawnie.tscn" id="30_pawnie"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/clawd.tscn" id="31_clawd"]
 [ext_resource type="Script" path="res://scripts/mainframe.gd" id="32_mainframe"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/paulie_no_brooms.tscn" id="q_paulie_no_brooms"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/nonna_catleone.tscn" id="q_nonna_catleone"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/frankie_espresso.tscn" id="q_frankie_espresso"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/sal_the_slapper.tscn" id="q_sal_the_slapper"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/billy_the_kitten.tscn" id="q_billy_the_kitten"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/bumper_car_benny.tscn" id="q_bumper_car_benny"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/gold_tooth_gus.tscn" id="q_gold_tooth_gus"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/jittery_jax.tscn" id="q_jittery_jax"]
+[ext_resource type="PackedScene" path="res://scenes/npcs/calamity_clara.tscn" id="q_calamity_clara"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -189,6 +198,22 @@ rotation = Vector3(0, -1.5708, 0)
 position = Vector3(-12, 0, -10)
 rotation = Vector3(0, 1.5708, 0)
 
+[node name="PaulieNoBrooms" parent="Hub" instance=ExtResource("q_paulie_no_brooms")]
+position = Vector3(7, 0, 16)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="NonnaCatleone" parent="Hub" instance=ExtResource("q_nonna_catleone")]
+position = Vector3(11.5, 0, -12.5)
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="FrankieEspresso" parent="Hub" instance=ExtResource("q_frankie_espresso")]
+position = Vector3(-11.5, 0, 10.6)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="SalTheSlapper" parent="Hub" instance=ExtResource("q_sal_the_slapper")]
+position = Vector3(-11.5, 0, 5.5)
+rotation = Vector3(0, 1.5708, 0)
+
 [node name="GangHub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(200, -200, 0)
 script = ExtResource("17_hub")
@@ -208,6 +233,26 @@ position = Vector3(8, 0, -16)
 
 [node name="Clawd" parent="GangHub" instance=ExtResource("31_clawd")]
 position = Vector3(-12, 0, -10)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="BillyTheKitten" parent="GangHub" instance=ExtResource("q_billy_the_kitten")]
+position = Vector3(10.3, 0, 9)
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="BumperCarBenny" parent="GangHub" instance=ExtResource("q_bumper_car_benny")]
+position = Vector3(7, 0, 16)
+rotation = Vector3(0, 3.14159, 0)
+
+[node name="GoldToothGus" parent="GangHub" instance=ExtResource("q_gold_tooth_gus")]
+position = Vector3(11.5, 0, -12.5)
+rotation = Vector3(0, -1.5708, 0)
+
+[node name="JitteryJax" parent="GangHub" instance=ExtResource("q_jittery_jax")]
+position = Vector3(-11.5, 0, 10.6)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="CalamityClara" parent="GangHub" instance=ExtResource("q_calamity_clara")]
+position = Vector3(-11.5, 0, 5.5)
 rotation = Vector3(0, 1.5708, 0)
 
 [node name="Rain" parent="." instance=ExtResource("9_rain")]

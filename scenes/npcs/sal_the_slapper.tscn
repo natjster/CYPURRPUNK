@@ -1,0 +1,348 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/npc.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_need"]
+script = ExtResource("4_choice")
+text = "HOW DO I EARN RESPECT?"
+go_to = "ask"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
+[sub_resource type="Resource" id="Choice_leave"]
+script = ExtResource("4_choice")
+text = "GOTTA GO"
+message = "Respect."
+
+[sub_resource type="Resource" id="Choice_accept"]
+script = ExtResource("4_choice")
+text = "MESSAGE RECEIVED"
+message = "Don't tell me about it. Let 'em tell me about it."
+action = "quest:gang_disrespect"
+
+[sub_resource type="Resource" id="Choice_no"]
+script = ExtResource("4_choice")
+text = "NOT TODAY"
+message = "Keep walkin'. That was also a message."
+
+[sub_resource type="Resource" id="Choice_onit"]
+script = ExtResource("4_choice")
+text = "ON IT"
+message = "Right across the whiskers."
+
+[sub_resource type="Resource" id="Choice_remind"]
+script = ExtResource("4_choice")
+text = "REMIND ME?"
+go_to = "remind"
+
+[sub_resource type="Resource" id="Choice_onmyway"]
+script = ExtResource("4_choice")
+text = "ON MY WAY"
+message = "Walk. Don't run. Respect walks."
+
+[sub_resource type="Resource" id="Choice_again"]
+script = ExtResource("4_choice")
+text = "SEND ANOTHER MESSAGE"
+message = "Good. Bring a bat."
+action = "quest:gang_disrespect"
+
+[sub_resource type="Resource" id="Choice_notnow"]
+script = ExtResource("4_choice")
+text = "NOT RIGHT NOW"
+message = "Respect."
+
+[sub_resource type="Resource" id="Page_ready"]
+script = ExtResource("3_page")
+id = "ready"
+lines = PackedStringArray("I heard. Whole sewer heard. Now get home with it, or it never happened.", "That's respect. Now extract, before somebody disrespects you back.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onmyway")])
+only_if_quest = "gang_disrespect"
+only_if_state = "ready"
+
+[sub_resource type="Resource" id="Page_waiting"]
+script = ExtResource("3_page")
+id = "waiting"
+lines = PackedStringArray("Word ain't reached me yet. So it didn't happen.", "Message ain't sent till I hear it. Boss bot. Pockets. Or whiskers. Pick one.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onit"), SubResource("Choice_remind"), SubResource("Choice_city")])
+only_if_quest = "gang_disrespect"
+only_if_state = "active"
+
+[sub_resource type="Resource" id="Page_thanks"]
+script = ExtResource("3_page")
+id = "thanks"
+lines = PackedStringArray("They're still talkin' about it up there. That's two hundred. There's always more disrespect to go around.", "Now THAT'S a message. Could use a follow-up.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_again"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_notnow")])
+only_if_quest = "gang_disrespect"
+only_if_state = "done"
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("...", "You're lookin' at me. Why you lookin' at me? Is that respect? I'm askin'.", "They call me The Slapper. They don't call me that twice.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_need"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_leave")])
+only_if_quest = "gang_disrespect"
+
+[sub_resource type="Resource" id="Page_ask"]
+script = ExtResource("3_page")
+id = "ask"
+lines = PackedStringArray("RESPECT. Somebody's gotta send a message up top. Whack one of OVERCLEAN's MEGA VAC-COPs. Or empty a downed Burrow hick's pockets. Or slap a rival across the whiskers, with a bat, with a fish, I ain't fussy. Any one of 'em. Then get home with it. Two hundred bucks. You get knocked out first, you didn't send nothin'.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_no")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("Sal. \"The Slapper.\" Button-man for the Family. I got one rule, and it's respect. Also I got this scar. Don't ask about the scar. That's the other rule.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("A hick in a fedora puts his elbow on the Family's Big Red Button, on OUR machine, in OUR room, and then says it was the Don? That ain't a mistake. That's DISRESPECT. It's the worst I ever seen, and I seen a lot.")
+
+[sub_resource type="Resource" id="Page_remind"]
+script = ExtResource("3_page")
+id = "remind"
+lines = PackedStringArray("Destroy a MEGA VAC-COP, rob a downed rival, or land a melee hit on a rival. One's plenty. Then extract. A knockout wipes it.")
+
+[sub_resource type="CapsuleShape3D" id="Shape_cat"]
+radius = 0.3
+height = 0.9
+
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.14, 0.14, 0.16, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.9, 0.5, 0.55, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.3, 0.2, 1)
+shader_parameter/emission_color = Color(1, 0.3, 0.2, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.05, 0.05, 0.06, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_cream"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.93, 0.88, 0.76, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_red"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.72, 0.08, 0.1, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.13
+bottom_radius = 0.2
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.06
+bottom_radius = 0.07
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.3
+height = 0.55
+radial_segments = 8
+rings = 5
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.2, 0.26, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.085
+height = 0.119
+radial_segments = 6
+rings = 3
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.025
+bottom_radius = 0.045
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_shades"]
+size = Vector3(0.5, 0.16, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_scar"]
+size = Vector3(0.03, 0.2, 0.02)
+
+[sub_resource type="CylinderMesh" id="Mesh_brim"]
+top_radius = 0.36
+bottom_radius = 0.36
+height = 0.04
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_crown"]
+top_radius = 0.19
+bottom_radius = 0.22
+height = 0.22
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_band"]
+top_radius = 0.225
+bottom_radius = 0.225
+height = 0.05
+radial_segments = 8
+rings = 1
+
+[node name="SalTheSlapper" type="StaticBody3D"]
+script = ExtResource("1_script")
+npc_name = "SAL \"THE SLAPPER\""
+pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
+turn_speed = 3
+tail_swish = 0.12
+tail_speed = 0.7
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.45, 0)
+shape = SubResource("Shape_cat")
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(0, 3.14159, 0)
+scale = Vector3(1.1, 1.1, 1.1)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.39, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.82, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, 0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, -0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.09, -0.25)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.03, -0.36)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0.28)
+rotation = Vector3(0.65, 0, 0)
+scale = Vector3(1, 1, 1)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Shades" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.07, -0.33)
+mesh = SubResource("Mesh_shades")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Scar" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.2, 0.05, -0.2)
+rotation = Vector3(0, 0.7, 0.3)
+mesh = SubResource("Mesh_scar")
+surface_material_override/0 = SubResource("Mat_cream")
+
+[node name="Hat" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.23, 0)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_brim")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="HatCrown" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.35, 0.015)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_crown")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="HatBand" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.27, 0.005)
+rotation = Vector3(-0.12, 0, 0)
+mesh = SubResource("Mesh_band")
+surface_material_override/0 = SubResource("Mat_red")
+
+[node name="Candle" type="OmniLight3D" parent="."]
+position = Vector3(-0.6, 1.2, 0.5)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 1.8
+omni_range = 4.0
+
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
+position = Vector3(0, 1.45, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(0.5, 0.85, 1, 1)
+outline_size = 6
+text = "SAL \"THE SLAPPER\""
+font_size = 32
+pixel_size = 0.009

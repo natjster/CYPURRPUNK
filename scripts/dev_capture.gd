@@ -45,6 +45,7 @@ extends Node
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    hit the nearest Roomba N times (34 each), as if shot (host or client)
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
+##   --quest=ID        take that quest right away, with no NPC (works with --deploy, unlike --talk)
 ##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
 ##                     add --kill_bosses to destroy bosses too
 ##   --down=S          (host, after --deploy) the cat in slot S (0 = ours; 1.. with --add_local) stands
@@ -257,6 +258,8 @@ func _ready() -> void:
 			HeatMeter.instance.start_district()
 			RoombaPatrol.instance.start_district()
 			print("DevCapture mainframe: %s active=%s exits at %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charges, Mainframe.instance.active_gangs(), [Mainframe.instance.exit_heat(0), Mainframe.instance.exit_heat(1)], HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
+		if args.has("quest"):
+			QuestManager.instance.start_quest(player.player_id, args["quest"])
 		if args.has("heat") and multiplayer.is_server():
 			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))
@@ -455,7 +458,7 @@ func _ready() -> void:
 				for node in scene.get_node("Roombas").get_children():
 					var victim := node as Roomba
 					if victim != null and (not victim.is_boss or args.has("kill_bosses")) and not victim.is_queued_for_deletion():
-						victim.take_hit(0, 500)
+						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
 						break
 				await get_tree().physics_frame
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):

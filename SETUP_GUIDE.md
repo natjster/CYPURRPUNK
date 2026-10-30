@@ -641,11 +641,14 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
     gang in the game has called. The bosses' phone lines are on the hubs: select **Hub** or
     **GangHub** > **Payphone (the boss on the line)**.
 - **Not yet (next PvP phase):** no team scoreboard or end-of-district results, no spawn protection.
-- **The story gag:** ask any boss **WHO LET OVERCLEAN IN?** Don says Pawnie & Clawd were on a date
-  in the Mainframe and leaned on the big red button, then sold the city for a can of tuna. Pawnie
-  says Don fell asleep on the button, then sold the city for a can of tuna ("PREMIUM tuna. Didn't
-  even share."). Clawd insists they were NOT on a date. They were "guardin' it. Real close up.
-  With candles."
+- **The story: The Night of the Big Red Button.** Don Catleone ordered OVERCLEAN off a 3 AM
+  infomercial, thinking it was a luxury litter-box cleaner. That same night Pawnie & Clawd snuck
+  into the Mainframe room on a candlelit date to hotwire it into a bank-vault cracker for
+  Meow-Mart. Don's bootleg wiring plus Clawd's elbow on the Big Red Button woke it up, and it
+  decided cats cause 99.8% of the city's mess. It locked the fish in Meow-Mart as bait and sent the
+  VAC-COPs. Both gangs fled to the sewers with stolen Mainframe terminals and blame each other.
+  Ask Don, Pawnie, Clawd, Comrade Whiskers or any quest giver **WHO LET OVERCLEAN IN?** (their
+  **blame** page) to hear their side of it.
 
 **The second sewer** is the same `hub.gd` with its own settings: select **GangHub** in `main.tscn`
 and look under **Gang** in the Inspector: **Team** (1), **Leader** (Pawnie: whoever sends cats up
@@ -685,8 +688,12 @@ OVERCLEAN IN?** (his side of the story: it was Pawnie & Clawd), **HOW DOES THIS 
 **NEVER MIND** (or Esc).
 
 **Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
-by the cardboard shanties on the east wall. Extremely needy. She gives you the **MITTENS' FISH**
+by the cardboard shanties on the east wall. Extremely needy. Gives you the **MITTENS' FISH**
 quest (see **Quests** below): bring 3 fish down at once for a **$100 bonus**.
+
+**The quest givers:** each sewer has five, in matching spots, and both casts hand out the same five
+quests (table under **Quests** below). Move one by selecting them under **Hub** / **GangHub** in
+`main.tscn` and changing **Position**.
 
 **Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
 counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
@@ -875,15 +882,30 @@ then button 1 (0 = top) and prints what happens. `--talk=LilMittens` picks anoth
 name).
 
 ### Quests
-A quest is a job an NPC gives you, with a cash reward. The first one is **MITTENS' FISH**:
+A quest is a job an NPC gives you, with a cash reward. There are five, all repeatable, and both
+gangs share the same cards, so rewards are identical in either sewer:
+
+| Quest card (`quests/`) | Objective | Reward | Catleone (`Hub`) | Burrow (`GangHub`) | Spot |
+|---|---|---|---|---|---|
+| `mittens_fish` | Extract with 3 fish in your bag | $100 | Lil' Mittens | Billy The Kitten | East wall boxes |
+| `smash_roombas` | Smash 5 VAC-COPs (gun, melee or car), extract | $150 | Paulie "No-Brooms" | Bumper-Car Benny | South-east walkway |
+| `golden_koi_heist` | Extract with a Golden Koi in your bag | $250 + the koi's $400 | Nonna Catleone | "Gold-Tooth" Gus | North-east, near the boss |
+| `daredevil_extract` | Extract alive at 85 heat or more | $150 | Frankie "Espresso" | Jittery Jax | South-west crates |
+| `gang_disrespect` | Destroy a MEGA VAC-COP, rob a downed rival, or land a melee hit on a rival; extract | $200 | Sal "The Slapper" | Calamity Clara | West walkway by the Mainframe |
+
+Getting knocked out drops your bag and resets VAC-COP / disrespect counts to 0. Extracting with
+part of a count done keeps it for the next trip. Only the cat that lands the killing blow (or the
+car's driver) gets a VAC-COP kill. There's only one Golden Koi in each district.
+
+How **MITTENS' FISH** goes, step by step (the others work the same way):
 1. Talk to **Lil' Mittens** > **WHAT DO YOU NEED?** > **FINE. THREE FISH.**
 2. Go get the fish. (There's no quest tracker on the HUD any more: the HUD was simplified. Check
    your loot bag with the inventory screen.)
 3. Climb down the exit manhole with **all 3 fish in your bag at once**: you get the fish's
    normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
    and you just get the fish money — the quest stays active for your next trip.
-4. Talk to her again afterwards: she thanks you and offers it again (it's repeatable).
-Her lines change with the quest (offer / waiting / "you HAVE them, go extract!" / thank you) using
+4. Talk to him again afterwards: he thanks you and offers it again (it's repeatable).
+His lines change with the quest (offer / waiting / "you HAVE them, go extract!" / thank you) using
 each page's **Only If Quest** settings — open `scenes/npcs/lil_mittens.tscn` to see how.
 
 **Where it lives:** quest cards are `.tres` files in the `quests/` folder (like item cards, loaded
@@ -891,8 +913,9 @@ automatically). `scripts/quests/quest_data.gd` is the card; `scripts/quests/ques
 the **Quests** node in `main.tscn` keeps track of who has which quest. In multiplayer the host
 decides (like cash), and every player has their own quests.
 
-**Change the Mittens quest:** double-click `quests/mittens_fish.tres`: **Title** (HUD name),
-**Item** + **Count** (what to bring — any item card's id), **Reward Cash**, **Repeatable**.
+**Change a quest:** double-click its card, e.g. `quests/mittens_fish.tres`: **Title**, **Kind**
+(the objective type), **Item** + **Count** (what to bring, or how many kills), **Heat Needed**
+(`EXTRACT_AT_HEAT` only), **Reward Cash**, **Repeatable**.
 
 **Add a new quest:**
 1. In the FileSystem, right-click `quests/mittens_fish.tres` > **Duplicate...**, name it
@@ -901,8 +924,8 @@ decides (like cash), and every player has their own quests.
 3. Optional: give that NPC pages with **Only If Quest** = your id, so they say different things
    while you're on the quest and after you've done it.
 
-For now every quest is "carry Count of Item when you extract". Other kinds of objectives (kill
-Roombas, visit a place...) would be added in `quest_manager.gd` (`progress()`).
+**Kinds of objective:** `CARRY_ITEM`, `DESTROY_ROOMBAS`, `EXTRACT_AT_HEAT` and `DISRESPECT` (listed
+at the top of `quest_data.gd`). A new kind would be added in `quest_manager.gd` (`progress()`).
 
 **Test it without playing:** `--talk=LilMittens --choose=0,0 --grab=fish,fish,fish
 --goto_dropoff_after=20 --talk_again_after=40` takes the quest, grabs 3 fish, extracts (prints

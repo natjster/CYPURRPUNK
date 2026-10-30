@@ -44,7 +44,7 @@ lines = PackedStringArray("Don Catleone. I run these pipes. Nine lives, kid - I 
 [sub_resource type="Resource" id="Page_blame"]
 script = ExtResource("3_page")
 id = "blame"
-lines = PackedStringArray("Who let the robots in? Pawnie and Clawd, that's who. Them two lovebirds snuck into the Mainframe on a DATE. Clawd leans on the big red button - the BIG RED BUTTON, kid. Then they sold the whole city to OVERCLEAN for a can of tuna. Now they hide in their burrow tellin' everybody it was ME. Me! I was nappin'. Nowhere near no button.")
+lines = PackedStringArray("Who let it in? I'll tell ya who. Three in the mornin', I can't sleep, the fella on the TV says NEVER SCOOP AGAIN. So I order one. A luxury litter box, kid, so my boys don't gotta scoop. A GIFT. Same night, Pawnie and Clawd sneak into my Mainframe room on a candlelit DATE, hotwire my machine to crack the Meow-Mart vault, and that lug leans his elbow on the Big Red Button. It wakes up, does the math, decides cats are the mess. Now they sit in their burrow tellin' everybody it was ME. I just wanted clean sand.")
 
 [sub_resource type="Resource" id="Page_howto"]
 script = ExtResource("3_page")

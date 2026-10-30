@@ -1,0 +1,333 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npcs/npc.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
+[ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+
+[sub_resource type="Resource" id="Choice_need"]
+script = ExtResource("4_choice")
+text = "WHAT ARE YOU AFTER, GUS?"
+go_to = "ask"
+
+[sub_resource type="Resource" id="Choice_who"]
+script = ExtResource("4_choice")
+text = "WHO ARE YOU?"
+go_to = "about"
+
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
+[sub_resource type="Resource" id="Choice_leave"]
+script = ExtResource("4_choice")
+text = "GOTTA GO"
+message = "Hmph."
+
+[sub_resource type="Resource" id="Choice_accept"]
+script = ExtResource("4_choice")
+text = "ONE GOLDEN KOI"
+message = "Heh. That's what I said in '61. Don't get caught with it."
+action = "quest:golden_koi_heist"
+
+[sub_resource type="Resource" id="Choice_no"]
+script = ExtResource("4_choice")
+text = "NOT TODAY"
+message = "Hmph. Kids today. Nobody wants the Big Score."
+
+[sub_resource type="Resource" id="Choice_onit"]
+script = ExtResource("4_choice")
+text = "ON IT"
+message = "Hmph. Good."
+
+[sub_resource type="Resource" id="Choice_remind"]
+script = ExtResource("4_choice")
+text = "REMIND ME?"
+go_to = "remind"
+
+[sub_resource type="Resource" id="Choice_onmyway"]
+script = ExtResource("4_choice")
+text = "ON MY WAY"
+message = "Hmph. Don't drop it."
+
+[sub_resource type="Resource" id="Choice_again"]
+script = ExtResource("4_choice")
+text = "ONE MORE BIG SCORE"
+message = "Hmph. Now you're learnin'."
+action = "quest:golden_koi_heist"
+
+[sub_resource type="Resource" id="Choice_notnow"]
+script = ExtResource("4_choice")
+text = "NOT RIGHT NOW"
+message = "Hmph."
+
+[sub_resource type="Resource" id="Page_ready"]
+script = ExtResource("3_page")
+id = "ready"
+lines = PackedStringArray("I can see that glint from here. Don't stand there! A score ain't a score till it's home.", "Beautiful. Now get to the hatch before a Catleone puts his greasy paws on it.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onmyway")])
+only_if_quest = "golden_koi_heist"
+only_if_state = "ready"
+
+[sub_resource type="Resource" id="Page_waiting"]
+script = ExtResource("3_page")
+id = "waiting"
+lines = PackedStringArray("Still no gold? Hmph.", "A real score takes patience. You got till the sirens stop bein' funny.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_onit"), SubResource("Choice_remind"), SubResource("Choice_city")])
+only_if_quest = "golden_koi_heist"
+only_if_state = "active"
+
+[sub_resource type="Resource" id="Page_thanks"]
+script = ExtResource("3_page")
+id = "thanks"
+lines = PackedStringArray("...Would you look at that. Forty years, and it still gets me. One more, kid. Same two-fifty.", "That's the stuff. Don't tell Clawd. He'll ask to borrow it.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_again"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_notnow")])
+only_if_quest = "golden_koi_heist"
+only_if_state = "done"
+
+[sub_resource type="Resource" id="Page_hello"]
+script = ExtResource("3_page")
+id = "hello"
+lines = PackedStringArray("Hmph. Forty years crackin' safes and I end up in a sewer with a lovesick driver.", "Mind the tooth. Everyone stares at the tooth. It's 24-karat. Paid for it with a bank.", "Clawd borrowed my best picks for a \"romantic evenin'\". They came back bent. All of 'em.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_need"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_leave")])
+only_if_quest = "golden_koi_heist"
+
+[sub_resource type="Resource" id="Page_ask"]
+script = ExtResource("3_page")
+id = "ask"
+lines = PackedStringArray("The Big Score, kid. The 24-karat Fort Knox of Fish: the Golden Koi. OVERCLEAN's got 'em in with the rest of the bait. One of 'em, in your bag, down the hatch. Two hundred fifty from me, and the koi still fetches its price. I don't want the money. I want to look at it.")
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_no")])
+
+[sub_resource type="Resource" id="Page_about"]
+script = ExtResource("3_page")
+id = "about"
+lines = PackedStringArray("\"Gold-Tooth\" Gus. Oldest safe-cracker in the Burrow. Taught Pawnie everything she knows. Should've taught her not to lend my tools to Clawd.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("Pawnie and Clawd had a fine plan. Hotwire Don's new machine into a vault-cracker, hit Meow-Mart. With MY tools. Then Clawd gets romantic and leans on a button. But who wires a button that size to a litter box? Catleone's fault. Mostly. Clawd still owes me a set of picks.")
+
+[sub_resource type="Resource" id="Page_remind"]
+script = ExtResource("3_page")
+id = "remind"
+lines = PackedStringArray("One Golden Koi, in your bag, out the exit hatch. Get knocked out and you'll drop it on the street for the next fool.")
+
+[sub_resource type="CapsuleShape3D" id="Shape_cat"]
+radius = 0.3
+height = 0.9
+
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.46, 0.45, 0.42, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.9, 0.5, 0.55, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.8, 0.8, 0.5, 1)
+shader_parameter/emission_color = Color(0.8, 0.8, 0.5, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_gold"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.8, 0.25, 1)
+shader_parameter/emission_color = Color(1, 0.8, 0.25, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.05, 0.05, 0.06, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.13
+bottom_radius = 0.2
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.06
+bottom_radius = 0.07
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.3
+height = 0.55
+radial_segments = 8
+rings = 5
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.2, 0.26, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.085
+height = 0.119
+radial_segments = 6
+rings = 3
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.025
+bottom_radius = 0.045
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_tooth"]
+size = Vector3(0.05, 0.06, 0.04)
+
+[sub_resource type="CylinderMesh" id="Mesh_loupe"]
+top_radius = 0.09
+bottom_radius = 0.07
+height = 0.1
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_goggle"]
+top_radius = 0.11
+bottom_radius = 0.11
+height = 0.05
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_strap"]
+size = Vector3(0.64, 0.03, 0.03)
+
+[node name="GoldToothGus" type="StaticBody3D"]
+script = ExtResource("1_script")
+npc_name = "\"GOLD-TOOTH\" GUS"
+pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
+turn_speed = 3
+tail_swish = 0.15
+tail_speed = 0.8
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.45, 0)
+shape = SubResource("Shape_cat")
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(0, 3.14159, 0)
+scale = Vector3(0.95, 0.95, 0.95)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.39, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.82, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, 0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, -0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.09, -0.25)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.03, -0.36)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0.28)
+rotation = Vector3(0.65, 0, 0)
+scale = Vector3(1, 1, 1)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Tooth" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.05, -0.17, -0.31)
+mesh = SubResource("Mesh_tooth")
+surface_material_override/0 = SubResource("Mat_gold")
+
+[node name="Loupe" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.31)
+rotation = Vector3(1.5708, 0, 0)
+mesh = SubResource("Mesh_loupe")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="LoupeGlass" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.36)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.6, 1, 0.6)
+mesh = SubResource("Mesh_goggle")
+surface_material_override/0 = SubResource("Mat_gold")
+
+[node name="Strap" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.12, -0.17)
+rotation = Vector3(0, 0, 0.12)
+mesh = SubResource("Mesh_strap")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Candle" type="OmniLight3D" parent="."]
+position = Vector3(-0.6, 1.2, 0.5)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 1.8
+omni_range = 4.0
+
+[node name="NameTag" type="Label3D" parent="." groups=["hud_name_tags"]]
+position = Vector3(0, 1.45, 0)
+billboard = 1
+texture_filter = 0
+modulate = Color(0.5, 0.85, 1, 1)
+outline_size = 6
+text = "\"GOLD-TOOTH\" GUS"
+font_size = 32
+pixel_size = 0.009

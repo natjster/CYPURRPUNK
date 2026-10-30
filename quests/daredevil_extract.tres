@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="QuestData" format=3]
+
+[ext_resource type="Script" path="res://scripts/quests/quest_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = "daredevil_extract"
+title = "DAREDEVIL EXTRACT"
+description = "Extract alive while the city's heat is 85 or higher."
+kind = 2
+count = 1
+heat_needed = 85.0
+reward_cash = 150
+repeatable = true

@@ -88,6 +88,10 @@ var _flash_time: float = 0.0
 ## Host: where each car was last time we looked (car instance id -> position), to work out its speed.
 var _last_car_positions := {}
 
+## Host: the player who last hurt us (or ran us over). Read by the quests when we explode.
+## 0 = nobody in particular.
+var killed_by: int = 0
+
 @onready var model: Node3D = get_node_or_null("Model")
 @onready var _flash_mesh: MeshInstance3D = get_node_or_null(flash_mesh)
 
@@ -135,6 +139,8 @@ func take_hit(shooter_id: int = 0, amount: int = 34, stun: float = 0.0, push: Ve
 	if not multiplayer.is_server() or health <= 0:
 		return
 	health -= clampi(amount, 1, 500)  # (clamped: a broken / cheating client can't one-shot the boss)
+	if PlayerId.sender_owns(shooter_id):
+		killed_by = shooter_id
 	_hit_flash.rpc()
 	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit * clampf(city_heat, 0.0, 1.0))  # gunfire makes the city angry
 	if health <= 0:
@@ -177,6 +183,7 @@ func run_over_by_car(delta: float) -> bool:
 		if car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
 				and Motion.flat_distance(car.global_position, global_position) < car_smash_radius:
 			hit = true
+			killed_by = car.driver_id
 	return hit
 
 

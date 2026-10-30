@@ -15,6 +15,11 @@ script = ExtResource("4_choice")
 text = "WHO ARE YOU?"
 go_to = "about"
 
+[sub_resource type="Resource" id="Choice_city"]
+script = ExtResource("4_choice")
+text = "WHO LET OVERCLEAN IN?"
+go_to = "blame"
+
 [sub_resource type="Resource" id="Choice_leave"]
 script = ExtResource("4_choice")
 text = "GOTTA GO"
@@ -82,7 +87,7 @@ only_if_state = "active"
 script = ExtResource("3_page")
 id = "thanks"
 lines = PackedStringArray("You came back! I ate all three fish in four seconds. New record. I'm hungry again. Same deal? A hundred bucks. I found more money. Still don't ask.", "MY HERO. My big strong hero. Who is about to bring me three more fish. Right? RIGHT?")
-choices = Array[ExtResource("4_choice")]([SubResource("Choice_again"), SubResource("Choice_who"), SubResource("Choice_notnow")])
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_again"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_notnow")])
 only_if_quest = "mittens_fish"
 only_if_state = "done"
 
@@ -90,7 +95,7 @@ only_if_state = "done"
 script = ExtResource("3_page")
 id = "hello"
 lines = PackedStringArray("Oh thank goodness, a FACE. Do you know how long it's been since anyone talked to me? Eleven minutes. ELEVEN.", "Hi. Hello. Are you busy? You look busy. I'll be quick. I'm STARVING. Also lonely. Mostly starving.", "Nobody ever visits the box. It's a very nice box. Please don't leave. Please.")
-choices = Array[ExtResource("4_choice")]([SubResource("Choice_need"), SubResource("Choice_who"), SubResource("Choice_leave")])
+choices = Array[ExtResource("4_choice")]([SubResource("Choice_need"), SubResource("Choice_who"), SubResource("Choice_city"), SubResource("Choice_leave")])
 only_if_quest = "mittens_fish"
 
 [sub_resource type="Resource" id="Page_ask"]
@@ -108,7 +113,12 @@ choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResou
 [sub_resource type="Resource" id="Page_about"]
 script = ExtResource("3_page")
 id = "about"
-lines = PackedStringArray("I'm Lil' Mittens. I live in the box. Don Catleone says I'm \"a lot\". I think it's a compliment. Is it a compliment? Tell me it's a compliment.")
+lines = PackedStringArray("I'm Lil' Mittens. I live in the box. I'm practically a made cat. Don Catleone says I'm \"a lot\". I think it's a compliment. Is it a compliment? Tell me it's a compliment.")
+
+[sub_resource type="Resource" id="Page_blame"]
+script = ExtResource("3_page")
+id = "blame"
+lines = PackedStringArray("The Don bought a robot litter box so nobody has to scoop. I offered to scoop! For fish! Then the Burrow's Clawd leaned on the Big Red Button on a date, and now all the fish are locked in Meow-Mart. So really, they stole my lunch. As a made cat, I take that personally.")
 
 [sub_resource type="Resource" id="Page_remind"]
 script = ExtResource("3_page")
@@ -200,7 +210,7 @@ size = Vector3(0.05, 0.6, 0.05)
 [node name="LilMittens" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "LIL' MITTENS"
-pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_guilt"), SubResource("Page_about"), SubResource("Page_remind")])
+pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_guilt"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
 turn_speed = 6.0
 tail_swish = 0.6
 tail_speed = 4.0

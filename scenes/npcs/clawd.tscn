@@ -39,7 +39,7 @@ lines = PackedStringArray("Clawd. Driver, shooter, Pawnie's better half. She'd s
 [sub_resource type="Resource" id="Page_blame"]
 script = ExtResource("3_page")
 id = "blame"
-lines = PackedStringArray("Pawnie tell you about the big red button? ...Yeah. Catleone did that. We were NOT on a date at the Mainframe that night. We were... guardin' it. Real close up. With candles. Look, you buyin' or not?")
+lines = PackedStringArray("Pawnie tell you about the Big Red Button? ...Yeah. That's on Catleone. His bootleg wirin', his robot toilet. We were NOT robbin' nothin' that night. We were... guardin' it. Real close up. With candles. And Gus's tools. My elbow was just restin'. Look, you buyin' or not?")
 
 [sub_resource type="CapsuleShape3D" id="Shape_don"]
 radius = 0.45
