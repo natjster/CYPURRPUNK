@@ -336,7 +336,7 @@ func _bonk(cat: CatPlayer) -> void:
 	var push := Motion.flat(cat.global_position - global_position).normalized() * bump_push + Vector3.UP * bump_hop
 	cat.get_zapped.rpc_id(PlayerId.peer_of(player_id), push)  # the cat's owner moves it
 	Sound.play_everywhere("bonk", cat.global_position)
-	if steals_loot:
+	if steals_loot and breach_hub == null:  # (a horde bot just bites: your scrap stays yours)
 		var item_id := ItemManager.instance.take_one_loot(player_id)
 		if item_id != "":
 			stomach.append(item_id)

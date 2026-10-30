@@ -777,17 +777,27 @@ per gang (Catleone, Burrow), and the district restarts on it.
 `--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --give=scrap --pos=-11,-199.5,0 --press_key=E` hacks.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --deploy --heat=70` shows one exit open and one shut.
-`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first. (`--mainframe=0` now starts a Sewer Breach.)
+`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first.
 
 ### The Sewer Breach (a Mainframe at 0%)
-When a gang's Mainframe hits **0%** (hacked from 25%, or drained by a sealed district), OVERCLEAN
-comes for that gang's sewer. It waits until **no cat is left up top** and knocked-out cats are home,
-so a gang can still save itself by feeding scrap before that.
+When a gang's Mainframe hits **0%** (hacked from 25%, or drained by a sealed district), it gets a
+warning and two chances before OVERCLEAN comes for that gang's sewer:
+
+1. **One last raid:** the next district runs at **0% CRITICAL** (50 heat, a MEGA VAC-COP already up
+   top to hunt for scrap, exit at 95 heat), and the gang's cats get a `LAST CHANCE` banner.
+2. **The siren:** if that district is sealed with the gang still at 0%, then once no cat is left up top
+   and knocked-out cats are home, a siren counts down **15 seconds**
+   (`FEED THE MAINFRAME! BREACH IN 12s`). The next district waits for it. Run to the stash and the
+   Mainframe: feeding scrap in time stops it.
+3. **Otherwise, the breach starts:**
 
 - **The tunnel:** the iron **Blast Gate** at the north end of the west walkway slides up, the tunnel
   pulses red, and a horde pours out: **35 bots + 2 MEGA VAC-COPs**. They hunt every cat in that sewer.
 - **No safe zone** in that sewer: guns and melee work, nobody heals, and a cat at 0 HP stays where it
   fell. Gang-mates can still revive you. A knockout here **keeps your gear**.
+- **Your loot is safe from the horde:** breach bots hit you but don't vacuum your bag, and nothing
+  a breach bot does adds to the city's heat. Anything dropped on a sewer floor (a boss's scrap too)
+  stays there through new districts.
 - **The sewer fights back:** all 7 NPCs in that sewer grab a gun, hop on the spot and spray the room,
   yelling battle cries over their heads. They're terrible shots and do little damage: they thin the
   front line, they don't win it for you. You can't talk to them or shop until it's over. A bot that
@@ -801,9 +811,15 @@ so a gang can still save itself by feeding scrap before that.
   `SEWER BREACHED!` with one gang), then the bots go, the gate shuts, all cats heal, **every**
   Mainframe resets to 75% and a new district starts. If both gangs were breached, the first one wiped
   out loses at once.
-- **The 1% Miracle** (someone still standing after 30 seconds): the gate slams, every bot explodes,
-  the gang's Mainframe reboots to **25%**, everyone heals, and a new district follows the banner.
-  (Only a MEGA VAC-COP you actually destroy drops scrap: the big bang pays nothing.)
+- **The 1% Miracle** (someone still standing after 30 seconds): the gate slams, every bot freezes and
+  they blow up one after another over 2.5 seconds, the gang's Mainframe reboots to **25%**, everyone
+  heals, and a new district follows the banner. (Only a MEGA VAC-COP you actually destroy drops
+  scrap, and only a bot you finish yourself counts for quests: the self-destruct pays nothing.)
+
+**Test it without playing:** `--mainframe=25 --heat=100 --heat_hold=30` drains to 0% (a last raid, no
+breach). `--mainframe=0 --heat=100 --heat_hold=30 --breach_warning=2 --breach_seconds=3 --breach_log=60`
+runs the siren, the breach and the Miracle. Add `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`
+to feed scrap in time.
 
 **Where it lives:** the rules in `scripts/mainframe.gd`, the tunnel, gate and camera in `scripts/hub.gd`
 (`_build_breach_tunnel`), the horde in `scripts/roomba_patrol.gd`, the bots' behaviour in
@@ -823,10 +839,10 @@ in `scripts/npcs/npc.gd`.
 | Lil' Mittens | Gold-Tooth Gus | PAW-PISTOL | slower, wilder yellow shots |
 
 **Tuning (no code):**
-- **Mainframe** in `main.tscn` > **Sewer Breach (0%)**: Breach Seconds, Breach Banner Seconds,
-  Breach Reboot Charge.
-- **Roombas** in `main.tscn` > **SEWER BREACH horde**: Breach Roombas, Breach Bosses, Breach Spawns
-  Per Frame. **This is the difficulty knob:** the horde arrives almost at once, so if nobody ever
+- **Mainframe** in `main.tscn` > **Sewer Breach (0%)**: Breach Warning Seconds (the siren), Breach
+  Seconds, Breach Banner Seconds, Breach Reboot Charge.
+- **Roombas** in `main.tscn` > **SEWER BREACH horde**: Miracle Blast Seconds, Breach Roombas, Breach
+  Bosses, Breach Spawns Per Frame. **This is the difficulty knob:** the horde arrives almost at once, so if nobody ever
   survives, lower Breach Roombas first (or Squirt Drone Chance under **Patrol Mix**).
 - **Hub** and **GangHub** > **Breach Tunnel** (size, gate speed, red light), **Breach Camera** (where it
   is, what it looks at, how wide), and **Gang** > Line Breach (what the boss shouts).
@@ -997,10 +1013,12 @@ at the top of `quest_data.gd`). A new kind would be added in `quest_manager.gd` 
 
 **Tuning the hub** (select **Hub**): **Size** (Half Width, Half Length, Height, Channel Width),
 **Spawning** (Spawn Spot = where cats appear, Surface Spot = where Don sends you in the city),
-**Mood** (the sewer fog colour, fog glow and ambient light).
+**Mood** (the sewer fog colour, fog glow and ambient light), **Gang Look** (floor, wall, crate and
+water colours, work lights, shop banner and light, and Wood Supports for timber posts and beams).
+**GangHub** has its own values: the Burrow's dug-out rust and amber against the Catleones' green.
 
-**The mood switch:** while *your* camera is in the hub, the moon and rain switch off and the fog
-turns green — on your screen only. Go back up and the rainy night city returns.
+**The mood switch:** while *your* camera is in a sewer, the moon and rain switch off and the fog
+turns that sewer's colour — on your screen only. Go back up and the rainy night city returns.
 
 ### Fish Heist: districts, manholes and payphones
 

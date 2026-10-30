@@ -102,6 +102,7 @@ extends Node
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
 ##   --breach_seconds=S (host) a SEWER BREACH lasts S seconds (a short one tests THE 1% MIRACLE)
+##   --breach_warning=S (host) the siren before a SEWER BREACH lasts S seconds
 ##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
 ##   --breach_log=N    (either) every N frames print the breach's state ("DevCapture breach" lines)
 ##   --breach_knock=N  (host) N frames in, drop a bot beside every breach NPC (they get knocked flat)
@@ -258,6 +259,8 @@ func _ready() -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED  # (--hold=shoot only fires with the mouse in the game)
 		if args.has("breach_seconds"):
 			Mainframe.instance.breach_seconds = float(args["breach_seconds"])
+		if args.has("breach_warning"):
+			Mainframe.instance.breach_warning_seconds = float(args["breach_warning"])
 		if args.has("breach_log"):
 			_breach_log(int(args["breach_log"]))
 		if args.has("breach_wipe"):

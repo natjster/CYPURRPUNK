@@ -76,8 +76,6 @@ signal action_chosen(action: String, cat: CatPlayer)
 @export var breach_sweep: bool = false
 ## How wildly they aim (1 = normal stormtrooper, 2 = twice as bad).
 @export var breach_wildness: float = 1.0
-## Blast guns only: how many times the shot bounces before it goes off (a cucumber grenade).
-@export var breach_bounces: int = 0
 
 @export_group("Sewer breach tuning")
 ## How far off target a shot can go, sideways and up/down (radians).
@@ -131,8 +129,6 @@ var _hub: UndergroundHub  # the sewer we defend (null = we stay out of breaches)
 var _gun: Weapon
 var _muzzle: Node3D
 var _cry_label: Label3D
-var _lob_mesh: Mesh  # what a blast gun's shot looks like in the air
-var _lob_material: ShaderMaterial
 var _aim_at: Vector3
 var _think_left: float = 0.0
 var _fire_left: float = 0.0
@@ -353,27 +349,6 @@ func _take_up_gun() -> void:
 	_gun.position = breach_gun_spot
 	(_model if _model != null else self as Node3D).add_child(_gun)
 	_muzzle = _gun.get_node_or_null("Model/Muzzle")
-	if _gun.blast_radius > 0.0:
-		_make_lob_look()
-
-
-## A blast gun's shot flies in an arc you can see: a ball of yarn, or (if it bounces) a cucumber.
-func _make_lob_look() -> void:
-	if breach_bounces > 0:
-		var cucumber := CapsuleMesh.new()
-		cucumber.radius = 0.1
-		cucumber.height = 0.5
-		cucumber.radial_segments = 6
-		cucumber.rings = 1
-		_lob_mesh = cucumber
-	else:
-		var yarn := SphereMesh.new()
-		yarn.radius = 0.16
-		yarn.height = 0.32
-		yarn.radial_segments = 7
-		yarn.rings = 3
-		_lob_mesh = yarn
-	_lob_material = LevelKit.psx_material({"albedo_color": _gun.blast_color, "emission_color": _gun.blast_color, "emission_energy": 3.0})
 
 
 func _fight(delta: float) -> void:
@@ -462,7 +437,8 @@ func _shoot() -> void:
 	var from := _muzzle.global_position if _muzzle != null else _gun.global_position
 	if _gun.blast_radius > 0.0:
 		_gun.draw_shot(PackedVector3Array(), 0.0)  # flash and bang now, the blast when it lands
-		_lob(from, _aim_at + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)) * breach_lob_scatter)
+		var landing := _aim_at + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)) * breach_lob_scatter
+		_gun.lob(from, landing, breach_lob_height, breach_lob_seconds, _lob_landed)  # (the same shot a player's gun fires)
 		return
 	var aim := _sprayed_aim((_aim_at - from).normalized())
 	var ends := PackedVector3Array()
@@ -506,35 +482,8 @@ func _hurt_bot(bot: Enemy, direction: Vector3) -> void:
 	bot.take_hit(0, breach_damage, breach_stun, Motion.flat(direction).normalized() * breach_push, 0.0)
 
 
-## A blast gun's shot: arcs through the air on every computer, bouncing if it's meant to.
-func _lob(from: Vector3, to: Vector3) -> void:
-	var ball := MeshInstance3D.new()
-	ball.mesh = _lob_mesh
-	ball.material_override = _lob_material
-	ball.top_level = true
-	add_child(ball)
-	ball.global_position = from
-	var tween := ball.create_tween()
-	tween.tween_method(_fly.bind(ball, from, to, breach_lob_height), 0.0, 1.0, breach_lob_seconds)
-	var last := to
-	var onward := Motion.flat(to - from).normalized() * 2.0
-	for i in breach_bounces:
-		tween.tween_method(_fly.bind(ball, last, last + onward, 0.8), 0.0, 1.0, breach_lob_seconds * 0.4)
-		last += onward
-	tween.tween_callback(_lob_landed.bind(ball, last))
-
-
-func _fly(progress: float, ball: MeshInstance3D, from: Vector3, to: Vector3, height: float) -> void:
-	ball.global_position = from.lerp(to, progress) + Vector3.UP * height * 4.0 * progress * (1.0 - progress)
-	ball.rotation.x = progress * TAU
-
-
-## It lands: the gun's own blast, and on the host a hit for each bot in range.
-func _lob_landed(ball: MeshInstance3D, where: Vector3) -> void:
-	ball.queue_free()
-	if _gun == null:
-		return  # the breach ended while it was in the air
-	_gun.draw_blast(where)
+## It landed (the gun has drawn the blast): on the host, a hit for each bot in range.
+func _lob_landed(where: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
 	for node in get_tree().get_nodes_in_group(Enemy.GROUP):

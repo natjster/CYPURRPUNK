@@ -112,12 +112,12 @@ func _load_catalog() -> void:
 # --- Placing items when a city is built (same result on every computer) ---
 
 func _on_city_generated(city_seed: int) -> void:
-	for id in _world_nodes:
-		_world_nodes[id].queue_free()
-	_world_nodes.clear()
-	world.clear()
+	# The old street goes, but things DROPPED in the sewers stay on the floor: they're the same
+	# sewers in every district. (Dropped ids keep counting up, so these can't be given away twice.)
+	for id in world.keys():
+		if id < FIRST_DROPPED_ID or not UndergroundHub.is_in_hub(world[id].pos):
+			_remove_world_local(id)
 	_spawns.clear()
-	_next_id = FIRST_DROPPED_ID
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + LOOT_SEED_SALT)

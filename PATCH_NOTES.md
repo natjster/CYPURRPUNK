@@ -12,7 +12,7 @@ gives it to you, and starts a fresh draft.
 
 ```text
 ## 🐾 New
-- **THE SEWER BREACH:** let your Mainframe hit 0% and OVERCLEAN comes for your home. Once everyone's back underground, the blast gate on the new north tunnel slides up and 35 bots plus 2 MEGA VAC-COPs pour in. Your sewer is no safe zone any more: guns work, nobody heals. Last 30 seconds with one cat on its feet for a miracle: every bot explodes and your Mainframe reboots to 25%. Get wiped out and the rival gang wins!
+- **THE SEWER BREACH:** let your Mainframe hit 0% and OVERCLEAN comes for your home. You get one last raid at 0% to bring home scrap, then a 15-second siren to feed it in. Fail, and the blast gate on the new north tunnel slides up and 35 bots plus 2 MEGA VAC-COPs pour in. Your sewer is no safe zone any more: guns work, nobody heals. Last 30 seconds with one cat on its feet for a miracle: every bot explodes and your Mainframe reboots to 25%. Get wiped out and the rival gang wins!
 - **The sewer fights back:** when the bots break in, everyone at home grabs a gun! The Don sprays his tommy gun, Nonna lobs bouncing cucumbers, Frankie waves a red laser around the room, and all of them yell battle cries. They couldn't hit a barn, but they'll chip away at the front line. Get a bot too close and they're flat on their back until it's over.
 - **Live feed:** while a rival gang's sewer is being breached, your screen switches to their security camera so you can watch it all go wrong.
 - **SQUIRT-DRONES:** OVERCLEAN's new quadcopters hover above the street, too high for your car. Get caught in their red spotlight and the heat climbs, and they fire water zaps at wherever you're standing, so keep moving! A Yarn-Zooka stun drops them low enough to whack.
@@ -39,6 +39,9 @@ gives it to you, and starts a fresh draft.
 
 ## 🔧 Changes
 - The old ladder in the sewers is gone: a barred tunnel stands in its place.
+- **Each gang has its own sewer now:** the Burrow Gang lives in a rust-and-amber dug-out with timber beams, the Catleones keep their green tunnel.
+- **Yarn-Zooka and Cucumber Launcher shots fly:** they arc through the air and go off where they land, and cucumbers bounce once first. Lead your target! Swap guns mid-flight and the shot is lost.
+- **The 1% Miracle** now sets the bots off one by one in a chain of explosions instead of all at once.
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 - **Golden Koi:** MEGA VAC-COPs no longer drop it. There's just the one hidden in the city now.
 - **Inventory at the stash:** your loot bag now stays visible above your stash.
@@ -48,6 +51,11 @@ gives it to you, and starts a fresh draft.
 
 ## 🐛 Fixes
 - Cars could get stuck in the middle of town at the start of a game instead of waiting at your gang's corner.
+- A Mainframe hitting 0% started the breach instantly, with no time to feed it and no 0% district to hunt for scrap.
+- Items dropped on a sewer floor, including a MEGA VAC-COP's scrap, vanished when a new district started.
+- Breach bots no longer vacuum loot out of your bag.
+- A grazed bot no longer counts as your kill for quests when the Miracle blows it up.
+- Fights in a breached sewer no longer raise the city's heat.
 ```
 
 ## Posted updates

@@ -213,6 +213,13 @@ func explode() -> void:
 	queue_free()  # the spawner removes it on everyone's screen
 
 
+## Host: blow up with nobody to thank for it (THE 1% MIRACLE): no quest kill and no boss drop.
+func self_destruct() -> void:
+	killed_by = 0
+	drop_on_destroy = ""
+	explode()
+
+
 ## For the floating health bar (scripts/ui/hud_health_bars.gd): hidden until a player SHOOTS it
 ## (health is synced, so everyone's HUD shows it once anybody has hit it).
 func health_bar_info() -> Dictionary:

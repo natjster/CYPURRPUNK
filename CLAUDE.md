@@ -182,13 +182,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
   the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N` or `=A,B`
   (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
-- SEWER BREACH (`mainframe.gd`, host `_run_breach`): an active gang at 0% with `players_up_top()==0` -> `_start_breach` RPC (`breached_teams`, `breach_left`,
+- SEWER BREACH (`mainframe.gd`, host `_run_breach`): a gang reaching 0% gets one LAST RAID first (`_had_last_raid[team]` = at 0% as the district starts, `_note_last_raids`, banner; a hack before anyone goes up counts). `doomed_gangs()` = at 0% AND had it. Doomed + `sealed` + `players_up_top()==0` -> siren `_run_warning` / `_set_warning` RPC (`warning_teams`, `warning_left`, `breach_warning_seconds`, line = `breach_text`); `FishHeist._run_deep_clean` holds `new_district` while `breach_coming()`; scrap in time = cancelled. Time up -> `_start_breach` RPC (`breached_teams`, `breach_left`,
   `breach_busy` until the next district; Events `sewer_breached`/`sewer_breach_ended`). `hub.set_breached` = BlastGate (StaticBody, north tunnel `_build_breach_tunnel`) + red pulse. Use `UndergroundHub.is_safe(pos)` (not is_in_hub) for
   "nothing can hurt you" (damage, healing, guns). Horde: `RoombaPatrol._breach_queue`, bots have `breach_hub` (host only): `_can_chase` = anyone in that hub, route `hub.next_stop` (mouth, bridges), `ground_height()` for the drone, no respawns;
-  patrol + FishHeist referee pause on `breach_busy`. Wipeout `_wiped_out` -> banner -> `_after_banner` (all reset to `starting_charge`); miracle = `_miracle` (reboot, bots `explode()` without scrap). Both end in `Game.new_district()`. KO in a hub keeps gear and
+  patrol + FishHeist referee pause on `breach_busy`. Wipeout `_wiped_out` -> banner -> `_after_banner` (all reset to `starting_charge`); miracle = `_miracle` (reboot; `RoombaPatrol._set_off_bots` stuns the bots, then `Enemy.self_destruct()` one by one over `miracle_blast_seconds`: no kill credit, no drop). `HeatMeter.add_heat` ignores everything while `breach_busy`; breach bots don't steal loot; `ItemManager._on_city_generated` keeps drops on sewer floors. Both end in `Game.new_district()`. KO in a hub keeps gear and
   stays lying (`_knocked_out`), `_on_sewer_breach_ended` wakes + heals. LIVE FEED: `feed_camera_for(cat)`, `is_spectating(cat)` (blocks via `cat._menu_open`), `GameScreen._show_live_feed`, line = `breach_text` in DropOff, `Hud.banner`.
   NPCs FIGHT (`npc.gd`, parent is a hub + `breach_weapon`, polls `hub.breached`; `Npc.fighting` blocks E): instance a real gun scene on Model, draw with `Weapon.draw_shot`/`draw_blast`
-  (no holder, no RPC: each computer sprays locally, only the host's shots call `take_hit`, city_heat 0). Blast guns = visual `_lob` arc, host hits on landing. Knockdown is host-decided (`_knocked_down` RPC).
+  (no holder, no RPC: each computer sprays locally, only the host's shots call `take_hit`, city_heat 0). Blast guns = `Weapon.lob(from, to, height, seconds, on_landed)` for players and NPCs alike (exports `lob_*`, bounces in the gun scene; `draw_shot` lobs, the holder's computer `_blast`s on landing; a shot in the air dies with the gun), NPC host hits on landing. Knockdown is host-decided (`_knocked_down` RPC).
   Targets = group `Enemy.GROUP`. Cries = `BattleCryLabel`, a `hud_name_tags` marker (a real 3D label is unreadable at 240p). Loadouts on the NPC instances in main.tscn.
   Test: `--mainframe=0|75,0 --breach_seconds=S --breach_wipe=N --breach_log=N --breach_knock=N`.
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
@@ -280,7 +280,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   copying the cat's `camera` each frame (GameScreen process_priority 100), and a separate "Post" SubViewport
   whose Dither reads it via psx_post `use_source_texture` (a hint_screen_texture ColorRect inside a shared-world
   viewport showed player 1's picture). Layout from `shown_seats()` (cats with `reads_input`; [0] while
-  `Hud.menu_open()`), `Settings.split_side_by_side`. Per-pane fog: `hub.environment_for(in_hub)` (null = world's);
+  `Hud.menu_open()`), `Settings.split_side_by_side`. Per-pane fog: `hub.environment_for(camera position)` (null = world's; `UndergroundHub.mood_at`: city or that sewer's gang; each hub's Mood + Gang Look exports);
   moon/music: anyone up top (`view_cameras()`). HUD frame = pane 0 (whole picture while `Hud.wants_input()`).
   Test: `--join_pad=1,2,3`, `--setting=split_side_by_side:false`.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.

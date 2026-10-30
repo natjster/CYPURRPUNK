@@ -83,6 +83,8 @@ const SQUIRT_DRONE_SCENE: PackedScene = preload("res://scenes/squirt_drone.tscn"
 @export var breach_bosses: int = 2
 ## How many pour in per physics frame.
 @export var breach_spawns_per_frame: int = 2
+## THE 1% MIRACLE: the surviving bots go off one by one over this many seconds (not all at once).
+@export var miracle_blast_seconds: float = 2.5
 
 ## The one patrol (RoombaPatrol.instance).
 static var instance: RoombaPatrol
@@ -107,6 +109,10 @@ var _patrolling: bool = false
 var _rng := RandomNumberGenerator.new()
 ## Host: the bots still to pour in: [{"hub": UndergroundHub, "boss": bool}, ...].
 var _breach_queue: Array[Dictionary] = []
+## Host: THE 1% MIRACLE's bots still to go off, the seconds between them, and until the next one.
+var _blast_queue: Array[Roomba] = []
+var _blast_gap: float = 0.0
+var _blast_wait: float = 0.0
 
 
 func _enter_tree() -> void:
@@ -139,8 +145,9 @@ func _on_sewer_breached(teams: Array) -> void:
 			_breach_queue.append({"hub": hub, "boss": true})
 
 
-## The breach is over. THE 1% MIRACLE: every bot blows up at once. A wipeout: they just go.
-## (Only bosses SHOT in the breach drop scrap: this big bang doesn't pay out.)
+## The breach is over. THE 1% MIRACLE: every bot freezes, then they blow up one after another (one
+## big bang of 37 explosions in a frame hurts the sound and the graphics). A wipeout: they just go.
+## (Only bosses SHOT in the breach drop scrap: self_destruct doesn't pay out.)
 func _on_sewer_breach_ended(survived: bool) -> void:
 	if not multiplayer.is_server():
 		return
@@ -150,10 +157,23 @@ func _on_sewer_breach_ended(survived: bool) -> void:
 		if roomba == null or roomba.breach_hub == null:
 			continue
 		if survived:
-			roomba.drop_on_destroy = ""
-			roomba.explode()
+			roomba._on_stunned(Enemy.MAX_STUN_SECONDS)
+			_blast_queue.append(roomba)
 		else:
 			roomba.queue_free()
+	_blast_queue.shuffle()
+	_blast_gap = miracle_blast_seconds / maxi(_blast_queue.size(), 1)
+	_blast_wait = 0.0
+
+
+## Host: set off the next bots of THE 1% MIRACLE. (A cat may still finish one off first.)
+func _set_off_bots(delta: float) -> void:
+	_blast_wait -= delta
+	while _blast_wait <= 0.0 and not _blast_queue.is_empty():
+		_blast_wait += _blast_gap
+		var roomba: Roomba = _blast_queue.pop_back()
+		if is_instance_valid(roomba):
+			roomba.self_destruct()
 
 
 ## Host: one bot of the horde, in its sewer's breach tunnel.
@@ -174,6 +194,7 @@ func start_district() -> void:
 		old.queue_free()
 	_patrolling = true
 	_breach_queue.clear()
+	_blast_queue.clear()
 	_respawn_at.clear()
 	deep_clean_extra = 0
 	_kills_toward_boss = 0
@@ -225,6 +246,7 @@ func _physics_process(delta: float) -> void:
 		for i in mini(breach_spawns_per_frame, _breach_queue.size()):
 			var bot: Dictionary = _breach_queue.pop_front()
 			_spawn_breach_bot(bot.hub, bot.boss)
+		_set_off_bots(delta)
 		return
 	for i in range(_respawn_at.size() - 1, -1, -1):
 		if _clock >= _respawn_at[i]:

@@ -30,8 +30,11 @@ extends Node
 ##        25%  30 heat (heat_at_25: heat level 2)
 ##         0%  50 heat (heat_at_0: heat level 3) + 1 MEGA VAC-COP already up top
 ##                                (roomba_patrol.gd), so you can hunt it for scrap.
-##   - A gang that hits 0% (hacked or drained) gets the SEWER BREACH, as soon as no cat is left up top
-##     and the knocked-out ones are home (feeding it scrap before that saves it):
+##   - A gang that hits 0% (hacked or drained) gets ONE LAST RAID first: the next district runs at 0%
+##     CRITICAL, with its MEGA VAC-COP up top to hunt for scrap. If that district is sealed with the
+##     gang still at 0%, then once no cat is left up top and the knocked-out ones are home a siren
+##     counts down breach_warning_seconds in the sewers. Feeding scrap in time stops it. If not,
+##     the SEWER BREACH starts:
 ##       * The gate of its sewer's north tunnel slides up and a horde pours in (roomba_patrol.gd).
 ##         That sewer stops being a safe zone: guns work, nobody heals, and a cat at 0 HP stays
 ##         where it fell. Nobody can go up, and the next district waits (hub.gd, fish_heist.gd).
@@ -79,6 +82,8 @@ signal charge_changed
 @export var hack_per_scrap: float = 25.0
 
 @export_group("Sewer Breach (0%)")
+## The siren in the sewers before a breach: this many seconds to get scrap to the Mainframe.
+@export var breach_warning_seconds: float = 15.0
 ## How long a breached gang must last (seconds). One cat on its feet at the end = THE 1% MIRACLE.
 @export var breach_seconds: float = 30.0
 ## How long the WIPEOUT / MIRACLE banner stays up before the new district (seconds).
@@ -139,6 +144,11 @@ var breach_left: float = 0.0
 ## True from the moment a breach starts until the next district is on its way (every computer):
 ## nobody goes up, and the heist and the patrol wait.
 var breach_busy: bool = false
+## The gangs the siren is counting down for, and the seconds left (every computer).
+var warning_teams: Array[int] = []
+var warning_left: float = 0.0
+## Host: which gangs (by team number) started this district at 0%: they've had their last raid.
+var _had_last_raid: Array[bool] = []
 ## Host: seconds left of the WIPEOUT / MIRACLE banner, and did the gang survive?
 var _banner_left: float = 0.0
 var _survived: bool = false
@@ -156,6 +166,7 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	for team in Teams.count():
 		charges.append(starting_charge)
+		_had_last_raid.append(false)
 	add_to_group(GameSystems.GROUP)  # new districts / late joiners (game_systems.gd)
 	Events.district_sealed.connect(_on_district_sealed)  # (scripts/events.gd)
 
@@ -268,13 +279,18 @@ func boss_at_start() -> bool:
 	return tier_of(lowest_charge()) == Tier.CRITICAL
 
 
-## The gangs at 0% that a breach is waiting for.
+## Host: the gangs at 0% that have had their last raid: a breach is waiting for them.
 func doomed_gangs() -> Array[int]:
 	var doomed: Array[int] = []
 	for team in active_gangs():
-		if charge_of(team) <= 0.0:
+		if charge_of(team) <= 0.0 and _had_last_raid[team]:
 			doomed.append(team)
 	return doomed
+
+
+## Host: must the next district wait, because a breach (or its siren) comes first? (fish_heist.gd)
+func breach_coming() -> bool:
+	return not doomed_gangs().is_empty()
 
 
 ## Is this gang's sewer being breached right now?
@@ -297,6 +313,10 @@ func feed_camera_for(cat: CatPlayer) -> Camera3D:
 
 ## The line at the top of this cat's screen during a breach.
 func breach_text(cat: CatPlayer) -> String:
+	if not warning_teams.is_empty():
+		if cat.team in warning_teams:
+			return "FEED THE MAINFRAME! BREACH IN %ds" % ceili(warning_left)
+		return "%s MAINFRAME FAILING \u2014 %ds" % [Teams.SHORT_NAMES[warning_teams[0]], ceili(warning_left)]
 	var seconds := " \u2014 %ds" % ceili(breach_left) if breach_left > 0.0 else ""
 	if breached_teams.is_empty():
 		return "SEWER SECURED"  # (THE 1% MIRACLE: the banner is up, the next district is coming)
@@ -314,6 +334,7 @@ func start_district() -> void:
 	_district_running = true
 	_district_lowest = lowest_charge()
 	_set_charges.rpc(charges, _district_lowest >= MAX_CHARGE)
+	_note_last_raids()
 	print("[Mainframe] District starts: charges %s, lowest active %d%%" % [charges, int(_district_lowest)])
 
 
@@ -339,10 +360,7 @@ func _run_breach(delta: float) -> void:
 			_after_banner()
 		return
 	if not breach_busy:
-		if _district_running and Game.instance.player_count() > 0 and Game.instance.players_up_top() == 0:
-			var doomed := doomed_gangs()
-			if not doomed.is_empty():
-				_start_breach.rpc(doomed, breach_seconds)
+		_run_warning(delta)
 		return
 	breach_left -= delta
 	var wiped := _wiped_out()
@@ -350,6 +368,61 @@ func _run_breach(delta: float) -> void:
 		_wipeout(wiped)
 	elif breach_left <= 0.0:
 		_miracle()
+
+
+## Host: the siren. It starts when a doomed gang's last district is over and every cat is home, and
+## counts down while scrap can still save them. Time up = the breach.
+func _run_warning(delta: float) -> void:
+	var doomed := doomed_gangs()
+	if warning_teams.is_empty():
+		if _district_running and not doomed.is_empty() and FishHeist.instance.sealed \
+				and Game.instance.player_count() > 0 and Game.instance.players_up_top() == 0:
+			_set_warning.rpc(doomed, breach_warning_seconds)
+		return
+	warning_left -= delta
+	if doomed.is_empty():
+		_set_warning.rpc([], 0.0)  # scrap got there in time: on to the next district
+	elif warning_left <= 0.0:
+		_start_breach.rpc(doomed, breach_seconds)
+	elif doomed != warning_teams:
+		_set_warning.rpc(doomed, warning_left)  # one of two gangs fed theirs
+
+
+## Host -> everyone (and a late joiner): the siren is counting down for these gangs, or (no gangs)
+## it stopped because they were saved.
+@rpc("authority", "call_local", "reliable")
+func _set_warning(teams: Array, seconds: float) -> void:
+	var was_quiet := warning_teams.is_empty()
+	warning_teams.assign(teams)
+	warning_left = seconds
+	if teams.is_empty():
+		Sound.play("extract")
+		Hud.banner("MAINFRAME BACK ONLINE!\nTHE BREACH IS OFF", 3.0, TIER_COLORS[Tier.ONLINE])
+	elif was_quiet:
+		Sound.play("boss_siren")
+		for cat in Game.instance.playing_cats():
+			if cat.team in warning_teams:
+				Hud.banner("YOUR MAINFRAME IS DYING!\nFEED IT SCRAP OR THEY BREAK IN", 3.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
+
+
+## Host: note which gangs are on their last raid (at 0% as this district starts), and tell them.
+func _note_last_raids() -> void:
+	var told: Array[int] = []
+	for team in charges.size():
+		var last_raid := charge_of(team) <= 0.0
+		if last_raid and not _had_last_raid[team] and team in active_gangs():
+			told.append(team)
+		_had_last_raid[team] = last_raid
+	if not told.is_empty():
+		_last_raid_warning.rpc(told)
+
+
+## Host -> everyone: these gangs start a district at 0%. Their cats get the news.
+@rpc("authority", "call_local", "reliable")
+func _last_raid_warning(teams: Array) -> void:
+	for cat in Game.instance.playing_cats():
+		if cat.team in teams:
+			Hud.banner("MAINFRAME CRITICAL: LAST CHANCE!\nBRING HOME SCRAP OR THE SEWER FALLS", 5.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
 
 
 ## Host: the breached gangs with nobody left on their feet.
@@ -408,6 +481,8 @@ func _after_banner() -> void:
 ## Host -> everyone (and a late joiner): these gangs' sewers are breached, for this many seconds.
 @rpc("authority", "call_local", "reliable")
 func _start_breach(teams: Array, seconds: float) -> void:
+	warning_teams.clear()
+	warning_left = 0.0
 	breached_teams.assign(teams)
 	breach_left = seconds
 	breach_busy = true
@@ -448,8 +523,9 @@ func _breach_done() -> void:
 
 ## Every computer but the host: count our copy of the clock down (for the HUD line).
 func _process(delta: float) -> void:
-	if not multiplayer.is_server() and breach_left > 0.0:
+	if not multiplayer.is_server():
 		breach_left = maxf(breach_left - delta, 0.0)
+		warning_left = maxf(warning_left - delta, 0.0)
 
 
 ## Host: if nobody has gone up yet and the lowest active charge changed, this district starts over
@@ -458,6 +534,7 @@ func _refresh_district() -> void:
 	var heist := FishHeist.instance
 	if not _district_running or heist == null or not heist.went_up.is_empty() or heist.sealed:
 		return
+	_note_last_raids()  # (nobody has gone up, so a hack down to 0% makes THIS their last raid)
 	var lowest := lowest_charge()
 	if lowest == _district_lowest:
 		return
@@ -547,5 +624,7 @@ func _hacked(team: int, target: int) -> void:
 ## Host -> a computer that just joined.
 func send_state_to(peer: int) -> void:
 	_set_charges.rpc_id(peer, charges, overclock_active)
+	if not warning_teams.is_empty():
+		_set_warning.rpc_id(peer, warning_teams, warning_left)
 	if not breached_teams.is_empty():
 		_start_breach.rpc_id(peer, breached_teams, breach_left)

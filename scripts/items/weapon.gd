@@ -74,6 +74,19 @@ extends HeldItem
 @export var blast_time: float = 0.3
 ## The sound of the blast (res://sounds/sfx/, no .wav).
 @export var blast_sound: String = "explode"
+## How fast the shot flies to where you aimed (metres per second), and the longest it may take.
+@export var lob_speed: float = 30.0
+@export var lob_max_seconds: float = 1.2
+## How high its arc goes on a long shot (metres; short shots arc lower).
+@export var lob_height: float = 3.0
+## How many hops it takes along the floor before it goes off (a cucumber grenade). A wall stops them.
+@export var lob_bounces: int = 0
+## How far (metres), how high and how long (seconds) each hop is.
+@export var lob_bounce_distance: float = 2.0
+@export var lob_bounce_height: float = 0.8
+@export var lob_bounce_seconds: float = 0.3
+## What flies through the air. Empty = a ball of yarn.
+@export var lob_mesh: Mesh
 
 @export_group("Look")
 ## Bolt colour (shifts toward hot_color as the gun heats up).
@@ -104,6 +117,7 @@ var _coil: MeshInstance3D
 var _coil_material: ShaderMaterial
 var _bolt_mesh := BoxMesh.new()
 var _bolt_material: ShaderMaterial
+var _lob_material: ShaderMaterial
 var _rng := RandomNumberGenerator.new()  # spread only — NOT the city's RNG
 
 
@@ -174,8 +188,7 @@ func _fire_bolt() -> Vector3:
 	var end: Vector3 = hit.position if hit else from + aim * max_range
 
 	if blast_radius > 0.0:
-		_blast(end, aim)  # the blast does the hitting (so what the bolt struck isn't hit twice)
-		return end
+		return end  # it flies there first: the blast does the hitting when it lands (draw_shot)
 	var target := Hit.target_of(hit.collider) if hit else null
 	if target != null:
 		var info := _make_hit(aim, hit.position)
@@ -243,15 +256,78 @@ func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 	for i in ends.size():
 		# A scattergun's pellets fan out from Bolt Color to Hot Color.
 		var pellet_color := bolt_color.lerp(hot_color, float(i) / (ends.size() - 1)) if ends.size() > 1 else color
-		_draw_bolt(start, ends[i], pellet_color)
 		if blast_radius > 0.0:
-			draw_blast(ends[i])
+			var length := start.distance_to(ends[i])
+			lob(start, ends[i], minf(lob_height, length * 0.2), minf(length / lob_speed, lob_max_seconds), _shot_landed)
+		else:
+			_draw_bolt(start, ends[i], pellet_color)
 
 	if _muzzle_flash != null:
 		_muzzle_flash.light_color = color
 	_flash_time = 0.05
 	if shots_seen % maxi(shots_per_sound, 1) == 0:
 		Sound.play_at(shot_sound, start, -4.0)  # every computer runs this, so play it just here
+
+
+## Every computer: our holder's shot landed. Their computer does the hitting, like any shot.
+func _shot_landed(where: Vector3) -> void:
+	if holder != null and PlayerId.is_local(holder.player_id):
+		_blast(where, -holder.global_basis.z)
+
+
+## A blast gun's shot: arcs through the air from "from" to "to" in "seconds", hops on if this gun's
+## shots bounce, then the blast. on_landed(where) runs after that. Every computer flies its own
+## copy. It belongs to the gun: stop holding the gun and any shot still in the air is lost.
+func lob(from: Vector3, to: Vector3, height: float, seconds: float, on_landed: Callable) -> void:
+	if _lob_material == null:
+		_lob_material = LevelKit.psx_material({"albedo_color": blast_color, "emission_color": blast_color, "emission_energy": 3.0})
+	if lob_mesh == null:
+		var yarn := SphereMesh.new()
+		yarn.radius = 0.16
+		yarn.height = 0.32
+		yarn.radial_segments = 7
+		yarn.rings = 3
+		lob_mesh = yarn
+	var ball := MeshInstance3D.new()
+	ball.mesh = lob_mesh
+	ball.material_override = _lob_material
+	ball.top_level = true
+	add_child(ball)
+	ball.global_position = from
+	var path := _lob_hops(from, to)
+	var tween := ball.create_tween()
+	tween.tween_method(_fly.bind(ball, from, to, height), 0.0, 1.0, seconds)
+	for i in range(1, path.size()):
+		tween.tween_method(_fly.bind(ball, path[i - 1], path[i], lob_bounce_height), 0.0, 1.0, lob_bounce_seconds)
+	tween.tween_callback(_lob_landed.bind(ball, path[-1], on_landed))
+
+
+## Where a lobbed shot touches down: "to", then a hop onward for each bounce, while there's a
+## floor under it and no wall in the way.
+func _lob_hops(from: Vector3, to: Vector3) -> PackedVector3Array:
+	var path := PackedVector3Array([to])
+	var onward := Motion.flat(to - from).normalized() * lob_bounce_distance
+	var space := get_world_3d().direct_space_state
+	var lift := Vector3.UP * 0.3
+	for i in lob_bounces:
+		var last := path[-1]
+		var has_floor := not space.intersect_ray(PhysicsRayQueryParameters3D.create(last + lift, last - lift * 2.0)).is_empty()
+		var wall := space.intersect_ray(PhysicsRayQueryParameters3D.create(last + lift, last + lift + onward))
+		if not has_floor or not wall.is_empty():
+			break
+		path.append(last + onward)
+	return path
+
+
+func _fly(progress: float, ball: MeshInstance3D, from: Vector3, to: Vector3, height: float) -> void:
+	ball.global_position = from.lerp(to, progress) + Vector3.UP * height * 4.0 * progress * (1.0 - progress)
+	ball.rotation.x = progress * TAU
+
+
+func _lob_landed(ball: MeshInstance3D, where: Vector3, on_landed: Callable) -> void:
+	ball.queue_free()
+	draw_blast(where)
+	on_landed.call(where)
 
 
 ## One bolt and the little spark where it landed.

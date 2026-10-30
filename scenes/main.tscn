@@ -228,7 +228,6 @@ breach_cries = PackedStringArray("NOBODY RUINS NONNA'S GRAVY!")
 knockdown_cry = "AVENGE NONNA'S GRAVY!"
 breach_fire_seconds = 1.8
 breach_color = Color(0.35, 1, 0.3, 1)
-breach_bounces = 1
 
 [node name="FrankieEspresso" parent="Hub" instance=ExtResource("q_frankie_espresso")]
 position = Vector3(-11.5, 0, 10.6)
@@ -261,6 +260,18 @@ line_had_your_trip = "You had your fun up there, sugar. That hatch is shut. Sit 
 phone_too_early = "Sugar! You're alive. Good. Listen - there's no way back down yet. OVERCLEAN's plugged every pipe we know, and Clawd's diggin' with a spoon. Don't ask. Grab what you can. When we break through, every phone in town's gonna ring."
 phone_exit_open = "There's my favourite stray! Clawd broke through - spoon and all. The hole's on the {where} side, it's on your map. Get home before a Catleone sniffs it out!"
 phone_sealed = "...sugar? They found our hole. We sealed it. I'm sorry. Nobody's comin'. Go out like a legend."
+sewer_fog_color = Color(0.09, 0.05, 0.02, 1)
+sewer_fog_albedo = Color(0.95, 0.68, 0.4, 1)
+sewer_ambient_color = Color(0.6, 0.42, 0.26, 1)
+concrete_tint = Color(0.55, 0.42, 0.3, 1)
+wall_tint = Color(0.42, 0.3, 0.2, 1)
+crate_tint = Color(0.95, 0.6, 0.25, 1)
+water_tint = Color(0.14, 0.07, 0.02, 1)
+water_glow_color = Color(1, 0.5, 0.12, 1)
+work_light_color = Color(1, 0.82, 0.55, 1)
+banner_color = Color(0.45, 0.17, 0.02, 1)
+shop_light_color = Color(1, 0.55, 0.12, 1)
+wood_supports = true
 
 [node name="Pawnie" parent="GangHub" instance=ExtResource("30_pawnie")]
 position = Vector3(8, 0, -16)
@@ -320,7 +331,6 @@ breach_weapon = "cucumber_launcher"
 breach_cries = PackedStringArray("EAT GREEN VEGGIES, TIN CANS!")
 breach_fire_seconds = 1.8
 breach_color = Color(0.35, 1, 0.3, 1)
-breach_bounces = 1
 
 [node name="Rain" parent="." instance=ExtResource("9_rain")]
 

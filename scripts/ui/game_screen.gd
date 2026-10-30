@@ -524,7 +524,7 @@ func _follow_cameras() -> void:
 		camera.near = source.near
 		camera.far = source.far
 		var in_hub := UndergroundHub.is_in_hub(camera.global_position)
-		camera.environment = game.hub.environment_for(in_hub)
+		camera.environment = game.hub.environment_for(camera.global_position)
 		pane.rain.visible = not in_hub
 		pane.rain.emitting = not in_hub
 

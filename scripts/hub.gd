@@ -53,6 +53,8 @@ static var by_team := {}
 
 ## Anything below this height is "in the hub" (the city floor is at 0, the hub at -200).
 const DEPTH_LINE: float = -100.0
+## mood_at's answer up in the city (down in a sewer it's that sewer's gang number).
+const CITY_MOOD: int = -1
 
 @export_group("Gang")
 ## Which gang lives here (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang).
@@ -146,6 +148,23 @@ const DEPTH_LINE: float = -100.0
 @export var sewer_ambient_color: Color = Color(0.35, 0.55, 0.45)
 @export var sewer_ambient_energy: float = 0.6
 
+@export_group("Gang Look")
+## What sets each gang's sewer apart (GangHub's are set in main.tscn: rust and amber). Floor, walls
+## and the crates' neon grid:
+@export var concrete_tint: Color = Color(0.45, 0.5, 0.46)
+@export var wall_tint: Color = Color(0.3, 0.36, 0.33)
+@export var crate_tint: Color = Color(0.3, 0.9, 0.8)
+## The water's colour, and the glow on it and coming up off it.
+@export var water_tint: Color = Color(0.03, 0.12, 0.09)
+@export var water_glow_color: Color = Color(0.2, 1, 0.7)
+## The hanging work lights.
+@export var work_light_color: Color = Color(1, 0.65, 0.32)
+## The banner over the shop and the shop's light.
+@export var banner_color: Color = Color(0.35, 0.02, 0.03)
+@export var shop_light_color: Color = Color(1, 0.2, 0.15)
+## On = timber posts and roof beams, like a tunnel dug by paw (the Burrow Gang's).
+@export var wood_supports: bool = false
+
 @export_group("Music")
 ## Music down here and up top: file names in res://sounds/music/ (without .wav). "" = silence.
 @export var hub_music: String = "hub"
@@ -162,11 +181,12 @@ var npc: Npc
 
 ## Glow colours of the boxes on the Black Markitten's shelves.
 const SHOP_GOODS_COLORS: Array[Color] = [Color(1, 0.35, 0.7), Color(0.3, 1, 0.35), Color(0.3, 0.8, 1), Color(1, 0.8, 0.2)]
-var _in_hub_view: bool = false
+## The mood the world's look is on now (mood_at).
+var _view_mood: int = CITY_MOOD
 var _city_mood := {}  # the night-city fog/ambient values, to put back when you go up
-## Split screen: a copy of the world's look with the OTHER mood (sewer while player 1 is up top,
-## city while they're down here), for screens whose camera is somewhere else. Made when needed.
-var _other_mood: Environment = null
+## Split screen: copies of the world's look with the OTHER moods (by mood_at number), for screens
+## whose camera is somewhere else. Made when needed.
+var _other_moods := {}
 
 var _concrete: ShaderMaterial
 var _wall: ShaderMaterial
@@ -174,6 +194,7 @@ var _water: ShaderMaterial
 var _metal: ShaderMaterial
 var _cardboard: ShaderMaterial
 var _crate: ShaderMaterial
+var _timber: ShaderMaterial
 var _neon: ShaderMaterial
 var _pitch_black: ShaderMaterial
 ## True while THIS sewer is breached (set on every computer by set_breached): no safe zone here,
@@ -234,7 +255,7 @@ func _ready() -> void:
 		"ambient_light_color": _environment.ambient_light_color,
 		"ambient_light_energy": _environment.ambient_light_energy,
 	}
-	Settings.changed.connect(func(): _other_mood = null)  # e.g. VOLUMETRIC FOG changed: copy it again
+	Settings.changed.connect(func(): _other_moods.clear())  # e.g. VOLUMETRIC FOG changed: copy it again
 
 
 ## True if this spot is down in a hub, any gang's (the safe zone).
@@ -347,10 +368,11 @@ func _process(_delta: float) -> void:
 	if self != instance:
 		return  # the fog / music are the whole world's: Team 0's hub runs them
 	var camera := get_viewport().get_camera_3d()
-	var in_hub := camera != null and is_in_hub(camera.global_position)
-	if in_hub != _in_hub_view:
-		_in_hub_view = in_hub
-		_update_mood(in_hub)
+	var mood := mood_at(camera.global_position) if camera != null else CITY_MOOD
+	if mood != _view_mood:
+		_view_mood = mood
+		_update_mood(mood)
+	var in_hub := mood != CITY_MOOD
 	# Split screen: is ANY of this computer's players up top? Then the moon shines (it lights
 	# the whole world, so it can't be on for one screen only) and the city music plays.
 	var anyone_up := not in_hub
@@ -384,43 +406,60 @@ func _update_mainframe_crt() -> void:
 	_crt_light.light_energy = 2.5 if flash_on else 0.6
 
 
-## Split screen: the look a screen whose camera is in the hub (or not) should use, or null for
-## "the world's own look" (when it matches player 1's screen). game_screen.gd asks every frame.
-func environment_for(in_hub: bool) -> Environment:
-	if in_hub == _in_hub_view:
+## Which mood a camera here gets: CITY_MOOD, or the gang number of the sewer it's in.
+static func mood_at(where: Vector3) -> int:
+	if not is_in_hub(where):
+		return CITY_MOOD
+	var hub := hub_at(where)
+	return hub.team if hub != null else Teams.CATLEONE
+
+
+## Split screen: the look a screen with its camera here should use, or null for "the world's own
+## look" (when it matches player 1's screen). game_screen.gd asks every frame.
+func environment_for(where: Vector3) -> Environment:
+	var mood := mood_at(where)
+	if mood == _view_mood:
 		return null
-	if _other_mood == null:
-		_other_mood = _environment.duplicate()
-		_set_mood(_other_mood, in_hub)
-	return _other_mood
+	if not _other_moods.has(mood):
+		_other_moods[mood] = _environment.duplicate()
+		_set_mood(_other_moods[mood], mood)
+	return _other_moods[mood]
 
 
-## Underground: no rain, green fog. Up top: the night city as it was.
-func _update_mood(in_hub: bool) -> void:
-	_other_mood = null  # the other screens' copy flips too: make it again when needed
-	_rain.visible = not in_hub
-	_rain.emitting = not in_hub
-	_set_mood(_environment, in_hub)
+## Underground: no rain, that sewer's fog. Up top: the night city as it was.
+func _update_mood(mood: int) -> void:
+	_other_moods.clear()  # the other screens' copies change too: make them again when needed
+	_rain.visible = mood == CITY_MOOD
+	_rain.emitting = mood == CITY_MOOD
+	_set_mood(_environment, mood)
 
 
-## Put the sewer (or city) fog and light colours into an Environment.
-func _set_mood(environment: Environment, in_hub: bool) -> void:
-	environment.fog_light_color = sewer_fog_color if in_hub else _city_mood.fog_light_color
-	environment.volumetric_fog_albedo = sewer_fog_albedo if in_hub else _city_mood.volumetric_fog_albedo
-	environment.ambient_light_color = sewer_ambient_color if in_hub else _city_mood.ambient_light_color
-	environment.ambient_light_energy = sewer_ambient_energy if in_hub else _city_mood.ambient_light_energy
+## Put a sewer's (or the city's) fog and light colours into an Environment.
+func _set_mood(environment: Environment, mood: int) -> void:
+	if mood == CITY_MOOD:
+		environment.fog_light_color = _city_mood.fog_light_color
+		environment.volumetric_fog_albedo = _city_mood.volumetric_fog_albedo
+		environment.ambient_light_color = _city_mood.ambient_light_color
+		environment.ambient_light_energy = _city_mood.ambient_light_energy
+		return
+	var hub := for_team(mood)
+	environment.fog_light_color = hub.sewer_fog_color
+	environment.volumetric_fog_albedo = hub.sewer_fog_albedo
+	environment.ambient_light_color = hub.sewer_ambient_color
+	environment.ambient_light_energy = hub.sewer_ambient_energy
 
 
 # --- Building the tunnel ---
 
 func _make_materials() -> void:
 	var asphalt := preload("res://textures/asphalt.png")
-	_concrete = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": Color(0.45, 0.5, 0.46), "world_uv": true, "world_uv_scale": 0.4, "specular": 0.4, "roughness": 0.4})
-	_wall = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": Color(0.3, 0.36, 0.33), "world_uv": true, "world_uv_scale": 0.3})
-	_water = LevelKit.psx_material({"albedo_color": Color(0.03, 0.12, 0.09), "specular": 0.7, "roughness": 0.15, "emission_color": Color(0.2, 1, 0.6), "emission_energy": 0.04})
+	_concrete = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": concrete_tint, "world_uv": true, "world_uv_scale": 0.4, "specular": 0.4, "roughness": 0.4})
+	_wall = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": wall_tint, "world_uv": true, "world_uv_scale": 0.3})
+	_water = LevelKit.psx_material({"albedo_color": water_tint, "specular": 0.7, "roughness": 0.15, "emission_color": water_glow_color, "emission_energy": 0.04})
 	_metal = LevelKit.psx_material({"albedo_color": Color(0.26, 0.28, 0.3), "specular": 0.5, "roughness": 0.4})
 	_cardboard = LevelKit.psx_material({"albedo_color": Color(0.55, 0.4, 0.22)})
-	_crate = LevelKit.psx_material({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": Color(0.3, 0.9, 0.8)})
+	_crate = LevelKit.psx_material({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": crate_tint})
+	_timber = LevelKit.psx_material({"albedo_color": Color(0.3, 0.19, 0.1)})
 	_neon = LevelKit.psx_material({"emission_color": Color.WHITE, "emission_energy": 5.0})
 	_pitch_black = LevelKit.psx_material({"albedo_color": Color(0.005, 0.005, 0.008)})
 
@@ -470,7 +509,10 @@ func _build_tunnel() -> void:
 		var pipe := LevelKit.add_cylinder(self, Vector3(x, height - 1.0, 0), 0.45, l * 2, _metal)
 		pipe.rotation.x = PI / 2
 	for z in range(-int(l) + 5, int(l), 5):
-		LevelKit.add_box(self, Vector3(0, height - 0.3, z), Vector3(w * 2, 0.6, 0.6), _wall, false)
+		LevelKit.add_box(self, Vector3(0, height - 0.3, z), Vector3(w * 2, 0.6, 0.6), _timber if wood_supports else _wall, false)
+		if wood_supports:  # a dug tunnel: a timber post up each wall, under every beam
+			for x in [-w + 0.2, w - 0.2]:
+				LevelKit.add_box(self, Vector3(x, (height - 0.6) * 0.5, z), Vector3(0.4, height - 0.6, 0.4), _timber, false)
 
 
 ## THE NORTH BREACH TUNNEL: a deep pipe running north from the mouth in the north wall, the iron
@@ -581,11 +623,11 @@ func _build_props() -> void:
 		for x in [-w + 5.0, w - 5.0]:
 			LevelKit.add_box(self, Vector3(x, height - 1.6, z), Vector3(0.05, 1.2, 0.05), _metal, false)  # cable
 			var bulb := LevelKit.add_box(self, Vector3(x, height - 2.3, z), Vector3(0.3, 0.2, 0.3), _neon, false)
-			bulb.set_instance_shader_parameter("instance_tint", Color(1, 0.7, 0.35))
-			LevelKit.add_light(self, Vector3(x, height - 2.6, z), Color(1, 0.65, 0.32), 4.0, 12.0)
-	# A cold cyan glow coming up off the water.
+			bulb.set_instance_shader_parameter("instance_tint", work_light_color)
+			LevelKit.add_light(self, Vector3(x, height - 2.6, z), work_light_color, 4.0, 12.0)
+	# A glow coming up off the water (cold cyan in the Catleones' sewer).
 	for z in [-14.0, 0.0, 14.0]:
-		LevelKit.add_light(self, Vector3(0, -0.2, z), Color(0.2, 1, 0.7), 1.2, 6.0)
+		LevelKit.add_light(self, Vector3(0, -0.2, z), water_glow_color, 1.2, 6.0)
 
 	# The leader's corner (Don Catleone's): a glow over their spot and crates for a desk.
 	var don := npc.position
@@ -644,9 +686,9 @@ func _build_shop() -> void:
 		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
 	# A red rebel banner hanging over the shelves.
 	var banner := LevelKit.add_box(self, Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
-	banner.set_instance_shader_parameter("instance_tint", Color(0.35, 0.02, 0.03))
-	# Red light over the shop, and a warm one so you can see his face.
-	LevelKit.add_light(self, Vector3(at.x + 1.0, 3.2, at.z), Color(1, 0.2, 0.15), 3.0, 8.0)
+	banner.set_instance_shader_parameter("instance_tint", banner_color)
+	# A coloured light over the shop, and a warm one so you can see his face.
+	LevelKit.add_light(self, Vector3(at.x + 1.0, 3.2, at.z), shop_light_color, 3.0, 8.0)
 	LevelKit.add_light(self, Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
 
 

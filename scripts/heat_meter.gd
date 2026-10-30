@@ -120,6 +120,8 @@ func extra_roombas() -> int:
 func add_heat(amount: float) -> void:
 	if not multiplayer.is_server():
 		return
+	if Mainframe.instance != null and Mainframe.instance.breach_busy:
+		return  # a SEWER BREACH is underground: nothing down there touches the city's heat
 	if amount > 0.0:
 		amount *= _mainframe_multiplier()
 	heat = clampf(heat + amount, 0.0, MAX_HEAT)

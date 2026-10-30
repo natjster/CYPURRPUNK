@@ -404,7 +404,8 @@ func _run_deep_clean() -> void:
 			if Game.instance.is_up_top(player_id):
 				CatHealth.instance.damage(player_id, 99999, "THE DEEP CLEAN", true)  # (true: no downed stage)
 		_new_district_at = _clock + new_district_delay
-	if _new_district_at >= 0.0 and _clock >= _new_district_at:
+	# (A Mainframe on its last legs: the siren or the breach goes first. It may yet be fed.)
+	if _new_district_at >= 0.0 and _clock >= _new_district_at and not Mainframe.instance.breach_coming():
 		_new_district_at = -1.0
 		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
 
@@ -488,8 +489,9 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var in_sewers := not Game.instance.is_up_top(me)
 	# A SEWER BREACH takes over the line at the top: the clock, in yellow (it sits between the red and green bars).
 	var mainframe := Mainframe.instance
-	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if mainframe.breach_busy else DROP_OFF_COLOR, seat)
-	if mainframe.breach_busy:
+	var alarm := mainframe.breach_busy or not mainframe.warning_teams.is_empty()
+	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if alarm else DROP_OFF_COLOR, seat)
+	if alarm:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)
 		return

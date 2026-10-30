@@ -51,6 +51,12 @@ size = Vector3(0.08, 0.16, 0.09)
 [sub_resource type="BoxMesh" id="Mesh_tank"]
 size = Vector3(0.14, 0.14, 0.26)
 
+[sub_resource type="CapsuleMesh" id="Mesh_cucumber_shot"]
+radius = 0.1
+height = 0.5
+radial_segments = 6
+rings = 1
+
 [node name="CucumberLauncher" type="Node3D"]
 script = ExtResource("1_script")
 fire_rate = 0.7
@@ -68,6 +74,8 @@ enemy_knockback = 16.0
 blast_radius = 5.5
 blast_color = Color(0.3, 1, 0.3, 1)
 blast_time = 0.4
+lob_bounces = 1
+lob_mesh = SubResource("Mesh_cucumber_shot")
 bolt_color = Color(0.35, 1, 0.3, 1)
 hot_color = Color(1, 0.8, 0.2, 1)
 bolt_time = 0.14
