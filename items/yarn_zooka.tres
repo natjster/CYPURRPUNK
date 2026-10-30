@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/yarn_zooka.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "yarn_zooka"
+display_name = "YARN-ZOOKA"
+description = "Static-charged yarn cannon. Zaps everything around where it lands and stuns VAC-COPs for 6 seconds, even bosses. 2 paws."
+kind = 1
+price = 160
+hands = 2
+hold_offset = Vector3(0.32, 0.45, -0.25)
+hold_scale = 1.5
+shoulder_camera = true
+scene = ExtResource("2_scene")
+auto_pickup = false
+world_scale = 1.4
+glow_color = Color(0.2, 0.95, 1, 1)

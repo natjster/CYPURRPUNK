@@ -1333,6 +1333,35 @@ side both get it), tall enough to reach the ground even while you're bouncing or
 - Test: `--give=neon_bat --deploy --bait_roomba=1.6 --hold=shoot --hold_frames=8` (one swing at
   a VAC-COP; the `DevCapture roombas` line shows its health).
 
+### The funny weapons (sold by both shopkeepers)
+All five are ordinary scenes + cards, so every number below is in the Inspector: open the scene in
+`scenes/items/` and select its root node. Price, name and paws are on the card in `items/`.
+
+| Weapon | Price | Paws | What it does |
+|---|---|---|---|
+| FROZEN TUNA | $80 | 2 | Melee. Slow, wide, launches cats and cars. Wet slap: `sounds/sfx/fish_slap.wav` |
+| THE RED DOT | $90 | 1 | Hold for a steady laser: 8 damage, 25 shots a second, overheats after ~2 s |
+| HAIRBALL BLASTER | $120 | 1 | 7 pellets per click, 18 damage each, 22 m range. Hold two! |
+| YARN-ZOOKA | $160 | 2 | 4.5 m blast, 35 damage, stuns VAC-COPs (bosses too) for 6 seconds |
+| CUCUMBER LAUNCHER | $280 | 2 | 5.5 m blast, 110 damage, huge shove, overheats on the second quick shot |
+
+The settings that make them work, usable on any gun:
+- **Hits > Stun Seconds**: each hit stops a VAC-COP for this long. Its eye and sirens fizz.
+- **Hits > Enemy Knockback**: shoves VAC-COPs (metres per second). The MEGA VAC-COP only feels a
+  fifth of it (**Knockback Taken** in `roomba_boss.tscn`).
+- **Hits > Car Launch**: throws the car this fast, away from the hit and upward. Car Impulse alone
+  can't launch it, because the car weighs 800: an impulse of 550 is only 0.7 m/s.
+- **Hits > City Heat Per Hit**: share of the usual heat each hit on an enemy adds. Keep it low on
+  guns that land lots of hits (Red Dot 0.1, Hairball 0.15), or they eat the district clock.
+- **Scatter > Pellets Per Shot**: bolts per pull. Their colours fan from Bolt Color to Hot Color.
+- **Blast > Blast Radius**: above 0 the shot explodes where it lands, hitting every enemy, rival
+  cat and car in range (through walls too) and shoving them outward. **Blast Color**, **Blast
+  Time**, **Blast Sound** are the look.
+- **Look > Shots Per Sound**: plays the sound on every Nth shot, for very fast guns.
+- Test: `--give=yarn_zooka --deploy --bait_roomba=aim --pitch=-25 --hold=shoot --hold_delay=60
+  --hold_frames=6 --capture=shots/x.png --frames=200` (the `DevCapture roombas` line shows health
+  and STUNNED); `--shoot_rival=1` with a blast gun sets the blast off on the rival.
+
 ### Adding a new weapon — no code needed
 The **Paw-Pistol** was made exactly this way (`scenes/items/pistol.tscn` + `items/pistol.tres`).
 Steps for your next one (e.g. a shotgun):

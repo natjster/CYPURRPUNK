@@ -31,6 +31,12 @@ var crit: bool = false
 var direction: Vector3
 ## Where exactly it hit (world position).
 var position: Vector3
+## Seconds this hit stuns an enemy (0 = no stun). Filled in from the gun's Stun Seconds.
+var stun_seconds: float = 0.0
+## Shove on an enemy (metres per second), already worked out by the gun.
+var enemy_push: Vector3 = Vector3.ZERO
+## How much of the usual "gunfire makes the city angry" heat this hit adds (1 = all of it).
+var city_heat: float = 1.0
 
 
 ## The player ID of the shooter, or 0.

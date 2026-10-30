@@ -1,0 +1,115 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/melee_weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_fish"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.2, 0.42, 0.65, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_belly"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.65, 0.85, 0.95, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.3, 0.75, 1, 1)
+shader_parameter/emission_color = Color(0.3, 0.75, 1, 1)
+shader_parameter/emission_energy = 3.5
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.02, 0.02, 0.04, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="BoxMesh" id="Mesh_body"]
+size = Vector3(0.1, 0.62, 0.3)
+
+[sub_resource type="BoxMesh" id="Mesh_belly"]
+size = Vector3(0.105, 0.5, 0.1)
+
+[sub_resource type="BoxMesh" id="Mesh_head"]
+size = Vector3(0.085, 0.2, 0.22)
+
+[sub_resource type="BoxMesh" id="Mesh_tail"]
+size = Vector3(0.03, 0.12, 0.34)
+
+[sub_resource type="BoxMesh" id="Mesh_fin"]
+size = Vector3(0.03, 0.2, 0.1)
+
+[sub_resource type="BoxMesh" id="Mesh_eye"]
+size = Vector3(0.11, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_frost"]
+size = Vector3(0.11, 0.03, 0.31)
+
+[node name="FrozenTuna" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 1.4
+max_range = 3.2
+spread_degrees = 0.0
+cat_knockback = 18.0
+cat_hop = 9.5
+car_impulse = 300.0
+car_launch = 7.0
+enemy_knockback = 14.0
+damage = 75
+crit_chance = 0.12
+bolt_color = Color(0.3, 0.75, 1, 1)
+hot_color = Color(0.3, 0.75, 1, 1)
+hud_name = "FROZEN TUNA"
+swing_radius = 1.8
+swing_time = 0.26
+hit_sound = "fish_slap"
+
+[node name="Model" type="Node3D" parent="."]
+rotation = Vector3(-0.7, 0, 0)
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.04, 0)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.32, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fish")
+
+[node name="Belly" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.3, 0.13)
+mesh = SubResource("Mesh_belly")
+surface_material_override/0 = SubResource("Mat_belly")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.7, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fish")
+
+[node name="Eye" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.72, -0.04)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Fin" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.34, -0.19)
+mesh = SubResource("Mesh_fin")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Frost1" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.18, 0)
+mesh = SubResource("Mesh_frost")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Frost2" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.5, 0)
+mesh = SubResource("Mesh_frost")
+surface_material_override/0 = SubResource("Mat_glow")

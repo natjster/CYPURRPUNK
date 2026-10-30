@@ -1,0 +1,115 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_tube"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.1, 0.22, 0.12, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_dark"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.05, 0.08, 0.06, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_cuke"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.35, 1, 0.3, 1)
+shader_parameter/emission_color = Color(0.35, 1, 0.3, 1)
+shader_parameter/emission_energy = 4.0
+
+[sub_resource type="CylinderMesh" id="Mesh_tube"]
+top_radius = 0.115
+bottom_radius = 0.095
+height = 0.7
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_cuke"]
+top_radius = 0.075
+bottom_radius = 0.075
+height = 0.26
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_ring"]
+top_radius = 0.125
+bottom_radius = 0.125
+height = 0.04
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_grip"]
+size = Vector3(0.08, 0.16, 0.09)
+
+[sub_resource type="BoxMesh" id="Mesh_tank"]
+size = Vector3(0.14, 0.14, 0.26)
+
+[node name="CucumberLauncher" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 0.7
+automatic = false
+damage = 110
+crit_chance = 0.05
+spread_degrees = 0.0
+heat_per_shot = 0.6
+cool_rate = 0.25
+cat_knockback = 22.0
+cat_hop = 10.0
+car_impulse = 550.0
+car_launch = 11.0
+enemy_knockback = 16.0
+blast_radius = 5.5
+blast_color = Color(0.3, 1, 0.3, 1)
+blast_time = 0.4
+bolt_color = Color(0.35, 1, 0.3, 1)
+hot_color = Color(1, 0.8, 0.2, 1)
+bolt_time = 0.14
+bolt_width = 0.24
+hud_name = "CUCUMBER LAUNCHER"
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Tube" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.12)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_tube")
+surface_material_override/0 = SubResource("Mat_tube")
+
+[node name="Ring" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.44)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_ring")
+surface_material_override/0 = SubResource("Mat_cuke")
+
+[node name="Cucumber" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.5)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_cuke")
+surface_material_override/0 = SubResource("Mat_cuke")
+
+[node name="Tank" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.15, 0)
+mesh = SubResource("Mesh_tank")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="Grip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.17, 0.04)
+rotation = Vector3(0.3, 0, 0)
+mesh = SubResource("Mesh_grip")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="Muzzle" type="Marker3D" parent="Model"]
+position = Vector3(0, 0, -0.62)
+
+[node name="MuzzleFlash" type="OmniLight3D" parent="Model/Muzzle"]
+light_color = Color(0.35, 1, 0.3, 1)
+light_energy = 0.0
+light_volumetric_fog_energy = 2.0
+omni_range = 3.0

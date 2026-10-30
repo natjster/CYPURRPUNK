@@ -325,10 +325,19 @@ func _is_stuck(delta: float) -> bool:
 
 ## Host (enemy.gd): shot but still alive. Angry now: chase whoever shot us (if they're on foot).
 func _on_hurt(shooter: CatPlayer) -> void:
+	if state == State.STUNNED:
+		return  # stunned means stunned: shooting it doesn't wake it up
 	if _can_chase(shooter, lose_range):
 		_chase_id = shooter.player_id
 		state = State.CHASE
 		_replan_left = 0.0
+
+
+## Host (enemy.gd): a stun gun zapped us. Stop dead for that long (a longer stun already running
+## is kept). The brain's STUNNED state counts it down.
+func _on_stunned(seconds: float) -> void:
+	state = State.STUNNED
+	_stun_left = maxf(_stun_left, seconds)
 
 
 # --- Every computer: the flashing lights and the sounds (the gliding is in enemy.gd) ---
@@ -354,8 +363,14 @@ func _process(delta: float) -> void:
 			_hum.stream_paused = not near
 	var blink := fmod(Time.get_ticks_msec() / 1000.0, 0.4) < 0.2
 	var off := Color(0.08, 0.08, 0.1)
-	siren_red.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.15) if chasing and blink else off)
-	siren_blue.set_instance_shader_parameter("instance_tint", Color(0.15, 0.3, 1) if chasing and not blink else off)
+	# Stunned: the eye and sirens fizz on and off, like something shorting out.
+	var fizz := state == State.STUNNED and fmod(Time.get_ticks_msec() / 1000.0, 0.14) < 0.07
+	var fizz_color := Color(0.8, 0.4, 1)
+	siren_red.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (Color(1, 0.1, 0.15) if chasing and blink else off))
+	siren_blue.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (Color(0.15, 0.3, 1) if chasing and not blink else off))
 	siren_light.visible = chasing
 	siren_light.light_color = Color(1, 0.1, 0.15) if blink else Color(0.15, 0.3, 1)
-	eye.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1) if chasing else Color(0.2, 0.9, 1))
+	if state == State.STUNNED:
+		eye.set_instance_shader_parameter("instance_tint", fizz_color if fizz else off)
+	else:
+		eye.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1) if chasing else Color(0.2, 0.9, 1))

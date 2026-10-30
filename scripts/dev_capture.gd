@@ -859,6 +859,14 @@ func _shoot_rival(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		await get_tree().physics_frame  # let the host see our new position first
 	var gun := ItemManager.instance.held_item(player, 0) as Weapon
 	for shot in int(args["shoot_rival"]):
+		if gun != null and gun.blast_radius > 0.0:
+			# A blast gun: set it off right on them, the way a real shot lands.
+			gun._blast(rival.global_position + Vector3(0.5, 0, 0), Vector3.LEFT)
+			for i in 15:
+				await get_tree().physics_frame
+			print("DevCapture blast %d at %s (gang %d): hp=%d at %s" % [shot + 1, rival.display_name(), rival.team,
+				health.get_health(rival.player_id), rival.global_position.snapped(Vector3.ONE * 0.1)])
+			continue
 		var hit := Hit.new()
 		hit.shooter = player
 		hit.weapon = gun

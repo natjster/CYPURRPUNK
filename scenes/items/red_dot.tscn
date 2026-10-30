@@ -1,0 +1,102 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_body"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.75, 0.75, 0.8, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_band"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.12, 0.1, 0.16, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.4
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.08, 0.1, 1)
+shader_parameter/emission_color = Color(1, 0.08, 0.1, 1)
+shader_parameter/emission_energy = 5.0
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.024
+bottom_radius = 0.024
+height = 0.26
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_band"]
+top_radius = 0.027
+bottom_radius = 0.027
+height = 0.03
+radial_segments = 7
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_tip"]
+top_radius = 0.012
+bottom_radius = 0.018
+height = 0.02
+radial_segments = 7
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_button"]
+size = Vector3(0.02, 0.012, 0.03)
+
+[node name="RedDot" type="Node3D"]
+script = ExtResource("1_script")
+fire_rate = 25.0
+automatic = true
+spread_degrees = 0.0
+heat_per_shot = 0.025
+damage = 8
+crit_chance = 0.25
+cat_knockback = 0.5
+cat_hop = 0.0
+car_impulse = 5.0
+city_heat_per_hit = 0.1
+bolt_color = Color(1, 0.08, 0.1, 1)
+hot_color = Color(1, 0.7, 0.5, 1)
+bolt_time = 0.07
+bolt_width = 0.05
+hud_name = "THE RED DOT"
+shots_per_sound = 4
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.04)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_body")
+
+[node name="Band" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, 0.04)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_band")
+surface_material_override/0 = SubResource("Mat_band")
+
+[node name="Tip" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.18)
+rotation = Vector3(-1.5708, 0, 0)
+mesh = SubResource("Mesh_tip")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Button" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.027, -0.04)
+mesh = SubResource("Mesh_button")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Muzzle" type="Marker3D" parent="Model"]
+position = Vector3(0, 0, -0.2)
+
+[node name="MuzzleFlash" type="OmniLight3D" parent="Model/Muzzle"]
+light_color = Color(1, 0.08, 0.1, 1)
+light_energy = 0.0
+light_volumetric_fog_energy = 2.0
+omni_range = 3.0

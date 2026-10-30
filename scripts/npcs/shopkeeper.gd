@@ -17,7 +17,7 @@ extends Npc
 ## Inspector (select ComradeWhiskers under Hub in main.tscn, or open his scene).
 
 ## Item ids for sale, top to bottom, e.g. "pistol". Prices come from the item cards.
-@export var stock: Array[String] = ["neon_bat", "catnip", "catdip", "pistol", "tommy_gun"]
+@export var stock: Array[String] = ["neon_bat", "catnip", "catdip", "frozen_tuna", "red_dot", "hairball_blaster", "pistol", "yarn_zooka", "tommy_gun", "cucumber_launcher"]
 ## What he says on the shop page. One is picked at random. %d = your cash.
 @export_multiline var shop_lines: PackedStringArray = ["Take your pick. You've got $%d."]
 ## Button that leaves the shop page (goes back to the greeting).

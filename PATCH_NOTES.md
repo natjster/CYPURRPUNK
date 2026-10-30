@@ -12,6 +12,12 @@ gives it to you, and starts a fresh draft.
 
 ```text
 ## 🐾 New
+- **5 ridiculous new weapons at both shops:**
+  - **FROZEN TUNA ($80, 2 paws):** a giant frozen fish. Slow, wide swings that launch cats and cars sky-high.
+  - **THE RED DOT ($90, 1 paw):** a tiny laser pointer. Hold it on a target and watch it melt, until it overheats.
+  - **HAIRBALL BLASTER ($120, 1 paw):** a short-range scattergun that fires a wall of neon hairballs. Hold two!
+  - **YARN-ZOOKA ($160, 2 paws):** an electric blast that stuns every VAC-COP nearby for 6 seconds, even bosses.
+  - **CUCUMBER LAUNCHER ($280, 2 paws):** a huge green explosion that destroys VAC-COPs and throws cats and cars across the street.
 - **NEON BAT:** the first melee weapon! $20 at both shops. Hold to keep swinging: it smacks everything right in front of you and knocks it back. Works on VAC-COPs and the rival gang (never your own). One paw, so you can hold two.
 - **Starting money:** new cats start with $100, so you can gear up before your first trip. Cats you already have with less get topped up to $100 once.
 - **Quick use slots:** catnip and catdip now go into two quick slots (keys **1** / **2**, d-pad left / right on a controller), up to 3 of each. One press and you're zooming, no more swapping them into your paws.

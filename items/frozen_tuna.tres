@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/frozen_tuna.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "frozen_tuna"
+display_name = "FROZEN TUNA"
+description = "Slow, wide, and it hits like a truck. Sends cats and cars sky-high. 2 paws."
+kind = 1
+price = 80
+hands = 2
+hold_offset = Vector3(0.32, 0.45, -0.25)
+hold_scale = 1.5
+shoulder_camera = false
+scene = ExtResource("2_scene")
+auto_pickup = false
+world_scale = 1.6
+glow_color = Color(0.3, 0.75, 1, 1)

@@ -419,7 +419,9 @@ func player_left(player_id: int, _last_position: Vector3) -> void:
 ## The hit framework (scripts/hit.gd): a bolt hit the car. Runs on the SHOOTER's computer;
 ## whoever simulates the car applies the push. (No damage number.)
 func receive_hit(hit: Hit) -> bool:
-	take_hit.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.car_impulse, hit.position)
+	# Car Launch is a speed, so it's multiplied by the car's weight to throw it that fast.
+	var launch := (hit.direction + Vector3.UP) * hit.weapon.car_launch * mass
+	take_hit.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.car_impulse + launch, hit.position)
 	return false
 
 

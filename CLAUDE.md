@@ -312,6 +312,9 @@ MELEE: `scripts/items/melee_weapon.gd` (`MeleeWeapon extends Weapon`, overrides 
 query (`swing_radius`/`swing_height`, `max_range` deep, reaches below the feet for flat Roombas), skips own-gang cats,
 rpc `show_swing` tweens `Model`). Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
 (100) for new saves / once for older ones (`progress/starter` key; `save_now` forces the first save).
+Weapon extras (exports, all `_make_hit` -> `Hit`): `pellets_per_shot`, `blast_radius` (`_blast`: sphere query, outward direction; replaces the
+direct hit), `stun_seconds` -> `Enemy.take_hit(id, amount, stun, push, city_heat)` -> `_on_stunned`/`_on_pushed`, `enemy_knockback` (`knockback_taken`), `car_launch`
+(m/s, x mass), `city_heat_per_hit`, `shots_per_sound`. `show_shot(ends, heat)` = one RPC per pull. STUNNED Roombas ignore `_on_hurt`. Test: SETUP_GUIDE §9.
 
 ## NPC framework
 Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), conversation data =

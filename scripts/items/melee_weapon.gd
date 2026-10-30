@@ -75,13 +75,7 @@ func _fire() -> void:
 		if target is CatPlayer and (target as CatPlayer).team == holder.team:
 			continue  # our own gang: the bat goes right past them (no hit sound either)
 		already[target] = true
-		var info := Hit.new()
-		info.shooter = holder
-		info.weapon = self
-		info.crit = _rng.randf() < crit_chance
-		info.damage = roundi(damage * _rng.randf_range(1.0 - damage_wobble, 1.0 + damage_wobble) * (crit_multiplier if info.crit else 1.0))
-		info.direction = forward
-		info.position = (target as Node3D).global_position + Vector3.UP * 0.5 if target is Node3D else centre
+		var info := _make_hit(forward, (target as Node3D).global_position + Vector3.UP * 0.5 if target is Node3D else centre)
 		hit_anything = true
 		if target.receive_hit(info):
 			Hud.damage_number(info.position, info.damage, info.crit, holder.slot)  # on OUR HUD

@@ -28,6 +28,11 @@ extends CharacterBody3D
 ##   func _physics_process(delta):     the brain (host only); set sync_position / sync_yaw
 ##   func _process(delta) -> void:     super(delta) ... your animations (every computer)
 ##   func _on_hurt(shooter: CatPlayer): got shot but still alive (e.g. chase the shooter)
+##   func _on_stunned(seconds: float):  a stun gun hit it (e.g. the YARN-ZOOKA)
+
+## The most one hit may stun (seconds) or shove (metres per second) an enemy.
+const MAX_STUN_SECONDS := 10.0
+const MAX_PUSH := 40.0
 
 ## Host only: this enemy just blew up (before it's removed). The spawner listens to this.
 signal destroyed(enemy: Enemy)
@@ -43,6 +48,8 @@ signal destroyed(enemy: Enemy)
 @export var car_smash_speed: float = 7.0
 ## How far from its middle the car counts as hitting it (metres).
 @export var car_smash_radius: float = 2.8
+## How much of a gun's Enemy Knockback it feels (1 = all of it, 0 = can't be shoved).
+@export var knockback_taken: float = 1.0
 
 @export_group("Boss")
 ## A boss: destroying it COOLS the heat instead of raising it (and the patrol sends no
@@ -116,22 +123,28 @@ func _process(delta: float) -> void:
 ## The hit framework (hit.gd): a bolt hit us. Runs on the SHOOTER's computer, which sends the
 ## damage to the host (the host keeps score of enemy health). true = show a damage number.
 func receive_hit(hit: Hit) -> bool:
-	take_hit.rpc_id(1, hit.shooter_id(), hit.damage)
+	take_hit.rpc_id(1, hit.shooter_id(), hit.damage, hit.stun_seconds, hit.enemy_push, hit.city_heat)
 	return true
 
 
 ## Host: take "amount" health off (sent by receive_hit above; the test tool calls it directly).
-## shooter_id = the player who fired (0 = nobody in particular).
+## shooter_id = the player who fired (0 = nobody in particular). stun = seconds stunned, push =
+## shove, city_heat = how much of the usual heat this hit adds (see hit.gd).
 @rpc("any_peer", "call_local", "reliable")
-func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
+func take_hit(shooter_id: int = 0, amount: int = 34, stun: float = 0.0, push: Vector3 = Vector3.ZERO, city_heat: float = 1.0) -> void:
 	if not multiplayer.is_server() or health <= 0:
 		return
 	health -= clampi(amount, 1, 500)  # (clamped: a broken / cheating client can't one-shot the boss)
 	_hit_flash.rpc()
-	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit)  # gunfire makes the city angry
+	HeatMeter.instance.add_heat(HeatMeter.instance.heat_per_roomba_hit * clampf(city_heat, 0.0, 1.0))  # gunfire makes the city angry
 	if health <= 0:
 		explode()
 		return
+	# (Clamped too: a broken / cheating client can't freeze or fling an enemy for ever.)
+	if stun > 0.0:
+		_on_stunned(minf(stun, MAX_STUN_SECONDS))
+	if push != Vector3.ZERO:
+		_on_pushed(push.limit_length(MAX_PUSH) * knockback_taken)
 	_on_hurt(Game.instance.cat_for(shooter_id) if PlayerId.sender_owns(shooter_id) else null)
 
 
@@ -139,6 +152,16 @@ func take_hit(shooter_id: int = 0, amount: int = 34) -> void:
 ## shooter = their cat, or null.
 func _on_hurt(_shooter: CatPlayer) -> void:
 	pass
+
+
+## Host: a stun gun hit us and we're still alive. Override it to stop moving (the VAC-COP does).
+func _on_stunned(_seconds: float) -> void:
+	pass
+
+
+## Host: a gun shoved us. Every enemy slides (and hops, if the push points up) by default.
+func _on_pushed(push: Vector3) -> void:
+	velocity += push
 
 
 ## Host: did a getaway car (any gang's) just run us over? Call it from your brain every physics
