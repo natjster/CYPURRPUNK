@@ -45,8 +45,6 @@ const TABS: Array = [
 			"hint": "SHARP = even pixels (may leave a border). FILL = as big as fits."},
 		{"setting": "widescreen", "label": "ASPECT", "choices": [[true, "WIDE"], [false, "4:3"]],
 			"hint": "WIDE fills widescreen + ultrawide monitors. Still 240 pixels tall."},
-		{"setting": "modern_ui", "label": "UI STYLE", "choices": [[false, "PS1"], [true, "MODERN"]],
-			"hint": "PS1 = chunky pixels, CRT over everything. MODERN = crisp HUD and menus."},
 		{"setting": "vsync", "label": "VSYNC", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "ON stops screen tearing. OFF can feel a tiny bit snappier."},
 		{"setting": "split_side_by_side", "label": "2-PLAYER SPLIT", "choices": [[true, "SIDE BY SIDE"], [false, "TOP + BOTTOM"]],
@@ -78,6 +76,8 @@ const TABS: Array = [
 	["EFFECTS", [
 		{"setting": "crt_strength", "label": "CRT TV LOOK", "min": 0.0, "max": 1.0, "step": 0.25, "format": "percent",
 			"hint": "Curved glass, scanlines and static of an old TV."},
+		{"setting": "modern_ui", "label": "UI STYLE", "choices": [[true, "MODERN"], [false, "PS1"]],
+			"hint": "MODERN = crisp HUD and menus. PS1 = chunky pixels, CRT over everything."},
 		{"setting": "ps1_wobble", "label": "PS1 WOBBLE", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "Shaky polygons and warpy textures. Turn OFF if it bothers your eyes."},
 		{"setting": "volumetric_fog", "label": "VOLUMETRIC FOG", "choices": [[true, "ON"], [false, "OFF"]],

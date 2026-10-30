@@ -41,9 +41,9 @@ var pixel_perfect: bool = true
 ##         monitors (e.g. 573x240 on 21:9) - you see more of the city to the sides.
 ## false = 4:3: always exactly 320x240, with black bars at the sides on wide monitors.
 var widescreen: bool = true
-## false = PS1: HUD and menus are chunky low-res pixels and the CRT effect covers everything.
 ## true  = MODERN: HUD and menus are crisp at full resolution; only the 3D world gets the CRT effect.
-var modern_ui: bool = false
+## false = PS1: HUD and menus are chunky low-res pixels and the CRT effect covers everything.
+var modern_ui: bool = true
 var vsync: bool = true
 ## Split screen with 2 players on one computer: true = side by side, false = top + bottom.
 var split_side_by_side: bool = true
@@ -73,11 +73,11 @@ var volumetric_fog: bool = true
 const SAVED: Array = [
 	["player", "cats"], ["player", "current_cat_id"],
 	["display", "fullscreen"], ["display", "resolution"], ["display", "pixel_perfect"], ["display", "widescreen"],
-	["display", "vsync"], ["display", "split_side_by_side"], ["display", "modern_ui"],
+	["display", "vsync"], ["display", "split_side_by_side"],
 	["audio", "master_volume"], ["audio", "music_volume"], ["audio", "sfx_volume"],
 	["controls", "mouse_speed"], ["controls", "invert_y"],
 	["controls", "stick_speed"], ["controls", "invert_stick_y"], ["controls", "rumble"],
-	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "ps1_wobble"],
+	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "modern_ui"], ["effects", "ps1_wobble"],
 	["effects", "volumetric_fog"],
 ]
 

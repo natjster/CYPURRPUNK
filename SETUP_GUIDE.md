@@ -2005,11 +2005,11 @@ The HUD is everything on screen during a game that isn't the world or a menu: ca
 line, HP, the extraction arrow, the scoreboard, the "[E] TALK TO..." prompt, the crosshair, what
 you're holding, messages and the big EXTRACTED popup.
 
-**It is drawn on top of the game, and SETTINGS > DISPLAY > UI STYLE picks how it looks:**
-- **PS1** (default): the HUD and menus are drawn 240 pixels tall, like the game, and blown up with
+**It is drawn on top of the game, and SETTINGS > EFFECTS > UI STYLE picks how it looks:**
+- **PS1**: the HUD and menus are drawn 240 pixels tall, like the game, and blown up with
   chunky pixels. One CRT + dither effect (`CRTOverlay`, made by `game_screen.gd`) then covers the
   whole picture, so the HUD and menus bend and scanline together with the 3D city.
-- **MODERN**: the HUD and menus are drawn at your monitor's real resolution, so they're crisp, and
+- **MODERN** (default): the HUD and menus are drawn at your monitor's real resolution, so they're crisp, and
   only the 3D city gets the CRT effect.
 
 The layout is the same in both, still 720 HUD units tall. PS1 style with one player draws the

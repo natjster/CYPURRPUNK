@@ -12,11 +12,11 @@ extends Control
 ##   3. The HUD (scenes/ui/hud.tscn, scripts/ui/hud.gd): cash, HP, prompts, crosshair... drawn
 ##      ON TOP, each player's in its own SubViewport.
 ##
-## THE TWO UI LOOKS (SETTINGS > DISPLAY > UI STYLE, Settings.modern_ui):
-##   PS1 (default): the menus and HUDs are drawn just as small as the game picture and blown up
+## THE TWO UI LOOKS (SETTINGS > EFFECTS > UI STYLE, Settings.modern_ui):
+##   PS1: the menus and HUDs are drawn just as small as the game picture and blown up
 ##      with blocky pixels. One CRT effect (CRTOverlay) then covers EVERYTHING together: the 3D
 ##      world, HUD and menus, like a real PS1 on a TV. The 3D-only CRT is switched off.
-##   MODERN: the menus and HUDs are drawn at your monitor's real resolution, so they're crisp, and
+##   MODERN (default): the menus and HUDs are drawn at your monitor's real resolution, so they're crisp, and
 ##      only the 3D world gets the CRT effect (the 3D-only one; CRTOverlay is hidden).
 ##
 ## SPLIT SCREEN (couch co-op, scripts/seats.gd): with 2-4 players on this computer the game
