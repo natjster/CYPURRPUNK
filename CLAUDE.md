@@ -58,7 +58,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   unplugged seat. Test: `--unplug=D [--replug]`.
   Overhead names: Label3Ds in group `hud_name_tags` are markers (made transparent; don't use
   `layers = 0`, it trips an engine light-pairing bug), `HudNameTags` (`Frame/Names`) projects them
-  via the game camera. Street items too (`ItemManager._make_item_tag`, tag metas `max_distance`, `press_e`, `item_name`). Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
+  via the game camera. Street items too (`ItemManager._make_item_tag`, tag meta `max_distance`; name only, the button is the "[E] PICKUP" Prompt). Test: `--mouse_test`, `--click_choice=N`, `--press_key=Tab`.
 - `scenes/main.tscn` (script `scripts/game.gd`, class `Game`, `Game.instance`): starts games, spawns
   cats via `MultiplayerSpawner` → `Players/` (cats named by PLAYER id; look up with
   `Game.instance.cat_for(id)` / `my_cat()` (first local player) / `local_cats()`), late-joiner catch-up, CRT/fog settings.

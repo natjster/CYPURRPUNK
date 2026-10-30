@@ -10,9 +10,8 @@ extends Control
 ##   - It shrinks with distance, like a real sign (between Min and Max Font Size).
 ##   - It fades out towards Max Distance, and hides behind walls (like the 3D one did).
 ##   - Hiding the Label3D (e.g. your own cat's name) hides the HUD name too.
-## Street items use the same markers, made in code (ItemManager._make_item_tag), with metadata:
-##   - "max_distance": this tag's own limit instead of Max Distance.
-##   - "press_e" + "item_name": shown as "[E] PAW-PISTOL", with each player's own button.
+## Street items use the same markers, made in code (ItemManager._make_item_tag), with the metadata
+## "max_distance": this tag's own limit instead of Max Distance.
 ##
 ## GIVE SOMETHING NEW A NAME TAG: add a Label3D child where the name should float, type the
 ## name in its Text, pick a colour in Modulate, then Node dock > Groups > add "hud_name_tags".
@@ -64,7 +63,7 @@ func _process(_delta: float) -> void:
 			if not _labels.has(id):
 				_labels[id] = _new_label()
 			var label: Label = _labels[id]
-			label.visible = _place(label, tag, camera, game_size, seat)
+			label.visible = _place(label, tag, camera, game_size)
 	# Forget the names of things that are gone (a player left, the scene changed).
 	for id in _labels.keys():
 		if not seen.has(id):
@@ -73,7 +72,7 @@ func _process(_delta: float) -> void:
 
 
 ## Put the HUD label where the Label3D is on screen. Returns false if it shouldn't show.
-func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2, seat: int) -> bool:
+func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2) -> bool:
 	if not tag.is_visible_in_tree() or tag.text == "":
 		return false
 	var where := tag.global_position
@@ -92,11 +91,7 @@ func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2, se
 	var font_size := clampi(roundi(world_text_height * units_per_metre), min_font_size, max_font_size)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_constant_override("outline_size", maxi(4, font_size / 4))
-	# Press-E gear shows THIS player's button, so each split-screen pane can read differently.
-	if tag.get_meta("press_e", false):
-		label.text = "[%s] %s" % [Hud.key_for("interact", seat), tag.get_meta("item_name", tag.text)]
-	else:
-		label.text = tag.text
+	label.text = tag.text
 	label.add_theme_color_override("font_color", Color(tag.modulate, 1.0))
 	var fade := clampf((limit - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
 	label.modulate.a = tag.modulate.a * fade

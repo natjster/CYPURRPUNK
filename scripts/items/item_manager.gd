@@ -218,13 +218,11 @@ func _make_item_tag(data: ItemData) -> Label3D:
 	tag.position.y = 1.25
 	tag.set_meta("max_distance", item_tag_distance)
 	if data.auto_pickup:
-		# Walk-into loot: just the name, in its glow colour (gold koi, cyan scrap) or warm white.
+		# Walk-into loot: its glow colour (gold koi, cyan scrap) or warm white.
 		tag.modulate = data.glow_color.lightened(0.25) if data.glow_color.a > 0.0 else Color(0.95, 0.95, 1.0)
 	else:
-		# Press-E gear: the HUD adds the key per player, "[E] PAW-PISTOL" / "[Pad X] PAW-PISTOL".
+		# Press-E gear: plain white. The button is on the HUD prompt ("[E] PICKUP", interact_prompt).
 		tag.modulate = Color(1, 1, 1, 0.9)
-		tag.set_meta("press_e", true)
-		tag.set_meta("item_name", data.display_name)
 	return tag
 
 
@@ -834,7 +832,7 @@ func interact_distance(cat: CatPlayer) -> float:
 
 
 func interact_prompt(_cat: CatPlayer) -> String:
-	return ""
+	return "PICKUP"
 
 
 ## E pressed: ask the host for the nearest press-E item in reach.

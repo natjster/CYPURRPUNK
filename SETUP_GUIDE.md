@@ -1567,7 +1567,7 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
   explanation at the bottom. Changes apply instantly and are saved. **RESET** = defaults.
   **Esc** = back.
 - **No key list on screen during play** — the keys live in **SETTINGS > KEYS**, and prompts
-  ("[E] TALK TO...", "[E] PURR-TOMMY" over items, "TAB: close" in the inventory) always show the
+  ("[E] TALK TO...", "[E] PICKUP" by items, "TAB: close" in the inventory) always show the
   player's *current* key. The city number is shown in the pause menu.
 - **Controllers** (Xbox, PlayStation, Switch Pro... anything Windows sees) work everywhere,
   including every menu. Whatever the player touched last decides what the prompts show: touch the
@@ -2101,9 +2101,10 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
 - Hiding the Label3D (like a cat in a car) hides the HUD name too. Your own cat's name isn't
   shown on your own screen (split screen: the other players still see it on theirs).
 - **Items on the street** get their labels here too, made in code (you won't see them in the scene
-  tree). Press-E gear reads `[E] PAW-PISTOL`, with each player's own button (`[Pad X] ...` on a
-  controller). Walk-into loot is just its name, in its glow colour (gold koi, cyan scrap) or warm
-  white. How close you must be: **Items** node (in `main.tscn`) > **Item Tag Distance** (18 m).
+  tree). They only show the item's name: white for press-E gear, and for walk-into loot its glow
+  colour (gold koi, cyan scrap) or warm white. How close you must be: **Items** node (in
+  `main.tscn`) > **Item Tag Distance** (18 m). Standing in reach of gear, the normal HUD prompt
+  says `[E] PICKUP` (each player's own button), like the car's `[E] GET IN`.
 
 ### Using it from a script (no node paths needed)
 ```gdscript
