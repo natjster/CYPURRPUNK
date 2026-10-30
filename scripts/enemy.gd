@@ -30,6 +30,9 @@ extends CharacterBody3D
 ##   func _on_hurt(shooter: CatPlayer): got shot but still alive (e.g. chase the shooter)
 ##   func _on_stunned(seconds: float):  a stun gun hit it (e.g. the YARN-ZOOKA)
 
+## Every enemy joins this group, on every computer (the sewer NPCs look for targets in it).
+const GROUP := "enemies"
+
 ## The most one hit may stun (seconds) or shove (metres per second) an enemy.
 const MAX_STUN_SECONDS := 10.0
 const MAX_PUSH := 40.0
@@ -100,6 +103,7 @@ func _ready() -> void:
 	if health < 0:
 		health = max_health
 	add_to_group(HudHealthBars.GROUP)  # a floating health bar on everyone's HUD
+	add_to_group(GROUP)
 	sync_position = global_position
 	if model != null:
 		sync_yaw = model.rotation.y

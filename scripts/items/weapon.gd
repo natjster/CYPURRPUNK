@@ -231,6 +231,12 @@ func _blast(centre: Vector3, aim: Vector3) -> void:
 func show_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 	if holder == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(holder.player_id):
 		return  # only the holder may fire
+	draw_shot(ends, shot_heat)
+
+
+## Draw one shot on this computer: bolts, blast, muzzle flash and sound. Needs no holder, so the
+## sewer NPCs fire their guns through it too (npc.gd). Empty "ends" = just the flash and the sound.
+func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 	shots_seen += 1
 	var start := _muzzle.global_position if _muzzle != null else global_position
 	var color := bolt_color.lerp(hot_color, shot_heat)
@@ -239,7 +245,7 @@ func show_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 		var pellet_color := bolt_color.lerp(hot_color, float(i) / (ends.size() - 1)) if ends.size() > 1 else color
 		_draw_bolt(start, ends[i], pellet_color)
 		if blast_radius > 0.0:
-			_draw_blast(ends[i])
+			draw_blast(ends[i])
 
 	if _muzzle_flash != null:
 		_muzzle_flash.light_color = color
@@ -277,7 +283,7 @@ func _draw_bolt(start: Vector3, end: Vector3, color: Color) -> void:
 
 ## The blast: a neon sphere that grows to blast_radius and fades, with a flash of light. It lives
 ## in the world (not on the gun), so dropping the gun doesn't delete it mid-blast.
-func _draw_blast(centre: Vector3) -> void:
+func draw_blast(centre: Vector3) -> void:
 	var mesh := SphereMesh.new()
 	mesh.radius = 1.0
 	mesh.height = 2.0

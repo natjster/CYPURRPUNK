@@ -189,30 +189,64 @@ shopkeeper = NodePath("ComradeWhiskers")
 
 [node name="DonCatleone" parent="Hub" instance=ExtResource("18_don")]
 position = Vector3(8, 0, -16)
+breach_weapon = "tommy_gun"
+breach_cries = PackedStringArray("SAY HELLO TO MY LIL' PAW!")
+breach_fire_seconds = 0.14
+breach_color = Color(1, 0.85, 0.2, 1)
 
 [node name="LilMittens" parent="Hub" instance=ExtResource("22_mittens")]
 position = Vector3(10.3, 0, 9)
 rotation = Vector3(0, -1.5708, 0)
+breach_weapon = "pistol"
+breach_cries = PackedStringArray("NOT MY SHINY FISH!!")
+breach_fire_seconds = 0.4
+breach_color = Color(1, 0.85, 0.2, 1)
+breach_wildness = 1.6
 
 [node name="ComradeWhiskers" parent="Hub" instance=ExtResource("23_whiskers")]
 position = Vector3(-12, 0, -10)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "yarn_zooka"
+breach_cries = PackedStringArray("SEIZE THE MEANS OF DETONATION!")
+breach_fire_seconds = 1.6
+breach_color = Color(1, 0.3, 0.75, 1)
 
 [node name="PaulieNoBrooms" parent="Hub" instance=ExtResource("q_paulie_no_brooms")]
 position = Vector3(7, 0, 16)
 rotation = Vector3(0, 3.14159, 0)
+breach_weapon = "pistol"
+breach_cries = PackedStringArray("I SAID NO BROOMS ALLOWED!")
+knockdown_cry = "OOF! MY BACK!"
+breach_fire_seconds = 0.35
+breach_color = Color(1, 0.85, 0.2, 1)
 
 [node name="NonnaCatleone" parent="Hub" instance=ExtResource("q_nonna_catleone")]
 position = Vector3(11.5, 0, -12.5)
 rotation = Vector3(0, -1.5708, 0)
+breach_weapon = "cucumber_launcher"
+breach_cries = PackedStringArray("NOBODY RUINS NONNA'S GRAVY!")
+knockdown_cry = "AVENGE NONNA'S GRAVY!"
+breach_fire_seconds = 1.8
+breach_color = Color(0.35, 1, 0.3, 1)
+breach_bounces = 1
 
 [node name="FrankieEspresso" parent="Hub" instance=ExtResource("q_frankie_espresso")]
 position = Vector3(-11.5, 0, 10.6)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "red_dot"
+breach_cries = PackedStringArray("TOO MUCH ESPRESSO!!")
+breach_damage = 1
+breach_fire_seconds = 0.05
+breach_sweep = true
 
 [node name="SalTheSlapper" parent="Hub" instance=ExtResource("q_sal_the_slapper")]
 position = Vector3(-11.5, 0, 5.5)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "hairball_blaster"
+breach_cries = PackedStringArray("CHOKE ON A FURBALL!")
+breach_fire_seconds = 0.75
+breach_color = Color(0.35, 1, 0.3, 1)
+breach_pellets = 5
 
 [node name="GangHub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(200, -200, 0)
@@ -230,30 +264,63 @@ phone_sealed = "...sugar? They found our hole. We sealed it. I'm sorry. Nobody's
 
 [node name="Pawnie" parent="GangHub" instance=ExtResource("30_pawnie")]
 position = Vector3(8, 0, -16)
+breach_weapon = "tommy_gun"
+breach_cries = PackedStringArray("LIGHT 'EM UP, BOYS!")
+breach_fire_seconds = 0.14
+breach_color = Color(1, 0.85, 0.2, 1)
 
 [node name="Clawd" parent="GangHub" instance=ExtResource("31_clawd")]
 position = Vector3(-12, 0, -10)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "yarn_zooka"
+breach_cries = PackedStringArray("CLEARANCE SALE ON ROCKETS!")
+breach_fire_seconds = 1.6
+breach_color = Color(1, 0.3, 0.75, 1)
 
 [node name="BillyTheKitten" parent="GangHub" instance=ExtResource("q_billy_the_kitten")]
 position = Vector3(10.3, 0, 9)
 rotation = Vector3(0, -1.5708, 0)
+breach_weapon = "hairball_blaster"
+breach_cries = PackedStringArray("YEE-CLAW, TOASTERS!")
+breach_fire_seconds = 0.75
+breach_color = Color(0.35, 1, 0.3, 1)
+breach_pellets = 5
 
 [node name="BumperCarBenny" parent="GangHub" instance=ExtResource("q_bumper_car_benny")]
 position = Vector3(7, 0, 16)
 rotation = Vector3(0, 3.14159, 0)
+breach_weapon = "pistol"
+breach_cries = PackedStringArray("BUMPER CARS ARE CANCELLED!")
+knockdown_cry = "OOF! MY BACK!"
+breach_fire_seconds = 0.35
+breach_color = Color(1, 0.85, 0.2, 1)
 
 [node name="GoldToothGus" parent="GangHub" instance=ExtResource("q_gold_tooth_gus")]
 position = Vector3(11.5, 0, -12.5)
 rotation = Vector3(0, -1.5708, 0)
+breach_weapon = "pistol"
+breach_cries = PackedStringArray("PROTECT THE GOLD TEETH!")
+breach_fire_seconds = 0.4
+breach_color = Color(1, 0.85, 0.2, 1)
+breach_wildness = 1.6
 
 [node name="JitteryJax" parent="GangHub" instance=ExtResource("q_jittery_jax")]
 position = Vector3(-11.5, 0, 10.6)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "red_dot"
+breach_cries = PackedStringArray("FOLLOW THE DOT TO HECK!!")
+breach_damage = 1
+breach_fire_seconds = 0.05
+breach_sweep = true
 
 [node name="CalamityClara" parent="GangHub" instance=ExtResource("q_calamity_clara")]
 position = Vector3(-11.5, 0, 5.5)
 rotation = Vector3(0, 1.5708, 0)
+breach_weapon = "cucumber_launcher"
+breach_cries = PackedStringArray("EAT GREEN VEGGIES, TIN CANS!")
+breach_fire_seconds = 1.8
+breach_color = Color(0.35, 1, 0.3, 1)
+breach_bounces = 1
 
 [node name="Rain" parent="." instance=ExtResource("9_rain")]
 

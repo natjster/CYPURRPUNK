@@ -788,7 +788,11 @@ so a gang can still save itself by feeding scrap before that.
   pulses red, and a horde pours out: **35 bots + 2 MEGA VAC-COPs**. They hunt every cat in that sewer.
 - **No safe zone** in that sewer: guns and melee work, nobody heals, and a cat at 0 HP stays where it
   fell. Gang-mates can still revive you. A knockout here **keeps your gear**.
-- **Everything else waits:** the boss refuses to send anyone up ("ARE YOU CRAZY?! THEY'RE IN THE
+- **The sewer fights back:** all 7 NPCs in that sewer grab a gun, hop on the spot and spray the room,
+  yelling battle cries over their heads. They're terrible shots and do little damage: they thin the
+  front line, they don't win it for you. You can't talk to them or shop until it's over. A bot that
+  gets within 1.8 m flattens that NPC, who stays on their back until the breach ends.
+- **Everything else waits:** the rival boss refuses to send anyone up ("ARE YOU CRAZY?! THEY'RE IN THE
   TUNNEL!"), the Mainframes are locked, the next district and the city's patrol are on hold.
 - **The rival gang watches:** their screens switch to the doomed sewer's security camera, with
   `LIVE FEED: BURROW SEWER BREACHED — 24s` on top. Their cats wait at home. If both gangs are at 0%,
@@ -803,7 +807,20 @@ so a gang can still save itself by feeding scrap before that.
 
 **Where it lives:** the rules in `scripts/mainframe.gd`, the tunnel, gate and camera in `scripts/hub.gd`
 (`_build_breach_tunnel`), the horde in `scripts/roomba_patrol.gd`, the bots' behaviour in
-`scripts/roomba.gd` (`breach_hub`), the live feed in `scripts/ui/game_screen.gd`.
+`scripts/roomba.gd` (`breach_hub`), the live feed in `scripts/ui/game_screen.gd`, the NPCs' fighting
+in `scripts/npcs/npc.gd`.
+
+**Who carries what** (both sewers; set on each NPC in `main.tscn`):
+
+| Catleone | Burrow | Gun | Shots |
+|---|---|---|---|
+| Don Catleone | Pawnie | PURR-TOMMY | fast yellow tracers |
+| Comrade Whiskers | Clawd | YARN-ZOOKA | pink yarn balls in an arc, then a blast |
+| Nonna Catleone | Calamity Clara | CUCUMBER LAUNCHER | green cucumbers: arc, bounce, blast |
+| Frankie Espresso | Jittery Jax | THE RED DOT | sweeping red laser |
+| Sal the Slapper | Billy the Kitten | HAIRBALL BLASTER | 5 green pellets |
+| Paulie "No-Brooms" | Bumper-Car Benny | PAW-PISTOL | yellow shots |
+| Lil' Mittens | Gold-Tooth Gus | PAW-PISTOL | slower, wilder yellow shots |
 
 **Tuning (no code):**
 - **Mainframe** in `main.tscn` > **Sewer Breach (0%)**: Breach Seconds, Breach Banner Seconds,
@@ -813,11 +830,17 @@ so a gang can still save itself by feeding scrap before that.
   survives, lower Breach Roombas first (or Squirt Drone Chance under **Patrol Mix**).
 - **Hub** and **GangHub** > **Breach Tunnel** (size, gate speed, red light), **Breach Camera** (where it
   is, what it looks at, how wide), and **Gang** > Line Breach (what the boss shouts).
+- **Any sewer NPC** (click them under Hub or GangHub in `main.tscn`) > **Sewer breach**: Breach Weapon
+  (a scene name from `scenes/items/`, empty = they don't fight), Breach Cries, Knockdown Cry, Breach
+  Damage, Breach Fire Seconds, Breach Color, Breach Pellets, Breach Sweep, Breach Wildness, Breach
+  Bounces. **Sewer breach tuning** has their aim, stun, shove, knockdown distance, hop and arc.
+  The red lasers do 1 damage instead of 3 because they fire 20 times a second.
 
 **Test it without playing:**
 `--mainframe=0 --breach_log=60` starts one (add `--pos=` to stand somewhere).
 `--breach_seconds=2` = the Miracle, `--breach_wipe=120` = a wipeout. `--grab_mouse --hold=shoot` fires a held gun.
 `--teams=0,1 --add_local=1 --mainframe=75,0` = watching the rival's feed.
+`--breach_knock=100` drops a bot beside each NPC (the "DevCapture breach npcs" line counts them).
 
 ### The stash & saved progress
 **THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black

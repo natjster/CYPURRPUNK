@@ -187,7 +187,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   "nothing can hurt you" (damage, healing, guns). Horde: `RoombaPatrol._breach_queue`, bots have `breach_hub` (host only): `_can_chase` = anyone in that hub, route `hub.next_stop` (mouth, bridges), `ground_height()` for the drone, no respawns;
   patrol + FishHeist referee pause on `breach_busy`. Wipeout `_wiped_out` -> banner -> `_after_banner` (all reset to `starting_charge`); miracle = `_miracle` (reboot, bots `explode()` without scrap). Both end in `Game.new_district()`. KO in a hub keeps gear and
   stays lying (`_knocked_out`), `_on_sewer_breach_ended` wakes + heals. LIVE FEED: `feed_camera_for(cat)`, `is_spectating(cat)` (blocks via `cat._menu_open`), `GameScreen._show_live_feed`, line = `breach_text` in DropOff, `Hud.banner`.
-  Test: `--mainframe=0|75,0 --breach_seconds=S --breach_wipe=N --breach_log=N`.
+  NPCs FIGHT (`npc.gd`, parent is a hub + `breach_weapon`, polls `hub.breached`; `Npc.fighting` blocks E): instance a real gun scene on Model, draw with `Weapon.draw_shot`/`draw_blast`
+  (no holder, no RPC: each computer sprays locally, only the host's shots call `take_hit`, city_heat 0). Blast guns = visual `_lob` arc, host hits on landing. Knockdown is host-decided (`_knocked_down` RPC).
+  Targets = group `Enemy.GROUP`. Cries = `BattleCryLabel`, a `hud_name_tags` marker (a real 3D label is unreadable at 240p). Loadouts on the NPC instances in main.tscn.
+  Test: `--mainframe=0|75,0 --breach_seconds=S --breach_wipe=N --breach_log=N --breach_knock=N`.
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
   `exit_is_open(team)` (heat >= `Mainframe.exit_heat(team)` or sticky `exit_opened[team]`, not `sealed`; `every_exit_is_open()` gates the all-home rush). `Payphone` NPCs (`scenes/props/payphone.tscn`,

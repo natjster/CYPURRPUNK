@@ -13,6 +13,7 @@ gives it to you, and starts a fresh draft.
 ```text
 ## 🐾 New
 - **THE SEWER BREACH:** let your Mainframe hit 0% and OVERCLEAN comes for your home. Once everyone's back underground, the blast gate on the new north tunnel slides up and 35 bots plus 2 MEGA VAC-COPs pour in. Your sewer is no safe zone any more: guns work, nobody heals. Last 30 seconds with one cat on its feet for a miracle: every bot explodes and your Mainframe reboots to 25%. Get wiped out and the rival gang wins!
+- **The sewer fights back:** when the bots break in, everyone at home grabs a gun! The Don sprays his tommy gun, Nonna lobs bouncing cucumbers, Frankie waves a red laser around the room, and all of them yell battle cries. They couldn't hit a barn, but they'll chip away at the front line. Get a bot too close and they're flat on their back until it's over.
 - **Live feed:** while a rival gang's sewer is being breached, your screen switches to their security camera so you can watch it all go wrong.
 - **SQUIRT-DRONES:** OVERCLEAN's new quadcopters hover above the street, too high for your car. Get caught in their red spotlight and the heat climbs, and they fire water zaps at wherever you're standing, so keep moving! A Yarn-Zooka stun drops them low enough to whack.
 - **LINT-TRAPPERS:** sticky mop-bots that leave glowing pink glue behind them and lob it at your feet. Step in it and you're at half speed for 3 seconds, even with zoomies, so the VAC-COPs can catch you. Jump over the puddles to stay clean!

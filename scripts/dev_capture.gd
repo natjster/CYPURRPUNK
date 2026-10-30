@@ -104,6 +104,7 @@ extends Node
 ##   --breach_seconds=S (host) a SEWER BREACH lasts S seconds (a short one tests THE 1% MIRACLE)
 ##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
 ##   --breach_log=N    (either) every N frames print the breach's state ("DevCapture breach" lines)
+##   --breach_knock=N  (host) N frames in, drop a bot beside every breach NPC (they get knocked flat)
 ##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
@@ -261,6 +262,8 @@ func _ready() -> void:
 			_breach_log(int(args["breach_log"]))
 		if args.has("breach_wipe"):
 			_breach_wipe(int(args["breach_wipe"]))
+		if args.has("breach_knock"):
+			_breach_knock(int(args["breach_knock"]))
 		if args.has("mainframe") and multiplayer.is_server():
 			# (host) --mainframe=N or =A,B: the gangs' charges are N (0/25/50/75/100; A = Catleone,
 			# B = Burrow), and this district starts over on them (heat, overclock, 0% boss).
@@ -860,6 +863,24 @@ func _breach_log(every: int) -> void:
 		var camera := GameScreen.instance.game_viewport.get_camera_3d()
 		print("DevCapture breach: busy=%s teams=%s left=%.1f charges=%s heat=%.0f sewer bots=%d chasing=%d hurt=%d east_bank=%d queue=%d gates=%s safe=%s camera=%s line=\"%s\" cats=%s" % [mainframe.breach_busy, mainframe.breached_teams, mainframe.breach_left, mainframe.charges, HeatMeter.instance.heat, bots.size(), chasing, bots.filter(func(bot): return bot.health < bot.max_health).size(), bots.filter(func(bot): return UndergroundHub.hub_at(bot.global_position).to_local(bot.global_position).x > 2.0).size(), RoombaPatrol.instance._breach_queue.size(),
 			[UndergroundHub.for_team(0)._gate.position.y, UndergroundHub.for_team(1)._gate.position.y], [UndergroundHub.is_safe(UndergroundHub.for_team(0).global_position), UndergroundHub.is_safe(UndergroundHub.for_team(1).global_position)], camera.name if camera != null else "none", (Hud.element("DropOff") as Label).text, cats])
+
+		var fighters := get_tree().get_nodes_in_group(Npc.GROUP).filter(func(npc): return npc.fighting)
+		var shots := 0
+		var hits := 0
+		for npc in fighters:
+			shots += npc.breach_shots
+			hits += npc.breach_hits
+		print("DevCapture breach npcs: fighting=%d guns=%d down=%d shots=%d hits=%d" % [fighters.size(), fighters.filter(func(npc): return npc._gun != null).size(), fighters.filter(func(npc): return npc.is_knocked_down).size(), shots, hits])
+
+
+## --breach_knock=N: after N frames, a bot right beside every fighting NPC.
+func _breach_knock(frames: int) -> void:
+	for i in frames:
+		await get_tree().process_frame
+	var bots := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(bot): return UndergroundHub.is_in_hub(bot.global_position))
+	var fighters := get_tree().get_nodes_in_group(Npc.GROUP).filter(func(npc): return npc.fighting)
+	for i in mini(bots.size(), fighters.size()):
+		bots[i].global_position = fighters[i].global_position + Vector3(1.0, 0.1, 0.0)
 
 
 ## --breach_wipe=N: after N frames, a killing blow for every cat in a breached sewer.
