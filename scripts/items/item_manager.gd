@@ -43,8 +43,8 @@ const MAX_REACH_HEIGHT: float = 3.0
 @export var pack_size: int = 6
 ## How many of the same item stack in one QUICK USE slot (3 = up to 3 catnip on key 1).
 @export var quick_stack_size: int = 3
-## Slots in each player's STASH, the safe lockers down in the sewers (gear only, no loot).
-## What's in the stash never drops when you're knocked out, and is saved between games.
+## Slots in each player's STASH, the safe lockers down in the sewers (gear, and SCRAP - no
+## money loot). What's in the stash never drops when you're knocked out, and is saved between games.
 @export var stash_size: int = 9
 ## How close (metres) a cat must be to grab an auto-pickup item by walking into it.
 @export var pickup_radius: float = 1.4
@@ -626,6 +626,43 @@ func take_bag(player_id: int) -> Array:
 	return bag
 
 
+## Host: take only the MONEY loot (cash_value > 0) out of a player's loot bag and return it
+## (the heist cashes it in at the exit manhole). Loot worth $0 - SCRAP - stays in the bag, to
+## be fed to THE MAINFRAME (scripts/mainframe.gd) or put in the stash.
+func take_cash_loot(player_id: int) -> Array:
+	var inventory := get_inventory(player_id).duplicate(true)
+	var cash: Array = []
+	var kept: Array = []
+	for item_id in inventory.bag:
+		if (catalog[item_id] as ItemData).cash_value > 0:
+			cash.append(item_id)
+		else:
+			kept.append(item_id)
+	if cash.is_empty():
+		return []
+	inventory.bag = kept
+	_set_inventory.rpc(player_id, inventory)
+	return cash
+
+
+## How many of this item are in a player's loot bag (e.g. scrap for THE MAINFRAME).
+func count_in_bag(player_id: int, item_id: String) -> int:
+	return get_inventory(player_id).bag.count(item_id)
+
+
+## Host: take ONE of this item out of a player's loot bag. False = they had none.
+## (THE MAINFRAME calls this when scrap is fed in: scripts/mainframe.gd.)
+func take_from_bag(player_id: int, item_id: String) -> bool:
+	var inventory := get_inventory(player_id).duplicate(true)
+	var bag: Array = inventory.bag
+	var index := bag.rfind(item_id)
+	if index < 0:
+		return false
+	bag.remove_at(index)
+	_set_inventory.rpc(player_id, inventory)
+	return true
+
+
 ## Host: a rival ROBS a downed cat (cat_health.gd): the victim's loot bag goes into the robber's,
 ## as far as it fits; the rest drops on the street next to the victim. Returns how many pieces
 ## the robber got.
@@ -683,8 +720,9 @@ func drop_everything(player_id: int, at: Vector3) -> void:
 
 # --- The stash: safe lockers in the sewers (host decides, like everything else) ---
 
-## Inventory screen at the stash: put the item in this paw ("hand", 0 right / 1 left) or
-## backpack slot ("pack") into the stash. Only while standing at the lockers. Host only.
+## Inventory screen at the stash: put the item in this paw ("hand", 0 right / 1 left),
+## backpack slot ("pack"), quick slot ("quick") or loot bag slot ("bag": SCRAP only, see
+## is_stashable) into the stash. Only while standing at the lockers. Host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_to_stash(player_id: int, where: String, index: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -705,6 +743,8 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 		item_id = inventory.pack.pop_at(index)
 	elif where == "quick":
 		item_id = _pop_quick(inventory, index)
+	elif where == "bag" and index >= 0 and index < inventory.bag.size() and is_stashable(inventory.bag[index]):
+		item_id = inventory.bag.pop_at(index)  # (money loot can't be stashed: only scrap)
 	if item_id == "":
 		return
 	stash.append(item_id)
@@ -712,7 +752,8 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 	_set_inventory.rpc(player_id, inventory)
 
 
-## Inventory screen at the stash: take stash slot "index" out, into the backpack. Host only.
+## Inventory screen at the stash: take stash slot "index" out, into the backpack (or, for
+## SCRAP, back into the loot bag). Host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_from_stash(player_id: int, index: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -722,11 +763,24 @@ func request_from_stash(player_id: int, index: int) -> void:
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or index < 0 or index >= stash.size():
 		return
-	if inventory.pack.size() >= pack_size:
+	var data: ItemData = catalog.get(stash[index])
+	if data != null and data.kind == ItemData.Kind.LOOT:
+		if not _can_take(player_id, data):
+			return  # loot bag full (the screen tells the player)
+		inventory.bag.append(stash.pop_at(index))
+	elif inventory.pack.size() >= pack_size:
 		return  # backpack full (the screen tells the player)
-	inventory.pack.append(stash.pop_at(index))
+	else:
+		inventory.pack.append(stash.pop_at(index))
 	inventory.stash = stash
 	_set_inventory.rpc(player_id, inventory)
+
+
+## May this item go in the stash? Gear (held items) yes; loot only if it's worth $0 at the
+## exit (SCRAP) - fish and koi have to be cashed in. (player_profile.gd checks saves with this.)
+func is_stashable(item_id: String) -> bool:
+	var data: ItemData = catalog.get(item_id)
+	return data != null and (data.kind != ItemData.Kind.LOOT or data.cash_value <= 0)
 
 
 ## Host: replace a player's whole stash (their saved one, when they start a game —

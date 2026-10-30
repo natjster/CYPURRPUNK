@@ -29,6 +29,7 @@
 [ext_resource type="Script" path="res://scripts/wallet.gd" id="29_wallet"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/pawnie.tscn" id="30_pawnie"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/clawd.tscn" id="31_clawd"]
+[ext_resource type="Script" path="res://scripts/mainframe.gd" id="32_mainframe"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -157,6 +158,9 @@ script = ExtResource("24_health")
 
 [node name="Profile" type="Node" parent="."]
 script = ExtResource("25_profile")
+
+[node name="Mainframe" type="Node" parent="."]
+script = ExtResource("32_mainframe")
 
 [node name="Heat" type="Node" parent="."]
 script = ExtResource("28_heat")

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/scrap.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "scrap"
+display_name = "SCRAP"
+description = "Salvage from a MEGA VAC-COP. Worth $0 at the exit (it stays in your bag), but feed it to THE MAINFRAME in the sewers for +25%. Spare scrap can go in your stash."
+kind = 0
+cash_value = 0
+bag_space = 1
+carry_speed = 1.0
+noise = 1.0
+scene = ExtResource("2_scene")
+auto_pickup = true
+world_scale = 1.4
+glow_color = Color(0.2, 1, 0.8, 1)

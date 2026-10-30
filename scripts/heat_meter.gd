@@ -6,6 +6,9 @@ extends Node
 ##
 ## How it plays:
 ##   - Heat goes 0..100. It creeps up every second while any cat is up in the city.
+##     A district doesn't always start at 0: THE MAINFRAME (scripts/mainframe.gd) decides
+##     (0 when it's charged, 15 / 30 / 50 when it runs low), and at 100% charge (OVERCLOCK)
+##     heat rises 20% slower for that district.
 ##   - Trouble adds heat on top: shooting Roombas, blowing them up, and grabbing any item whose
 ##     card has a heat_on_pickup (none do right now; the golden koi used to).
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
@@ -19,7 +22,8 @@ extends Node
 ##     hub, the heat races to 100
 ##     (heat_per_second_when_all_home) so the next district comes quickly.
 ##   - The HUD shows it as the red/blue flashing HEAT bar, top-right (scripts/ui/hud_heat_bar.gd,
-##     fed from _process below). Players also HEAR it go up (the heat_up / boss_siren sounds).
+##     fed from _process below; down in the sewers the same bar shows THE MAINFRAME's charge).
+##     Players also HEAR it go up (the heat_up / boss_siren sounds).
 ##
 ## MULTIPLAYER: only the HOST changes the heat. It sends the number to everyone a few times a
 ## second (for the HUD); Roombas run on the host, so they read it directly.
@@ -85,9 +89,14 @@ func _ready() -> void:
 
 ## 1..5. 5 = the MEGA VAC-COP is out.
 func level() -> int:
-	if heat >= MAX_HEAT:
+	return level_of(heat)
+
+
+## The heat level (1..5) for any heat number.
+static func level_of(heat_value: float) -> int:
+	if heat_value >= MAX_HEAT:
 		return MAX_LEVEL
-	return mini(1 + int(heat / HEAT_PER_LEVEL), MAX_LEVEL - 1)
+	return mini(1 + int(heat_value / HEAT_PER_LEVEL), MAX_LEVEL - 1)
 
 
 ## How much faster Roombas chase at this heat (1.0 at level 1).
@@ -105,19 +114,34 @@ func extra_roombas() -> int:
 	return extra_roombas_per_level * (level() - 1)
 
 
-## Host: add (or, with a negative number, remove) heat.
+## Host: add (or, with a negative number, remove) heat. Added heat is slowed while the district
+## is OVERCLOCKED (scripts/mainframe.gd heat_multiplier).
 func add_heat(amount: float) -> void:
 	if not multiplayer.is_server():
 		return
+	if amount > 0.0:
+		amount *= _mainframe_multiplier()
 	heat = clampf(heat + amount, 0.0, MAX_HEAT)
 	_send_timer = 0.0  # tell everyone right away
 
 
-## Host: back to zero (a new game or a new district; game_systems.gd).
+## Host: a new game or a new district (game_systems.gd). The heat starts where THE MAINFRAME
+## says (scripts/mainframe.gd starting_heat: 0 when it's healthy, up to 50 at 0%).
 func start_district() -> void:
-	heat = 0.0
-	_last_level = 1
+	restart_district_heat()
+
+
+## Host: put the heat back to this district's starting heat (start_district, or scrap fed into
+## THE MAINFRAME before anyone went up).
+func restart_district_heat() -> void:
+	heat = Mainframe.instance.starting_heat() if Mainframe.instance != null else 0.0
+	_last_level = level()  # (no level-up sound for starting high)
 	_send_timer = 0.0
+
+
+## 1.0 normally, less while THE MAINFRAME has the district OVERCLOCKED.
+func _mainframe_multiplier() -> float:
+	return Mainframe.instance.heat_multiplier() if Mainframe.instance != null else 1.0
 
 
 func _physics_process(delta: float) -> void:
@@ -126,7 +150,7 @@ func _physics_process(delta: float) -> void:
 	var cats_up := Game.instance.players_up_top()
 	if cats_up > 0:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
-		heat = minf(heat + heat_per_second * crowd * delta, MAX_HEAT)
+		heat = minf(heat + heat_per_second * crowd * _mainframe_multiplier() * delta, MAX_HEAT)
 	elif heat < MAX_HEAT and FishHeist.instance != null \
 			and (FishHeist.instance.exit_is_open() or FishHeist.instance.everyone_has_been_up()):
 		# Everyone's done (extracted / knocked out) after the exit opened, or every cat has used
@@ -156,13 +180,20 @@ func send_state_to(peer_id: int) -> void:
 
 func _process(_delta: float) -> void:
 	var lvl := level()
-	# Every player on this computer gets the heat bar (top-right of their HUD) - but only
-	# while they're up in the city. Down in the sewer hub the bar is hidden.
+	# Every player on this computer gets the bar top-right of their HUD. Up in the city it's the
+	# HEAT bar; down in the sewers it turns into THE MAINFRAME's charge (scripts/mainframe.gd).
 	for cat in Game.instance.playing_cats():
 		var bar := Hud.element("Heat", cat.slot) as HudHeatBar
 		if bar != null:
-			bar.visible = not UndergroundHub.is_in_hub(cat.global_position)
-			bar.set_heat(heat, MAX_HEAT, lvl)
+			if not UndergroundHub.is_in_hub(cat.global_position):
+				bar.visible = true
+				bar.set_heat(heat, MAX_HEAT, lvl)
+			elif Mainframe.instance != null:
+				bar.visible = true
+				var mainframe := Mainframe.instance
+				bar.set_mainframe(mainframe.charge, Mainframe.MAX_CHARGE, mainframe.tier_color(), mainframe.tier() == Mainframe.Tier.CRITICAL)
+			else:
+				bar.visible = false
 	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:
 		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)

@@ -10,15 +10,17 @@ extends Control
 ##   QUICK USE two slots for catnip / catdip (keys 1 / 2, d-pad left / right in the game).
 ##             Click = put one back in the backpack. Clicking catnip in the backpack moves it here.
 ##   BACKPACK  held items you're carrying but not using. Click = take it into your paws.
-##   LOOT BAG  fish etc. Paid out at the exit manhole.
+##   LOOT BAG  fish etc. Money loot is paid out at the exit manhole; SCRAP stays in it (feed it to
+##             THE MAINFRAME in the sewers, or stash it).
 ##   Right-click any item = drop it on the ground in front of you.
 ##   CONTROLLER: Y opens it, the d-pad / left stick picks a slot, A = click, X = drop, B / Y = close.
 ## SPLIT SCREEN: every player has their own inventory screen in their own HUD (Hud.seat), showing
 ## their own cat's things. InventoryScreen.for_seat(seat) finds it.
 ##
-## AT THE STASH (standing at the lockers in the sewers, or pressing E there) the loot bag is
-## swapped for your STASH, and clicks move things between you and the stash instead:
+## AT THE STASH (standing at the lockers in the sewers, or pressing E there) your STASH shows
+## under the loot bag, and clicks move things between you and the stash instead:
 ##   click a paw / backpack item = put it in the stash; click a stash item = into the backpack.
+##   SCRAP goes between the LOOT BAG and the stash (money loot can't be stashed).
 ##
 ## The screen only ASKS the item system (ItemManager) to move things; the host decides,
 ## and the screen redraws itself from the result. So it's always in sync in multiplayer.
@@ -31,7 +33,8 @@ extends Control
 ##       ├── Title, Paws (left + right paw slots)
 ##       ├── Quick (QUICK USE 1 + 2 slots)
 ##       ├── PackTitle + PackGrid           (3 slots per row)
-##       ├── BagTitle + BagGrid  / StashTitle + StashGrid   (only one of the two is shown)
+##       ├── BagTitle + BagGrid
+##       ├── StashTitle + StashGrid         (only at the stash lockers)
 ##       └── Info (hints, item descriptions, "Backpack is full.")
 
 ## Player 1's inventory screen.
@@ -148,7 +151,7 @@ func _build() -> void:
 	box.add_child(_pack_title)
 	box.add_child(_grid(_pack_buttons, "pack", items.pack_size))
 
-	# The loot bag and the stash share the same spot: only one is shown at a time.
+	# The loot bag is always shown; the stash only at the lockers, under it.
 	_bag_title = _label("LOOT BAG", title_font_size, Color(0.45, 1, 0.55))
 	box.add_child(_bag_title)
 	_bag_grid = _grid(_bag_buttons, "bag", items.bag_size)
@@ -258,14 +261,14 @@ func _process(_delta: float) -> void:
 	for i in _stash_buttons.size():
 		_fill(_stash_buttons[i], stash[i] if i < stash.size() else "")
 	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size]
-	_bag_title.text = "LOOT BAG  %d/%d  (paid out at the exit manhole)" % [items.bag_used(cat.player_id), items.bag_size]
+	_bag_title.text = "LOOT BAG  %d/%d  (cash loot pays out at the exit; SCRAP stays)" % [items.bag_used(cat.player_id), items.bag_size]
 	_stash_title.text = "STASH  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
 
 
-## At the lockers: show the stash instead of the loot bag (the box resizes itself to fit).
+## At the lockers: show the stash too, under the loot bag (the box resizes itself to fit).
 func _show_stash_section(at_stash: bool) -> void:
-	_bag_title.visible = not at_stash
-	_bag_grid.visible = not at_stash
+	_bag_title.visible = true
+	_bag_grid.visible = true
 	_stash_title.visible = at_stash
 	_stash_grid.visible = at_stash
 	var on_pad := owner_cat != null and Seats.uses_pad(owner_cat.slot)
@@ -369,10 +372,18 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		pass  # (stash items can't be dropped)
 	elif _at_stash:
 		if where == "stash":
-			if inventory.pack.size() >= items.pack_size:
+			var data: ItemData = items.catalog.get(button.get_meta("item"))
+			if data != null and data.kind == ItemData.Kind.LOOT:
+				if items.bag_used(cat.player_id) + data.bag_space > items.bag_size:
+					_info.text = "Loot bag is full."
+				else:
+					items.request_from_stash.rpc_id(1, cat.player_id, index)  # scrap: back into the loot bag
+			elif inventory.pack.size() >= items.pack_size:
 				_info.text = "Backpack is full."
 			else:
 				items.request_from_stash.rpc_id(1, cat.player_id, index)
+		elif where == "bag" and not items.is_stashable(button.get_meta("item")):
+			_info.text = "Money loot can't be stashed: cash it in at the exit manhole. (SCRAP can go in.)"
 		elif items.get_stash(cat.player_id).size() >= items.stash_size:
 			_info.text = "Stash is full."
 		else:
@@ -391,7 +402,7 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 			else:
 				items.request_put_away.rpc_id(1, cat.player_id, index)
 		else:
-			_info.text = "Loot pays out when you climb down the exit manhole."
+			_info.text = "Cash loot pays out at the exit manhole. SCRAP feeds THE MAINFRAME in the sewers."
 
 
 ## Hovering a slot shows what the item is.

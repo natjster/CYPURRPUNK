@@ -674,7 +674,7 @@ P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture 
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
 middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
-west wall; decoration for now — later it's where scrap buys server-wide buffs) and a ladder up
+west wall: feed it SCRAP, see **The Mainframe** in §8) and a ladder up
 to the surface. The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
 sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
 
@@ -714,14 +714,51 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
   price on the item card and your cash, takes the money and puts the item in your paws (or the
   backpack). Make another shopkeeper the same way: set an NPC's script to `shopkeeper.gd`.
 
+### The Mainframe & scrap
+**SCRAP** only comes from a destroyed **MEGA VAC-COP** (it glows cyan on the street, and you grab
+it by walking over it). It's worth $0 and takes 1 loot bag space. At the exit your money loot is
+cashed in and scrap **stays in your bag**. A knockout loses it, like any loot.
+
+**THE MAINFRAME** is the giant CRT on the west wall. Every player, in both gangs' sewers, shares
+**one** charge, 0-100% in 25% steps. A new game starts at **75%** (the charge is not saved between
+games). Each sealed district drains **25%**. With scrap in your bag, walk up and press **[E] FEED
+SCRAP**: 1 scrap = +25%. At 100% it refuses, so put spare scrap in your stash for later.
+
+The charge when a district starts decides how it begins:
+
+| Charge | CRT says | Starting heat | Extra |
+|---|---|---|---|
+| 100% | OVERCLOCK ACTIVE (cyan) | 0 | Heat rises 20% slower that district |
+| 75% | SYSTEM ONLINE (green) | 0 | Normal |
+| 50% | POWER LOW (yellow) | 15 | Less time before the exit opens |
+| 25% | WARNING (orange) | 30 | Starts at heat level 2 |
+| 0% | CRITICAL (flashing red) | 50 | Starts at heat level 3, with 1 MEGA VAC-COP already up top |
+
+The seal drains the charge just **before** the next district starts, so a Mainframe at 100% only
+reaches OVERCLOCK if you top it up **in the sewers before anyone goes up**: scrap fed then counts
+for the current district straight away. Otherwise 100% is a one-district buffer.
+
+The top-right bar shows the **HEAT** up in the city and the **Mainframe's charge** in the sewers.
+
+**Where it lives:** `scripts/mainframe.gd` on the **Mainframe** node in `main.tscn`.
+
+**Tuning:** select **Mainframe** in `main.tscn`: **Charge** (Starting Charge, Drain Per District,
+Charge Per Scrap), **Starting Heat Per Tier**, **Overclock** (Overclock Heat Multiplier). The
+scrap card is `items/scrap.tres`. The CRT's feeding spot: **Hub** and **GangHub** > **Mainframe**.
+
+**Test it without playing:** `--mainframe=N` sets the charge and restarts the district on it.
+`--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one. `--to_stash=bag:0` stashes
+scrap. On a client, add `--wait=120` first.
+
 ### The stash & saved progress
 **THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black
 Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STASH**. Press E
 (or open the inventory with Tab while standing there) and the inventory shows your **STASH**
-(9 slots) where the loot bag usually is:
+(9 slots) under the loot bag:
 - **Click** something in your paws or backpack = put it in the stash.
 - **Click** something in the stash = take it into your backpack (equip it from there as usual).
-- Only gear goes in the stash (no fish: fish are for cashing in at the exit manhole).
+- **SCRAP** moves between your **loot bag** and the stash the same way.
+- Only gear and scrap go in the stash (no fish: fish are for cashing in at the exit manhole).
 
 Gear in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
 
@@ -1041,7 +1078,7 @@ until destroyed or the district ends). On top of that, **one is called in every 
 3 VAC-COPs**, up to **4 times per district** (only when no boss is out, and only from 25 heat on: kills
 before that still count, so the boss arrives right at 25), and one always comes out for the DEEP CLEAN at
 100 heat (level bosses and the DEEP CLEAN one don't count toward the 4).
-The heat bar only shows while you're up in the city - it's hidden down in the sewer hub. The car can't run it over: driving into
+The heat bar only shows while you're up in the city - down in the sewers the same bar shows The Mainframe's charge. The car can't run the boss over: driving into
 it is a crash, like hitting a wall (the car stops dead and bounces back a little; tune
 **Boss Crash Bounce** on the GetawayCar). That works because `roomba_boss.tscn` is also on
 collision **layer 3** and the car's **Mask** includes layer 3 (Inspector > CollisionObject3D >
@@ -1049,8 +1086,8 @@ Collision). Everyone hears its
 siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (once it's been shot, a big health bar
-floats over it, like the little ones' but twice the size). Destroy it and it spits out a **golden koi**
-(so 4 bosses = 4 koi... if you survive). In the DEEP CLEAN, destroying it doesn't stop the swarm.
+floats over it, like the little ones' but twice the size). Destroy it and it spits out **SCRAP**
+(fuel for The Mainframe, see above). In the DEEP CLEAN, destroying it doesn't stop the swarm.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
 levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas and the boss).
@@ -1066,7 +1103,7 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Roombas, Swarm Min/Max Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
 - The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
   with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On
-  Destroy** (`golden_koi`), Heat Scaling (off: the boss doesn't get faster with heat).
+  Destroy** (`scrap`), Heat Scaling (off: the boss doesn't get faster with heat).
 - How much heat an item adds when grabbed: **Heat On Pickup** on its card.
 
 ### Health, downed cats, revives & knockouts (the risk in "extraction")
@@ -1219,7 +1256,8 @@ Markitten in the sewers (§8).
 | **Catdip** | quick use | shop, $35 | Press its quick key: 20 s of double jump, with a front flip (used up) |
 | **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
-| **Golden Koi** | loot (2 spaces) | one hidden far away; the MEGA VAC-COP drops one | $400, but heavy and noisy (§8) |
+| **Golden Koi** | loot (2 spaces) | one hidden far away | $400, but heavy and noisy (§8) |
+| **Scrap** | loot | dropped by a destroyed MEGA VAC-COP | $0, stays in your bag at the exit; feed it to The Mainframe (§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
 it (`HEAT [####------]`). About 3 s of non-stop fire overheats it: it blinks and won't fire until
@@ -1353,8 +1391,8 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 - **Hover** an item to read its description (the **Description** line on its item card).
 - **Picking things up:** a held item goes into a free paw first; if your paws are busy it goes
   into the backpack; only if the backpack is full too does it swap with what's in your paw.
-- **At the stash lockers** in the sewers the LOOT BAG rows are replaced by your **STASH**
-  (9 slots), and clicking moves items between you and the stash instead (see **The stash &
+- **At the stash lockers** in the sewers your **STASH** (9 slots) shows under the LOOT BAG,
+  and clicking moves items between you and the stash instead (see **The stash &
   saved progress** in §8).
 - The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, §13) just has an empty
   `Inventory` node (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`). It's drawn sharp at

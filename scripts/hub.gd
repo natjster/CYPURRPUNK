@@ -13,6 +13,9 @@ extends Node3D
 ##   - COMRADE WHISKERS runs THE BLACK MARKITTEN on the west wall: the only place to get
 ##     gear (guns, catnip, catdip). Pay with the cash you earn extracting fish.
 ##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
+##   - THE MAINFRAME, the big CRT in the middle of the west wall (scripts/mainframe.gd): its
+##     screen shows the shared charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
+##     CRITICAL). Bring SCRAP home in your loot bag and press E there to feed it (+25%).
 ##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
 ##     cashed in and you're brought back down here (return_cat()).
 ##
@@ -95,6 +98,12 @@ const DEPTH_LINE: float = -100.0
 ## How close (metres) you must be to the stash spot to open it.
 @export var stash_radius: float = 2.5
 
+@export_group("Mainframe")
+## Where you stand to feed THE MAINFRAME scrap (the big CRT on the west wall), relative to the Hub node.
+@export var mainframe_spot: Vector3 = Vector3(-11.0, 0, 0)
+## How close (metres) you must be to the mainframe spot.
+@export var mainframe_radius: float = 2.5
+
 @export_group("Mood")
 ## Fog and ambient colours while you're down here.
 @export var sewer_fog_color: Color = Color(0.03, 0.07, 0.05)
@@ -131,6 +140,26 @@ var _metal: ShaderMaterial
 var _cardboard: ShaderMaterial
 var _crate: ShaderMaterial
 var _neon: ShaderMaterial
+## THE MAINFRAME's CRT prop (built in _build_props, coloured by _update_mainframe_crt).
+var _crt_screen: MeshInstance3D
+var _crt_light: OmniLight3D
+var _crt_sign: Label3D
+var _crt_key := ""  # what the CRT shows now, so it's only rewritten when that changes
+
+
+## THE MAINFRAME's E spot: "[E] FEED SCRAP (+25%)", only while you have scrap in your loot bag.
+## Pressing it asks the host (Mainframe.request_feed), which checks and feeds.
+class MainframeTerminal extends Interactable:
+	func interact_distance(cat: CatPlayer) -> float:
+		if Mainframe.instance == null or ItemManager.instance.count_in_bag(cat.player_id, Mainframe.SCRAP_ID) <= 0:
+			return -1.0  # no scrap: nothing to do here
+		return super(cat)
+
+	func interact_prompt(_cat: CatPlayer) -> String:
+		return "FEED SCRAP (+%d%%)" % int(Mainframe.instance.charge_per_scrap)
+
+	func interact(cat: CatPlayer) -> void:
+		Mainframe.instance.request_feed.rpc_id(1, cat.player_id)
 
 
 func _enter_tree() -> void:
@@ -143,8 +172,6 @@ func _ready() -> void:
 	npc = leader if leader != null else get_node_or_null("DonCatleone") as Npc
 	if shopkeeper == null:
 		shopkeeper = get_node_or_null("ComradeWhiskers") as Npc
-	if self != instance:
-		set_process(false)  # the fog / music are the whole world's: Team 0's hub runs them
 	_make_materials()
 	_build_tunnel()
 	_build_props()
@@ -178,6 +205,11 @@ static func of(cat: CatPlayer) -> UndergroundHub:
 ## True if this cat is standing at THE STASH lockers (where the inventory shows your stash).
 func near_stash(cat: CatPlayer) -> bool:
 	return cat != null and cat.global_position.distance_to(to_global(stash_spot)) < stash_radius
+
+
+## True if this cat is standing at THE MAINFRAME (where scrap can be fed in: mainframe.gd).
+func near_mainframe(cat: CatPlayer) -> bool:
+	return cat != null and cat.global_position.distance_to(to_global(mainframe_spot)) < mainframe_radius + 0.5
 
 
 ## Where cat number n appears when it joins: rows of three on the walkway, facing Don.
@@ -230,9 +262,12 @@ func return_cat(cat: CatPlayer) -> void:
 	print("[Hub] %s extracted back to the hub" % cat.name)
 
 
-# --- Every frame: the mood (this computer only) ---
+# --- Every frame: THE MAINFRAME's CRT (every hub), then the mood (this computer only) ---
 
 func _process(_delta: float) -> void:
+	_update_mainframe_crt()
+	if self != instance:
+		return  # the fog / music are the whole world's: Team 0's hub runs them
 	var camera := get_viewport().get_camera_3d()
 	var in_hub := camera != null and is_in_hub(camera.global_position)
 	if in_hub != _in_hub_view:
@@ -249,6 +284,26 @@ func _process(_delta: float) -> void:
 	# rain.wav). Same track as before = nothing happens.
 	Sound.play_music(city_music if anyone_up else hub_music)
 	Sound.play_ambience(city_ambience if anyone_up else hub_ambience)
+
+
+## THE MAINFRAME's CRT: sign text, screen tint and light colour follow the shared charge's tier
+## (scripts/mainframe.gd). CRITICAL (0%) flashes red. Every hub runs this for its own CRT.
+func _update_mainframe_crt() -> void:
+	var mainframe := Mainframe.instance
+	if mainframe == null or _crt_sign == null:
+		return
+	var colour := mainframe.tier_color()
+	var critical := mainframe.tier() == Mainframe.Tier.CRITICAL
+	var flash_on := not critical or fmod(Time.get_ticks_msec() / 1000.0 * 2.0, 1.0) < 0.5
+	var key := "%d %s %s" % [int(mainframe.charge), mainframe.tier_name(), flash_on]
+	if key == _crt_key:
+		return
+	_crt_key = key
+	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(), int(mainframe.charge)]
+	var shown := colour if flash_on else colour * 0.25
+	_crt_screen.set_instance_shader_parameter("instance_tint", Color(shown, 1.0))
+	_crt_light.light_color = colour
+	_crt_light.light_energy = 2.5 if flash_on else 0.6
 
 
 ## Split screen: the look a screen whose camera is in the hub (or not) should use, or null for
@@ -364,14 +419,21 @@ func _build_props() -> void:
 	_build_shop()
 	_build_stash()
 
-	# THE MAINFRAME: a giant CRT computer on the west wall. Decoration for now — later,
-	# players will feed it scrap for server-wide buffs.
+	# THE MAINFRAME: a giant CRT computer on the west wall (scripts/mainframe.gd). Its sign, screen
+	# and light show the shared charge's tier, live (_update_mainframe_crt); walk up with SCRAP in
+	# your loot bag and press E to feed it (+25%).
 	var frame_x := -w + 1.0
 	LevelKit.add_box(self, Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
-	var screen := LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
-	screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
-	LevelKit.add_light(self, Vector3(frame_x + 2.5, 2.8, 0), Color(0.2, 1, 0.45), 2.5, 8.0)
-	LevelKit.add_sign(self, "THE MAINFRAME\nOVERCLOCK  OFFLINE", Vector3(frame_x + 1.35, 2.8, 0), Color(0.0, 0.06, 0.02), 32, PI / 2)
+	_crt_screen = LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
+	_crt_screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
+	_crt_light = LevelKit.add_light(self, Vector3(frame_x + 2.5, 2.8, 0), Color(0.2, 1, 0.45), 2.5, 8.0)
+	_crt_sign = LevelKit.add_sign(self, "THE MAINFRAME\nSYSTEM ONLINE\n75%", Vector3(frame_x + 1.35, 2.8, 0), Color(0.0, 0.06, 0.02), 22, PI / 2)
+	var terminal := MainframeTerminal.new()
+	terminal.name = "MainframeTerminal"
+	terminal.position = mainframe_spot
+	terminal.radius = mainframe_radius
+	terminal.priority = 10
+	add_child(terminal)
 
 	# Cardboard-box shanties along the east wall (the "homes" of sewer cats).
 	for z in [4.0, 9.0, 14.0]:

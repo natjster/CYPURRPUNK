@@ -26,6 +26,8 @@ extends Node3D
 ##       GOLDEN KOI $400: only one in the city, far from Meow-Mart, glowing gold. It's HEAVY
 ##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
+##       SCRAP isn't on the street: only a destroyed MEGA VAC-COP drops it. It's worth $0 here
+##       (it stays in your bag at the exit) - it's fuel for THE MAINFRAME (scripts/mainframe.gd).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
 ##   - At 3/4 heat (exit_opens_at_heat) both gangs' crews break through: each gang's EXIT manhole
 ##     opens, somewhere random, and every PAYPHONE in the district rings. Payphones
@@ -38,7 +40,7 @@ extends Node3D
 ##   - (The HUD heat bar shows how close you are.) At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
 ##     VAC-COPs plus the MEGA VAC-COP. Anyone left up top is as good as dead (after
 ##     deep_clean_seconds they're knocked out no matter what, losing what they carry).
-##     Then a NEW DISTRICT is built (new seed, heat back to 0) and Don can send you up again.
+##     Then a NEW DISTRICT is built (new seed, heat back to where THE MAINFRAME says) and Don can send you up again.
 ##
 ## Multiplayer: the HOST is the referee. It checks every frame who is standing on the open exit,
 ## empties their loot bag and tells everyone with an RPC. The extracted player's own computer
@@ -349,7 +351,8 @@ func _physics_process(delta: float) -> void:
 		_extract_wait[player_id] = _clock + 3.0
 		# Quests first, while the loot is still in the bag (e.g. Mittens wants 3 fish IN it).
 		var quest_bonus: int = QuestManager.instance.complete_on_extract(player_id)[0]
-		var loot := items.take_bag(player_id) if items.bag_used(player_id) > 0 else []
+		# Only MONEY loot is cashed in; SCRAP ($0) stays in the bag for THE MAINFRAME / the stash.
+		var loot := items.take_cash_loot(player_id) if items.bag_used(player_id) > 0 else []
 		var earned := 0
 		for item_id in loot:
 			earned += (items.catalog[item_id] as ItemData).cash_value

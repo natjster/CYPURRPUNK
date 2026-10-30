@@ -14,6 +14,8 @@ extends Node3D
 ## At max heat fish_heist.gd also seals the hatch and starts the DEEP CLEAN (Events.district_sealed):
 ## we set deep_clean_extra to Deep Clean Roombas, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
+## THE MAINFRAME (scripts/mainframe.gd) at 0% (CRITICAL) puts one MEGA VAC-COP out as soon as a
+## district starts. Every MEGA VAC-COP drops SCRAP when destroyed (roomba_boss.tscn drop_on_destroy).
 ##
 ## Only the HOST creates Roombas (start_district(), called through game_systems.gd when a game starts). Where they appear
 ## is random each game — they're not part of the city seed, so they never change the city.
@@ -109,12 +111,27 @@ func start_district() -> void:
 		old.queue_free()
 	_patrolling = true
 	_respawn_at.clear()
-	_boss_level_done = 0
 	deep_clean_extra = 0
 	_kills_toward_boss = 0
 	_bosses_called = 0
 	for i in roomba_count:
 		_spawn_one()
+	var mainframe := Mainframe.instance
+	# A low MAINFRAME (scripts/mainframe.gd) starts the district hotter: the heat levels it
+	# starts on don't send level bosses...
+	_boss_level_done = HeatMeter.level_of(mainframe.starting_heat()) if mainframe != null else 0
+	if _boss_level_done <= 1:
+		_boss_level_done = 0
+	# ...but at 0% (CRITICAL) one MEGA VAC-COP is already up there: hunt it for SCRAP.
+	if mainframe != null and mainframe.boss_at_start():
+		_spawn_boss("MAINFRAME CRITICAL")
+
+
+## Host: scrap was fed into THE MAINFRAME before anyone went up, so the district's starting heat
+## changed (heat_meter.gd restart_district_heat): level bosses count from the new heat level.
+func restart_heat_levels() -> void:
+	var lvl := HeatMeter.instance.level()
+	_boss_level_done = lvl if lvl > 1 else 0
 
 
 ## Host: a Roomba blew up (its "destroyed" signal, enemy.gd). Show the explosion everywhere and

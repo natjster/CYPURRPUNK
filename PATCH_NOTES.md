@@ -16,9 +16,15 @@ gives it to you, and starts a fresh draft.
 - **Starting money:** new cats start with $100, so you can gear up before your first trip. Cats you already have with less get topped up to $100 once.
 - **Quick use slots:** catnip and catdip now go into two quick slots (keys **1** / **2**, d-pad left / right on a controller), up to 3 of each. One press and you're zooming, no more swapping them into your paws.
 - **Jedi flip:** a catdip double jump is now a front flip.
+- **SCRAP:** MEGA VAC-COPs now drop glowing scrap. It's worth no cash, stays in your bag when you extract, and can be saved in your stash.
+- **THE MAINFRAME:** the giant computer in the sewers is alive! Everyone shares its power. Each sealed district drains 25%, and each scrap you feed it (E) adds 25%.
+- **Keep it charged:** at 50% and below, districts start with heat already up, and at 0% a MEGA VAC-COP is waiting up top. Top it up to 100% before heading up and OVERCLOCK makes heat rise 20% slower.
+- **Sewer status bar:** the top-right bar shows the Mainframe's power while you're in the sewers.
 
 ## 🔧 Changes
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
+- **Golden Koi:** MEGA VAC-COPs no longer drop it. There's just the one hidden in the city now.
+- **Inventory at the stash:** your loot bag now stays visible above your stash.
 
 ## 🐛 Fixes
 - Cars could get stuck in the middle of town at the start of a game instead of waiting at your gang's corner.

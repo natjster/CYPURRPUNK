@@ -95,6 +95,7 @@ extends Node
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
+##   --mainframe=N     (host) THE MAINFRAME's charge is N and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 ##                     (slot 2 = the PAD box: --rebind=jump,2,Pad_B  - use _ for spaces)
@@ -243,6 +244,14 @@ func _ready() -> void:
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				Wallet.instance.set_cash(peer_id, int(args["cash"])))
+		if args.has("mainframe") and multiplayer.is_server():
+			# (host) --mainframe=N: THE MAINFRAME's charge is N (0/25/50/75/100), and this district
+			# starts over as if it had begun at that charge (heat, overclock, 0% boss).
+			Mainframe.instance.charge = float(args["mainframe"])
+			Mainframe.instance.start_district()
+			HeatMeter.instance.start_district()
+			RoombaPatrol.instance.start_district()
+			print("DevCapture mainframe: %d%% %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charge, Mainframe.instance.tier_name(), HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
 		if args.has("heat") and multiplayer.is_server():
 			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))

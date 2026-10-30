@@ -23,7 +23,7 @@ display_name = "MEGA VAC-COP"
 health_bar_height = 2.4
 car_smash_speed = 999.0
 is_boss = true
-drop_on_destroy = "golden_koi"
+drop_on_destroy = "scrap"
 heat_scaling = false
 draw_distance = 250.0
 

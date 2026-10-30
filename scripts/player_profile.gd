@@ -3,7 +3,8 @@ extends Node
 ## CYPURRPUNK — SAVED PROGRESS: your cash and your stash, kept between games.
 ## Attach to the "Profile" node in main.tscn. Reach it with PlayerProfile.instance.
 ##
-## What's saved: your CASH and what's in your STASH (the lockers in the sewers). That's all:
+## What's saved: your CASH and what's in your STASH (the lockers in the sewers: gear, and spare
+## SCRAP for THE MAINFRAME). That's all:
 ## what you carry (paws, backpack, loot bag) is NOT saved, so put gear in the stash before you
 ## quit — a player who quits drops what they carry on the spot, like before.
 ##
@@ -125,9 +126,8 @@ func _request_restore(player_id: int, cash: int, stash: Array) -> void:
 	var items := ItemManager.instance
 	var clean: Array = []
 	for item_id in stash:
-		# Only real gear (no loot, no unknown items), and no more than fits in the stash.
-		if item_id is String and items.catalog.has(item_id) \
-				and (items.catalog[item_id] as ItemData).kind != ItemData.Kind.LOOT and clean.size() < items.stash_size:
+		# Only real gear or SCRAP (no money loot, no unknown items), and no more than fits.
+		if item_id is String and items.is_stashable(item_id) and clean.size() < items.stash_size:
 			clean.append(item_id)
 	Wallet.instance.set_cash(player_id, clampi(cash, 0, MAX_CASH))
 	items.set_stash(player_id, clean)

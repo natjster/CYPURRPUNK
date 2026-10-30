@@ -13,6 +13,11 @@ extends Control
 ##   - When the heat goes up a LEVEL (every 25), the frame flashes white for a moment.
 ##   - Thin tick marks on the bar show the level steps (25 / 50 / 75); 75 = the exit opens.
 ##
+## DOWN IN THE SEWERS the same bar shows THE MAINFRAME instead (scripts/mainframe.gd; heat_meter.gd
+## calls set_mainframe() while you're in the hub): its charge 0..100% in the terminal colour of
+## its tier (cyan OVERCLOCK, green ONLINE, yellow POWER LOW, orange WARNING, flashing red
+## CRITICAL), the same 25 / 50 / 75 ticks, a "MAINFRAME" tag, and a white flash when it's fed.
+##
 ## Move / resize it in hud.tscn like any Control (select Heat, drag it, or change Layout >
 ## Transform). Colours and timings are below (Inspector, with Heat selected).
 
@@ -41,12 +46,22 @@ extends Control
 ## Seconds the frame flashes white when the heat goes up a level.
 @export var level_up_flash: float = 0.6
 
+@export_group("Mainframe mode (in the sewers)")
+## Size of the little "MAINFRAME" tag above the bar.
+@export var mainframe_tag_size: int = 14
+## Flashes per second of the bar when the Mainframe is CRITICAL (0%).
+@export var critical_flash_speed: float = 2.0
+
 var _heat: float = 0.0
 var _max: float = 100.0
 var _level: int = 1
 var _level_flash: float = 0.0
 ## Where we are in the red/blue cycle (0..1 = one red + one blue).
 var _phase: float = 0.0
+## True while showing THE MAINFRAME (set_mainframe) instead of the heat (set_heat).
+var _mainframe_mode: bool = false
+var _mainframe_color: Color = Color(0.2, 1.0, 0.45)
+var _mainframe_critical: bool = false
 
 
 func _ready() -> void:
@@ -57,11 +72,26 @@ func _ready() -> void:
 func set_heat(heat: float, max_heat: float, level: int) -> void:
 	if max_heat <= 0.0:
 		return
-	if level > _level:
+	if level > _level and not _mainframe_mode:
 		_level_flash = level_up_flash
+	_mainframe_mode = false
 	_heat = heat
 	_max = max_heat
 	_level = level
+
+
+## Called every frame by heat_meter.gd while the player is in the sewers: THE MAINFRAME's charge
+## (0..max), its tier colour, and whether it's CRITICAL (the bar flashes).
+func set_mainframe(charge: float, max_charge: float, color: Color, critical: bool) -> void:
+	if max_charge <= 0.0:
+		return
+	if _mainframe_mode and charge > _heat:
+		_level_flash = level_up_flash  # scrap fed in: flash white
+	_mainframe_mode = true
+	_heat = charge
+	_max = max_charge
+	_mainframe_color = color
+	_mainframe_critical = critical
 
 
 func _process(delta: float) -> void:
@@ -74,7 +104,12 @@ func _process(delta: float) -> void:
 
 ## The colour right now: red for the first half of the cycle, blue for the second half.
 ## smoothness rounds off the switch (a sine wave squashed towards a square wave).
+## (Mainframe mode: the tier's terminal colour, blinking dark when CRITICAL.)
 func current_color() -> Color:
+	if _mainframe_mode:
+		if _mainframe_critical and fmod(Time.get_ticks_msec() / 1000.0 * critical_flash_speed, 1.0) > 0.5:
+			return _mainframe_color.darkened(0.6)
+		return _mainframe_color
 	var wave := sin(_phase * TAU)  # +1 = red, -1 = blue
 	var sharp := 1.0 if wave >= 0.0 else -1.0
 	var mixed := lerpf(sharp, wave, smoothness)
@@ -91,16 +126,30 @@ func _draw() -> void:
 	var bar_top := (h - bar_thickness) * 0.5
 	var fraction := clampf(_heat / _max, 0.0, 1.0)
 
-	# --- The number box (right side): [ 42 ] ---
+	# --- The number box (right side): [ 42 ] (Mainframe mode: [ 75% ]) ---
 	var box := Rect2(box_left, 0, number_box_width, h)
 	draw_rect(box, back_color)
 	draw_rect(box, frame_colour, false, 2.0)
 	var number := str(floori(_heat))
+	var font_size := number_font_size
+	if _mainframe_mode:
+		number += "%"
+		# Shrink the text until "100%" fits in the box.
+		while font_size > 10 and font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > number_box_width - 10.0:
+			font_size -= 2
 	var number_colour := Color.WHITE if _level_flash > 0.0 else colour.lerp(Color.WHITE, 0.25)
-	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size)
-	var text_pos := Vector2(box_left + (number_box_width - text_size.x) * 0.5, (h + text_size.y) * 0.5 - font.get_descent(number_font_size))
-	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size, 6, Color(0.04, 0.01, 0.08))
-	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, number_font_size, number_colour)
+	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var text_pos := Vector2(box_left + (number_box_width - text_size.x) * 0.5, (h + text_size.y) * 0.5 - font.get_descent(font_size))
+	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, Color(0.04, 0.01, 0.08))
+	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, number_colour)
+
+	# Mainframe mode: a small "MAINFRAME" tag just above the bar's right end.
+	if _mainframe_mode:
+		var tag := "MAINFRAME"
+		var tag_size := font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size)
+		var tag_pos := Vector2(bar_w - tag_size.x, bar_top - 4.0)
+		draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size, 4, Color(0.04, 0.01, 0.08))
+		draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size, colour.lerp(Color.WHITE, 0.3))
 
 	# --- The bar: dark back, flashing fill growing from the RIGHT edge (next to the number) ---
 	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), back_color)

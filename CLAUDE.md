@@ -157,7 +157,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,
   levels 1-5, HUD `Heat` bar top-right flashes red/blue; level-ups also play a sound): `RoombaPatrol._follow_the_heat` adds Roombas per level
   (20 base, +5/level, +40 DEEP CLEAN) and spawns the boss `scenes/roomba_boss.tscn` (inherits roomba.tscn, `is_boss`,
-  drops a koi) at each heat level in `boss_on_levels` (2-4, stacks; no boss below `boss_min_heat` 25 except DEEP CLEAN; HUD heat bar hidden in the hub), every `boss_every_kills` (3) regular kills when no boss is out (max `bosses_per_district` 4), plus at max heat.
+  drops scrap) at each heat level in `boss_on_levels` (2-4, stacks; no boss below `boss_min_heat` 25 except DEEP CLEAN; HUD heat bar = Mainframe bar in the hub), every `boss_every_kills` (3) regular kills when no boss is out (max `bosses_per_district` 4), plus at max heat.
   Roomba perf: far (>60 m from all cats) patrollers think every 4th frame (velocity scaled for move_and_slide),
   chase route replanned 10/s, mesh `visibility_range_end`, siren light distance fade, hum paused when far;
   sync_position/yaw are ON_CHANGE (`delta_interval` 0.05). Health bars show only once shot (`health < max`).
@@ -169,6 +169,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   up top; `hub.deploy` refuses `has_been_up` (extracted or KO'd). Heat races home (`heat_per_second_when_all_home`) when all
   are in the hub and (exit open OR `everyone_has_been_up()`). Story: Don's crew digs for a way down; exit at 75 = they broke
   through; payphone too-early line has NO direction hint. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
+- MAINFRAME = `scripts/mainframe.gd` (`Mainframe.instance`, `Mainframe` node ABOVE Heat/Roombas: GameSystems order sets overclock
+  first; in `GameSystems.GROUP`): shared charge 0-100 (`_set_charge`, starts 75), -25 on `Events.district_sealed`, +25 per scrap via
+  `request_feed(player_id)` (hub `MainframeTerminal`, `near_mainframe`). Charge at district start sets `starting_heat()` / `heat_multiplier()` /
+  `boss_at_start()`; feeding before anyone went up (`went_up.is_empty()`) reapplies to the current district. Not saved. The seal drains BEFORE
+  `start_district`, so overclock needs a pre-trip feed. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
+  the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N`
+  (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
   `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,
@@ -368,9 +375,8 @@ low-poly, dithering, CRT.
 ## Direction
 Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hides in the sewers. Spawn in
 the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
-DEEP CLEAN, then a new district (new seed). PLANNED next: scrap (Roomba drop, takes bag space: money vs
-time) fed to a shared MAINFRAME in the hub that drains slowly + a chunk per sealed district; its level
-sets the next district's starting heat; mainframe at 0 = boss-fight finale (design TBD).
+DEEP CLEAN, then a new district (new seed). Scrap + the shared MAINFRAME are in. PLANNED next: mainframe at
+0 = boss-fight finale (design TBD).
 
 ## Patch notes (Discord)
 `PATCH_NOTES.md` holds Discord-ready update posts for the user's players. After each finished, committed change that
