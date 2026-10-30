@@ -81,7 +81,7 @@ func interact_priority() -> int:
 ## Nothing while that player's talk box / inventory / pause menu is open, or they're downed /
 ## knocked out (a downed player's E means "give up" instead: cat_health.gd).
 static func best_for(cat: CatPlayer) -> Node:
-	if cat == null or not cat.is_controlled or cat.knocked_out or Hud.wants_input(cat.slot):
+	if cat == null or not cat.is_controlled or cat.knocked_out or Hud.wants_input(cat.slot) or Mainframe.instance.is_spectating(cat):
 		return null
 	if CatHealth.instance != null and CatHealth.instance.is_down(cat.player_id):
 		return null

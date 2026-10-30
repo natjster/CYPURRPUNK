@@ -28,6 +28,9 @@ extends Node
 ##   - The DEEP CLEAN (max heat) knocks out everyone still up top at once, downed or not.
 ##   - Back down in the sewers (the hub) you're healed to full straight away.
 ##   - Cats in the car or in the hub can't be hurt.
+##   - EXCEPT in a SEWER BREACH (scripts/mainframe.gd): in a breached sewer nobody heals and bots
+##     hurt you as usual. A knockout there keeps your gear (no street to lose it on) and you lie
+##     where you fell until the breach is over; then everybody is picked up and healed.
 ##   - Every down, knockout, revive and robbery shows in the FEED (top-left, under your health
 ##     bar: Hud.feed), e.g. "CLAWD DOWNED MITTENS".
 ##
@@ -106,6 +109,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
+	Events.sewer_breach_ended.connect(_on_sewer_breach_ended)  # (scripts/events.gd)
 
 
 # --- Questions anyone can ask (every computer has the answers) ---
@@ -158,7 +162,7 @@ func damage(player_id: int, amount: int, cause: String, instant: bool = false) -
 	if not multiplayer.is_server() or amount <= 0:
 		return
 	var cat := Game.instance.cat_for(player_id)
-	if cat == null or UndergroundHub.is_in_hub(cat.global_position):
+	if cat == null or UndergroundHub.is_safe(cat.global_position):
 		return
 	if is_down(player_id):
 		if instant and is_downed(player_id):
@@ -184,6 +188,8 @@ func _anyone_could_help(player_id: int) -> bool:
 			continue
 		if Game.instance.is_up_top(other_id) or not FishHeist.instance.has_been_up(other_id):
 			return true
+		if Mainframe.instance.is_breached(Teams.team_of(player_id)):
+			return true  # fighting side by side in a breached sewer
 	return false
 
 
@@ -206,7 +212,8 @@ func _knock_out(player_id: int, cause: String) -> void:
 	_down_cause.erase(player_id)
 	if get_health(player_id) > 0:
 		_set_health.rpc(player_id, 0)
-	ItemManager.instance.drop_everything(player_id, cat.global_position)
+	if not UndergroundHub.is_in_hub(cat.global_position):  # (a SEWER BREACH: you keep your gear)
+		ItemManager.instance.drop_everything(player_id, cat.global_position)
 	print("[Health] Player %d was knocked out by %s" % [player_id, cause])
 	_knocked_out.rpc(player_id, cause)  # everyone hears it; that player's computer acts on it
 
@@ -216,12 +223,27 @@ func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server():
 		return
 	_run_downed(delta)
-	# Cats down in the sewers heal to full.
+	# Cats down in the sewers heal to full (not in a breached one: UndergroundHub.is_safe).
 	# (That's also how a knocked-out cat gets its HP back once it wakes up down there.)
 	for node in Game.instance.players.get_children():
 		var player_id := (node as CatPlayer).player_id
 		if get_health(player_id) < max_health and not is_downed(player_id) \
-				and UndergroundHub.is_in_hub((node as Node3D).global_position):
+				and UndergroundHub.is_safe((node as Node3D).global_position):
+			_set_health.rpc(player_id, max_health)
+
+
+## The SEWER BREACH is over (every computer hears it): the host picks everyone up and heals them,
+## and each computer wakes its own knocked-out cats.
+func _on_sewer_breach_ended(_survived: bool) -> void:
+	for cat in Game.instance.local_cats():
+		cat.knocked_out = false
+	if not multiplayer.is_server():
+		return
+	for player_id in downed.keys():
+		_set_downed.rpc(player_id, -1.0, "")
+	_down_cause.clear()
+	for player_id in Game.instance.player_ids():
+		if get_health(player_id) < max_health:
 			_set_health.rpc(player_id, max_health)
 
 
@@ -428,6 +450,10 @@ func _knocked_out(player_id: int, cause: String) -> void:
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
 	Seats.rumble(player_id, 0.8, 1.0, 0.7)  # big shake on their controller
 	Sound.play("knockout")
+	if UndergroundHub.is_in_hub(cat.global_position):
+		# A SEWER BREACH: lie where you fell. The end of the breach wakes you (_on_sewer_breach_ended).
+		Hud.show_message("KNOCKED OUT BY %s!\nHold on. It's not over yet." % cause, knockout_seconds + 1.5, cat.slot)
+		return
 	Hud.show_message("KNOCKED OUT BY %s!\nYour gear and loot are lying in the street." % cause, knockout_seconds + 1.5, cat.slot)
 	await get_tree().create_timer(knockout_seconds).timeout
 	if is_instance_valid(cat):

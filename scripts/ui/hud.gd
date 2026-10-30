@@ -21,7 +21,7 @@ extends CanvasLayer
 ##       │                   Hud.feed), Heat (the red/blue heat bar, top-right,
 ##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
 ##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
-##       ├── Middle       <- hidden while a window is open: Popup, Crosshair, Message, Prompt, Held
+##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
@@ -33,6 +33,7 @@ extends CanvasLayer
 ##   Hud.damage_number(where, 38, false, seat) a damage number popping off a world position
 ##   Hud.show_message("DON: Go get 'em.", 4)  the line of text in the middle, for N seconds
 ##   Hud.popup("EXTRACTED +$80", 2.5)         the big text that fades out (e.g. extraction)
+##   Hud.banner("MIRACLE IN THE SEWERS!", 6, color) big wrapped text for long news (a Sewer Breach)
 ##   Hud.feed("CLAWD DOWNED MITTENS", color)   a line in the FEED (top-left, every player; fades)
 ##   Hud.set_in_game(true)                    the whole HUD on (in a game) / off (start menu)
 ##   Hud.element("Scoreboard")                the node itself, for anything else
@@ -80,6 +81,7 @@ var in_game: bool = false
 
 var _message_time: float = 0.0
 var _popup_time: float = 0.0
+var _banner_time: float = 0.0
 
 @onready var frame: Control = $Frame
 @onready var middle: Control = $Frame/Middle
@@ -102,6 +104,7 @@ func _ready() -> void:
 	frame.hide()
 	element("Message").hide()
 	element("Popup").hide()
+	element("Banner").hide()
 
 
 # --- The functions other scripts call ---
@@ -159,6 +162,16 @@ static func popup(text: String, seconds: float = 2.5, seat_number: int = -1) -> 
 		set_text("Popup", text, hud.seat)
 		show_element("Popup", true, hud.seat)
 		hud._popup_time = seconds
+
+
+## Big news that needs more words than the popup holds: wraps to fit the screen, in any colour,
+## and fades out at the end. seat_number = only that player sees it; left out (-1) = everyone.
+static func banner(text: String, seconds: float = 6.0, color: Color = Color.WHITE, seat_number: int = -1) -> void:
+	for hud in _targets(seat_number):
+		set_text("Banner", text, hud.seat)
+		set_color("Banner", color, hud.seat)
+		show_element("Banner", true, hud.seat)
+		hud._banner_time = seconds
 
 
 ## A line in the FEED, top-left under the health bar (e.g. "CLAWD DOWNED MITTENS"), on EVERY
@@ -258,6 +271,12 @@ func _process(delta: float) -> void:
 		var popup_label := element("Popup", seat)
 		popup_label.visible = _popup_time > 0.0
 		popup_label.modulate.a = clampf(_popup_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
+
+	if _banner_time > 0.0:
+		_banner_time -= delta
+		var banner_label := element("Banner", seat)
+		banner_label.visible = _banner_time > 0.0
+		banner_label.modulate.a = clampf(_banner_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
 
 	# The feed: count each line down, drop the old ones.
 	if not _feed.is_empty():

@@ -23,6 +23,11 @@ extends Node
 
 ## EVERY computer: the hatch was just sealed at max heat; the DEEP CLEAN starts (fish_heist.gd).
 signal district_sealed()
+## EVERY computer: a SEWER BREACH just started on these gangs (scripts/mainframe.gd).
+signal sewer_breached(teams: Array)
+## EVERY computer: the breach is over: the gate is shut and the sewers are safe again.
+## survived = THE 1% MIRACLE (false = OVERCLEAN wiped them out).
+signal sewer_breach_ended(survived: bool)
 
 ## EVERY computer: a player climbed down the exit. loot_value = what their loot was worth,
 ## quest_bonus = extra cash from quests finished just now (fish_heist.gd).

@@ -45,6 +45,10 @@ extends Enemy
 ## isn't drawn beyond draw_distance (the fog hides it anyway), its siren light fades out with
 ## distance, and its hum only plays when it's near a player on this computer.
 ##
+## THE SEWER BREACH (scripts/mainframe.gd): a bot of the horde has breach_hub set. It's born in that
+## sewer's tunnel, hunts every cat in that sewer wherever it is, and finds its way with the sewer's
+## next_stop instead of the city's streets. Fallen in the channel? It hops back out.
+##
 ## OTHER HUNTERS: the SQUIRT-DRONE (squirt_drone.gd) and LINT-TRAPPER (lint_trapper.gd) extend this
 ## script, so they patrol, chase, get stunned, save CPU and get spawned exactly like a VAC-COP. They
 ## only replace these four small functions: _fall (how it stays up), _chase_point (where it drives),
@@ -76,6 +80,8 @@ enum State { PATROL, CHASE, STUNNED }
 ## HP a bonk takes off the cat (cats have 100, see the Health node; 34 = three bonks). At 0 the
 ## cat is knocked out and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
 @export var bonk_damage: int = 34
+## How hard a SEWER BREACH bot hops out of the sewage channel (metres per second; it's 1 m deep).
+@export var channel_hop: float = 6.0
 ## Does the HEAT level (scripts/heat_meter.gd) make it faster and sharper-eyed?
 @export var heat_scaling: bool = true
 
@@ -100,6 +106,9 @@ enum State { PATROL, CHASE, STUNNED }
 @export var brush_spin: float = 14.0
 ## Pitch of its hum (1 = normal, 2 = an octave up: the drone's whine).
 @export var hum_pitch: float = 1.0
+
+## Host: the sewer this bot was sent into by a SEWER BREACH (null = a normal city patrol).
+var breach_hub: UndergroundHub = null
 
 ## Synced to everyone: what it's doing (the lights and sounds follow it).
 var state: State = State.PATROL
@@ -219,6 +228,13 @@ func _physics_process(delta: float) -> void:
 func _fall(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
+	elif breach_hub != null and is_on_wall() and global_position.y < ground_height() - 0.3:
+		velocity.y = channel_hop  # down in the sewage channel, nose against its side: hop out
+
+
+## Host: how high the floor under this bot's world is (0 = the city's streets).
+func ground_height() -> float:
+	return breach_hub.global_position.y if breach_hub != null else 0.0
 
 
 ## Host, every frame of a chase: the VAC-COP bonks whatever it touches.
@@ -251,6 +267,8 @@ func _find_cat_to_chase() -> CatPlayer:
 ## spots you from across town) drove straight into the first building and stayed there.
 func _chase_point(cat: CatPlayer) -> Vector3:
 	var goal := cat.global_position
+	if breach_hub != null:
+		return breach_hub.next_stop(global_position, goal)  # (no streets down here)
 	if _clear_line_to(cat):
 		return goal
 	var city := Game.instance.city
@@ -296,9 +314,13 @@ func _clear_line_to(cat: CatPlayer) -> bool:
 
 ## A cat on foot (visible = not in the car), up in the city, not knocked out, within "reach" metres.
 ## Noisy loot (the jingling golden koi) and a hot city make "reach" longer.
+## A bot of the SEWER BREACH instead hunts any cat in its own sewer, however far away.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
-	if cat == null or not cat.visible or UndergroundHub.is_in_hub(cat.global_position) \
-			or CatHealth.instance.is_down(cat.player_id):
+	if cat == null or not cat.visible or CatHealth.instance.is_down(cat.player_id):
+		return false
+	if breach_hub != null:
+		return UndergroundHub.hub_at(cat.global_position) == breach_hub
+	if UndergroundHub.is_in_hub(cat.global_position):
 		return false
 	reach *= ItemManager.instance.loot_noise(cat.player_id)
 	if heat_scaling:
@@ -328,6 +350,9 @@ func _bonk(cat: CatPlayer) -> void:
 
 
 func _pick_patrol_target() -> void:
+	if breach_hub != null:
+		_target = breach_hub.random_walkway_spot(_rng)
+		return
 	# A random sidewalk spot not too far away, so it wanders its own neighbourhood.
 	for attempt in 8:
 		var spot := ItemManager.instance.random_sidewalk_spot(_rng)

@@ -80,6 +80,8 @@ static var instance: FishHeist
 ## Mixed into the city seed so heist placement has its own random numbers.
 const HEIST_SEED_SALT: int = 7331
 const PAYPHONE_SCENE: PackedScene = preload("res://scenes/props/payphone.tscn")
+## The usual colour of the HUD's top line (scenes/ui/hud.tscn, DropOff).
+const DROP_OFF_COLOR := Color(0.45, 1, 0.55, 1)
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
@@ -336,6 +338,10 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or _exits.is_empty():
 		return
+	# A SEWER BREACH (scripts/mainframe.gd): no sealing and no new district until it's over. It
+	# starts the next district itself, which resets everything here (place_items).
+	if Mainframe.instance.breach_busy:
+		return
 	_clock += delta
 
 	# One trip per district: note everyone who has made it up top.
@@ -480,6 +486,13 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var seat := my_cat.slot
 	var where := Game.instance.player_position(me)
 	var in_sewers := not Game.instance.is_up_top(me)
+	# A SEWER BREACH takes over the line at the top: the clock, in yellow (it sits between the red and green bars).
+	var mainframe := Mainframe.instance
+	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if mainframe.breach_busy else DROP_OFF_COLOR, seat)
+	if mainframe.breach_busy:
+		Hud.show_element("DropOff", true, seat)
+		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)
+		return
 	# The arrow to OUR gang's exit only shows once our boss has told us where it is (a payphone call).
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)

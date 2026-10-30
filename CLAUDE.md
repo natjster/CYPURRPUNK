@@ -182,6 +182,12 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
   the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N` or `=A,B`
   (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
+- SEWER BREACH (`mainframe.gd`, host `_run_breach`): an active gang at 0% with `players_up_top()==0` -> `_start_breach` RPC (`breached_teams`, `breach_left`,
+  `breach_busy` until the next district; Events `sewer_breached`/`sewer_breach_ended`). `hub.set_breached` = BlastGate (StaticBody, north tunnel `_build_breach_tunnel`) + red pulse. Use `UndergroundHub.is_safe(pos)` (not is_in_hub) for
+  "nothing can hurt you" (damage, healing, guns). Horde: `RoombaPatrol._breach_queue`, bots have `breach_hub` (host only): `_can_chase` = anyone in that hub, route `hub.next_stop` (mouth, bridges), `ground_height()` for the drone, no respawns;
+  patrol + FishHeist referee pause on `breach_busy`. Wipeout `_wiped_out` -> banner -> `_after_banner` (all reset to `starting_charge`); miracle = `_miracle` (reboot, bots `explode()` without scrap). Both end in `Game.new_district()`. KO in a hub keeps gear and
+  stays lying (`_knocked_out`), `_on_sewer_breach_ended` wakes + heals. LIVE FEED: `feed_camera_for(cat)`, `is_spectating(cat)` (blocks via `cat._menu_open`), `GameScreen._show_live_feed`, line = `breach_text` in DropOff, `Hud.banner`.
+  Test: `--mainframe=0|75,0 --breach_seconds=S --breach_wipe=N --breach_log=N`.
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
   `exit_is_open(team)` (heat >= `Mainframe.exit_heat(team)` or sticky `exit_opened[team]`, not `sealed`; `every_exit_is_open()` gates the all-home rush). `Payphone` NPCs (`scenes/props/payphone.tscn`,
@@ -388,8 +394,7 @@ low-poly, dithering, CRT.
 ## Direction
 Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hides in the sewers. Spawn in
 the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
-DEEP CLEAN, then a new district (new seed). Scrap + per-gang MAINFRAMES are in. PLANNED next: mainframe at
-0 = boss-fight finale (design TBD).
+DEEP CLEAN, then a new district (new seed). Scrap + per-gang MAINFRAMES + the SEWER BREACH (0%) are in.
 
 ## Patch notes (Discord)
 `PATCH_NOTES.md` holds Discord-ready update posts for the user's players. After each finished, committed change that

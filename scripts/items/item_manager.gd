@@ -279,7 +279,7 @@ func _use_held_items(delta: float) -> void:
 	for cat in Game.instance.local_cats():
 		if not cat.reads_input() or not cat.is_controlled or cat.knocked_out or cat.is_downed():
 			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
-		var safe_zone := UndergroundHub.is_in_hub(cat.global_position)
+		var safe_zone := UndergroundHub.is_safe(cat.global_position)  # (a SEWER BREACH: fight!)
 		var allowed := _can_use_items(cat)
 		# QUICK USE keys (1 / 2, d-pad left / right): the host takes one out and we use it.
 		for slot in 2:

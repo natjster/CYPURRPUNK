@@ -12,6 +12,8 @@ gives it to you, and starts a fresh draft.
 
 ```text
 ## 🐾 New
+- **THE SEWER BREACH:** let your Mainframe hit 0% and OVERCLEAN comes for your home. Once everyone's back underground, the blast gate on the new north tunnel slides up and 35 bots plus 2 MEGA VAC-COPs pour in. Your sewer is no safe zone any more: guns work, nobody heals. Last 30 seconds with one cat on its feet for a miracle: every bot explodes and your Mainframe reboots to 25%. Get wiped out and the rival gang wins!
+- **Live feed:** while a rival gang's sewer is being breached, your screen switches to their security camera so you can watch it all go wrong.
 - **SQUIRT-DRONES:** OVERCLEAN's new quadcopters hover above the street, too high for your car. Get caught in their red spotlight and the heat climbs, and they fire water zaps at wherever you're standing, so keep moving! A Yarn-Zooka stun drops them low enough to whack.
 - **LINT-TRAPPERS:** sticky mop-bots that leave glowing pink glue behind them and lob it at your feet. Step in it and you're at half speed for 3 seconds, even with zoomies, so the VAC-COPs can catch you. Jump over the puddles to stay clean!
 - **5 ridiculous new weapons at both shops:**
@@ -35,6 +37,7 @@ gives it to you, and starts a fresh draft.
 - **The Night of the Big Red Button:** ask around with WHO LET OVERCLEAN IN? and find out what really happened. Everyone has their own version.
 
 ## 🔧 Changes
+- The old ladder in the sewers is gone: a barred tunnel stands in its place.
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.
 - **Golden Koi:** MEGA VAC-COPs no longer drop it. There's just the one hidden in the city now.
 - **Inventory at the stash:** your loot bag now stays visible above your stash.

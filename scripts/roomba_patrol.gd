@@ -16,6 +16,9 @@ extends Node3D
 ## hunting them from much further away (roomba.gd _can_chase).
 ## THE MAINFRAME (scripts/mainframe.gd) at 0% (CRITICAL) puts one MEGA VAC-COP out as soon as a
 ## district starts. Every MEGA VAC-COP drops SCRAP when destroyed (roomba_boss.tscn drop_on_destroy).
+## A SEWER BREACH (scripts/mainframe.gd, Events.sewer_breached) pours a horde into each breached
+## sewer's north tunnel. Those bots (breach_hub set) stay down there and aren't part of the patrol:
+## nothing replaces them, and the city's patrol waits until the breach is over.
 ##
 ## Only the HOST creates Roombas (start_district(), called through game_systems.gd when a game starts). Where they appear
 ## is random each game — they're not part of the city seed, so they never change the city.
@@ -74,6 +77,13 @@ const SQUIRT_DRONE_SCENE: PackedScene = preload("res://scenes/squirt_drone.tscn"
 ## Extra swarm Roombas spawned per physics frame while the DEEP CLEAN fills up.
 @export var swarm_spawns_per_frame: int = 2
 
+@export_group("SEWER BREACH horde")
+## Regular patrol units (the same Patrol Mix) and MEGA VAC-COPs sent into EACH breached sewer.
+@export var breach_roombas: int = 35
+@export var breach_bosses: int = 2
+## How many pour in per physics frame.
+@export var breach_spawns_per_frame: int = 2
+
 ## The one patrol (RoombaPatrol.instance).
 static var instance: RoombaPatrol
 
@@ -95,6 +105,8 @@ var _bosses_called: int = 0
 ## host's when we join someone.
 var _patrolling: bool = false
 var _rng := RandomNumberGenerator.new()
+## Host: the bots still to pour in: [{"hub": UndergroundHub, "boss": bool}, ...].
+var _breach_queue: Array[Dictionary] = []
 
 
 func _enter_tree() -> void:
@@ -105,6 +117,8 @@ func _ready() -> void:
 	_rng.randomize()
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
 	Events.district_sealed.connect(_on_district_sealed)  # (scripts/events.gd)
+	Events.sewer_breached.connect(_on_sewer_breached)
+	Events.sewer_breach_ended.connect(_on_sewer_breach_ended)
 
 
 ## The hatch was sealed at max heat (every computer hears it): the host sends in the swarm.
@@ -113,12 +127,53 @@ func _on_district_sealed() -> void:
 		deep_clean_extra = deep_clean_roombas
 
 
+## A SEWER BREACH started (every computer hears it): the host lines the horde up.
+func _on_sewer_breached(teams: Array) -> void:
+	if not multiplayer.is_server():
+		return
+	for team in teams:
+		var hub := UndergroundHub.for_team(team)
+		for i in breach_roombas:
+			_breach_queue.append({"hub": hub, "boss": false})
+		for i in breach_bosses:
+			_breach_queue.append({"hub": hub, "boss": true})
+
+
+## The breach is over. THE 1% MIRACLE: every bot blows up at once. A wipeout: they just go.
+## (Only bosses SHOT in the breach drop scrap: this big bang doesn't pay out.)
+func _on_sewer_breach_ended(survived: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	_breach_queue.clear()
+	for child in get_children():
+		var roomba := child as Roomba
+		if roomba == null or roomba.breach_hub == null:
+			continue
+		if survived:
+			roomba.drop_on_destroy = ""
+			roomba.explode()
+		else:
+			roomba.queue_free()
+
+
+## Host: one bot of the horde, in its sewer's breach tunnel.
+func _spawn_breach_bot(hub: UndergroundHub, boss: bool) -> void:
+	var roomba := (BOSS_SCENE if boss else _pick_scene()).instantiate() as Roomba
+	roomba.name = "%s%d" % ["RoombaBoss" if boss else "Roomba", _next_number]
+	_next_number += 1
+	roomba.breach_hub = hub
+	roomba.position = hub.breach_spawn_spot(_rng)
+	roomba.destroyed.connect(roomba_destroyed)
+	add_child(roomba, true)
+
+
 ## Host: clear any old Roombas and put a fresh patrol out (a new game or a new district;
 ## game_systems.gd calls it).
 func start_district() -> void:
 	for old in get_children():
 		old.queue_free()
 	_patrolling = true
+	_breach_queue.clear()
 	_respawn_at.clear()
 	deep_clean_extra = 0
 	_kills_toward_boss = 0
@@ -152,6 +207,8 @@ func restart_heat_levels() -> void:
 ## destroyed calls the boss in.
 func roomba_destroyed(roomba: Enemy) -> void:
 	_show_explosion.rpc(roomba.global_position)
+	if roomba.breach_hub != null:
+		return  # the horde is no part of the patrol: no replacement, no boss call
 	if roomba.is_boss:
 		print("[Roombas] THE MEGA VAC-COP IS DOWN!")
 	else:
@@ -163,6 +220,12 @@ func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or not _patrolling:
 		return
 	_clock += delta
+	if Mainframe.instance.breach_busy:
+		# A SEWER BREACH: the horde pours in, and the city's patrol waits until it's over.
+		for i in mini(breach_spawns_per_frame, _breach_queue.size()):
+			var bot: Dictionary = _breach_queue.pop_front()
+			_spawn_breach_bot(bot.hub, bot.boss)
+		return
 	for i in range(_respawn_at.size() - 1, -1, -1):
 		if _clock >= _respawn_at[i]:
 			_respawn_at.remove_at(i)

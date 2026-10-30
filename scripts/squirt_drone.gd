@@ -63,7 +63,7 @@ func _ready() -> void:
 
 ## Host: no gravity, just hold the right height. (Replaces the VAC-COP's fall.)
 func _fall(_delta: float) -> void:
-	var wanted := stunned_height if state == State.STUNNED else hover_height
+	var wanted := ground_height() + (stunned_height if state == State.STUNNED else hover_height)
 	velocity.y = clampf((wanted - global_position.y) * climb_strength, -max_climb_speed, max_climb_speed)
 
 
@@ -79,6 +79,9 @@ func _chase_point(cat: CatPlayer) -> Vector3:
 func _attack(cat: CatPlayer, delta: float) -> void:
 	_squirt_left -= delta
 	if not _clear_line_to(cat):
+		return
+	# (A SEWER BREACH drone hunts from any distance, but has to get close before it may fire.)
+	if breach_hub != null and Motion.flat_distance(cat.global_position, global_position) > lose_range:
 		return
 	HeatMeter.instance.add_heat(heat_per_second * delta)
 	if _squirt_left <= 0.0:

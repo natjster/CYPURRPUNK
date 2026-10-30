@@ -101,6 +101,9 @@ extends Node
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
+##   --breach_seconds=S (host) a SEWER BREACH lasts S seconds (a short one tests THE 1% MIRACLE)
+##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
+##   --breach_log=N    (either) every N frames print the breach's state ("DevCapture breach" lines)
 ##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
@@ -250,6 +253,12 @@ func _ready() -> void:
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				Wallet.instance.set_cash(peer_id, int(args["cash"])))
+		if args.has("breach_seconds"):
+			Mainframe.instance.breach_seconds = float(args["breach_seconds"])
+		if args.has("breach_log"):
+			_breach_log(int(args["breach_log"]))
+		if args.has("breach_wipe"):
+			_breach_wipe(int(args["breach_wipe"]))
 		if args.has("mainframe") and multiplayer.is_server():
 			# (host) --mainframe=N or =A,B: the gangs' charges are N (0/25/50/75/100; A = Catleone,
 			# B = Burrow), and this district starts over on them (heat, overclock, 0% boss).
@@ -828,6 +837,36 @@ func _describe(steps: Array) -> String:
 		biggest = maxf(biggest, step)
 		total += step
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
+
+
+## --breach_log=N: a line every N frames: the gangs breached, the clock, cats, bots, gates, camera.
+func _breach_log(every: int) -> void:
+	while is_instance_valid(Game.instance):
+		for i in every:
+			await get_tree().process_frame
+		if not is_instance_valid(Game.instance):
+			return
+		var mainframe := Mainframe.instance
+		var bots := []
+		for node in RoombaPatrol.instance.get_children():
+			if UndergroundHub.is_in_hub(node.global_position):
+				bots.append(node)
+		var chasing := bots.filter(func(bot): return bot.state == Roomba.State.CHASE).size()
+		var cats := []
+		for cat in Game.instance.players.get_children():
+			cats.append("%s team=%d hp=%d ko=%s pos=%s feed=%s" % [cat.name, cat.team, CatHealth.instance.get_health(cat.player_id), cat.knocked_out, cat.global_position.snapped(Vector3.ONE * 0.1), mainframe.is_spectating(cat)])
+		var camera := GameScreen.instance.game_viewport.get_camera_3d()
+		print("DevCapture breach: busy=%s teams=%s left=%.1f charges=%s heat=%.0f sewer bots=%d chasing=%d hurt=%d east_bank=%d queue=%d gates=%s safe=%s camera=%s line=\"%s\" cats=%s" % [mainframe.breach_busy, mainframe.breached_teams, mainframe.breach_left, mainframe.charges, HeatMeter.instance.heat, bots.size(), chasing, bots.filter(func(bot): return bot.health < bot.max_health).size(), bots.filter(func(bot): return UndergroundHub.hub_at(bot.global_position).to_local(bot.global_position).x > 2.0).size(), RoombaPatrol.instance._breach_queue.size(),
+			[UndergroundHub.for_team(0)._gate.position.y, UndergroundHub.for_team(1)._gate.position.y], [UndergroundHub.is_safe(UndergroundHub.for_team(0).global_position), UndergroundHub.is_safe(UndergroundHub.for_team(1).global_position)], camera.name if camera != null else "none", (Hud.element("DropOff") as Label).text, cats])
+
+
+## --breach_wipe=N: after N frames, a killing blow for every cat in a breached sewer.
+func _breach_wipe(frames: int) -> void:
+	for i in frames:
+		await get_tree().process_frame
+	for player_id in Game.instance.player_ids():
+		if Mainframe.instance.is_breached(Teams.team_of(player_id)):
+			CatHealth.instance.damage(player_id, 99999, "THE TEST")
 
 
 ## The car the --drive / --ride_along / --exit_after tests use: the one this cat is in, else its

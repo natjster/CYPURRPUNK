@@ -7,7 +7,8 @@ extends Node3D
 ##
 ## How it plays:
 ##   - Joining or hosting puts your cat here, at the south end of the tunnel.
-##   - It's a SAFE ZONE: guns don't fire down here (see ItemManager._use_held_items).
+##   - It's a SAFE ZONE: guns don't fire down here (see ItemManager._use_held_items), unless it's
+##     being BREACHED (below; ask UndergroundHub.is_safe(where)).
 ##   - Walk up to DON CATLEONE (the boss cat at the north end) and press E to talk.
 ##     Pick "SEND ME UP TOP" and he sends you into the city (deploy()).
 ##   - COMRADE WHISKERS runs THE BLACK MARKITTEN on the west wall: the only place to get
@@ -19,6 +20,12 @@ extends Node3D
 ##     100% to hack the rival gang's (-25%).
 ##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
 ##     cashed in and you're brought back down here (return_cat()).
+##
+##   - THE NORTH BREACH TUNNEL: a dark pipe behind a heavy BLAST GATE at the north end of the west
+##     walkway. It stays shut... until a gang's Mainframe hits 0%. Then the SEWER BREACH comes
+##     (scripts/mainframe.gd): the gate slides up, the tunnel pulses red, a horde pours out of it
+##     (roomba_patrol.gd) and THIS sewer stops being a safe zone until the breach is over.
+##     A BreachCamera up in the south-west corner lets the rival gang watch it live.
 ##
 ## The tunnel is built from code in _ready() (like the city), but it is always the SAME:
 ## it doesn't use the city seed or any randomness, so every computer builds it identically.
@@ -64,6 +71,8 @@ const DEPTH_LINE: float = -100.0
 @export_multiline var line_sealed: String = "Hatch is sealed, kid. Sit tight - we're movin' to a new district."
 ## ...and when you've already had your one trip up this district.
 @export_multiline var line_had_your_trip: String = "You had your shot up there, kid. That hatch is shut behind ya. Sit tight till we hit the next district."
+## ...and during a SEWER BREACH (scripts/mainframe.gd).
+@export_multiline var line_breach: String = "ARE YOU CRAZY?! THEY'RE IN THE TUNNEL!"
 
 @export_group("Payphone (the boss on the line)")
 ## What this gang's boss says when one of their cats calls from a payphone up top
@@ -105,6 +114,31 @@ const DEPTH_LINE: float = -100.0
 ## How close (metres) you must be to the mainframe spot.
 @export var mainframe_radius: float = 2.5
 
+@export_group("Breach Tunnel")
+## East-west middle of the tunnel mouth (metres; -8 = the west walkway).
+@export var tunnel_x: float = -8.0
+## The tunnel's width, height and how far north it runs past the north wall (metres).
+@export var tunnel_width: float = 6.0
+@export var tunnel_height: float = 4.5
+@export var tunnel_depth: float = 12.0
+## How long the BLAST GATE takes to slide up, and to slam shut (seconds).
+@export var gate_open_seconds: float = 1.2
+@export var gate_slam_seconds: float = 0.2
+## The red emergency light in the tunnel: dim normally, pulsing bright during a breach.
+@export var tunnel_light_color: Color = Color(1, 0.08, 0.05)
+@export var tunnel_light_idle: float = 1.2
+@export var tunnel_light_breach: float = 9.0
+## Pulses per second during a breach.
+@export var tunnel_light_pulse: float = 1.5
+
+@export_group("Breach Camera")
+## The security camera the rival gang watches a breach through, relative to the Hub node...
+@export var breach_camera_spot: Vector3 = Vector3(-10, 5.5, 16)
+## ...and the spot it looks at (the tunnel mouth and walkways).
+@export var breach_camera_target: Vector3 = Vector3(-6, 0.5, -16)
+## How wide it sees (degrees).
+@export var breach_camera_fov: float = 62.0
+
 @export_group("Mood")
 ## Fog and ambient colours while you're down here.
 @export var sewer_fog_color: Color = Color(0.03, 0.07, 0.05)
@@ -141,6 +175,16 @@ var _metal: ShaderMaterial
 var _cardboard: ShaderMaterial
 var _crate: ShaderMaterial
 var _neon: ShaderMaterial
+var _pitch_black: ShaderMaterial
+## True while THIS sewer is breached (set on every computer by set_breached): no safe zone here,
+## the gate is up and the tunnel pulses red.
+var breached: bool = false
+## The security camera in this sewer (the rival gang watches a breach through it).
+var breach_camera: Camera3D
+## The BLAST GATE (a StaticBody3D, so it really stops cats and bots) and the tunnel's red light.
+var _gate: StaticBody3D
+var _tunnel_light: OmniLight3D
+var _gate_tween: Tween
 ## THE MAINFRAME's CRT prop (built in _build_props, coloured by _update_mainframe_crt).
 var _crt_screen: MeshInstance3D
 var _crt_light: OmniLight3D
@@ -183,6 +227,7 @@ func _ready() -> void:
 	_make_materials()
 	_build_tunnel()
 	_build_props()
+	_build_breach_tunnel()
 	_city_mood = {
 		"fog_light_color": _environment.fog_light_color,
 		"volumetric_fog_albedo": _environment.volumetric_fog_albedo,
@@ -195,6 +240,24 @@ func _ready() -> void:
 ## True if this spot is down in a hub, any gang's (the safe zone).
 static func is_in_hub(where: Vector3) -> bool:
 	return where.y < DEPTH_LINE
+
+
+## True if this spot is somewhere nothing can hurt you: down in a sewer that ISN'T being breached.
+static func is_safe(where: Vector3) -> bool:
+	if not is_in_hub(where):
+		return false
+	var hub := hub_at(where)
+	return hub == null or not hub.breached
+
+
+## The sewer this spot is in, or null (the hubs are 200 m apart, so "the nearest" is easy).
+static func hub_at(where: Vector3) -> UndergroundHub:
+	if not is_in_hub(where):
+		return null
+	for hub in by_team.values():
+		if is_instance_valid(hub) and absf(where.x - (hub as UndergroundHub).global_position.x) < 60.0:
+			return hub
+	return null
 
 
 ## The sewer this gang lives in (Team 0's if there's no hub for it).
@@ -246,6 +309,10 @@ func spawn_position(n: int) -> Vector3:
 
 ## "SEND ME UP TOP": pop the cat out of the ENTRY manhole in the city's centre crossroads.
 func deploy(cat: CatPlayer) -> void:
+	if Mainframe.instance.breach_busy:
+		# A SEWER BREACH (mainframe.gd): nobody goes anywhere until it's over.
+		Hud.show_message("%s: %s" % [boss_name, line_breach], 4.0, cat.slot)
+		return
 	if FishHeist.instance.sealed:
 		# The DEEP CLEAN is on up there: wait for the next district.
 		Hud.show_message("%s: %s" % [boss_name, line_sealed], 4.0, cat.slot)
@@ -274,6 +341,9 @@ func return_cat(cat: CatPlayer) -> void:
 
 func _process(_delta: float) -> void:
 	_update_mainframe_crt()
+	if breached:
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * tunnel_light_pulse)
+		_tunnel_light.light_energy = lerpf(tunnel_light_idle, tunnel_light_breach, pulse)
 	if self != instance:
 		return  # the fog / music are the whole world's: Team 0's hub runs them
 	var camera := get_viewport().get_camera_3d()
@@ -352,6 +422,7 @@ func _make_materials() -> void:
 	_cardboard = LevelKit.psx_material({"albedo_color": Color(0.55, 0.4, 0.22)})
 	_crate = LevelKit.psx_material({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": Color(0.3, 0.9, 0.8)})
 	_neon = LevelKit.psx_material({"emission_color": Color.WHITE, "emission_energy": 5.0})
+	_pitch_black = LevelKit.psx_material({"albedo_color": Color(0.005, 0.005, 0.008)})
 
 
 ## Floor, sewage channel, walls and ceiling. No two surfaces overlap (they'd flicker).
@@ -384,7 +455,13 @@ func _build_tunnel() -> void:
 	# Walls and ceiling: 1 m thick boxes just outside the room.
 	LevelKit.add_box(self, Vector3(-w - 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
 	LevelKit.add_box(self, Vector3(w + 0.5, height * 0.5 - 1, 0), Vector3(1, height + 2, l * 2 + 2), _wall, true)
-	LevelKit.add_box(self, Vector3(0, height * 0.5 - 1, -l - 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
+	# The north wall comes in three pieces, around the mouth of the breach tunnel (_build_breach_tunnel).
+	var mouth_west := tunnel_x - tunnel_width * 0.5
+	var mouth_east := tunnel_x + tunnel_width * 0.5
+	var wall_top := height + 1.0
+	LevelKit.add_box(self, Vector3((-w + mouth_west) * 0.5, height * 0.5 - 1, -l - 0.5), Vector3(mouth_west + w, height + 2, 1), _wall, true)
+	LevelKit.add_box(self, Vector3((mouth_east + w) * 0.5, height * 0.5 - 1, -l - 0.5), Vector3(w - mouth_east, height + 2, 1), _wall, true)
+	LevelKit.add_box(self, Vector3(tunnel_x, (tunnel_height + wall_top) * 0.5, -l - 0.5), Vector3(tunnel_width, wall_top - tunnel_height, 1), _wall, true)
 	LevelKit.add_box(self, Vector3(0, height * 0.5 - 1, l + 0.5), Vector3(w * 2, height + 2, 1), _wall, true)
 	LevelKit.add_box(self, Vector3(0, height + 0.5, 0), Vector3(w * 2 + 2, 1, l * 2 + 2), _wall, true)
 
@@ -394,6 +471,105 @@ func _build_tunnel() -> void:
 		pipe.rotation.x = PI / 2
 	for z in range(-int(l) + 5, int(l), 5):
 		LevelKit.add_box(self, Vector3(0, height - 0.3, z), Vector3(w * 2, 0.6, 0.6), _wall, false)
+
+
+## THE NORTH BREACH TUNNEL: a deep pipe running north from the mouth in the north wall, the iron
+## BLAST GATE across its mouth, a red emergency light inside, and the security camera that films it.
+func _build_breach_tunnel() -> void:
+	var l := half_length
+	var middle_z := -l - 1.0 - tunnel_depth * 0.5 + 0.5  # (the wall itself is the first metre of the way)
+	var length := tunnel_depth - 1.0
+	var side := tunnel_width * 0.5
+	# Floor (top at 0, like the walkway), side walls, ceiling and a pitch-black far end.
+	LevelKit.add_box(self, Vector3(tunnel_x, -0.5, -l - tunnel_depth * 0.5), Vector3(tunnel_width, 1, tunnel_depth), _concrete, true)
+	for x in [tunnel_x - side - 0.5, tunnel_x + side + 0.5]:
+		LevelKit.add_box(self, Vector3(x, tunnel_height * 0.5, middle_z), Vector3(1, tunnel_height + 2, length), _wall, true)
+	LevelKit.add_box(self, Vector3(tunnel_x, tunnel_height + 0.5, middle_z), Vector3(tunnel_width, 1, length), _wall, true)
+	LevelKit.add_box(self, Vector3(tunnel_x, tunnel_height * 0.5, -l - tunnel_depth - 0.5), Vector3(tunnel_width + 2, tunnel_height + 2, 1), _pitch_black, true)
+	# Ribs around the pipe every 3 m, so it reads as a deep tunnel going off into the dark.
+	var z := -l - 2.5
+	while z > -l - tunnel_depth:
+		LevelKit.add_box(self, Vector3(tunnel_x, tunnel_height - 0.15, z), Vector3(tunnel_width, 0.3, 0.4), _metal, false)
+		for x in [tunnel_x - side + 0.1, tunnel_x + side - 0.1]:
+			LevelKit.add_box(self, Vector3(x, (tunnel_height - 0.3) * 0.5, z), Vector3(0.2, tunnel_height - 0.3, 0.4), _metal, false)
+		z -= 3.0
+
+	# The BLAST GATE: vertical bars + crossbeams. The collision is one solid slab, so nothing
+	# squeezes between the bars. Sliding this one node moves all of it (set_breached).
+	_gate = StaticBody3D.new()
+	_gate.name = "BlastGate"
+	_gate.position = Vector3(tunnel_x, 0, -l - 0.2)
+	add_child(_gate)
+	LevelKit.add_collision(_gate, Vector3(0, tunnel_height * 0.5, 0), Vector3(tunnel_width, tunnel_height, 0.4))
+	var bar_x := -side + 0.3
+	while bar_x < side:
+		LevelKit.add_box(_gate, Vector3(bar_x, tunnel_height * 0.5, 0), Vector3(0.2, tunnel_height, 0.2), _metal, false)
+		bar_x += 0.75
+	for y in [0.9, tunnel_height - 0.9]:
+		LevelKit.add_box(_gate, Vector3(0, y, 0.12), Vector3(tunnel_width, 0.35, 0.12), _metal, false)
+	var warning := LevelKit.add_box(_gate, Vector3(0, tunnel_height - 0.9, 0.2), Vector3(tunnel_width, 0.1, 0.04), _neon, false)
+	warning.set_instance_shader_parameter("instance_tint", Color(0.8, 0.05, 0.03))
+
+	_tunnel_light = LevelKit.add_light(self, Vector3(tunnel_x, 2.5, -25.0), tunnel_light_color, tunnel_light_idle, 16.0)
+
+	# The security camera. It only ever gets switched on by GameScreen (the rival's live feed).
+	breach_camera = Camera3D.new()
+	breach_camera.name = "BreachCamera"
+	breach_camera.position = breach_camera_spot
+	breach_camera.fov = breach_camera_fov
+	add_child(breach_camera)
+	breach_camera.look_at(to_global(breach_camera_target))
+	# (Godot hands the picture to the first camera it meets. That must never be this one.)
+	if get_viewport().get_camera_3d() == breach_camera:
+		breach_camera.clear_current(false)
+
+
+## Every computer (mainframe.gd): the breach starts (gate slides up, tunnel pulses) or ends (gate
+## slams shut, and any cat still in the tunnel is put back in the sewer before it's locked in).
+func set_breached(on: bool) -> void:
+	if on == breached:
+		return
+	breached = on
+	if _gate_tween != null:
+		_gate_tween.kill()
+	_gate_tween = create_tween()
+	if on:
+		_gate_tween.tween_property(_gate, "position:y", tunnel_height + 0.1, gate_open_seconds).set_trans(Tween.TRANS_SINE)
+		return
+	_tunnel_light.light_energy = tunnel_light_idle
+	_gate_tween.tween_property(_gate, "position:y", 0.0, gate_slam_seconds).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	Sound.play_at("explode", _gate.global_position + Vector3.UP)
+	for cat in Game.instance.local_cats():
+		if hub_at(cat.global_position) == self and to_local(cat.global_position).z < -half_length + 1.0:
+			return_cat(cat)
+
+
+## Host: a random spot in the breach tunnel, for a bot pouring in (around z = -29..-23, x = -10..-6).
+func breach_spawn_spot(rng: RandomNumberGenerator) -> Vector3:
+	var reach := tunnel_width * 0.5 - 1.0
+	return to_global(Vector3(tunnel_x + rng.randf_range(-reach, reach), 0.1, rng.randf_range(-29.0, -23.0)))
+
+
+## Host: a random spot on the walkways, for a breach bot with nobody left to chase.
+func random_walkway_spot(rng: RandomNumberGenerator) -> Vector3:
+	var west := rng.randf() < 0.5
+	var x := rng.randf_range(channel_width * 0.5 + 1.0, half_width - 2.0) * (-1.0 if west else 1.0)
+	return to_global(Vector3(x, 0, rng.randf_range(-half_length + 2.0, half_length - 2.0)))
+
+
+## Host: the next spot a breach bot should drive to, on its way from "from" to "to" (world
+## positions). Bots out of the tunnel make for its mouth first, and take a bridge over the channel.
+func next_stop(from: Vector3, to: Vector3) -> Vector3:
+	var here := to_local(from)
+	var there := to_local(to)
+	var north_end := -half_length
+	if (here.z < north_end) != (there.z < north_end):
+		return to_global(Vector3(tunnel_x, here.y, north_end + 1.5 if here.z < north_end else north_end - 1.5))
+	var bank := channel_width * 0.5
+	if absf(here.x) > bank and absf(there.x) > bank and signf(here.x) != signf(there.x):
+		var bridge_z := -8.0 if absf(here.z + 8.0) < absf(here.z - 8.0) else 8.0
+		return to_global(Vector3(0, here.y, bridge_z))
+	return to
 
 
 func _build_props() -> void:
@@ -410,12 +586,6 @@ func _build_props() -> void:
 	# A cold cyan glow coming up off the water.
 	for z in [-14.0, 0.0, 14.0]:
 		LevelKit.add_light(self, Vector3(0, -0.2, z), Color(0.2, 1, 0.7), 1.2, 6.0)
-
-	# A ladder up the north wall to a drain grate (where Don "sends you up").
-	for side in [-0.5, 0.5]:
-		LevelKit.add_box(self, Vector3(-w + 6 + side, height * 0.5, -l + 0.15), Vector3(0.08, height, 0.08), _metal, false)
-	for y in range(1, int(height)):
-		LevelKit.add_box(self, Vector3(-w + 6, y, -l + 0.15), Vector3(1.0, 0.06, 0.06), _metal, false)
 
 	# The leader's corner (Don Catleone's): a glow over their spot and crates for a desk.
 	var don := npc.position

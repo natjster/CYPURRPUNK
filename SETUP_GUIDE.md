@@ -678,9 +678,9 @@ P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture 
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
 middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
-west wall: feed it SCRAP, see **The Mainframe** in §8) and a ladder up
-to the surface. The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
-sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work).
+west wall: feed it SCRAP, see **The Mainframe** in §8) and, at the north end of the west
+walkway, the barred **North Breach Tunnel** (see **The Sewer Breach** in §8). The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
+sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work), except during a **Sewer Breach** (§8).
 
 **Don Catleone** — the boss cat in the fedora with the cigar, at the north end under a pink
 glow. Walk up to him and press **E**. The talk box (bottom of the screen) gives five choices:
@@ -698,7 +698,7 @@ quests (table under **Quests** below). Move one by selecting them under **Hub** 
 
 **Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
 counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
-the ladder. It's **the only place to get gear**: nothing but fish lies around the city any more.
+the breach tunnel. It's **the only place to get gear**: nothing but fish lies around the city any more.
 Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** button per item, and
 **BACK**. You pay with the cash you earn extracting fish; the shop stays open so you can keep buying.
 
@@ -777,7 +777,47 @@ per gang (Catleone, Burrow), and the district restarts on it.
 `--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --give=scrap --pos=-11,-199.5,0 --press_key=E` hacks.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --deploy --heat=70` shows one exit open and one shut.
-`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first.
+`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first. (`--mainframe=0` now starts a Sewer Breach.)
+
+### The Sewer Breach (a Mainframe at 0%)
+When a gang's Mainframe hits **0%** (hacked from 25%, or drained by a sealed district), OVERCLEAN
+comes for that gang's sewer. It waits until **no cat is left up top** and knocked-out cats are home,
+so a gang can still save itself by feeding scrap before that.
+
+- **The tunnel:** the iron **Blast Gate** at the north end of the west walkway slides up, the tunnel
+  pulses red, and a horde pours out: **35 bots + 2 MEGA VAC-COPs**. They hunt every cat in that sewer.
+- **No safe zone** in that sewer: guns and melee work, nobody heals, and a cat at 0 HP stays where it
+  fell. Gang-mates can still revive you. A knockout here **keeps your gear**.
+- **Everything else waits:** the boss refuses to send anyone up ("ARE YOU CRAZY?! THEY'RE IN THE
+  TUNNEL!"), the Mainframes are locked, the next district and the city's patrol are on hold.
+- **The rival gang watches:** their screens switch to the doomed sewer's security camera, with
+  `LIVE FEED: BURROW SEWER BREACHED — 24s` on top. Their cats wait at home. If both gangs are at 0%,
+  each fights its own horde and nobody watches.
+- **Wipeout** (everyone in the sewer down): a banner for 6 seconds (`CATLEONE FAMILY WINS!`, or
+  `SEWER BREACHED!` with one gang), then the bots go, the gate shuts, all cats heal, **every**
+  Mainframe resets to 75% and a new district starts. If both gangs were breached, the first one wiped
+  out loses at once.
+- **The 1% Miracle** (someone still standing after 30 seconds): the gate slams, every bot explodes,
+  the gang's Mainframe reboots to **25%**, everyone heals, and a new district follows the banner.
+  (Only a MEGA VAC-COP you actually destroy drops scrap: the big bang pays nothing.)
+
+**Where it lives:** the rules in `scripts/mainframe.gd`, the tunnel, gate and camera in `scripts/hub.gd`
+(`_build_breach_tunnel`), the horde in `scripts/roomba_patrol.gd`, the bots' behaviour in
+`scripts/roomba.gd` (`breach_hub`), the live feed in `scripts/ui/game_screen.gd`.
+
+**Tuning (no code):**
+- **Mainframe** in `main.tscn` > **Sewer Breach (0%)**: Breach Seconds, Breach Banner Seconds,
+  Breach Reboot Charge.
+- **Roombas** in `main.tscn` > **SEWER BREACH horde**: Breach Roombas, Breach Bosses, Breach Spawns
+  Per Frame. **This is the difficulty knob:** the horde arrives almost at once, so if nobody ever
+  survives, lower Breach Roombas first (or Squirt Drone Chance under **Patrol Mix**).
+- **Hub** and **GangHub** > **Breach Tunnel** (size, gate speed, red light), **Breach Camera** (where it
+  is, what it looks at, how wide), and **Gang** > Line Breach (what the boss shouts).
+
+**Test it without playing:**
+`--mainframe=0 --breach_log=60` starts one (add `--pos=` to stand somewhere).
+`--breach_seconds=2` = the Miracle, `--breach_wipe=120` = a wipeout.
+`--teams=0,1 --add_local=1 --mainframe=75,0` = watching the rival's feed.
 
 ### The stash & saved progress
 **THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black
@@ -2063,11 +2103,12 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Cash             <- top-left, big green "$120"
     │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
     │   ├── Health           <- your health bar, drawn in code (script ui/hud_health_bar.gd)
-    │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE"
+    │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE" / the Sewer Breach clock
     │   ├── Heat             <- top-right: flashing red/blue heat bar (script ui/hud_heat_bar.gd)
     │   └── Scoreboard       <- top-right, under Heat: everyone's cash (sewers only)
     ├── Middle (Control)     <- hidden while the talk box or inventory is open
     │   ├── Popup            <- big "EXTRACTED +$150" that fades out
+    │   ├── Banner           <- big wrapped text for long news (Sewer Breach results)
     │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH" / "[E] GET IN" (hud.gd)

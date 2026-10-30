@@ -55,6 +55,9 @@ extends Control
 ##   │   └── Viewport > HUD     moved here from game_screen.tscn (Hud.seat = 0..3)
 ##   └── CRTOverlay          <- made by this script: the CRT + dither over everything (PS1 look)
 ##
+## LIVE FEED: during a rival gang's SEWER BREACH (scripts/mainframe.gd feed_camera_for) every player
+## of the safe gang looks through the doomed sewer's security camera instead of their own.
+##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
 ## This script also passes your mouse and keyboard on to the menus, then the game inside GameViewport.
 
@@ -104,6 +107,8 @@ var _menus  # PS1Overlay (scripts/ui/ps1_overlay.gd)
 var _game_dither: ColorRect
 ## The CRT effect over the whole picture: game, HUD and menus. On in the PS1 UI look.
 var _crt_overlay: ColorRect
+## The security camera player 1 is watching right now (LIVE FEED), or null.
+var _live_feed: Camera3D
 
 
 func _enter_tree() -> void:
@@ -279,6 +284,7 @@ func _process(_delta: float) -> void:
 	var key := "%s %s" % [seats, Settings.split_side_by_side]
 	if key != _layout_key:
 		_fit()
+	_show_live_feed()
 	_follow_cameras()
 	# The menu layer is only drawn while a menu is showing (it still hears keys when hidden,
 	# so Esc can open the pause menu).
@@ -480,8 +486,26 @@ func _copy_crt_settings() -> void:
 			target.set_shader_parameter(param, source.get_shader_parameter(param))
 
 
+## LIVE FEED for player 1: their screen's camera is switched for real (and back). Players 2-4's
+## screens just copy the feed camera instead of their cat's (_follow_cameras).
+func _show_live_feed() -> void:
+	var game := Game.instance
+	if game == null or not is_instance_valid(game) or Mainframe.instance == null:
+		return
+	var cat := game.my_cat()
+	var feed := Mainframe.instance.feed_camera_for(cat)
+	if feed == _live_feed:
+		return
+	_live_feed = feed
+	if feed != null:
+		feed.make_current()
+	elif cat != null:
+		cat.camera.make_current()
+
+
 ## Players 2-4's screens look through a copy of their cat's camera (wherever it is: behind the
-## cat, or behind the car), with the sewer or city fog of where that camera is.
+## cat, or behind the car), with the sewer or city fog of where that camera is. During a rival's
+## SEWER BREACH, a copy of the security camera instead.
 func _follow_cameras() -> void:
 	var game := Game.instance
 	if game == null or not is_instance_valid(game):
@@ -492,7 +516,8 @@ func _follow_cameras() -> void:
 		var cat := game.cat_for(PlayerId.make(multiplayer.get_unique_id(), pane.seat))
 		if cat == null:
 			continue
-		var source: Camera3D = cat.camera
+		var feed := Mainframe.instance.feed_camera_for(cat)
+		var source: Camera3D = feed if feed != null else cat.camera
 		var camera: Camera3D = pane.camera
 		camera.global_transform = source.global_transform
 		camera.fov = source.fov
