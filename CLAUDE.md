@@ -314,7 +314,7 @@ rpc `show_swing` tweens `Model`). Item `neon_bat` ($20, in `Shopkeeper.stock`). 
 (100) for new saves / once for older ones (`progress/starter` key; `save_now` forces the first save).
 Weapon extras (exports, all `_make_hit` -> `Hit`): `pellets_per_shot`, `blast_radius` (`_blast`: sphere query, outward direction; replaces the
 direct hit), `stun_seconds` -> `Enemy.take_hit(id, amount, stun, push, city_heat)` -> `_on_stunned`/`_on_pushed`, `enemy_knockback` (`knockback_taken`), `car_launch`
-(m/s, x mass), `city_heat_per_hit`, `shots_per_sound`. `show_shot(ends, heat)` = one RPC per pull. STUNNED Roombas ignore `_on_hurt`. Test: SETUP_GUIDE §9.
+(m/s, x mass), `city_heat_per_hit`, `shots_per_sound`. `show_shot(ends, heat)` = one RPC per pull. STUNNED Roombas ignore `_on_hurt`. `CatHealth.finish_grace_seconds` = no finishing right after going down. Test: SETUP_GUIDE §9, `--rival_volley=N`, `--blast_car`, `--blast_probe`.
 
 ## NPC framework
 Talking characters: `scripts/npcs/npc.gd` (`Npc`, StaticBody3D, group `npcs`), conversation data =

@@ -6,7 +6,7 @@
 [sub_resource type="ShaderMaterial" id="Mat_metal"]
 render_priority = 0
 shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.2, 0.19, 0.26, 1)
+shader_parameter/albedo_color = Color(0.34, 0.32, 0.42, 1)
 shader_parameter/specular = 0.5
 shader_parameter/roughness = 0.4
 

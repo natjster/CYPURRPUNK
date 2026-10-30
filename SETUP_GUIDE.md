@@ -1358,6 +1358,9 @@ The settings that make them work, usable on any gun:
   cat and car in range (through walls too) and shoving them outward. **Blast Color**, **Blast
   Time**, **Blast Sound** are the look.
 - **Look > Shots Per Sound**: plays the sound on every Nth shot, for very fast guns.
+- **Finish Grace Seconds** (on the **Health** node in `main.tscn`, 1.5): shots can't finish off a
+  rival for this long after they go down, so a scattergun or the Red Dot can't down and knock out
+  a cat in the same instant.
 - Test: `--give=yarn_zooka --deploy --bait_roomba=aim --pitch=-25 --hold=shoot --hold_delay=60
   --hold_frames=6 --capture=shots/x.png --frames=200` (the `DevCapture roombas` line shows health
   and STUNNED); `--shoot_rival=1` with a blast gun sets the blast off on the rival.

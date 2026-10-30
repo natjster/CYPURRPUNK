@@ -69,10 +69,16 @@ extends Node
 @export var rob_seconds: float = 2.0
 ## Can a rival finish off a downed cat by shooting it? (false = shots on downed cats do nothing.)
 @export var shots_finish_downed: bool = true
+## Seconds after going down when shots can't finish a cat off yet. Without this, the rest of a
+## scattergun's pellets (or the Red Dot's beam) would knock it out in the same instant.
+@export var finish_grace_seconds: float = 1.5
 ## The host ignores a "I shot a rival" claim from further away than this (metres; guns reach 60).
 @export var pvp_max_range: float = 75.0
 ## ...or claiming more damage than this in one bolt (a pistol crit is about 90).
 @export var pvp_max_damage: int = 120
+
+## Host: player ID -> the clock time (ms) shots may finish them off from (finish_grace_seconds).
+var _finish_allowed_at := {}
 
 ## The one health node (CatHealth.instance).
 static var instance: CatHealth
@@ -184,6 +190,7 @@ func _anyone_could_help(player_id: int) -> bool:
 ## Host: this cat is DOWNED. It keeps its stuff; gang-mates have bleed_out_seconds to revive it.
 func _go_down(player_id: int, cause: String) -> void:
 	_down_cause[player_id] = cause
+	_finish_allowed_at[player_id] = Time.get_ticks_msec() + roundi(finish_grace_seconds * 1000.0)
 	print("[Health] Player %d is DOWNED by %s" % [player_id, cause])
 	_set_downed.rpc(player_id, bleed_out_seconds, cause)
 
@@ -302,7 +309,7 @@ func request_shot(shooter_id: int, target_id: int, amount: int) -> void:
 		return  # too far to be a real shot
 	var who := shooter.display_name()
 	if is_downed(target_id):
-		if shots_finish_downed:
+		if shots_finish_downed and Time.get_ticks_msec() >= _finish_allowed_at.get(target_id, 0):
 			_knock_out(target_id, who)  # finished off
 		return
 	damage(target_id, clampi(amount, 1, pvp_max_damage), who)

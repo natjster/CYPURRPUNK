@@ -6,14 +6,14 @@
 [sub_resource type="ShaderMaterial" id="Mat_tube"]
 render_priority = 0
 shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.1, 0.22, 0.12, 1)
+shader_parameter/albedo_color = Color(0.2, 0.55, 0.25, 1)
 shader_parameter/specular = 0.5
 shader_parameter/roughness = 0.4
 
 [sub_resource type="ShaderMaterial" id="Mat_dark"]
 render_priority = 0
 shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.05, 0.08, 0.06, 1)
+shader_parameter/albedo_color = Color(0.13, 0.2, 0.15, 1)
 shader_parameter/specular = 0.5
 shader_parameter/roughness = 0.4
 

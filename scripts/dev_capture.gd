@@ -53,6 +53,9 @@ extends Node
 ##   --down_loot=A,B   (with --down) put this loot in the downed cat's bag first (to test robbing)
 ##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
 ##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
+##   --rival_volley=N  (with --shoot_rival) land N hits in one frame, like a scattergun's pellets
+##   --blast_car       set our gun's blast off right beside the nearest car (prints how it flew)
+##   --blast_probe     print how many things a blast at our feet finds (street tiles and walls count)
 ##   --revive=N        (with --down=S, S > 0) our cat presses E on it and holds the button N frames
 ##                     (a cat of the OTHER gang = we ROB it instead)
 ##                     (180 = the 3 s revive); prints health / downed state before and after
@@ -459,6 +462,10 @@ func _ready() -> void:
 			await _down_and_revive(scene, player, args)
 		if args.has("shoot_rival"):
 			await _shoot_rival(scene, player, args)
+		if args.has("blast_car"):
+			await _blast_car(scene, player)
+		if args.has("blast_probe"):
+			_blast_probe(player)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.
@@ -867,6 +874,9 @@ func _shoot_rival(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			print("DevCapture blast %d at %s (gang %d): hp=%d at %s" % [shot + 1, rival.display_name(), rival.team,
 				health.get_health(rival.player_id), rival.global_position.snapped(Vector3.ONE * 0.1)])
 			continue
+		for volley in int(args.get("rival_volley", "1")) - 1:
+			var pellet := gun._make_hit((rival.global_position - player.global_position).normalized(), rival.global_position)
+			rival.receive_hit(pellet)
 		var hit := Hit.new()
 		hit.shooter = player
 		hit.weapon = gun
@@ -879,6 +889,38 @@ func _shoot_rival(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture shoot %d at %s (gang %d): number=%s hp=%d downed=%s knocked_out_or_down=%s" % [shot + 1,
 			rival.display_name(), rival.team, number, health.get_health(rival.player_id), health.is_downed(rival.player_id),
 			health.is_down(rival.player_id)])
+
+
+## --blast_car: blast beside the nearest car and print where it was, its speed and where it landed.
+func _blast_car(scene: Node, player: CatPlayer) -> void:
+	for i in 30:
+		await get_tree().physics_frame
+	var gun := ItemManager.instance.held_item(player, 0) as Weapon
+	var car: GetawayCar = null
+	for candidate: GetawayCar in (scene as Game).cars():
+		if car == null or candidate.global_position.distance_to(player.global_position) < car.global_position.distance_to(player.global_position):
+			car = candidate
+	var before := car.global_position
+	gun._blast(before + Vector3(1, 0, 0), Vector3.LEFT)
+	for i in 30:
+		await get_tree().physics_frame
+	print("DevCapture blast_car %s driver=%d: from %s to %s speed=%.1f" % [car.name, car.driver_id, before.snapped(Vector3.ONE * 0.1),
+		car.global_position.snapped(Vector3.ONE * 0.1), car.linear_velocity.length()])
+
+
+## --blast_probe: everything a blast's sphere finds at our feet, and how many of those can be hit.
+func _blast_probe(player: CatPlayer) -> void:
+	var sphere := SphereShape3D.new()
+	sphere.radius = 5.5
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = sphere
+	query.transform = Transform3D(Basis.IDENTITY, player.global_position)
+	var found := player.get_world_3d().direct_space_state.intersect_shape(query, 2048)
+	var hittable := 0
+	for result in found:
+		if Hit.target_of(result.collider) != null:
+			hittable += 1
+	print("DevCapture blast_probe: %d found, %d hittable" % [found.size(), hittable])
 
 
 ## --down=S [--revive=N] [--bleed_out=SEC]: knock the cat in slot S down in front of us, then
