@@ -12,6 +12,8 @@ gives it to you, and starts a fresh draft.
 
 ```text
 ## 🐾 New
+- **SQUIRT-DRONES:** OVERCLEAN's new quadcopters hover above the street, too high for your car. Get caught in their red spotlight and the heat climbs, and they fire water zaps at wherever you're standing, so keep moving! A Yarn-Zooka stun drops them low enough to whack.
+- **LINT-TRAPPERS:** sticky mop-bots that leave glowing pink glue behind them and lob it at your feet. Step in it and you're at half speed for 3 seconds, even with zoomies, so the VAC-COPs can catch you. Jump over the puddles to stay clean!
 - **5 ridiculous new weapons at both shops:**
   - **FROZEN TUNA ($80, 2 paws):** a giant frozen fish. Slow, wide swings that launch cats and cars sky-high.
   - **THE RED DOT ($90, 1 paw):** a tiny laser pointer. Hold it on a target and watch it melt, until it overheats.

@@ -152,6 +152,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`Roombas` node + `RoombaSpawner`) spawns them at host start with its own RNG (not the city seed).
   Bonk = `get_zapped` + `ItemManager.take_one_loot` into `stomach`; guns call `take_hit` on the host;
   explode drops stomach via `ItemManager.drop_on_street`. Test: `--bait_roomba=D|aim`, `--zap_roomba=N`.
+- HUNTERS: `SquirtDrone` (`scripts/squirt_drone.gd`) and `LintTrapper` (`scripts/lint_trapper.gd`) EXTEND `Roomba` (so patrol/`as Roomba` lists, perf, stun,
+  DevCapture all just work) and override only `_fall`, `_chase_point`, `_attack`, `_show_light`. Their scenes keep the node names roomba.gd looks up (Eye, SirenRed/Blue,
+  SirenLight; Brush optional). `RoombaPatrol._pick_scene` = `lint_trapper_chance`/`squirt_drone_chance`. Drone heat stacks per drone. Puddles = `StickyPatch` (`scripts/sticky_patch.gd`,
+  local nodes on Main made by RPC on every computer; `StickyPatch.touches(pos)`, owner checks in `CatPlayer._sticky_paws`). Test: `--roomba=drone|trapper --bait_roomba=8 [--stun_roomba=6]`, `DevCapture sticky` line.
 - Greed + pressure: loot tiers sardine $20 / fish $50 / `golden_koi` $400 (ItemData `carry_speed`,
   `noise`, `heat_on_pickup`, `pickup_announcement`; `ItemManager.carry_speed/loot_noise`). HEAT =
   `scripts/heat_meter.gd` (`HeatMeter.instance`, `Heat` node, host-only `add_heat`, shared 0..100,

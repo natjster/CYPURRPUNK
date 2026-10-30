@@ -1092,6 +1092,63 @@ Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd (extends enemy.g
 **Multiplayer:** the host runs every Roomba's brain; everyone else's copy glides to where the
 host says it is. Bonks, stolen fish and explosions are all decided by the host.
 
+### SQUIRT-DRONEs and LINT-TRAPPERs (the VAC-COP's backup)
+Every new patrol unit has a **20%** chance of being a LINT-TRAPPER and a **15%** chance of being a
+SQUIRT-DRONE; the other 65% are VAC-COPs. The mix is the same for the district start, heat
+reinforcements, replacements and the DEEP CLEAN swarm. Both count as kills for the MEGA VAC-COP
+call-in and the Smash 5 quest.
+
+**SQUIRT-DRONE** (60 health, about 2 pistol shots): a quadcopter hovering **3.8 m** up. Cars drive
+underneath and can't smash it, so shoot it, or jump and swing at it (a bat takes two hits, the
+Frozen Tuna one). Its spotlight is cyan on patrol and turns red on the cat it tracks.
+- It spots cats from 18 m and holds about 6 m away from them.
+- With a clear view of a cat it adds **0.5 heat per second**. **This stacks:** three drones on you
+  add 1.5 per second.
+- Every 2 seconds it fires a water zap at the spot you're standing on. The zap takes 0.25 seconds
+  to land, so keep moving. A hit (1.4 m splash) takes **15 HP** with a small hop. It never steals.
+- A **stun** (YARN-ZOOKA) makes it sink to **1 m**, in easy reach of a melee swing.
+
+**LINT-TRAPPER** (80 health, can be run over like a VAC-COP): a mop-bot with a hot-pink roller. It
+never bonks and never steals.
+- While chasing it leaves a pink puddle behind it every 1.2 seconds.
+- Within 7.5 m it lobs a glob at your feet every 3.5 seconds (a puddle where it lands).
+- Puddles last 6 seconds. Touch one on the ground and you have **STICKY PAWS**: half speed until
+  3 seconds after you leave it (zoomies 9 -> 4.5 m/s, slow enough for a VAC-COP to catch you).
+  Jumping over a puddle keeps you clean.
+
+**Where they live:** `scenes/squirt_drone.tscn` (`scripts/squirt_drone.gd`),
+`scenes/lint_trapper.tscn` (`scripts/lint_trapper.gd`) and `scripts/sticky_patch.gd` (the puddle,
+built in code). Both scripts **extend the VAC-COP's script** (`roomba.gd`), so they use its
+patrolling, street-finding, stun and performance settings. They replace only `_fall`, `_chase_point`,
+`_attack` and `_show_light`.
+
+```
+SquirtDrone (CharacterBody3D, Layer 2)         LintTrapper (CharacterBody3D, Layer 2)
+├── CollisionShape3D                           ├── CollisionShape3D
+├── Model > Body, Arm1-2, Tank, Nozzle, Eye,   ├── Model > Body, Hood, Tank, Eye, SirenRed,
+│   SirenRed, SirenBlue, Motor1-4,             │   SirenBlue, Brush (Roller, Stripe)
+│   Rotors (Rotor1-4 > Blade, Blade2)          ├── SirenLight (OmniLight3D)
+├── SirenLight (SpotLight3D)                   └── MultiplayerSynchronizer
+└── MultiplayerSynchronizer
+```
+
+**Tuning:**
+- Select **Roombas** in `main.tscn`, group **Patrol Mix**: **Lint Trapper Chance**, **Squirt Drone
+  Chance**.
+- Open `scenes/squirt_drone.tscn`, select the root: **Flight** (Hover Height, Stunned Height, Climb
+  Strength, Max Climb Speed, Stand Off), **Spotlight and Water Zap** (Heat Per Second, Squirt Seconds,
+  Squirt Travel Seconds, Squirt Radius, Squirt Damage, Squirt Push, Squirt Hop, the two light colours).
+- Open `scenes/lint_trapper.tscn`, select the root: **Sticky Glue** (Patch Radius, Patch Seconds,
+  Trail Seconds, Trail Spacing, Lob Range, Lob Seconds, Lob Flight Seconds, Lob Height, Keep Distance).
+- Open `scenes/player.tscn`, select the root: **Sticky Slow**, **Sticky Seconds**.
+- Speeds, sight and health are in the same Inspector groups as the VAC-COP's.
+
+**Multiplayer:** the host runs both brains and decides every zap. Each puddle is made on every
+computer, and each player's own computer checks their own paws.
+
+**Test:** `--deploy --roomba=drone --bait_roomba=8` (or `--roomba=trapper`), and add
+`--stun_roomba=6` for a stun. The `DevCapture roombas` and `DevCapture sticky` lines show the result.
+
 ### HEAT and the MEGA VAC-COP (the pressure)
 The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-right, flashing
 red and blue) is **shared by every player**:
@@ -1870,7 +1927,9 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `meow` (`_1`, `_2`) | pressing **M** (MEOW, rebindable in SETTINGS > KEYS) | everyone nearby |
 | `shoot` | each gun shot (per gun: **Shot Sound** on the gun scene's root) | everyone nearby |
 | `pickup` | grabbing an item / fish | everyone nearby |
-| `roomba_hum` (loops) | every VAC-COP, revs up while chasing | everyone nearby |
+| `roomba_hum` (loops) | every VAC-COP, revs up while chasing (higher-pitched on a SQUIRT-DRONE) | everyone nearby |
+| `squirt` | a SQUIRT-DRONE fires a water zap | everyone nearby |
+| `splat` | LINT-TRAPPER glue: a lob, its landing, and your paws getting stuck | everyone nearby (paws: only you) |
 | `alert` | a VAC-COP starts chasing | everyone nearby |
 | `bonk` | a VAC-COP bonks a cat | everyone nearby |
 | `roomba_hit` | a bolt hits a VAC-COP | everyone nearby |

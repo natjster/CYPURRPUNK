@@ -1,0 +1,240 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/squirt_drone.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="SceneReplicationConfig" id="Sync"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 0
+properties/1/path = NodePath(".:sync_position")
+properties/1/spawn = true
+properties/1/replication_mode = 2
+properties/2/path = NodePath(".:sync_yaw")
+properties/2/spawn = true
+properties/2/replication_mode = 2
+properties/3/path = NodePath(".:state")
+properties/3/spawn = true
+properties/3/replication_mode = 2
+properties/4/path = NodePath(".:health")
+properties/4/spawn = true
+properties/4/replication_mode = 2
+
+[sub_resource type="SphereShape3D" id="Shape"]
+radius = 0.75
+
+[sub_resource type="ShaderMaterial" id="Mat_shell"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.82, 0.84, 0.9, 1)
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.07, 0.07, 0.1, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 5.0
+
+[sub_resource type="ShaderMaterial" id="Mat_water"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(0.3, 0.9, 1, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_body"]
+size = Vector3(0.5, 0.16, 0.62)
+
+[sub_resource type="BoxMesh" id="Mesh_arm"]
+size = Vector3(1.4, 0.05, 0.07)
+
+[sub_resource type="CylinderMesh" id="Mesh_motor"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.1
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_blade"]
+size = Vector3(0.62, 0.015, 0.07)
+
+[sub_resource type="CylinderMesh" id="Mesh_tank"]
+top_radius = 0.17
+bottom_radius = 0.17
+height = 0.34
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_nozzle"]
+top_radius = 0.03
+bottom_radius = 0.07
+height = 0.18
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_eye"]
+size = Vector3(0.2, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_siren"]
+size = Vector3(0.09, 0.05, 0.07)
+
+[node name="SquirtDrone" type="CharacterBody3D"]
+collision_layer = 2
+script = ExtResource("1_script")
+max_health = 60
+display_name = "SQUIRT-DRONE"
+health_bar_height = 0.8
+car_smash_speed = 999.0
+patrol_speed = 3.0
+chase_speed = 6.2
+sight_range = 18.0
+lose_range = 26.0
+hum_pitch = 2.2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_shell")
+
+[node name="Arm1" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 0.7854, 0)
+mesh = SubResource("Mesh_arm")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Arm2" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, -0.7854, 0)
+mesh = SubResource("Mesh_arm")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Tank" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.25, 0)
+mesh = SubResource("Mesh_tank")
+surface_material_override/0 = SubResource("Mat_water")
+
+[node name="Nozzle" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, -0.5, 0)
+mesh = SubResource("Mesh_nozzle")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Eye" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0, -0.33)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenRed" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.12, 0.11, 0)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenBlue" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.12, 0.11, 0)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Rotors" type="Node3D" parent="Model"]
+
+[node name="Rotor1" type="Node3D" parent="Model/Rotors"]
+position = Vector3(-0.5, 0.09, -0.5)
+
+[node name="Blade" type="MeshInstance3D" parent="Model/Rotors/Rotor1"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Blade2" type="MeshInstance3D" parent="Model/Rotors/Rotor1"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 1.5708, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Rotor2" type="Node3D" parent="Model/Rotors"]
+position = Vector3(0.5, 0.09, -0.5)
+
+[node name="Blade" type="MeshInstance3D" parent="Model/Rotors/Rotor2"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Blade2" type="MeshInstance3D" parent="Model/Rotors/Rotor2"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 1.5708, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Rotor3" type="Node3D" parent="Model/Rotors"]
+position = Vector3(-0.5, 0.09, 0.5)
+
+[node name="Blade" type="MeshInstance3D" parent="Model/Rotors/Rotor3"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Blade2" type="MeshInstance3D" parent="Model/Rotors/Rotor3"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 1.5708, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Rotor4" type="Node3D" parent="Model/Rotors"]
+position = Vector3(0.5, 0.09, 0.5)
+
+[node name="Blade" type="MeshInstance3D" parent="Model/Rotors/Rotor4"]
+position = Vector3(0, 0, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Blade2" type="MeshInstance3D" parent="Model/Rotors/Rotor4"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 1.5708, 0)
+mesh = SubResource("Mesh_blade")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Motor1" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.5, 0.03, -0.5)
+mesh = SubResource("Mesh_motor")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Motor2" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.5, 0.03, -0.5)
+mesh = SubResource("Mesh_motor")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Motor3" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.5, 0.03, 0.5)
+mesh = SubResource("Mesh_motor")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Motor4" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.5, 0.03, 0.5)
+mesh = SubResource("Mesh_motor")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="SirenLight" type="SpotLight3D" parent="."]
+position = Vector3(0, -0.45, 0)
+rotation = Vector3(-1.5708, 0, 0)
+light_color = Color(0.2, 0.9, 1, 1)
+light_energy = 8.0
+light_volumetric_fog_energy = 2.0
+spot_range = 14.0
+spot_angle = 16.0
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("Sync")
+replication_interval = 0.05
+delta_interval = 0.05

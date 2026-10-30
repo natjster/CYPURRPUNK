@@ -21,6 +21,10 @@ extends CharacterBody3D
 ## How quickly the cat model turns to face its running direction.
 @export var turn_speed: float = 12.0
 @export var jump_velocity: float = 6.0
+## STICKY PAWS: stepping in a LINT-TRAPPER's glue (scripts/sticky_patch.gd) multiplies your speed
+## by Sticky Slow (0.5 = half speed: zoomies 9 -> 4.5) for Sticky Seconds after you leave it.
+@export var sticky_slow: float = 0.5
+@export var sticky_seconds: float = 3.0
 
 @export_group("Camera")
 @export var mouse_sensitivity: float = 0.0025
@@ -60,6 +64,7 @@ var aim_until: float = 0.0
 var shoulder_view: bool = false
 ## Catnip etc.: speed multiplier and how long it lasts (see start_boost).
 var speed_boost: float = 1.0
+var _sticky_left: float = 0.0  # owner: seconds of sticky paws left
 var _boost_time_left: float = 0.0
 ## Catdip: extra jumps allowed in mid-air while it lasts (see start_double_jump).
 var air_jumps: int = 0
@@ -497,7 +502,7 @@ func _physics_process(delta: float) -> void:
 		target_speed = walk_speed * CatHealth.instance.crawl_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.
 	var heavy := ItemManager.instance.carry_speed(player_id) if ItemManager.instance != null else 1.0
-	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy
+	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy * _sticky_paws(delta)
 
 	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
 	var weight := 1.0 - exp(-acceleration * delta)
@@ -523,6 +528,18 @@ func _physics_process(delta: float) -> void:
 	sync_position = position
 	sync_model_rotation = cat_model.rotation
 	_update_footsteps(delta, is_on_floor())
+
+
+## Owner: the speed multiplier from LINT-TRAPPER glue (1 = clean paws). Only paws on the ground
+## touch it, so a jump clears a puddle. Patches are on every computer, so this needs no network.
+func _sticky_paws(delta: float) -> float:
+	if is_on_floor() and StickyPatch.touches(global_position):
+		if _sticky_left <= 0.0:
+			Sound.play_at("splat", global_position, -6.0)
+			Hud.popup("STICKY PAWS!", 1.5, slot)
+		_sticky_left = sticky_seconds
+	_sticky_left = maxf(_sticky_left - delta, 0.0)
+	return sticky_slow if _sticky_left > 0.0 else 1.0
 
 
 ## Pitter-patter. Every computer does this for every cat it can see (our own cat from

@@ -22,6 +22,8 @@ extends Node3D
 
 const ROOMBA_SCENE: PackedScene = preload("res://scenes/roomba.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
+const LINT_TRAPPER_SCENE: PackedScene = preload("res://scenes/lint_trapper.tscn")
+const SQUIRT_DRONE_SCENE: PackedScene = preload("res://scenes/squirt_drone.tscn")
 
 ## How many Roombas patrol the city at once when the city is calm (HEAT level 1).
 ## Hotter levels add more (HeatMeter.extra_roombas_per_level, on the Heat node).
@@ -37,6 +39,13 @@ const BOSS_SCENE: PackedScene = preload("res://scenes/roomba_boss.tscn")
 ## When the heat goes UP a level, one reinforcement Roomba arrives every this many seconds
 ## until there are enough. (When it cools down, spare Roombas far from cats go home just as slowly.)
 @export var reinforce_seconds: float = 2.0
+
+@export_group("Patrol Mix")
+## Out of every new patrol unit (0.20 = 20%), how many are LINT-TRAPPERS and SQUIRT-DRONES. The rest
+## are regular VAC-COPs. The same mix goes for every spawn: district start, heat reinforcements,
+## replacements and the DEEP CLEAN swarm.
+@export var lint_trapper_chance: float = 0.20
+@export var squirt_drone_chance: float = 0.15
 
 @export_group("MEGA VAC-COP (boss)")
 ## The boss appears at least this far from every cat (it drives in from across town).
@@ -211,12 +220,22 @@ func _follow_the_heat() -> void:
 
 ## "swarm" = DEEP CLEAN: appear close to a cat that's still up top.
 func _spawn_one(swarm: bool = false) -> void:
-	var roomba := ROOMBA_SCENE.instantiate() as Roomba
+	var roomba := _pick_scene().instantiate() as Roomba
 	roomba.name = "Roomba%d" % _next_number  # unique names keep everyone's copies matched up
 	_next_number += 1
 	roomba.position = _swarm_spot() if swarm else _spawn_spot()
 	roomba.destroyed.connect(roomba_destroyed)
 	add_child(roomba, true)
+
+
+## Host: which kind of patrol unit comes next (see Patrol Mix).
+func _pick_scene() -> PackedScene:
+	var roll := _rng.randf()
+	if roll < lint_trapper_chance:
+		return LINT_TRAPPER_SCENE
+	if roll < lint_trapper_chance + squirt_drone_chance:
+		return SQUIRT_DRONE_SCENE
+	return ROOMBA_SCENE
 
 
 ## DEEP CLEAN: a sidewalk spot near (but not on top of) a random cat up in the city.
@@ -310,5 +329,5 @@ func _show_explosion(at: Vector3) -> void:
 		var fly := bit.create_tween().set_parallel()
 		fly.tween_property(bit, "position", at + out + Vector3(0, 1.2, 0), 0.3).set_ease(Tween.EASE_OUT)
 		fly.tween_property(bit, "rotation", Vector3(randf() * 8, randf() * 8, 0), 0.7)
-		fly.chain().tween_property(bit, "position:y", at.y + 0.03, 0.4).set_ease(Tween.EASE_IN)
+		fly.chain().tween_property(bit, "position:y", minf(at.y, 0.1) + 0.03, 0.4).set_ease(Tween.EASE_IN)
 		fly.chain().tween_callback(bit.queue_free).set_delay(2.0)

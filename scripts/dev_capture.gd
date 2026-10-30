@@ -45,6 +45,8 @@ extends Node
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    hit the nearest Roomba N times (34 each), as if shot (host or client)
 ##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
+##                     (--roomba=drone / trapper: the nearest SQUIRT-DRONE / LINT-TRAPPER)
+##   --stun_roomba=S   (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit
 ##   --quest=ID        take that quest right away, with no NPC (works with --deploy, unlike --talk)
 ##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
 ##                     add --kill_bosses to destroy bosses too
@@ -452,11 +454,15 @@ func _ready() -> void:
 				hit.shooter = player
 				hit.damage = 34
 				roomba.receive_hit(hit)
+		if args.has("stun_roomba") and multiplayer.is_server():
+			# --stun_roomba=S: (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit.
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			roomba._on_stunned(float(args["stun_roomba"]))
 		if args.has("kill_roombas") and multiplayer.is_server():
 			# (host) destroy N regular Roombas as if shot to death (every 3 calls in the MEGA VAC-COP).
 			for i in int(args["kill_roombas"]):
 				for node in scene.get_node("Roombas").get_children():
-					var victim := node as Roomba
+					var victim := node as Roomba  # (any patrol unit: drones and Lint-Trappers count too)
 					if victim != null and (not victim.is_boss or args.has("kill_bosses")) and not victim.is_queued_for_deletion():
 						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
 						break
@@ -748,8 +754,11 @@ func _ready() -> void:
 		var lines := PackedStringArray()
 		for roomba in roombas.get_children():
 			if roomba is Roomba and not roomba.is_queued_for_deletion():
-				lines.append("%s %s %s hp=%d stomach=%s" % [roomba.name, Roomba.State.keys()[roomba.state], roomba.global_position.snapped(Vector3.ONE * 0.1), roomba.health, roomba.stomach])
+				lines.append("%s %s %s %s hp=%d stomach=%s" % [roomba.name, roomba.display_name, Roomba.State.keys()[roomba.state], roomba.global_position.snapped(Vector3.ONE * 0.1), roomba.health, roomba.stomach])
 		print("DevCapture roombas (%d): %s" % [lines.size(), " | ".join(lines)])
+		for cat in scene.get_node("Players").get_children():
+			print("DevCapture sticky: cat %s paws=%.1f s, patches=%d, speed=%.1f, hp=%d" % [cat.name, cat._sticky_left,
+				StickyPatch.count(), Motion.flat(cat.velocity).length(), CatHealth.instance.get_health(cat.player_id)])
 	for car in (scene as Game).cars():
 		print("DevCapture car %s (gang %d): position=%s driver=%d passengers=%s frozen=%s" % [car.name, car.team,
 			car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
@@ -994,6 +1003,17 @@ func _pick_roomba(scene: Node, near: Vector3, args: Dictionary) -> Roomba:
 			for roomba in scene.get_node("Roombas").get_children():
 				if roomba is Roomba and (roomba as Roomba).is_boss:
 					return roomba
+			await get_tree().physics_frame
+	if args.get("roomba", "") in ["drone", "trapper"]:
+		# --roomba=drone / trapper: the nearest of that kind (waits for one to appear).
+		while true:
+			var best: Roomba = null
+			for node in scene.get_node("Roombas").get_children():
+				if (node is SquirtDrone if args["roomba"] == "drone" else node is LintTrapper) \
+						and (best == null or near.distance_to(node.global_position) < near.distance_to(best.global_position)):
+					best = node
+			if best != null:
+				return best
 			await get_tree().physics_frame
 	return _nearest_roomba(scene, near)
 

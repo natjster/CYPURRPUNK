@@ -178,7 +178,7 @@ script = ExtResource("28_heat")
 script = ExtResource("20_roombas")
 
 [node name="RoombaSpawner" type="MultiplayerSpawner" parent="."]
-_spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn", "res://scenes/roomba_boss.tscn")
+_spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn", "res://scenes/roomba_boss.tscn", "res://scenes/lint_trapper.tscn", "res://scenes/squirt_drone.tscn")
 spawn_path = NodePath("../Roombas")
 
 [node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]

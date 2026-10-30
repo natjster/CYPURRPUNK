@@ -1,0 +1,164 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/lint_trapper.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+
+[sub_resource type="SceneReplicationConfig" id="Sync"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 0
+properties/1/path = NodePath(".:sync_position")
+properties/1/spawn = true
+properties/1/replication_mode = 2
+properties/2/path = NodePath(".:sync_yaw")
+properties/2/spawn = true
+properties/2/replication_mode = 2
+properties/3/path = NodePath(".:state")
+properties/3/spawn = true
+properties/3/replication_mode = 2
+properties/4/path = NodePath(".:health")
+properties/4/spawn = true
+properties/4/replication_mode = 2
+
+[sub_resource type="BoxShape3D" id="Shape"]
+size = Vector3(1.1, 0.5, 1.0)
+
+[sub_resource type="ShaderMaterial" id="Mat_shell"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.32, 0.3, 0.42, 1)
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_black"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.07, 0.07, 0.1, 1)
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 5.0
+
+[sub_resource type="ShaderMaterial" id="Mat_glue"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(1, 0.12, 0.65, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="ShaderMaterial" id="Mat_roller"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0, 0, 0, 1)
+shader_parameter/emission_color = Color(1, 0.2, 0.7, 1)
+shader_parameter/emission_energy = 1.6
+
+[sub_resource type="BoxMesh" id="Mesh_body"]
+size = Vector3(0.9, 0.3, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_hood"]
+size = Vector3(0.55, 0.14, 0.45)
+
+[sub_resource type="CylinderMesh" id="Mesh_roller"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 1.1
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_tank"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_eye"]
+size = Vector3(0.26, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_siren"]
+size = Vector3(0.14, 0.08, 0.1)
+
+[sub_resource type="BoxMesh" id="Mesh_stripe"]
+size = Vector3(1.12, 0.03, 0.05)
+
+[node name="LintTrapper" type="CharacterBody3D"]
+collision_layer = 2
+script = ExtResource("1_script")
+max_health = 80
+display_name = "LINT-TRAPPER"
+health_bar_height = 0.9
+patrol_speed = 2.4
+chase_speed = 5.2
+siren_color_1 = Color(1, 0.1, 0.7, 1)
+siren_color_2 = Color(0.55, 0.15, 1, 1)
+brush_axis = Vector3(1, 0, 0)
+brush_spin = -9.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.25, 0)
+shape = SubResource("Shape")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.25, 0.05)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_shell")
+
+[node name="Hood" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.47, 0.0)
+mesh = SubResource("Mesh_hood")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="Tank" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.54, 0.32)
+mesh = SubResource("Mesh_tank")
+surface_material_override/0 = SubResource("Mat_glue")
+
+[node name="Eye" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.34, -0.36)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenRed" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.09, 0.58, -0.05)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="SirenBlue" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.09, 0.58, -0.05)
+mesh = SubResource("Mesh_siren")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Brush" type="Node3D" parent="Model"]
+position = Vector3(0, 0.2, -0.55)
+
+[node name="Roller" type="MeshInstance3D" parent="Model/Brush"]
+position = Vector3(0, 0, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("Mesh_roller")
+surface_material_override/0 = SubResource("Mat_roller")
+
+[node name="Stripe" type="MeshInstance3D" parent="Model/Brush"]
+position = Vector3(0, 0.2, 0)
+mesh = SubResource("Mesh_stripe")
+surface_material_override/0 = SubResource("Mat_black")
+
+[node name="SirenLight" type="OmniLight3D" parent="."]
+visible = false
+position = Vector3(0, 0.8, 0)
+light_color = Color(1, 0.1, 0.7, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 1.5
+omni_range = 5.0
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("Sync")
+replication_interval = 0.05
+delta_interval = 0.05

@@ -44,6 +44,11 @@ extends Enemy
 ## frames (far_think_every), a chasing one re-plans its route a few times a second, its model
 ## isn't drawn beyond draw_distance (the fog hides it anyway), its siren light fades out with
 ## distance, and its hum only plays when it's near a player on this computer.
+##
+## OTHER HUNTERS: the SQUIRT-DRONE (squirt_drone.gd) and LINT-TRAPPER (lint_trapper.gd) extend this
+## script, so they patrol, chase, get stunned, save CPU and get spawned exactly like a VAC-COP. They
+## only replace these four small functions: _fall (how it stays up), _chase_point (where it drives),
+## _attack (what it does while chasing) and _show_light (its light).
 
 enum State { PATROL, CHASE, STUNNED }
 
@@ -86,6 +91,16 @@ enum State { PATROL, CHASE, STUNNED }
 ## The vacuum hum only plays within this distance (metres) of a player on this computer.
 @export var hum_distance: float = 35.0
 
+@export_group("Look")
+## The two colours its siren flashes (the lights on the model and the glow on the street).
+@export var siren_color_1: Color = Color(1, 0.1, 0.15)
+@export var siren_color_2: Color = Color(0.15, 0.3, 1)
+## How the Brush part spins: around which axis, and how fast (radians per second).
+@export var brush_axis: Vector3 = Vector3.UP
+@export var brush_spin: float = 14.0
+## Pitch of its hum (1 = normal, 2 = an octave up: the drone's whine).
+@export var hum_pitch: float = 1.0
+
 ## Synced to everyone: what it's doing (the lights and sounds follow it).
 var state: State = State.PATROL
 
@@ -109,8 +124,8 @@ var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city'
 @onready var eye: MeshInstance3D = $Model/Eye
 @onready var siren_red: MeshInstance3D = $Model/SirenRed
 @onready var siren_blue: MeshInstance3D = $Model/SirenBlue
-@onready var brush: Node3D = $Model/Brush
-@onready var siren_light: OmniLight3D = $SirenLight
+@onready var brush: Node3D = get_node_or_null("Model/Brush")  # (optional: the drone has rotors)
+@onready var siren_light: Light3D = $SirenLight
 
 
 func _ready() -> void:
@@ -142,8 +157,7 @@ func _physics_process(delta: float) -> void:
 	delta = _skipped_time
 	_skipped_time = 0.0
 	_clock += delta
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+	_fall(delta)
 
 	if run_over_by_car(delta):
 		explode()
@@ -182,8 +196,7 @@ func _physics_process(delta: float) -> void:
 				move = Motion.flat(_route_point - global_position)
 				# Hotter city = faster Roombas (heat_meter.gd).
 				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
-				if Motion.flat_distance(cat.global_position, global_position) < bump_range:
-					_bonk(cat)
+				_attack(cat, delta)
 
 	# Drive: ease toward the wanted velocity and turn to face where we're going.
 	var wanted := move.normalized() * speed
@@ -200,6 +213,18 @@ func _physics_process(delta: float) -> void:
 
 	sync_position = global_position
 	sync_yaw = model.rotation.y
+
+
+## Host: gravity. (The drone replaces this to hover.)
+func _fall(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+
+
+## Host, every frame of a chase: the VAC-COP bonks whatever it touches.
+func _attack(cat: CatPlayer, _delta: float) -> void:
+	if Motion.flat_distance(cat.global_position, global_position) < bump_range:
+		_bonk(cat)
 
 
 ## True if no cat is within far_distance (then nothing up close can see us thinking slowly).
@@ -344,14 +369,15 @@ func _on_stunned(seconds: float) -> void:
 
 func _process(delta: float) -> void:
 	super(delta)
-	brush.rotate_y(delta * 14.0)
+	if brush != null:
+		brush.rotate_object_local(brush_axis, delta * brush_spin)
 	var chasing := state == State.CHASE
 	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
 	if chasing and _last_state != State.CHASE:
 		Sound.play_at("alert", global_position, -2.0)
 	_last_state = state
 	if _hum != null:
-		_hum.pitch_scale = 1.4 if chasing else 1.0
+		_hum.pitch_scale = (1.4 if chasing else 1.0) * hum_pitch
 		# Only hum when a player on this computer is near (dozens of far-away hums cost CPU
 		# and you couldn't hear them through the rain anyway). Checked 4 times a second.
 		_hum_check_left -= delta
@@ -366,11 +392,16 @@ func _process(delta: float) -> void:
 	# Stunned: the eye and sirens fizz on and off, like something shorting out.
 	var fizz := state == State.STUNNED and fmod(Time.get_ticks_msec() / 1000.0, 0.14) < 0.07
 	var fizz_color := Color(0.8, 0.4, 1)
-	siren_red.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (Color(1, 0.1, 0.15) if chasing and blink else off))
-	siren_blue.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (Color(0.15, 0.3, 1) if chasing and not blink else off))
-	siren_light.visible = chasing
-	siren_light.light_color = Color(1, 0.1, 0.15) if blink else Color(0.15, 0.3, 1)
+	siren_red.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (siren_color_1 if chasing and blink else off))
+	siren_blue.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (siren_color_2 if chasing and not blink else off))
+	_show_light(chasing, blink)
 	if state == State.STUNNED:
 		eye.set_instance_shader_parameter("instance_tint", fizz_color if fizz else off)
 	else:
 		eye.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1) if chasing else Color(0.2, 0.9, 1))
+
+
+## Every computer: the glow on the street. (The drone's spotlight replaces this.)
+func _show_light(chasing: bool, blink: bool) -> void:
+	siren_light.visible = chasing
+	siren_light.light_color = siren_color_1 if blink else siren_color_2
