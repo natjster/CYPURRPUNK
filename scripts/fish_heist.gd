@@ -29,8 +29,9 @@ extends Node3D
 ##       SCRAP isn't on the street: only a destroyed MEGA VAC-COP drops it. It's worth $0 here
 ##       (it stays in your bag at the exit) - it's fuel for THE MAINFRAME (scripts/mainframe.gd).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
-##   - At 3/4 heat (exit_opens_at_heat) both gangs' crews break through: each gang's EXIT manhole
-##     opens, somewhere random, and every PAYPHONE in the district rings. Payphones
+##   - At the heat its own MAINFRAME says (scripts/mainframe.gd exit_heat: 60 / 75 / 82 / 90 / 95)
+##     a gang's crew breaks through: its EXIT manhole opens, somewhere random, and every PAYPHONE
+##     in the district rings. Once open it stays open for the district. Payphones
 ##     (scripts/npcs/payphone.gd) are scattered too: call your boss on one and they tell you where
 ##     your exit is; the HUD arrow switches on for your gang. The phones ring until every gang
 ##     in the game has called.
@@ -50,8 +51,6 @@ extends Node3D
 ## their exit (revealed) and whether the hatch is sealed are decided by the host (_set_state).
 
 @export_group("Manholes (the way in and out)")
-## The EXIT manhole opens (lid off, climb down) once the heat reaches this (out of 100).
-@export var exit_opens_at_heat: float = 75.0
 ## How close (metres) to the middle of the open exit manhole you must get to climb down.
 @export var exit_radius: float = 1.6
 ## Every exit is at least this far (metres) from every gang's entry manhole...
@@ -90,6 +89,9 @@ var exit_positions: Array[Vector3] = []
 ## Per gang: true once someone in that gang called their boss on a payphone (the HUD arrow then
 ## points that gang at its exit). By team number: is_revealed(team).
 var revealed: Array[bool] = []
+## Per gang: true once that gang's exit has opened in this district. It stays open, even if a
+## rival's hack pushes that gang's exit heat back up.
+var exit_opened: Array[bool] = []
 ## True from max heat until the new district is built: the hatch is shut, nobody gets out.
 var sealed: bool = false
 ## Player ID -> true for everyone who has been up top in THIS district (their one trip is used:
@@ -129,6 +131,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	_exits.clear()
 	exit_positions.clear()
 	revealed.clear()
+	exit_opened.clear()
 	sealed = false
 	went_up.clear()  # a new district: everyone gets a trip up again
 	_deep_clean_ends_at = -1.0
@@ -159,6 +162,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 			spot = _random_street_spot(rng)
 		exit_positions.append(spot)
 		revealed.append(false)
+		exit_opened.append(false)
 		_exits.append(_add_manhole(spot, Teams.color_of(team)))
 
 	# The payphones: on sidewalks, spread out, facing the street.
@@ -261,10 +265,23 @@ func everyone_has_been_up() -> bool:
 	return true
 
 
-## Can you climb down the exit right now? (Heat high enough, hatch not sealed yet.)
-## (Every gang's exit opens at the same moment.)
-func exit_is_open() -> bool:
-	return not sealed and HeatMeter.instance != null and HeatMeter.instance.heat >= exit_opens_at_heat
+## Can this gang climb down its exit right now? (Heat high enough for ITS Mainframe, or it already
+## opened this district, and the hatch isn't sealed yet.)
+func exit_is_open(team: int) -> bool:
+	if sealed or HeatMeter.instance == null or Mainframe.instance == null:
+		return false
+	if team >= 0 and team < exit_opened.size() and exit_opened[team]:
+		return true
+	return HeatMeter.instance.heat >= Mainframe.instance.exit_heat(team)
+
+
+## Is the exit open for every gang in the game? (Then a sewer full of cats can hurry the heat on
+## without taking a gang's chance at its later exit away: heat_meter.gd.)
+func every_exit_is_open() -> bool:
+	for team in Mainframe.instance.active_gangs():
+		if not exit_is_open(team):
+			return false
+	return true
 
 
 ## Where this gang's exit manhole is.
@@ -301,15 +318,16 @@ func _gangs_up_top() -> Array[int]:
 func _process(_delta: float) -> void:
 	if _exits.is_empty():
 		return
-	var open := exit_is_open()
-	for exit in _exits:
-		exit.set_open(open)
-	# The phones ring once the exits are open, until every gang still up top has called its boss.
+	for team in _exits.size():
+		var open := exit_is_open(team)
+		exit_opened[team] = exit_opened[team] or open
+		_exits[team].set_open(open)
+	# The phones ring while a gang up top has an open exit and hasn't called its boss yet.
 	var someone_waiting := false
 	for team in _gangs_up_top():
-		someone_waiting = someone_waiting or not is_revealed(team)
+		someone_waiting = someone_waiting or (exit_is_open(team) and not is_revealed(team))
 	for phone in _payphones:
-		phone.set_ringing(open and someone_waiting)
+		phone.set_ringing(someone_waiting)
 	_update_hud()
 
 
@@ -328,12 +346,10 @@ func _physics_process(delta: float) -> void:
 	# Max heat: seal the hatch and start the DEEP CLEAN.
 	if not sealed and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
 		_deep_clean_ends_at = _clock + deep_clean_seconds
-		_set_state.rpc(true, revealed)  # (announces Events.district_sealed: the swarm comes)
+		_set_state.rpc(true, revealed, exit_opened)  # (announces Events.district_sealed: the swarm comes)
 		print("[Heist] Hatch SEALED: the DEEP CLEAN begins")
 	if sealed:
 		_run_deep_clean()
-		return
-	if not exit_is_open():
 		return
 
 	var items := ItemManager.instance
@@ -342,6 +358,8 @@ func _physics_process(delta: float) -> void:
 		var where := Game.instance.player_position(player_id)
 		if not Game.instance.is_up_top(player_id) or _clock < _extract_wait.get(player_id, 0.0):
 			continue
+		if not exit_is_open(Teams.team_of(player_id)):
+			continue  # this gang's crew hasn't broken through yet
 		if CatHealth.instance.is_down(player_id):
 			continue  # knocked out: no flopping into the hole to save your stuff
 		# Only YOUR gang's exit takes you down (the rival's is just a hole in the road to you).
@@ -391,20 +409,23 @@ func request_reveal_exit(player_id: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var team := Teams.team_of(player_id)
-	if exit_is_open() and not is_revealed(team) and team < revealed.size():
+	if exit_is_open(team) and not is_revealed(team) and team < revealed.size():
 		print("[Heist] Player %d called their boss: the %s's exit is revealed" % [player_id, Teams.name_of(team)])
 		var now := revealed.duplicate()
 		now[team] = true
-		_set_state.rpc(sealed, now)
+		_set_state.rpc(sealed, now, exit_opened)
 
 
-## Host -> everyone: is the hatch sealed, and which gangs know where their exit is?
+## Host -> everyone: is the hatch sealed, which gangs know where their exit is, and whose exits
+## have already opened?
 @rpc("authority", "call_local", "reliable")
-func _set_state(is_sealed: bool, gangs_revealed: Array) -> void:
+func _set_state(is_sealed: bool, gangs_revealed: Array, gangs_opened: Array) -> void:
 	var newly_sealed := is_sealed and not sealed
 	sealed = is_sealed
 	for team in mini(gangs_revealed.size(), revealed.size()):
 		revealed[team] = gangs_revealed[team]
+	for team in mini(gangs_opened.size(), exit_opened.size()):
+		exit_opened[team] = gangs_opened[team]
 	if newly_sealed:
 		Sound.play("boss_siren")
 		Hud.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
@@ -439,7 +460,7 @@ func _mark_went_up(player_id: int) -> void:
 ## Host -> a computer that just joined (network ID "peer"): which gangs found their exit, the
 ## hatch sealed, and who has already been up.
 func send_state_to(peer: int) -> void:
-	_set_state.rpc_id(peer, sealed, revealed)
+	_set_state.rpc_id(peer, sealed, revealed, exit_opened)
 	for player_id in went_up:
 		_mark_went_up.rpc_id(peer, player_id)
 
@@ -464,7 +485,7 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE", seat)
 	else:
-		var show_arrow := is_revealed(my_cat.team) and exit_is_open()
+		var show_arrow := is_revealed(my_cat.team) and exit_is_open(my_cat.team)
 		Hud.show_element("DropOff", show_arrow, seat)
 		if show_arrow:
 			Hud.set_text("DropOff", _direction_text(where, exit_for(my_cat.team), GameScreen.instance.camera_for_seat(seat)), seat)

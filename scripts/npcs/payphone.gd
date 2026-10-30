@@ -6,11 +6,12 @@ extends Npc
 ## you have to find them by exploring. Both gangs use the same phones.
 ##
 ## What the boss says depends on the heat (fish_heist.gd):
-##   - Before the EXIT manholes open (heat under 3/4): their crew is still digging for a way back
-##     down. No hint where - there IS no way down yet.
-##   - Once they're open (the crews broke through), every payphone in the district RINGS
-##     (sounds/sfx/phone_ring.wav) until every gang in the game has called. Calling then tells
-##     you where YOUR gang's exit is, and the HUD arrow to it switches on for your gang only.
+##   - Before YOUR gang's EXIT manhole opens (its Mainframe sets when: scripts/mainframe.gd): their
+##     crew is still digging for a way back down. No hint where - there IS no way down yet.
+##   - Once a gang's exit is open, every payphone in the district RINGS
+##     (sounds/sfx/phone_ring.wav) until that gang has called. A ring can be for the rival: your
+##     boss only answers with a location once YOUR exit is open. That call tells you where your
+##     gang's exit is, and the HUD arrow to it switches on for your gang only.
 ##   - After the hatch is sealed: nobody's coming. Good luck.
 ##
 ## The LINES belong to each boss, not the phone: select Hub (Don) or GangHub (Pawnie) in main.tscn
@@ -45,7 +46,7 @@ func talk(cat: CatPlayer) -> void:
 	var line := boss.phone_too_early
 	if heist.sealed:
 		line = boss.phone_sealed
-	elif heist.exit_is_open():
+	elif heist.exit_is_open(cat.team):
 		line = boss.phone_exit_open
 		heist.request_reveal_exit.rpc_id(1, cat.player_id)  # the host switches our gang's arrow on
 	Sound.play("click")

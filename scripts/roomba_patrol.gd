@@ -132,6 +132,10 @@ func start_district() -> void:
 func restart_heat_levels() -> void:
 	var lvl := HeatMeter.instance.level()
 	_boss_level_done = lvl if lvl > 1 else 0
+	# A hack (or scrap) that lands the lowest gang on 0% still puts the CRITICAL boss up top.
+	var mainframe := Mainframe.instance
+	if _patrolling and mainframe != null and mainframe.boss_at_start() and _bosses_out() == 0:
+		_spawn_boss("MAINFRAME CRITICAL")
 
 
 ## Host: a Roomba blew up (its "destroyed" signal, enemy.gd). Show the explosion everywhere and

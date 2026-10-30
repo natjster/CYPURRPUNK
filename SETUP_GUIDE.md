@@ -580,7 +580,7 @@ Tested at a steady 60 fps on an RTX 4060.
 ```
 THE SEWERS (hub, safe)  --Don sends you up the entry manhole-->  THE CITY (grab fish)
         ^                                                              |
-        +--- climb down the EXIT manhole (opens at 75 heat; a payphone ---+
+        +--- climb down the EXIT manhole (opens at 60-95 heat; a payphone +
              call to Don tells you where it is)
 
   HEAT hits 100: the hatch is SEALED, the DEEP CLEAN swarm wipes out anyone still up top,
@@ -632,7 +632,7 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
     `fish_heist.gd`, worked out from the city size so it's always on a street). You pop out a
     few steps up the street towards the middle, facing up it (**Surface Distance** on each hub),
     with your gang's car parked right in front of you (§3).
-  - **One exit per gang:** at 75 heat BOTH exits open, each somewhere random (at least 60 m from
+  - **One exit per gang:** each opens at the heat its gang's Mainframe says (75 by default, §8), somewhere random (at least 60 m from
     every entry and 45 m from each other: **Exit Min Distance** / **Exit Spacing** on the Heist
     node). Each glows in its gang's colour (pink / orange). Only YOUR gang's exit takes you down;
     the rival's is just a hole in the road to you. (Ambush their exit!)
@@ -719,36 +719,57 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
 it by walking over it). It's worth $0 and takes 1 loot bag space. At the exit your money loot is
 cashed in and scrap **stays in your bag**. A knockout loses it, like any loot.
 
-**THE MAINFRAME** is the giant CRT on the west wall. Every player, in both gangs' sewers, shares
-**one** charge, 0-100% in 25% steps. A new game starts at **75%** (the charge is not saved between
-games). Each sealed district drains **25%**. With scrap in your bag, walk up and press **[E] FEED
-SCRAP**: 1 scrap = +25%. At 100% it refuses, so put spare scrap in your stash for later.
+**THE MAINFRAME** is the giant CRT on the west wall of your sewer. **Each gang has its own**, with
+a charge of 0-100% in 25% steps. A new game starts both at **75%** (charges are not saved between
+games). Each sealed district drains **25%** from every gang with at least one player in the game.
 
-The charge when a district starts decides how it begins:
+With scrap in your bag, walk up to your gang's Mainframe and press E. 1 scrap does one of these:
 
-| Charge | CRT says | Starting heat | Extra |
+- **[E] FEED SCRAP (+25%)** when your Mainframe is under 100%.
+- **[E] HACK RIVAL MAINFRAME (-25%)** when yours is at 100% and a rival gang in the game is above
+  0%. Everyone sees it in the HUD feed.
+- **MAINFRAME FULL** at 100% with nobody to hack (solo, one gang, or the rival is at 0%): it refuses,
+  so put spare scrap in your stash for later.
+
+Your gang's charge sets when **your** exit opens. The **lowest** charge of any gang in the game sets
+how the shared city starts:
+
+| Charge | CRT says | Your exit opens at | City start (lowest gang) |
 |---|---|---|---|
-| 100% | OVERCLOCK ACTIVE (cyan) | 0 | Heat rises 20% slower that district |
-| 75% | SYSTEM ONLINE (green) | 0 | Normal |
-| 50% | POWER LOW (yellow) | 15 | Less time before the exit opens |
-| 25% | WARNING (orange) | 30 | Starts at heat level 2 |
-| 0% | CRITICAL (flashing red) | 50 | Starts at heat level 3, with 1 MEGA VAC-COP already up top |
+| 100% | OVERCLOCK ACTIVE (cyan) | 60 heat | 0 heat, and heat rises 20% slower |
+| 75% | SYSTEM ONLINE (green) | 75 heat | 0 heat |
+| 50% | POWER LOW (yellow) | 82 heat | 15 heat |
+| 25% | WARNING (orange) | 90 heat | 30 heat |
+| 0% | CRITICAL (flashing red) | 95 heat | 50 heat, with 1 MEGA VAC-COP already up top |
 
-The seal drains the charge just **before** the next district starts, so a Mainframe at 100% only
-reaches OVERCLOCK if you top it up **in the sewers before anyone goes up**: scrap fed then counts
-for the current district straight away. Otherwise 100% is a one-district buffer.
+- Exit timing follows your charge live, so feeding mid-district can open your exit sooner. Once an
+  exit has opened it **stays open** for that district, even if a rival hacks you.
+- Anything that changes the lowest charge **before anyone goes up** (feeding, hacking) changes the
+  current district's start straight away.
+- The seal drains just **before** the next district starts, so 100% only reaches OVERCLOCK if you
+  top up in the sewers before anyone goes up. Every gang in the game must be at 100% for it.
+- If everyone's home, heat only races to the DEEP CLEAN once **every** gang's exit has opened (or
+  everyone has used their trip), so an early exit can't rob the other gang of its turn.
+- The payphones ring for any gang with an open exit that hasn't called. If it's not your exit yet,
+  your boss still says they're digging.
 
-The top-right bar shows the **HEAT** up in the city and the **Mainframe's charge** in the sewers.
+The top-right bar shows **your gang's Mainframe** in the sewers and the **HEAT** up in the city,
+with a white **EXIT** tick where your gang's exit opens.
 
-**Where it lives:** `scripts/mainframe.gd` on the **Mainframe** node in `main.tscn`.
+**Where it lives:** `scripts/mainframe.gd` on the **Mainframe** node in `main.tscn` (one node, all
+gangs' charges).
 
 **Tuning:** select **Mainframe** in `main.tscn`: **Charge** (Starting Charge, Drain Per District,
-Charge Per Scrap), **Starting Heat Per Tier**, **Overclock** (Overclock Heat Multiplier). The
-scrap card is `items/scrap.tres`. The CRT's feeding spot: **Hub** and **GangHub** > **Mainframe**.
+Charge Per Scrap, Hack Per Scrap), **Exit Opens At Heat**, **Starting Heat Per Tier**, **Overclock**
+(Overclock Heat Multiplier). The scrap card is `items/scrap.tres`. The CRT's feeding spot: **Hub**
+and **GangHub** > **Mainframe**. The EXIT tag's size: `hud.tscn` > **Heat** > Exit Tag Size.
 
-**Test it without playing:** `--mainframe=N` sets the charge and restarts the district on it.
-`--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one. `--to_stash=bag:0` stashes
-scrap. On a client, add `--wait=120` first.
+**Test it without playing:** `--mainframe=N` sets every gang's charge, `--mainframe=100,50` sets them
+per gang (Catleone, Burrow), and the district restarts on it.
+`--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one.
+`--teams=0,1 --add_local=1 --mainframe=100,75 --give=scrap --pos=-11,-199.5,0 --press_key=E` hacks.
+`--teams=0,1 --add_local=1 --mainframe=100,75 --deploy --heat=70` shows one exit open and one shut.
+`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first.
 
 ### The stash & saved progress
 **THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black
@@ -912,7 +933,7 @@ new district. In the code that just means a new city seed: the whole city is gen
    `went_up` in `fish_heist.gd`, decided by the host.)
 2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **10 minutes** from a
    fresh district to max if you cause no trouble; gunfights speed it up).
-3. At **75 heat** the crews break through: each gang's **exit manhole** opens somewhere random in
+3. At **75 heat** (60-95, set by your gang's Mainframe) your crew breaks through: your gang's **exit manhole** opens somewhere random in
    the city (the lid slides off and a glow in the gang's colour comes out of the hole). At the
    same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
 4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call

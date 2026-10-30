@@ -95,7 +95,7 @@ extends Node
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
-##   --mainframe=N     (host) THE MAINFRAME's charge is N and the district restarts on it
+##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 ##                     (slot 2 = the PAD box: --rebind=jump,2,Pad_B  - use _ for spaces)
@@ -245,13 +245,15 @@ func _ready() -> void:
 				await get_tree().create_timer(0.2).timeout  # after the joiner has the cash list
 				Wallet.instance.set_cash(peer_id, int(args["cash"])))
 		if args.has("mainframe") and multiplayer.is_server():
-			# (host) --mainframe=N: THE MAINFRAME's charge is N (0/25/50/75/100), and this district
-			# starts over as if it had begun at that charge (heat, overclock, 0% boss).
-			Mainframe.instance.charge = float(args["mainframe"])
+			# (host) --mainframe=N or =A,B: the gangs' charges are N (0/25/50/75/100; A = Catleone,
+			# B = Burrow), and this district starts over on them (heat, overclock, 0% boss).
+			var test_charges: PackedStringArray = args["mainframe"].split(",")
+			for team in Mainframe.instance.charges.size():
+				Mainframe.instance.charges[team] = float(test_charges[mini(team, test_charges.size() - 1)])
 			Mainframe.instance.start_district()
 			HeatMeter.instance.start_district()
 			RoombaPatrol.instance.start_district()
-			print("DevCapture mainframe: %d%% %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charge, Mainframe.instance.tier_name(), HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
+			print("DevCapture mainframe: %s active=%s exits at %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charges, Mainframe.instance.active_gangs(), [Mainframe.instance.exit_heat(0), Mainframe.instance.exit_heat(1)], HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
 		if args.has("heat") and multiplayer.is_server():
 			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))
@@ -709,7 +711,7 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
-		print("DevCapture heist: entries=%s exits=%s open=%s revealed=%s sealed=%s cash=%s" % [[heist.entry_position(0), heist.entry_position(1)], heist.exit_positions, heist.exit_is_open(), heist.revealed, heist.sealed, Wallet.instance.cash])
+		print("DevCapture heist: entries=%s exits=%s open=%s revealed=%s sealed=%s cash=%s" % [[heist.entry_position(0), heist.entry_position(1)], heist.exit_positions, [heist.exit_is_open(0), heist.exit_is_open(1)], heist.revealed, heist.sealed, Wallet.instance.cash])
 	if HeatMeter.instance != null:
 		var regulars := 0
 		var bosses := 0

@@ -170,15 +170,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   are in the hub and (exit open OR `everyone_has_been_up()`). Story: Don's crew digs for a way down; exit at 75 = they broke
   through; payphone too-early line has NO direction hint. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
 - MAINFRAME = `scripts/mainframe.gd` (`Mainframe.instance`, `Mainframe` node ABOVE Heat/Roombas: GameSystems order sets overclock
-  first; in `GameSystems.GROUP`): shared charge 0-100 (`_set_charge`, starts 75), -25 on `Events.district_sealed`, +25 per scrap via
-  `request_feed(player_id)` (hub `MainframeTerminal`, `near_mainframe`). Charge at district start sets `starting_heat()` / `heat_multiplier()` /
-  `boss_at_start()`; feeding before anyone went up (`went_up.is_empty()`) reapplies to the current district. Not saved. The seal drains BEFORE
-  `start_district`, so overclock needs a pre-trip feed. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
-  the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N`
+  first; in `GameSystems.GROUP`): one node, PER-GANG `charges[team]` 0-100 (`charge_of/tier/tier_name/tier_color(team)`, `_set_charges`, start 75),
+  -25 on `Events.district_sealed` for `active_gangs()` (>=1 player), `request_feed(player_id)` (hub `MainframeTerminal`, `near_mainframe`) does
+  `use_for(team)`: FEED +25 / HACK `hack_target(team)` -25 at 100% (feed line `_hacked`) / FULL refuses. `exit_heat(team)` = that gang's exit, live;
+  `lowest_charge()` sets city-wide `starting_heat()` / `heat_multiplier()` / `boss_at_start()`. `_refresh_district` (host, each second + after a feed):
+  while `went_up.is_empty()` a changed lowest restarts the district (covers late-arriving gangs too; `RoombaPatrol.restart_heat_levels` spawns the 0% boss).
+  Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
+  the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N` or `=A,B`
   (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
   `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
-  `exit_is_open()` (heat >= `exit_opens_at_heat` 75, not `sealed`). `Payphone` NPCs (`scenes/props/payphone.tscn`,
+  `exit_is_open(team)` (heat >= `Mainframe.exit_heat(team)` or sticky `exit_opened[team]`, not `sealed`; `every_exit_is_open()` gates the all-home rush). `Payphone` NPCs (`scenes/props/payphone.tscn`,
   `scripts/npcs/payphone.gd`, `Npc.prompt_verb` "USE") ring while open + some gang not `is_revealed`; a call ->
   `request_reveal_exit` -> host `_set_state(sealed, revealed)`; HUD `DropOff` arrow only when revealed.
   Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
@@ -375,7 +377,7 @@ low-poly, dithering, CRT.
 ## Direction
 Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hides in the sewers. Spawn in
 the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
-DEEP CLEAN, then a new district (new seed). Scrap + the shared MAINFRAME are in. PLANNED next: mainframe at
+DEEP CLEAN, then a new district (new seed). Scrap + per-gang MAINFRAMES are in. PLANNED next: mainframe at
 0 = boss-fight finale (design TBD).
 
 ## Patch notes (Discord)

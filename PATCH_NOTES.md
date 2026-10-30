@@ -17,9 +17,11 @@ gives it to you, and starts a fresh draft.
 - **Quick use slots:** catnip and catdip now go into two quick slots (keys **1** / **2**, d-pad left / right on a controller), up to 3 of each. One press and you're zooming, no more swapping them into your paws.
 - **Jedi flip:** a catdip double jump is now a front flip.
 - **SCRAP:** MEGA VAC-COPs now drop glowing scrap. It's worth no cash, stays in your bag when you extract, and can be saved in your stash.
-- **THE MAINFRAME:** the giant computer in the sewers is alive! Everyone shares its power. Each sealed district drains 25%, and each scrap you feed it (E) adds 25%.
-- **Keep it charged:** at 50% and below, districts start with heat already up, and at 0% a MEGA VAC-COP is waiting up top. Top it up to 100% before heading up and OVERCLOCK makes heat rise 20% slower.
-- **Sewer status bar:** the top-right bar shows the Mainframe's power while you're in the sewers.
+- **THE MAINFRAMES:** the giant computer in each gang's sewer is alive! Each sealed district drains 25%, and each scrap you feed it (E) adds 25%.
+- **Your exit, your power:** your gang's Mainframe decides when your exit opens: 60 heat at 100%, 75 at 75%, 82 at 50%, 90 at 25%, and a last-second 95 at 0%.
+- **Hack the rivals:** at 100%, scrap drains the rival gang's Mainframe by 25% instead, and everyone sees it in the feed.
+- **Keep it charged:** the lowest gang's Mainframe sets the city's start. At 50% and below, districts start with heat already up, and at 0% a MEGA VAC-COP is waiting up top. If every gang is at 100% when you head up, OVERCLOCK makes heat rise 20% slower.
+- **Status bar:** the top-right bar shows your gang's Mainframe in the sewers, and an EXIT mark on the heat bar shows when your exit opens.
 
 ## 🔧 Changes
 - **Solo is back to the classic layout:** you come up in the centre of the city with one car parked right there, and there's one exit.

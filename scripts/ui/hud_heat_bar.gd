@@ -11,9 +11,11 @@ extends Control
 ##   - The fill FLASHES back and forth between RED and BLUE like police lights.
 ##   - The hotter it gets, the faster it flashes (flash_speed + flash_speed_per_level).
 ##   - When the heat goes up a LEVEL (every 25), the frame flashes white for a moment.
-##   - Thin tick marks on the bar show the level steps (25 / 50 / 75); 75 = the exit opens.
+##   - Thin tick marks on the bar show the level steps (25 / 50 / 75).
+##   - A taller white tick tagged EXIT shows the heat where YOUR gang's exit opens (60 / 75 / 82 /
+##     90 / 95, from your gang's Mainframe: scripts/mainframe.gd exit_heat).
 ##
-## DOWN IN THE SEWERS the same bar shows THE MAINFRAME instead (scripts/mainframe.gd; heat_meter.gd
+## DOWN IN THE SEWERS the same bar shows YOUR GANG'S MAINFRAME instead (scripts/mainframe.gd; heat_meter.gd
 ## calls set_mainframe() while you're in the hub): its charge 0..100% in the terminal colour of
 ## its tier (cyan OVERCLOCK, green ONLINE, yellow POWER LOW, orange WARNING, flashing red
 ## CRITICAL), the same 25 / 50 / 75 ticks, a "MAINFRAME" tag, and a white flash when it's fed.
@@ -35,6 +37,8 @@ extends Control
 @export var number_font_size: int = 26
 ## Draw small tick marks on the bar at every heat level (25, 50, 75).
 @export var show_level_ticks: bool = true
+## Size of the little "EXIT" tag over your gang's exit tick.
+@export var exit_tag_size: int = 12
 
 @export_group("Feel")
 ## Red/blue flips per second at heat level 1.
@@ -55,6 +59,8 @@ extends Control
 var _heat: float = 0.0
 var _max: float = 100.0
 var _level: int = 1
+## The heat at which your gang's exit opens (the EXIT tick). -1 = no tick.
+var _exit_heat: float = -1.0
 var _level_flash: float = 0.0
 ## Where we are in the red/blue cycle (0..1 = one red + one blue).
 var _phase: float = 0.0
@@ -68,8 +74,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## Called every frame by heat_meter.gd with the shared heat (0..max) and the heat level (1..5).
-func set_heat(heat: float, max_heat: float, level: int) -> void:
+## Called every frame by heat_meter.gd with the shared heat (0..max), the heat level (1..5) and
+## the heat at which this player's gang's exit opens.
+func set_heat(heat: float, max_heat: float, level: int, exit_heat: float = -1.0) -> void:
 	if max_heat <= 0.0:
 		return
 	if level > _level and not _mainframe_mode:
@@ -78,6 +85,7 @@ func set_heat(heat: float, max_heat: float, level: int) -> void:
 	_heat = heat
 	_max = max_heat
 	_level = level
+	_exit_heat = exit_heat
 
 
 ## Called every frame by heat_meter.gd while the player is in the sewers: THE MAINFRAME's charge
@@ -159,3 +167,12 @@ func _draw() -> void:
 			var x := bar_w * (1.0 - step)
 			draw_line(Vector2(x, bar_top - 2.0), Vector2(x, bar_top + bar_thickness + 2.0), Color(1, 1, 1, 0.5), 1.0)
 	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), frame_colour, false, 1.0)
+
+	# --- Up top: where YOUR gang's exit opens (a taller white tick, tagged EXIT) ---
+	if not _mainframe_mode and _exit_heat >= 0.0:
+		var exit_x := bar_w * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
+		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, 2.0)
+		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size).x
+		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
+		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size, 4, Color(0.04, 0.01, 0.08))
+		draw_string(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size, Color.WHITE)

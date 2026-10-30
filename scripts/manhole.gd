@@ -5,7 +5,7 @@ extends Node3D
 ##   - the ENTRY manhole in the centre crossroads, where Don Catleone sends you up. It's one-way:
 ##     it always looks closed (the rebels slam it shut behind you).
 ##   - the EXIT manhole somewhere else in the city. It looks closed until the heat reaches 3/4
-##     (fish_heist.gd exit_opens_at_heat), then the lid slides aside, a green glow comes up out
+##     (mainframe.gd exit_heat), then the lid slides aside, a green glow comes up out
 ##     of the hole, and walking onto it takes you (and your loot) back down to the sewers.
 ##
 ## The lid and the hole are two little pictures you can repaint:

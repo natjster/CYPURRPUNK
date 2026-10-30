@@ -23,6 +23,8 @@ const BURROW := 1
 
 ## Each gang's name (HUD, menus).
 const NAMES: Array[String] = ["CATLEONE FAMILY", "BURROW GANG"]
+## Each gang's short name ("THE BURROW MAINFRAME").
+const SHORT_NAMES: Array[String] = ["CATLEONE", "BURROW"]
 ## Each gang's colour: its cats' names over their heads and the menu button.
 const COLORS: Array[Color] = [Color(1, 0.4, 0.85), Color(1, 0.65, 0.15)]
 

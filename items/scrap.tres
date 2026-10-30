@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "scrap"
 display_name = "SCRAP"
-description = "Salvage from a MEGA VAC-COP. Worth $0 at the exit (it stays in your bag), but feed it to THE MAINFRAME in the sewers for +25%. Spare scrap can go in your stash."
+description = "Salvage from a MEGA VAC-COP. Worth $0 at the exit (it stays in your bag), but feed it to your gang's MAINFRAME in the sewers for +25%. At 100% it hacks the rival's for -25%. Spare scrap can go in your stash."
 kind = 0
 cash_value = 0
 bag_space = 1

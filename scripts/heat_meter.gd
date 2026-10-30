@@ -13,7 +13,8 @@ extends Node
 ##     card has a heat_on_pickup (none do right now; the golden koi used to).
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
 ##     that drive faster and spot cats from further away.
-##   - At 75 heat the EXIT manhole opens (fish_heist.gd).
+##   - Each gang's EXIT manhole opens at the heat its own MAINFRAME says (60-95, 75 at the start:
+##     mainframe.gd exit_heat, fish_heist.gd).
 ##   - At 100 heat: level 5. The hatch is SEALED and the DEEP CLEAN begins (fish_heist.gd): the
 ##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
 ##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
@@ -152,8 +153,8 @@ func _physics_process(delta: float) -> void:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
 		heat = minf(heat + heat_per_second * crowd * _mainframe_multiplier() * delta, MAX_HEAT)
 	elif heat < MAX_HEAT and FishHeist.instance != null \
-			and (FishHeist.instance.exit_is_open() or FishHeist.instance.everyone_has_been_up()):
-		# Everyone's done (extracted / knocked out) after the exit opened, or every cat has used
+			and (FishHeist.instance.every_exit_is_open() or FishHeist.instance.everyone_has_been_up()):
+		# Everyone's done (extracted / knocked out) after every gang's exit opened, or every cat has used
 		# its one trip up (all knocked out early): hurry to the next district.
 		heat = minf(heat + heat_per_second_when_all_home * delta, MAX_HEAT)
 	else:
@@ -181,19 +182,19 @@ func send_state_to(peer_id: int) -> void:
 func _process(_delta: float) -> void:
 	var lvl := level()
 	# Every player on this computer gets the bar top-right of their HUD. Up in the city it's the
-	# HEAT bar; down in the sewers it turns into THE MAINFRAME's charge (scripts/mainframe.gd).
+	# HEAT bar (with a tick where YOUR gang's exit opens); down in the sewers it turns into YOUR
+	# gang's MAINFRAME charge (scripts/mainframe.gd).
+	var mainframe := Mainframe.instance
 	for cat in Game.instance.playing_cats():
 		var bar := Hud.element("Heat", cat.slot) as HudHeatBar
 		if bar != null:
-			if not UndergroundHub.is_in_hub(cat.global_position):
-				bar.visible = true
-				bar.set_heat(heat, MAX_HEAT, lvl)
-			elif Mainframe.instance != null:
-				bar.visible = true
-				var mainframe := Mainframe.instance
-				bar.set_mainframe(mainframe.charge, Mainframe.MAX_CHARGE, mainframe.tier_color(), mainframe.tier() == Mainframe.Tier.CRITICAL)
-			else:
+			bar.visible = true
+			if mainframe == null:
 				bar.visible = false
+			elif not UndergroundHub.is_in_hub(cat.global_position):
+				bar.set_heat(heat, MAX_HEAT, lvl, mainframe.exit_heat(cat.team))
+			else:
+				bar.set_mainframe(mainframe.charge_of(cat.team), Mainframe.MAX_CHARGE, mainframe.tier_color(cat.team), mainframe.tier(cat.team) == Mainframe.Tier.CRITICAL)
 	# A sound (no text on screen) when the heat goes UP a level.
 	if lvl > _last_level:
 		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)

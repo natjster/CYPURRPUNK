@@ -14,8 +14,9 @@ extends Node3D
 ##     gear (guns, catnip, catdip). Pay with the cash you earn extracting fish.
 ##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
 ##   - THE MAINFRAME, the big CRT in the middle of the west wall (scripts/mainframe.gd): its
-##     screen shows the shared charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
-##     CRITICAL). Bring SCRAP home in your loot bag and press E there to feed it (+25%).
+##     screen shows THIS gang's charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
+##     CRITICAL). Bring SCRAP home in your loot bag and press E there to feed it (+25%), or at
+##     100% to hack the rival gang's (-25%).
 ##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
 ##     cashed in and you're brought back down here (return_cat()).
 ##
@@ -147,16 +148,23 @@ var _crt_sign: Label3D
 var _crt_key := ""  # what the CRT shows now, so it's only rewritten when that changes
 
 
-## THE MAINFRAME's E spot: "[E] FEED SCRAP (+25%)", only while you have scrap in your loot bag.
-## Pressing it asks the host (Mainframe.request_feed), which checks and feeds.
+## THE MAINFRAME's E spot, only while you have scrap in your loot bag: "[E] FEED SCRAP (+25%)", or
+## at 100% "[E] HACK RIVAL MAINFRAME (-25%)" (or a FULL reminder when there's nobody to hack).
+## Pressing it asks the host (Mainframe.request_feed), which checks and does it.
 class MainframeTerminal extends Interactable:
 	func interact_distance(cat: CatPlayer) -> float:
 		if Mainframe.instance == null or ItemManager.instance.count_in_bag(cat.player_id, Mainframe.SCRAP_ID) <= 0:
 			return -1.0  # no scrap: nothing to do here
 		return super(cat)
 
-	func interact_prompt(_cat: CatPlayer) -> String:
-		return "FEED SCRAP (+%d%%)" % int(Mainframe.instance.charge_per_scrap)
+	func interact_prompt(cat: CatPlayer) -> String:
+		var mainframe := Mainframe.instance
+		match mainframe.use_for(cat.team):
+			Mainframe.ScrapUse.FEED:
+				return "FEED SCRAP (+%d%%)" % int(mainframe.charge_per_scrap)
+			Mainframe.ScrapUse.HACK:
+				return "HACK RIVAL MAINFRAME (-%d%%)" % int(mainframe.hack_per_scrap)
+		return "MAINFRAME FULL"
 
 	func interact(cat: CatPlayer) -> void:
 		Mainframe.instance.request_feed.rpc_id(1, cat.player_id)
@@ -286,20 +294,20 @@ func _process(_delta: float) -> void:
 	Sound.play_ambience(city_ambience if anyone_up else hub_ambience)
 
 
-## THE MAINFRAME's CRT: sign text, screen tint and light colour follow the shared charge's tier
+## THE MAINFRAME's CRT: sign text, screen tint and light colour follow THIS gang's charge
 ## (scripts/mainframe.gd). CRITICAL (0%) flashes red. Every hub runs this for its own CRT.
 func _update_mainframe_crt() -> void:
 	var mainframe := Mainframe.instance
 	if mainframe == null or _crt_sign == null:
 		return
-	var colour := mainframe.tier_color()
-	var critical := mainframe.tier() == Mainframe.Tier.CRITICAL
+	var colour := mainframe.tier_color(team)
+	var critical := mainframe.tier(team) == Mainframe.Tier.CRITICAL
 	var flash_on := not critical or fmod(Time.get_ticks_msec() / 1000.0 * 2.0, 1.0) < 0.5
-	var key := "%d %s %s" % [int(mainframe.charge), mainframe.tier_name(), flash_on]
+	var key := "%d %s %s" % [int(mainframe.charge_of(team)), mainframe.tier_name(team), flash_on]
 	if key == _crt_key:
 		return
 	_crt_key = key
-	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(), int(mainframe.charge)]
+	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(team), int(mainframe.charge_of(team))]
 	var shown := colour if flash_on else colour * 0.25
 	_crt_screen.set_instance_shader_parameter("instance_tint", Color(shown, 1.0))
 	_crt_light.light_color = colour
@@ -420,8 +428,8 @@ func _build_props() -> void:
 	_build_stash()
 
 	# THE MAINFRAME: a giant CRT computer on the west wall (scripts/mainframe.gd). Its sign, screen
-	# and light show the shared charge's tier, live (_update_mainframe_crt); walk up with SCRAP in
-	# your loot bag and press E to feed it (+25%).
+	# and light show this gang's tier, live (_update_mainframe_crt); walk up with SCRAP in your
+	# loot bag and press E to feed it (+25%) or, at 100%, hack the rival's (-25%).
 	var frame_x := -w + 1.0
 	LevelKit.add_box(self, Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
 	_crt_screen = LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
