@@ -52,6 +52,7 @@ gives it to you, and starts a fresh draft.
 - **Picking things up:** no more walking over loot to grab it! Walk up to any item and press the button on the "PICKUP" prompt (it shows your own keyboard key or controller button), just like getting in the car.
 
 ## 🐛 Fixes
+- **NPCs talk again:** in downloaded builds, the Don and everyone else in the sewers only said "...". All their lines are back.
 - Cars could get stuck in the middle of town at the start of a game instead of waiting at your gang's corner.
 - A Mainframe hitting 0% started the breach instantly, with no time to feed it and no 0% district to hunt for scrap.
 - Items dropped on a sewer floor, including a MEGA VAC-COP's scrap, vanished when a new district started.

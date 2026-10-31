@@ -2610,6 +2610,9 @@ top to match. If you don't, GitHub keeps building with the old version.
 - `export_presets.cfg` has the **Windows Desktop**, **Linux** and **Android** presets. Windows and
   Linux are packed into one file each, with no separate `.pck`.
 - The Android file is a debug build, the same as "Export With Debug" in Godot.
+- **Leave this setting alone:** `project.godot` has `export/convert_text_resources_to_binary=false`
+  (**Project Settings > Editor > Export > Convert Text Resources to Binary** = off). With it on,
+  exported games lost what NPCs say and they only said "...", even though it looked fine in the editor.
 
 ### Making a Windows build yourself
 **Project > Export... > Windows Desktop > Export Project...**, or from PowerShell:

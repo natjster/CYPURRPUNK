@@ -49,3 +49,7 @@ psx_wobble={
 "type": "float",
 "value": 1.0
 }
+
+[editor]
+
+export/convert_text_resources_to_binary=false

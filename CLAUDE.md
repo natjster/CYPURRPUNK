@@ -293,6 +293,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - CI (SETUP_GUIDE §18): `.github/workflows/build.yml` builds on every push to `main` and refreshes the rolling `latest`
   release (`CYPURRPUNK-Windows.zip`, `-Linux.zip`, `-Android.apk`; README links). Android = debug export, key from secret
   `ANDROID_DEBUG_KEYSTORE_BASE64` (throwaway key + warning if unset). A Godot upgrade must also change `GODOT_VERSION` there.
+  `editor/export/convert_text_resources_to_binary=false` in project.godot is ON PURPOSE: the binary conversion dropped every
+  scene's `PackedStringArray` values (NPC `lines` came out empty) in exports only. Editor runs never show this: test
+  data-driven text in an export too (`--export-debug` build accepts the `-- --host --talk=` test args; add `--capture` or it never quits).
 
 ## Character creator (MY CAT)
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
