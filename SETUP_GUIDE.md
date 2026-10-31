@@ -2564,3 +2564,18 @@ The game has no icon yet, so the phone shows Godot's robot icon: set one in
 - No touch controls (on-screen stick and buttons). This is the big one if you want to play without a controller.
 - Not tested on slower phones. If one struggles: turn **VOLUMETRIC FOG** off in **SETTINGS**, or
   use the **mobile** renderer (above).
+
+---
+
+## 18. Building a Linux version (for friends on Linux / Steam Deck)
+
+**Project > Export...** has a **Linux** preset (`export_presets.cfg`) set up to pack the whole game into a single file (`build/linux/cypurrpunk.x86_64`, with `Embed PCK` switched on so there is no extra `.pck` file to lose).
+
+### Making a fresh Linux build
+- **In Godot:** **Project > Export... > Linux > Export Project...**, untick **Export With Debug**, and click **Save**.
+- **Or from PowerShell:**
+  ```powershell
+  & "C:\GoDot\Godot_v4.7.2-stable_win64_console.exe" --headless --path . --export-release "Linux" "build/linux/cypurrpunk.x86_64"
+  ```
+- **Running on Linux:** unzip/download `cypurrpunk.x86_64`. If double-clicking doesn't launch it right away, right-click the file > **Properties > Permissions > Allow executing file as program** (or run `chmod +x cypurrpunk.x86_64 && ./cypurrpunk.x86_64` in a terminal).
+
