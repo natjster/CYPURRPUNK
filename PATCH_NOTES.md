@@ -12,6 +12,7 @@ gives it to you, and starts a fresh draft.
 
 ```text
 ## 🐾 New
+- **One-click downloads:** grab the newest build for Windows, Linux or Android from the front page at github.com/natjster/CYPURRPUNK. The links update by themselves every time the game does.
 - **Invite Codes:** play with friends in other houses, usually with no router setup! Host a game and it opens the door by itself, then gives you a code like MEOW-499A-21B0. Copy it from the pause menu and send it over. Your friend hits PASTE CODE, then JOIN. If your router says no, the game tells you, and the guide has easy fixes.
 - **THE SEWER BREACH:** let your Mainframe hit 0% and OVERCLEAN comes for your home. You get one last raid at 0% to bring home scrap, then a 15-second siren to feed it in. Fail, and the blast gate on the new north tunnel slides up and 35 bots plus 2 MEGA VAC-COPs pour in. Your sewer is no safe zone any more: guns work, nobody heals. Last 30 seconds with one cat on its feet for a miracle: every bot explodes and your Mainframe reboots to 25%. Get wiped out and the rival gang wins!
 - **The sewer fights back:** when the bots break in, everyone at home grabs a gun! The Don sprays his tommy gun, Nonna lobs bouncing cucumbers, Frankie waves a red laser around the room, and all of them yell battle cries. They couldn't hit a barn, but they'll chip away at the front line. Get a bot too close and they're flat on their back until it's over.

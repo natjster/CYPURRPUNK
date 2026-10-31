@@ -290,6 +290,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   volumetric fog = no light pools); settings.gd skips window sizing on `OS.has_feature("mobile")`. Controller only,
   no touch controls. Export from CLI: `--headless --path . --export-debug "Android" build/android/cypurrpunk.apk`.
 
+- CI (SETUP_GUIDE §18): `.github/workflows/build.yml` builds on every push to `main` and refreshes the rolling `latest`
+  release (`CYPURRPUNK-Windows.zip`, `-Linux.zip`, `-Android.apk`; README links). Android = debug export, key from secret
+  `ANDROID_DEBUG_KEYSTORE_BASE64` (throwaway key + warning if unset). A Godot upgrade must also change `GODOT_VERSION` there.
+
 ## Character creator (MY CAT)
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
