@@ -13,8 +13,8 @@ extends Control
 ##                same as SETTINGS > CONTROLS)
 ##   Everyone:    MY CAT (restyle / rename THEIR cat: the full-screen cat screen, driven only by
 ##                their controller; DONE comes back here)
-##   Player 1:    SETTINGS / LEAVE GAME / QUIT TO DESKTOP
-##                (SETTINGS opens the big pause menu: those screens are shared)
+##   Player 1:    the invite code when hosting online (A = copy it), SETTINGS / LEAVE GAME /
+##                QUIT TO DESKTOP (SETTINGS opens the big pause menu: those screens are shared)
 ##   Players 2-4: nothing else: there's no dropping out mid-game (the couch is set on the landing
 ##                page; when player 1 leaves the game, everyone on this computer goes with them)
 ##
@@ -39,6 +39,8 @@ var _for_unplug: bool = false
 var _focus := SeatFocus.new()
 ## Every button the highlight can move to (the setting rows' < and > too).
 var _focus_buttons: Array[Button] = []
+## The invite code button (player 1, while hosting). Its text follows the router (scripts/net.gd).
+var _invite_button: Button = null
 
 
 func _enter_tree() -> void:
@@ -71,6 +73,7 @@ func _ready() -> void:
 	_buttons = VBoxContainer.new()
 	_buttons.add_theme_constant_override("separation", 6)
 	box.add_child(_buttons)
+	Net.upnp_updated.connect(_refresh_invite)
 
 
 ## This player's pause menu (seat 0 = player 1), or null.
@@ -129,7 +132,14 @@ func open(reason: String = "") -> void:
 		close()
 		game.cat_creator.open(true, seat)
 		game.cat_creator.back_to_player_pause = true)  # DONE comes back to this menu (game.gd)
+	_invite_button = null
 	if seat == 0:
+		if Net.is_hosting():
+			_add_button("", func():
+				DisplayServer.clipboard_set(Net.room_code)
+				_invite_button.text = "COPIED TO CLIPBOARD!")
+			_invite_button = _focus_buttons.back()
+			_refresh_invite()
 		_add_button("SETTINGS", func():
 			close()
 			game.pause_menu.opened_by = 0
@@ -144,6 +154,13 @@ func open(reason: String = "") -> void:
 	if seat == 0:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
 	_focus.set_buttons(_focus_buttons)  # RESUME highlighted
+
+
+## Show the room code, or how far the router has got.
+func _refresh_invite() -> void:
+	if _invite_button != null:
+		_invite_button.text = Net.invite_text()
+		_invite_button.disabled = Net.room_code.is_empty()
 
 
 ## The controller is back: close the pause that opened when it was unplugged (not a normal one).

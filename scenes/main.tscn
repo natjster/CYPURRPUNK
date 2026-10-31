@@ -483,9 +483,14 @@ horizontal_alignment = 1
 
 [node name="AddressInput" type="LineEdit" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
 layout_mode = 2
-text = "127.0.0.1"
-placeholder_text = "host IP address"
+placeholder_text = "Code or IP"
 alignment = 1
+max_length = 21
+
+[node name="PasteButton" type="Button" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "PASTE CODE"
 
 [node name="JoinButton" type="Button" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
 custom_minimum_size = Vector2(0, 16)
@@ -562,6 +567,12 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(0, 15)
 layout_mode = 2
 text = "RESUME"
+
+[node name="InviteButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
+visible = false
+custom_minimum_size = Vector2(0, 15)
+layout_mode = 2
+text = "OPENING ROUTER PORT..."
 
 [node name="CatButton" type="Button" parent="PS1Overlay/PauseMenu/Panel/VBox"]
 custom_minimum_size = Vector2(0, 15)

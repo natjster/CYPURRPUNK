@@ -421,8 +421,38 @@ argument `--host` and instance 2 `--join` to skip the menu (`--name=Whiskers` na
    Address** (e.g. `192.168.1.23`), type it into the JOIN box and click **JOIN**.
 
 Up to 8 players in total: e.g. 8 computers, or 2 computers with 4 couch players each (§10).
-Playing over the internet needs port forwarding (UDP port 7777) or Steam's relay. Steam is planned
-and will only change `scripts/net.gd`.
+
+### Play with a friend in another house (Invite Codes)
+No router setup needed on most home internet:
+1. The host clicks **HOST** as normal. If Windows asks about the firewall, click **Allow**. The
+   game quietly asks the router to open UDP port 7777 (this is called UPnP) and a few seconds later
+   shows `ONLINE READY! INVITE CODE: MEOW-499A-21B0`.
+2. The host presses **Esc** (or START) and clicks **COPY CODE**, then sends the code to their
+   friend by text or Discord. The button says `OPENING ROUTER PORT...` while the router is thinking.
+   In split screen it's in player 1's small pause menu.
+3. The friend goes to the HOST / JOIN screen, copies the code, clicks **PASTE CODE**, then **JOIN**.
+   (Or: pick the box, type the code on the on-screen keyboard, or press Ctrl+V / its PASTE key.
+   `MEOW-` and the dashes are optional, and normal IP addresses still work.)
+
+The port closes again when the host leaves the game. The code is the host's internet address in
+disguise, so only share it with people you trust, and expect it to change now and then (internet
+providers change it). Don't try your own code from your own house: many routers can't do that.
+Test it from a phone hotspot or a friend's house.
+
+**If it says `ROUTER WOULD NOT OPEN UP` (the button says COPY LAN CODE):** that code only works on
+your own network or VPN. Try these, easiest first:
+1. Turn on **UPnP** in your router's settings page (often `192.168.1.1`; the sticker on the router
+   has the address and login), then host again.
+2. Install **Tailscale** (free) on both PCs and sign in to the same network. The host's code then
+   works for the friend, with no router changes. This also solves **CGNAT**, where your internet
+   provider shares one address between many homes and no router setting can help. (Mobile hotspots
+   and some fibre and rural providers do this.)
+3. On the router page, forward UDP port 7777 to the host PC by hand, look up your public address
+   (search "what is my IP"), and send that to your friend.
+
+Script side: all of this is in `scripts/net.gd` (`upnp_status`, `room_code`, `ip_to_code`,
+`code_to_ip`). Test: `--test-room-code` (headless), `--host --fake_upnp=73.154.33.176` or
+`--fake_upnp=off` (test runs never touch the real router), `--join --address=MEOW-7F00-0001`.
 
 ### Bigger games get more of everything (balance knobs)
 The more players, the busier the city (counted on the host, players on every computer):

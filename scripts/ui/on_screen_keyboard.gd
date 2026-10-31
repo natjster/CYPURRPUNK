@@ -22,9 +22,11 @@ extends Control
 ##   |  K L M N O P Q R S T           |
 ##   |  U V W X Y Z - ' . !           |
 ##   |  1 2 3 4 5 6 7 8 9 0           |
-##   |  [SPACE]  [DEL]  [DONE]        |
+##   |  [SPACE] [DEL] [PASTE] [DONE]  |
 ##   |  B = DELETE   START = DONE     |
 ##   +--------------------------------+
+##
+## PASTE (or Ctrl+V) adds what's on the clipboard, keeping only characters this keyboard can type.
 ##
 ## The layouts are the LETTERS / DIGITS / ADDRESS lists below: change a row's characters there.
 
@@ -35,8 +37,8 @@ signal closed
 const LETTERS: Array[String] = ["ABCDEFGHIJ", "KLMNOPQRST", "UVWXYZ-'.!", "1234567890"]
 ## Numbers only (the city #).
 const DIGITS: Array[String] = ["12345", "67890"]
-## A network address: numbers, dots and a colon (e.g. 192.168.1.20 or 192.168.1.20:7777).
-const ADDRESS: Array[String] = ["1234567", "890.:"]
+## A room code or network address (MEOW-499A-21B0, 192.168.1.20 or 192.168.1.20:7777).
+const ADDRESS: Array[String] = ["1234567890", "ABCDEF", "MOW-.:"]
 
 ## The look (same as the other menus).
 const MENU_THEME: Theme = preload("res://ui/menu_theme.tres")
@@ -152,9 +154,12 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-## A real keyboard: letters / numbers type, Backspace deletes, Enter = done. True if used.
-## (Arrow keys, Esc etc. are left for the menu controls.)
+## A real keyboard: letters / numbers type, Backspace deletes, Ctrl+V pastes, Enter = done. True
+## if used. (Arrow keys, Esc etc. are left for the menu controls.)
 func _typed_key(event: InputEventKey) -> bool:
+	if event.is_command_or_control_pressed() and event.keycode == KEY_V:
+		_paste()
+		return true
 	if event.keycode == KEY_BACKSPACE:
 		_backspace()
 		return true
@@ -217,6 +222,17 @@ func _backspace() -> void:
 	_set_text(target.text.left(-1))
 
 
+## Add the clipboard's text, skipping anything this keyboard can't type.
+func _paste() -> void:
+	var text := target.text
+	for character in DisplayServer.clipboard_get().strip_edges():
+		if character.to_upper() in _allowed:
+			text += character
+	if target.max_length > 0:
+		text = text.left(target.max_length)
+	_set_text(text)
+
+
 ## Change the text box (and tell its menu, as if it was typed).
 func _set_text(text: String) -> void:
 	target.text = text
@@ -269,6 +285,7 @@ func _build(layout: Array[String]) -> void:
 	if with_space:
 		bottom.append(_key(row, "SPACE", _type.bind(" "), 50))
 	bottom.append(_key(row, "DEL", _backspace, 34))
+	bottom.append(_key(row, "PASTE", _paste, 42))
 	bottom.append(_key(row, "DONE", close, 42))
 	_rows.append(bottom)
 

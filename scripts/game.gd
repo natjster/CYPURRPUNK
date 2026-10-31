@@ -86,8 +86,9 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	Net.joined.connect(_on_joined)
-	Net.join_failed.connect(main_menu.show_status.bind("Couldn't connect. Check the address and that the host is running."))
+	Net.join_failed.connect(main_menu.show_status.bind("Couldn't connect. Check the code and that the host is running."))
 	Net.host_left.connect(_back_to_menu.bind(false))
+	Net.upnp_updated.connect(_on_upnp_updated)
 
 	# Settings that belong to this scene (CRT look, fog) — re-applied whenever they change.
 	for param in CRT_PARAMS:
@@ -114,6 +115,8 @@ func _handle_test_shortcuts() -> void:
 			Settings.update_current_cat({"name": arg.trim_prefix("--name=")})
 		if arg.begins_with("--seed="):  # e.g. --seed=42
 			main_menu.seed_input.text = arg.trim_prefix("--seed=")
+		if arg.begins_with("--address="):  # e.g. --join --address=MEOW-7F00-0001
+			main_menu.address_input.text = arg.trim_prefix("--address=")
 	if "--solo" in args:
 		Seats.coop = false
 		solo_game(main_menu.chosen_seed())
@@ -141,6 +144,16 @@ func host_game(city_seed: int) -> void:
 		main_menu.show_status("Can't host - is another game already hosting?")
 		return
 	_begin_game(city_seed)
+
+
+## The router answered (scripts/net.gd): tell the host how friends can get in.
+func _on_upnp_updated() -> void:
+	var copy_key := Controls.key_text("pause")
+	if Net.upnp_status == "ready":
+		Hud.show_message("ONLINE READY! INVITE CODE: %s (%s TO COPY)" % [Net.room_code, copy_key], 12.0)
+	elif Net.upnp_status == "unavailable":
+		Hud.show_message("ROUTER WOULD NOT OPEN UP. THIS CODE ONLY WORKS ON YOUR NETWORK OR VPN: %s (%s TO COPY)" \
+				% [Net.room_code, copy_key], 12.0)
 
 
 ## Is this a SOLO game (picked SOLO on the menu: one player, no gangs fighting)? Then the city
@@ -171,7 +184,7 @@ func _begin_game(city_seed: int) -> void:
 func join_game(address: String) -> void:
 	_remember_name()
 	if Net.join(address) != OK:
-		main_menu.show_status("Can't start connecting.")
+		main_menu.show_status("Can't start connecting. Check the code.")
 		return
 	main_menu.show_status("Connecting to %s..." % (address if address != "" else "this computer"))
 

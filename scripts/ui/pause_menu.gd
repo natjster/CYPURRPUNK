@@ -6,7 +6,10 @@ extends Control
 ##   ├── Dim (ColorRect)
 ##   └── Panel (PanelContainer) > VBox
 ##       ├── Title (Label)
-##       └── ResumeButton, CatButton, SettingsButton, LeaveButton, QuitButton
+##       └── ResumeButton, InviteButton, CatButton, SettingsButton, LeaveButton, QuitButton
+##
+## InviteButton only shows while hosting a network game: it shows the room code (scripts/net.gd)
+## and copies it for pasting to a friend.
 ##
 ## The game does NOT stop while it's open (it's online), but your cat and car ignore the
 ## keyboard: they check PauseMenu.is_open.
@@ -18,6 +21,9 @@ signal leave_pressed
 ## MY CAT was clicked (game.gd opens the character creator).
 signal cat_pressed
 
+## How long the invite button says COPIED TO CLIPBOARD! (seconds).
+@export var copied_seconds: float = 2.0
+
 ## True while this menu (or the settings menu opened from it) is up. The cat, the car and
 ## the inventory screen ignore the keyboard while it's true.
 static var is_open: bool = false
@@ -27,10 +33,14 @@ var enabled: bool = false
 ## Which player on this computer opened it (their seat, scripts/seats.gd). Only player 1 gets
 ## LEAVE GAME (it takes this whole computer out); couch players can't drop out mid-game.
 var opened_by: int = 0
+## The button is saying COPIED TO CLIPBOARD! for a moment.
+var _just_copied: bool = false
 
 
 func _ready() -> void:
 	$Panel/VBox/ResumeButton.pressed.connect(close)
+	$Panel/VBox/InviteButton.pressed.connect(_on_invite_pressed)
+	Net.upnp_updated.connect(_refresh_invite)
 	$Panel/VBox/SettingsButton.pressed.connect(_on_settings_pressed)
 	$Panel/VBox/CatButton.pressed.connect(func():
 		hide()  # is_open stays true: the MY CAT screen is on top, so still no walking
@@ -62,6 +72,7 @@ func open() -> void:
 	# Only player 1 can leave the game (it takes everyone on this computer along).
 	$Panel/VBox/LeaveButton.visible = opened_by == 0
 	# MY CAT restyles the cat of whoever opened the menu (game.gd passes opened_by on).
+	_refresh_invite()
 	show()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	$Panel/VBox/ResumeButton.grab_focus()
@@ -73,6 +84,23 @@ func close() -> void:
 	opened_by = 0
 	hide()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## Show the room code, or how far the router has got (scripts/net.gd).
+func _refresh_invite() -> void:
+	var button: Button = $Panel/VBox/InviteButton
+	button.visible = Net.is_hosting()
+	button.disabled = Net.room_code.is_empty()
+	button.text = "COPIED TO CLIPBOARD!" if _just_copied else Net.invite_text()
+
+
+func _on_invite_pressed() -> void:
+	DisplayServer.clipboard_set(Net.room_code)
+	_just_copied = true
+	_refresh_invite()
+	get_tree().create_timer(copied_seconds).timeout.connect(func():
+		_just_copied = false
+		_refresh_invite())
 
 
 func _on_leave_pressed() -> void:

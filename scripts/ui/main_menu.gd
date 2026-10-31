@@ -105,6 +105,7 @@ func _ready() -> void:
 	_build_landing_screen()
 	$PlayScreen/VBox/Columns/HostColumn/HostButton.pressed.connect(_on_host_pressed)
 	$PlayScreen/VBox/Columns/JoinColumn/JoinButton.pressed.connect(func(): join_pressed.emit(address_input.text.strip_edges()))
+	$PlayScreen/VBox/Columns/JoinColumn/PasteButton.pressed.connect(_on_paste_pressed)
 	$PlayScreen/VBox/BackButton.pressed.connect(show_landing.bind(true))
 	# Controller / arrow keys: left / right hops straight between HOST and JOIN (Godot's own
 	# guess sent "right" from HOST down to BACK).
@@ -194,6 +195,17 @@ func _show_only(screen: Control) -> void:
 		Net.stop_listening()
 
 
+## PASTE CODE: put the copied invite code in the box, ready for one press of JOIN.
+func _on_paste_pressed() -> void:
+	var text := DisplayServer.clipboard_get().strip_edges()
+	if Net.code_to_ip(text).is_empty():
+		show_status("No invite code copied. Copy your friend's code first.")
+		return
+	address_input.text = text.left(address_input.max_length)
+	show_status("")
+	$PlayScreen/VBox/Columns/JoinColumn/JoinButton.grab_focus()
+
+
 ## The games found on your network, as buttons: "WHISKERS  #4242  3/8". Click = join it.
 func _refresh_game_list() -> void:
 	if _game_list == null:
@@ -276,7 +288,7 @@ func _build_coop_screen() -> void:
 	_menu_button(coop_screen, "ONLINE CO-OP", show_landing.bind(true), 16)
 	_menu_button(coop_screen, "BACK", show_mode_screen, 14).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var note := Label.new()
-	note.text = "LOCAL = everyone on this computer\nONLINE = with friends on your network"
+	note.text = "LOCAL = everyone on this computer\nONLINE = with friends, by invite code"
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.modulate = Color(1, 1, 1, 0.6)
 	coop_screen.add_child(note)

@@ -76,6 +76,9 @@ extends Node
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
 ##   --equip=N         take backpack slot N into the paws (what clicking it in the inventory does)
 ##   --inventory       open the inventory screen (Tab) before the snap
+##   --test-room-code  (headless, no --capture) room code checks, prints PASS / FAIL, then quits
+##   --fake_upnp=IP    pretend the router answered with this address; =off = it said no (net.gd)
+##   --address=X       with --join: join this room code or address
 ##   --press_key=KEY   press and release a real key, e.g. --press_key=Tab (inventory) or Escape
 ##                     (--give=catnip --press_key=1 = quick use slot 1; prints the quick slots)
 ##   --jump_test       jump + double jump (needs catdip); prints the height and the front flip's
@@ -139,6 +142,10 @@ var _args: Dictionary = {}
 func _ready() -> void:
 	var args := _parse_args(OS.get_cmdline_user_args())
 	_args = args
+	# --test-room-code: check room codes turn back into the right addresses, then quit.
+	if args.has("test-room-code") and OS.is_debug_build():
+		_test_room_code()
+		return
 	# Never runs in a release build (the exported .exe players get), only in Godot / debug builds.
 	if not args.has("capture") or not OS.is_debug_build():
 		queue_free()
@@ -632,6 +639,25 @@ func _ready() -> void:
 			"settings": scene.settings_menu.open()
 			"pause": scene.pause_menu.open()
 			"cat": scene.cat_creator.open(scene.pause_menu.enabled)
+			"keyboard":
+				# The address keyboard, tested with a REAL Ctrl+V and with the PASTE CODE button.
+				scene.main_menu.show_play_screen()
+				DisplayServer.clipboard_set(" meow-499a-21b0 ")
+				scene.main_menu._on_paste_pressed()
+				print("DevCapture paste button: '%s' -> %s" % [scene.main_menu.address_input.text, Net.code_to_ip(scene.main_menu.address_input.text)])
+				scene.main_menu.address_input.text = ""
+				DisplayServer.clipboard_set(" meow-499a-21b0! ")  # (the keyboard drops the !)
+				scene.main_menu._address_keyboard.open()
+				await get_tree().process_frame
+				for pressed in [true, false]:
+					var key := InputEventKey.new()
+					key.keycode = KEY_V
+					key.physical_keycode = KEY_V
+					key.ctrl_pressed = true
+					key.pressed = pressed
+					Input.parse_input_event(key)
+					await get_tree().process_frame
+				print("DevCapture keyboard Ctrl+V: '%s'" % scene.main_menu.address_input.text)
 		if args.has("settings_tab"):
 			scene.settings_menu._show_tab(int(args["settings_tab"]))
 		# --rebind=ACTION,SLOT,KEY   click a box on the KEYS tab and press KEY (e.g. jump,1,J)
@@ -1266,6 +1292,42 @@ func _describe_focus(control: Control) -> String:
 		return "-"
 	var text: String = control.get("text") if control.get("text") != null else ""
 	return "%s '%s'" % [control.get_class(), text]
+
+
+## --test-room-code (headless): every way of writing a code must give the same address back.
+## Prints a PASS / FAIL line and quits with exit code 1 on any failure.
+func _test_room_code() -> void:
+	var failures: Array[String] = []
+	var check := func(what: String, got: Variant, wanted: Variant) -> void:
+		if got != wanted:
+			failures.append("%s: got '%s', wanted '%s'" % [what, got, wanted])
+	check.call("example", Net.ip_to_code("73.154.33.176"), "MEOW-499A-21B0")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1999
+	var addresses: Array[String] = ["0.0.0.0", "255.255.255.255", "127.0.0.1", "10.0.0.1"]
+	for i in 500:
+		addresses.append("%d.%d.%d.%d" % [rng.randi_range(0, 255), rng.randi_range(0, 255), rng.randi_range(0, 255), rng.randi_range(0, 255)])
+	for ip in addresses:
+		var code := Net.ip_to_code(ip)
+		var bare := code.trim_prefix("MEOW-")
+		for spelling in [code, code.to_lower(), bare, bare.to_lower(), bare.replace("-", ""),
+				bare.replace("-", " "), "  %s  " % code, ip, ip + ":7777"]:
+			check.call(spelling, Net.code_to_ip(spelling), ip)
+	for junk in ["", "MEOW", "MEOW-499A", "MEOW-499A-21BG", "499A21B0F", "+499A21B", "not a code", "::1", "256.1.1.1"]:
+		check.call("junk " + junk, Net.code_to_ip(junk), "")
+	for not_ipv4 in ["", "::1", "999.1.1.1", "hello"]:
+		check.call("no code for " + not_ipv4, Net.ip_to_code(not_ipv4), "")
+	check.call("public", Net.is_public_ip("73.154.33.176"), true)
+	for private in ["10.1.2.3", "100.64.0.1", "100.127.255.1", "172.16.0.1", "192.168.1.1", "127.0.0.1", "169.254.1.1", ""]:
+		check.call("private " + private, Net.is_public_ip(private), false)
+	check.call("VPN first", Net.best_local_ip(PackedStringArray(["127.0.0.1", "fe80::1", "172.20.0.1", "192.168.1.5", "100.100.1.1"])), "100.100.1.1")
+	check.call("home over WSL", Net.best_local_ip(PackedStringArray(["172.20.0.1", "192.168.1.5", "192.168.56.1"])), "192.168.1.5")
+	check.call("Wi-Fi over Hyper-V", Net.best_local_ip(PackedStringArray(["169.254.1.2", "192.168.128.1", "192.168.130.247"])), "192.168.130.247")
+	check.call("nothing usable", Net.best_local_ip(PackedStringArray(["127.0.0.1", "169.254.3.4", "::1"])), "")
+	for failure in failures.slice(0, 20):
+		print("DevCapture room code FAIL ", failure)
+	print("DevCapture room code test: %s (%d addresses, %d failures)" % ["FAIL" if failures.size() > 0 else "PASS", addresses.size(), failures.size()])
+	get_tree().quit(1 if failures.size() > 0 else 0)
 
 
 func _parse_args(raw: PackedStringArray) -> Dictionary:

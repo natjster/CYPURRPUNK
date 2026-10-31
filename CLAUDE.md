@@ -78,7 +78,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   for `PlayerId.first_local()`. Test: `--add_local=N --as_local=S`, `--remove_local=S`.
 - Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
   the transport; Steam swaps in here; LAN discovery: hosts broadcast `Net.advert` (set by game.gd
-  `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`), `Settings` (`scripts/settings.gd`: all player settings,
+  `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`; INTERNET: `host()` starts a UPnP Thread, `upnp_status` ""/opening/ready/unavailable + `room_code`, signal `upnp_updated`, `ip_to_code`/`code_to_ip`; `join` takes a code or address; `_close_router` in `_go_offline`/`_exit_tree`; invite rows in PauseMenu + PlayerPause; test runs never touch the real router. Test: `--test-room-code`, `--fake_upnp=IP|off`, `--address=`), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999` (old name kept on purpose so saves survive the rename to CYPURRPUNK); test runs with `--capture` use
   defaults and never save), `Controls`, `Events`, `DevCapture` (debug builds only).
 - EVENTS: autoload `Events` (`scripts/events.gd`): signals `district_sealed`, `player_extracted`, `player_knocked_out`,
