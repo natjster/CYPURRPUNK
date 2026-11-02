@@ -12,6 +12,18 @@
 [ext_resource type="Script" path="res://scripts/ui/hud_damage_numbers.gd" id="10_damage"]
 [ext_resource type="Script" path="res://scripts/ui/hud_heat_bar.gd" id="11_heat"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tutorial"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.02, 0.03, 0.08, 0.72)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 1, 1, 0.85)
+
 [node name="HUD" type="CanvasLayer"]
 layer = 10
 script = ExtResource("1_hud")
@@ -85,6 +97,41 @@ theme_override_colors/font_color = Color(0.45, 1, 0.55, 1)
 theme_override_font_sizes/font_size = 22
 text = "EXTRACT ^ 0m"
 horizontal_alignment = 1
+
+[node name="TutorialBox" type="PanelContainer" parent="Frame/Top"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 50.0
+offset_right = 250.0
+offset_bottom = 120.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_tutorial")
+
+[node name="VBox" type="VBoxContainer" parent="Frame/Top/TutorialBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="TutorialStep" type="Label" parent="Frame/Top/TutorialBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.25, 1)
+theme_override_font_sizes/font_size = 20
+text = "STEP 1/9"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="TutorialHint" type="Label" parent="Frame/Top/TutorialBox/VBox"]
+custom_minimum_size = Vector2(480, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Do the thing."
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Heat" type="Control" parent="Frame/Top"]
 layout_mode = 1

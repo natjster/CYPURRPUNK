@@ -71,6 +71,8 @@ func open() -> void:
 	is_open = true
 	# Only player 1 can leave the game (it takes everyone on this computer along).
 	$Panel/VBox/LeaveButton.visible = opened_by == 0
+	# A TUTORIAL run (scripts/tutorial.gd) leaves the same way, back to the start menu.
+	$Panel/VBox/LeaveButton.text = "EXIT TUTORIAL" if Game.is_tutorial() else "LEAVE GAME"
 	# MY CAT restyles the cat of whoever opened the menu (game.gd passes opened_by on).
 	_refresh_invite()
 	show()

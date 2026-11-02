@@ -6,7 +6,7 @@ extends Control
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
 ##   ├── Title / Subtitle / Tagline (Label)
 ##   ├── MainScreen (VBoxContainer)  <- PlayButton, SettingsButton, QuitButton
-##   ├── ModeScreen (VBoxContainer)  <- SoloButton, MultiplayerButton, BackButton
+##   ├── ModeScreen (VBoxContainer)  <- SoloButton, MultiplayerButton, TutorialButton, BackButton
 ##   ├── CoopScreen (VBoxContainer)  <- made by this script: LOCAL CO-OP / ONLINE CO-OP / BACK
 ##   ├── LandingScreen (VBoxContainer) <- made by this script: who's playing (see below)
 ##   ├── PlayScreen (PanelContainer) > VBox      <- the ONLINE screen
@@ -18,7 +18,8 @@ extends Control
 ##
 ## The way through:
 ##   PLAY / SETTINGS / QUIT
-##     PLAY -> SOLO / MULTIPLAYER (ModeScreen)
+##     PLAY -> SOLO / MULTIPLAYER / TUTORIAL (ModeScreen)
+##       TUTORIAL    -> straight into a guided training run with your current cat (scripts/tutorial.gd)
 ##       SOLO        -> CHOOSE YOUR CAT (scripts/ui/cat_creator.gd) -> NEXT = a game just for you
 ##       MULTIPLAYER -> LOCAL CO-OP / ONLINE CO-OP (CoopScreen)
 ##         either one -> the LANDING PAGE (LandingScreen): everyone on this computer gathers
@@ -43,6 +44,8 @@ signal cat_pressed
 signal lobby_cat_pressed(seat: int)
 ## SOLO was clicked. city_seed = a random city.
 signal solo_pressed(city_seed: int)
+## TUTORIAL was clicked (game.gd starts a training run: scripts/tutorial.gd).
+signal tutorial_pressed
 ## HOST was clicked. city_seed = the number typed, or a random one.
 signal host_pressed(city_seed: int)
 ## JOIN was clicked, with the address typed in.
@@ -100,6 +103,7 @@ func _ready() -> void:
 	$MainScreen/QuitButton.pressed.connect(get_tree().quit)
 	$ModeScreen/SoloButton.pressed.connect(_on_solo_pressed)
 	$ModeScreen/MultiplayerButton.pressed.connect(show_coop_screen)
+	$ModeScreen/TutorialButton.pressed.connect(_on_tutorial_pressed)
 	$ModeScreen/BackButton.pressed.connect(show_main_screen)
 	_build_coop_screen()
 	_build_landing_screen()
@@ -394,6 +398,14 @@ func _on_solo_pressed() -> void:
 	_cat_from = "solo"
 	hide_screens()
 	cat_pressed.emit()
+
+
+## TUTORIAL: a training run right away, with the cat you have now (no cat screen first).
+func _on_tutorial_pressed() -> void:
+	Seats.clear_lobby()
+	Seats.coop = false  # one player, like SOLO
+	Teams.picks[0] = Teams.CATLEONE
+	tutorial_pressed.emit()
 
 
 ## CHOOSE YOUR CAT: NEXT was pressed (game.gd forwards it).

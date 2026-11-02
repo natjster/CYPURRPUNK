@@ -168,7 +168,8 @@ func damage(player_id: int, amount: int, cause: String, instant: bool = false) -
 		if instant and is_downed(player_id):
 			_knock_out(player_id, cause)
 		return
-	var left := maxi(get_health(player_id) - amount, 0)
+	# (TUTORIAL: never below Tutorial > Min Health, so a beginner can't be knocked out.)
+	var left := maxi(get_health(player_id) - amount, Tutorial.health_floor())
 	_set_health.rpc(player_id, left)
 	if left > 0:
 		return

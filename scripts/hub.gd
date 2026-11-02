@@ -338,6 +338,10 @@ func deploy(cat: CatPlayer) -> void:
 		# The DEEP CLEAN is on up there: wait for the next district.
 		Hud.show_message("%s: %s" % [boss_name, line_sealed], 4.0, cat.slot)
 		return
+	if not Tutorial.allows_deploy():
+		# TUTORIAL (scripts/tutorial.gd): the sewer steps come first.
+		Hud.show_message("%s: %s" % [boss_name, Tutorial.instance.too_early_to_deploy], 4.0, cat.slot)
+		return
 	if FishHeist.instance.has_been_up(cat.player_id):
 		# One trip per district (fish_heist.gd went_up): extracted or flattened, you've had yours.
 		Hud.show_message("%s: %s" % [boss_name, line_had_your_trip], 5.0, cat.slot)

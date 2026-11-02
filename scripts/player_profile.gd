@@ -26,6 +26,8 @@ extends Node
 ## A new cat (or an old one that never had it) gets starting_cash in step 1, once.
 ## The host trusts what players send, same as the rest of the game: fine between friends.
 ##
+## TUTORIAL runs (PLAY > TUTORIAL) never touch any save: restore() hands out a training save.
+##
 ## Test runs (DevCapture, "--capture=...") use user://test_profiles/ instead, so tests never
 ## touch your real saves. --fresh_profile starts that test save from scratch.
 
@@ -57,6 +59,12 @@ func _enter_tree() -> void:
 ## of the cat they play (cat_id from Settings.cats) and send it to the host.
 ## player_name is only used by test runs, to name their test save.
 func restore(player_id: int, cat_id: String, player_name: String) -> void:
+	if Game.is_tutorial():
+		# TUTORIAL (scripts/tutorial.gd): a training save every time - starting_cash, an empty
+		# stash - and the real save file is never read or written (we don't watch it: no _local).
+		print("[Profile] Tutorial: training save ($%d, empty stash), real save untouched" % starting_cash)
+		_request_restore.rpc_id(1, player_id, starting_cash, [])
+		return
 	var path := _profile_path(player_id, cat_id, player_name)
 	_local[player_id] = {"path": path, "restored": false, "saved_key": ""}
 	var config := ConfigFile.new()

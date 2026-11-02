@@ -209,6 +209,8 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 		owner_cat = cat if cat != null else Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if owner_cat == null:
 			return
+	if open_it:
+		_match_bag_size()
 	visible = open_it
 	_last_key = ""
 	if open_it:
@@ -294,6 +296,15 @@ func _fill(button: Button, item_id: String) -> void:
 
 
 ## A grid of "count" slots, "columns" per row (the buttons are also added to "list").
+## The loot bag can change size after the screen was built (the TUTORIAL has a bigger one:
+## scripts/tutorial.gd): add slots until the grid matches ItemManager's bag_size.
+func _match_bag_size() -> void:
+	while _bag_buttons.size() < ItemManager.instance.bag_size:
+		var button := _slot("bag", _bag_buttons.size())
+		_bag_grid.add_child(button)
+		_bag_buttons.append(button)
+
+
 func _grid(list: Array[Button], where: String, count: int) -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = columns

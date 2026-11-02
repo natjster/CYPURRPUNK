@@ -30,6 +30,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/pawnie.tscn" id="30_pawnie"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/clawd.tscn" id="31_clawd"]
 [ext_resource type="Script" path="res://scripts/mainframe.gd" id="32_mainframe"]
+[ext_resource type="Script" path="res://scripts/tutorial.gd" id="33_tutorial"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/paulie_no_brooms.tscn" id="q_paulie_no_brooms"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/nonna_catleone.tscn" id="q_nonna_catleone"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/frankie_espresso.tscn" id="q_frankie_espresso"]
@@ -180,6 +181,9 @@ script = ExtResource("20_roombas")
 [node name="RoombaSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("res://scenes/roomba.tscn", "res://scenes/roomba_boss.tscn", "res://scenes/lint_trapper.tscn", "res://scenes/squirt_drone.tscn")
 spawn_path = NodePath("../Roombas")
+
+[node name="Tutorial" type="Node" parent="."]
+script = ExtResource("33_tutorial")
 
 [node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(0, -200, 0)
@@ -413,7 +417,7 @@ visible = false
 offset_left = 90.0
 offset_top = 90.0
 offset_right = 230.0
-offset_bottom = 180.0
+offset_bottom = 200.0
 theme_override_constants/separation = 5
 
 [node name="SoloButton" type="Button" parent="PS1Overlay/Lobby/ModeScreen"]
@@ -425,6 +429,11 @@ text = "SOLO"
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 text = "MULTIPLAYER"
+
+[node name="TutorialButton" type="Button" parent="PS1Overlay/Lobby/ModeScreen"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+text = "TUTORIAL"
 
 [node name="BackButton" type="Button" parent="PS1Overlay/Lobby/ModeScreen"]
 custom_minimum_size = Vector2(70, 14)

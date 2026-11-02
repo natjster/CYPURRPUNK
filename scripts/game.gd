@@ -24,7 +24,7 @@ extends Node3D
 ##   - Cats start in THE SEWERS, the underground hub 200 m below the city (hub.gd).
 ##     Don Catleone sends them up a manhole; the EXIT manhole brings them back (fish_heist.gd).
 ##
-## Testing shortcuts: launch the game with "--solo", "--host" or "--join" to skip the menu
+## Testing shortcuts: launch the game with "--solo", "--tutorial", "--host" or "--join" to skip the menu
 ## (plus "--name=Whiskers" / "--seed=42" for the cat's name and the city number).
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player.tscn")
@@ -41,6 +41,11 @@ static var instance: Game
 ## The name typed in the lobby. Your own cat reads this when it appears
 ## and shares it with everyone (see player_name in cat_player.gd).
 static var local_player_name: String = ""
+## Is this game a TUTORIAL run (PLAY > TUTORIAL, scripts/tutorial.gd)? Ask Game.is_tutorial().
+## (Static, so it's reset in _ready: leaving a game reloads the scene.)
+static var _tutorial_run: bool = false
+## "--tutorial" (testing) only starts ONE tutorial: when it ends, the start menu stays up.
+static var _tutorial_shortcut_used: bool = false
 ## Why we were sent back to the start menu (e.g. "That game is full."), shown there once.
 static var leave_reason: String = ""
 ## Split screen: the EXTRA players on this computer (slot 1, 2, 3 -> {"name", "look", "cat_id"}).
@@ -73,6 +78,7 @@ func _ready() -> void:
 	main_menu.cat_pressed.connect(cat_creator.open.bind(false))
 	cat_creator.next_pressed.connect(main_menu.cat_done)
 	main_menu.solo_pressed.connect(solo_game)
+	main_menu.tutorial_pressed.connect(tutorial_game)
 	main_menu.host_pressed.connect(host_game)
 	main_menu.join_pressed.connect(join_game)
 	main_menu.settings_pressed.connect(settings_menu.open)
@@ -96,6 +102,7 @@ func _ready() -> void:
 	Settings.changed.connect(_apply_scene_settings)
 	_apply_scene_settings()
 
+	_tutorial_run = false  # (back at the start menu: no tutorial running)
 	Seats.reset()  # one player, no controllers claimed yet (scripts/seats.gd)
 	if leave_reason != "":
 		main_menu.show_status.call_deferred(leave_reason)
@@ -117,7 +124,12 @@ func _handle_test_shortcuts() -> void:
 			main_menu.seed_input.text = arg.trim_prefix("--seed=")
 		if arg.begins_with("--address="):  # e.g. --join --address=MEOW-7F00-0001
 			main_menu.address_input.text = arg.trim_prefix("--address=")
-	if "--solo" in args:
+	if "--tutorial" in args and not _tutorial_shortcut_used:
+		_tutorial_shortcut_used = true
+		tutorial_game()
+	elif "--tutorial" in args:
+		pass  # (the tutorial is over: stay on the start menu)
+	elif "--solo" in args:
 		Seats.coop = false
 		solo_game(main_menu.chosen_seed())
 	elif "--host" in args:
@@ -135,6 +147,26 @@ func _handle_test_shortcuts() -> void:
 func solo_game(city_seed: int) -> void:
 	_remember_name()
 	_begin_game(city_seed)
+
+
+## PLAY > TUTORIAL: a solo training run with your current cat (scripts/tutorial.gd walks you
+## through it). Always the same city, a training save (player_profile.gd: $100, empty stash, your
+## real save untouched) and beginner-friendly rules. Back to the start menu when it's done.
+func tutorial_game() -> void:
+	Seats.coop = false  # one player: the classic solo layout (one manhole in the centre)
+	Teams.picks[0] = Teams.CATLEONE  # Don's sewer
+	_tutorial_run = true
+	_remember_name()
+	if local_player_name.is_empty():
+		local_player_name = "RECRUIT"  # (a cat that was never named)
+	var tutorial := $Tutorial as Tutorial
+	tutorial.prepare()
+	_begin_game(tutorial.city_seed, true)  # (true: Meow-Mart right by the centre crossroads)
+
+
+## True during a TUTORIAL run (PLAY > TUTORIAL). Other scripts use it for the training rules.
+static func is_tutorial() -> bool:
+	return _tutorial_run
 
 
 ## MULTIPLAYER > HOST: start a game others can join.
@@ -165,7 +197,8 @@ func is_solo() -> bool:
 
 
 ## Host (or solo): build the city and start.
-func _begin_game(city_seed: int) -> void:
+## showcase = true: Meow-Mart by the centre crossroads (the tutorial: city_generator.gd).
+func _begin_game(city_seed: int, showcase: bool = false) -> void:
 	if is_solo():
 		# Only the Catleone car: the Burrow Gang's (GangCar) isn't needed with one player.
 		# (It's back next time: leaving a game reloads the whole scene.)
@@ -173,7 +206,7 @@ func _begin_game(city_seed: int) -> void:
 			if each_car.team > 0:
 				each_car.remove_from_group("cars")
 				each_car.queue_free()
-	city.generate(city_seed)
+	city.generate(city_seed, showcase)
 	_start_playing()
 	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player
 	# Every game system resets for the first district: the heat starts calm, the VAC-COPs come

@@ -283,6 +283,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `Hud.menu_open()`), `Settings.split_side_by_side`. Per-pane fog: `hub.environment_for(camera position)` (null = world's; `UndergroundHub.mood_at`: city or that sewer's gang; each hub's Mood + Gang Look exports);
   moon/music: anyone up top (`view_cameras()`). HUD frame = pane 0 (whole picture while `Hud.wants_input()`).
   Test: `--join_pad=1,2,3`, `--setting=split_side_by_side:false`.
+- TUTORIAL (SETUP_GUIDE §19): `scripts/tutorial.gd` (`Tutorial.instance`, node `Tutorial` under Main, in `GameSystems.GROUP`),
+  menu PLAY > TUTORIAL (`MainMenu.tutorial_pressed` -> `Game.tutorial_game()`; `Game.is_tutorial()` static, reset in `_ready`).
+  9 steps (`step` 1..9, `phase` for sub-steps, DONE=10 -> banner -> `_back_to_menu(false)`), HUD `Frame/Top/TutorialBox`
+  (`TutorialStep`/`TutorialHint`), code-built cyan beacon. Training rules: `PlayerProfile.restore` sends $starting_cash + empty
+  stash and never reads/writes the save; heat held each physics frame (priority 100; step 8 = `exit_heat`); `Tutorial.health_floor()`
+  in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets `bag_size` 4 (inventory grid grows on open:
+  `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--tutorial --tutorial_auto` (headless, exit 0 = pass).
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 - ANDROID (SETUP_GUIDE §17): `export_presets.cfg` preset "Android" (arm64, immersive, net + multicast permissions,
