@@ -477,7 +477,7 @@ func _after_banner() -> void:
 		_set_charges.rpc(fresh, false)
 		_end_breach.rpc(false)
 	_breach_done.rpc()
-	Game.instance.new_district()
+	RaidReport.end_district()  # the RAID REPORT (scripts/raid_report.gd), then the next district
 
 
 ## Host -> everyone (and a late joiner): these gangs' sewers are breached, for this many seconds.

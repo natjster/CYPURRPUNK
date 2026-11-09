@@ -330,7 +330,19 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (fish_heist `_mark_went_up`, late-join catch-up passes announce=false), `boss_deployed` (roomba_patrol `_boss_siren`).
   `Sound` also registers numbered files by full name (`Sound.play("overclean_deploy_2")`). Test: `--deploy --heat_ramp=S --sound_log`.
 
-## Character creator (MY CAT)
+- RAID REPORT (SETUP_GUIDE §22): `scripts/raid_report.gd` (`RaidReport.instance`, node `RaidReport` under Main, in `GameSystems.GROUP`).
+  Host counts per PLAYER id from Events (went_up, extracted, downed, revived, robbed, knocked_out, enemy_destroyed+`killed_by`,
+  sewer_breach_ended, NEW `player_hurt` (CatHealth.damage), `loot_vacuumed` (ItemManager.take_one_loot), `mess_made` (nobody emits yet:
+  Phase 1; card line behind export `show_mess_stat`)). District endings call `RaidReport.end_district()` (fish_heist `_run_deep_clean`,
+  mainframe `_after_banner`) instead of `Game.new_district()`; ignored while `showing`; skipped (straight to new_district) in tutorial / 0 players /
+  `enabled` false. Host `build_report()` (rows, endings, awards, gangs, timing) -> one `_show_report` RPC (late joiner: `send_state_to`,
+  skip_reveal) -> `Events.raid_report_shown`; READY = `request_report_ready(player_id)` -> `_set_ready(ready, waiting_for)`; host `_process`
+  ends at `seconds_left` or all ready after `reveal_end + read_seconds_after_awards`, then `_hide_report` + `Game.new_district()`. `player_left`
+  keeps the row (`left`). Awards = `RaidAward` .tres cards in `res://raid_awards/` (`assign_awards`: by `order`, best unawarded qualifier,
+  tie = earlier row; 8 empty-stat safety nets). Screen = `RaidReportScreen` (`scripts/ui/raid_report_screen.gd`, hud.tscn `Frame/RaidReportScreen`,
+  built in code, `for_seat/is_open_for`, SeatFocus READY button + interact key, `_fit` shrinks to the pane; in `Hud.wants_input` and cat `_menu_open`).
+  Sounds `report_open/row/award`. Test: `--raid_report[=N] [--raid_report_after=F]`, `--report_ready=0,1 [--report_ready_delay=N]`, `DevCapture report` lines.
+
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
 Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and

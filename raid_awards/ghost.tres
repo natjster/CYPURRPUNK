@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaidAward" format=3]
+
+[ext_resource type="Script" path="res://scripts/raid_award.gd" id="1_award"]
+
+[resource]
+script = ExtResource("1_award")
+id = "ghost"
+title = "GHOST"
+line = "NOT A SCRATCH"
+stat = "damage"
+pick = 1
+at_least = 0.0
+at_most = 0.0
+needs = "extracted"
+order = 120
+color = Color(0.4, 1, 1, 1)

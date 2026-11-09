@@ -189,7 +189,9 @@ a world that hates mess.
   (Head start: Claude built a first bin and cone in Blockbench format. Open
   `models/blockbench/trash_bin.bbmodel` and repaint or remodel it as your tutorial piece.)
 - **You:** post the waiting patch notes to Discord.
-- **Claude:** Raid Report screen.
+- [x] **Claude:** Raid Report screen. (Done 9 Nov 2026: a card per cat with cash, bots smashed, downs,
+  revives and how their raid ended, plus one silly award each, stamped in last; READY-up to skip the
+  wait; Discord invite line; TURF WAR grouped by gang; MESS MADE ready for Phase 1. SETUP_GUIDE §22.)
 - [x] **Claude:** OVERCLEAN announcer (lines and a robot voice). (Done 9 Nov 2026: chime + robot
   PA voice + subtitles for the first cat up top, heat levels 2-4, MEGA VAC-COPs, the seal and
   knockouts. SETUP_GUIDE §21.)

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaidAward" format=3]
+
+[ext_resource type="Script" path="res://scripts/raid_award.gd" id="1_award"]
+
+[resource]
+script = ExtResource("1_award")
+id = "gone_fishin"
+title = "GONE FISHIN'"
+line = "LEFT BEFORE THE END"
+stat = "left"
+pick = 0
+at_least = 1.0
+at_most = 999999.0
+needs = ""
+order = 150
+color = Color(0.85, 0.85, 1, 1)

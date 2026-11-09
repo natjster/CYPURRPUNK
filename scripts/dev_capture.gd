@@ -117,6 +117,12 @@ extends Node
 ##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
 ##   --breach_log=N    (either) every N frames print the breach's state ("DevCapture breach" lines)
 ##   --breach_knock=N  (host) N frames in, drop a bot beside every breach NPC (they get knocked flat)
+##   --raid_report[=N] (host) end the district NOW with made-up numbers: the RAID REPORT goes up
+##                     (N = that many cards; made-up quitters fill the gap). --raid_report_after=F waits
+##                     F frames first (default 30). Every report prints "DevCapture report" lines
+##                     (also real ones, e.g. after --heat=100).
+##   --report_ready=S,S  once a report is up, wait --report_ready_delay frames (default 60), then
+##                     seat S presses READY with a REAL button (its controller's A, or E for seat 0)
 ##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
@@ -288,6 +294,12 @@ func _ready() -> void:
 			_breach_wipe(int(args["breach_wipe"]))
 		if args.has("breach_knock"):
 			_breach_knock(int(args["breach_knock"]))
+		# THE RAID REPORT (scripts/raid_report.gd): every report that goes up is printed here.
+		Events.raid_report_shown.connect(_print_report)
+		if args.has("raid_report") and multiplayer.is_server():
+			_force_report(int(args["raid_report"]) if args["raid_report"] != "true" else 0, int(args.get("raid_report_after", 30)))
+		if args.has("report_ready"):
+			_report_ready(args["report_ready"].split(","), int(args.get("report_ready_delay", 60)))
 		if args.has("mainframe") and multiplayer.is_server():
 			# (host) --mainframe=N or =A,B: the gangs' charges are N (0/25/50/75/100; A = Catleone,
 			# B = Burrow), and this district starts over on them (heat, overclock, 0% boss).
@@ -1459,6 +1471,69 @@ func _watch_car_camera(car: GetawayCar, every: int) -> void:
 			await get_tree().process_frame
 		if is_instance_valid(car):
 			print("DevCapture car_watch: look_yaw=%.2f look_pitch=%.2f speed=%.1f" % [car.look_yaw, car.look_pitch, -car.global_basis.z.dot(car.linear_velocity)])
+
+
+## Every RAID REPORT that goes up (any computer): one line for the crew, one per card.
+func _print_report(report: Dictionary) -> void:
+	print("DevCapture report: district %d ending=\"%s\" total=$%d turf=%s cards=%d seconds=%.1f reveal=%.1f invite=\"%s\" mess_shown=%s" % [
+		int(report.district), report.ending, int(report.total), report.turf, report.rows.size(),
+		float(report.seconds_left), float(report.reveal_end), report.invite, report.show_mess])
+	for gang in report.gangs:
+		print("DevCapture report gang: %s $%d" % [gang.name, int(gang.total)])
+	for row in report.rows:
+		print("DevCapture report row: %s id=%d team=%d went_up=%d %s cash=$%d (loot %d + quest %d) bots=%d bosses=%d downs=%d revives=%d damage=%d vacuumed=%d robbed=%d left=%d award=%s \"%s\" / \"%s\"" % [
+			row.name, int(row.id), int(row.team), int(row.went_up), row.ending, int(row.cash), int(row.loot), int(row.bonus), int(row.bots),
+			int(row.bosses), int(row.downs), int(row.revives), int(row.damage), int(row.vacuumed), int(row.robbed),
+			int(row.left), row.award_id, row.award_title, row.award_line])
+	var ids: Array = report.rows.map(func(row): return row.award_id)
+	var unique := {}
+	for id in ids:
+		unique[id] = true
+	print("DevCapture report awards: %d cards, %d different awards (%s)" % [ids.size(), unique.size(), "OK" if unique.size() == ids.size() else "DUPLICATE!"])
+	# Where each local player's screen stands (split screen: one each).
+	await get_tree().create_timer(0.5).timeout
+	for seat in 4:
+		var screen := RaidReportScreen.for_seat(seat)
+		if screen != null and Hud.of(seat) != null:
+			print("DevCapture report screen seat %d: open=%s wants_input=%s size=%s scale=%.2f" % [seat, screen.is_open, Hud.wants_input(seat), screen.size, screen._scale])
+
+
+## --raid_report[=N]: (host) made-up numbers, then the report (scripts/raid_report.gd test_report).
+func _force_report(cards: int, after: int) -> void:
+	for i in after:
+		await get_tree().physics_frame
+	RaidReport.instance.test_report(cards)
+
+
+## --report_ready=S,S: once the report is up, those seats press READY with a real button.
+func _report_ready(seats: PackedStringArray, delay: int) -> void:
+	for i in 3000:
+		if RaidReport.instance.showing:
+			break
+		await get_tree().physics_frame
+	for i in delay:
+		await get_tree().process_frame
+	for seat_text in seats:
+		var seat := int(seat_text)
+		var device: int = Seats.pads[seat] if seat < Seats.pads.size() else -1
+		for pressed in [true, false]:
+			var event: InputEvent
+			if seat > 0 or device >= 0:
+				event = Controls._event_from_name("Pad A")
+				event.device = device
+				event.pressed = pressed
+			else:
+				event = InputEventKey.new()
+				event.keycode = KEY_E
+				event.physical_keycode = KEY_E
+				event.pressed = pressed
+			Input.parse_input_event(event)
+			await get_tree().process_frame
+		for i in 10:
+			await get_tree().process_frame
+		var counts := RaidReport.instance.ready_count()
+		print("DevCapture report_ready seat %d: ready=%d/%d showing=%s button=\"%s\"" % [seat, counts[0], counts[1],
+			RaidReport.instance.showing, RaidReportScreen.for_seat(seat)._ready_button.text if RaidReportScreen.for_seat(seat) != null else "-"])
 
 
 ## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all

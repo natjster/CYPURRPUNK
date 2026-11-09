@@ -24,6 +24,7 @@ extends CanvasLayer
 ##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
+##       ├── RaidReportScreen <- end-of-district report (scripts/ui/raid_report_screen.gd)
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
@@ -229,12 +230,12 @@ static func _targets(seat_number: int) -> Array:
 	return all
 
 
-## True while this player's HUD window (talk box or inventory) is open: it gets their buttons
+## True while this player's HUD window (talk box, inventory, pause or RAID REPORT) is open: it gets their buttons
 ## (and for player 1 the mouse and keys), not the game.
 static func wants_input(seat_number: int = 0) -> bool:
 	var inventory := InventoryScreen.for_seat(seat_number)
 	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible) \
-		or PlayerPause.is_open_for(seat_number)
+		or PlayerPause.is_open_for(seat_number) or RaidReportScreen.is_open_for(seat_number)
 
 
 ## True while a full-screen game menu (pause, settings, MY CAT) is open; the HUD hides under it.

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaidAward" format=3]
+
+[ext_resource type="Script" path="res://scripts/raid_award.gd" id="1_award"]
+
+[resource]
+script = ExtResource("1_award")
+id = "butterpaws"
+title = "BUTTERPAWS"
+line = "LOST {value} LOOT TO BOTS"
+stat = "vacuumed"
+pick = 0
+at_least = 1.0
+at_most = 999999.0
+needs = ""
+order = 40
+color = Color(1, 0.4, 0.35, 1)

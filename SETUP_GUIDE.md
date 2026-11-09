@@ -2122,6 +2122,7 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `meow_blip_don`, `meow_blip_whiskers` (`_1`..`_4`) | talking-cat voice blips (Sound Lab); not used yet | |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
+| `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's card flips in / each award stamps down (§22) | just you |
 
 Music and background loops change by area (they fade into each other): in the sewers
 `music/hub` + `ambience/sewer`, up top (and on the start menu) `music/city` + `ambience/rain`.
@@ -2894,3 +2895,113 @@ voice says: ask Claude to remake that line with the Sound Lab (or edit
 **Testing:** `--deploy --heat_ramp=40 --sound_log --frames=3300` (plus `--capture=shots/x.png`)
 sends your cat up and raises the heat to 100 over 40 seconds; the console prints an
 `[Announcer]` line for each announcement (and `[Sound] overclean_...`).
+
+## 22. The RAID REPORT (end of every district)
+
+When a district ends, every player gets a **report card for the round** before the next city is
+built. It's meant to be the moment your friends laugh about, and a good 10-second clip.
+
+**What it shows** (one screen per player, also in split screen):
+- **RAID REPORT**, the district number, and how it ended for the crew: CLEAN GETAWAY (everyone
+  who went up came home), MESSY GETAWAY (someone got vacuumed), CAUGHT IN THE DEEP CLEAN (someone
+  was still up top at the end), NOBODY LEFT THE COUCH, SURVIVED THE SEWER BREACH, or WIPED OUT BY
+  THE BREACH.
+- **One card per cat:** name (each card has its own colour, plus a little square in the cat's fur
+  colour), how their raid ended (EXTRACTED / VACUUMED / STAYED HOME / LEFT EARLY), cash brought
+  home (quest bonus shown on its own line), VAC-COPs smashed (MEGA VAC-COPs called out),
+  times DOWNED and team-mates REVIVED. A cat whose player quit keeps their card.
+- **One silly award per cat**, stamped down last, one by one (that's the clip). Every cat gets
+  exactly one, never two cats the same.
+- The crew's **CASH BROUGHT HOME** total, a **READY** button with the countdown, and an optional
+  Discord invite line.
+- **TURF WAR:** the same cards, grouped under each gang's name, colour and cash. No winner, no score.
+- No report in the **TUTORIAL** or behind the start menu.
+
+**How long it holds the next district:** up to **14 seconds** (a bit longer with lots of cats so
+every award is seen). Everyone can press **READY** (A on a controller, or the GRAB/TALK key, or
+click it): when every player is ready the next district starts at once, but never before the
+awards have all been shown plus 2 seconds. While it's up the hatch is sealed and everyone is home,
+so nothing can hurt anyone, and the cats' buttons go to the report (the big pause menu waits until it's done).
+
+### Changing it (no code)
+Scene dock: open `scenes/main.tscn`, click **Main > RaidReport**. Inspector:
+- **Timing > Enabled**: untick to switch the report off (districts change straight away).
+- **Timing > Report Seconds** (14): the longest it stays up.
+- **Timing > Read Seconds After Awards** (2): how long it stays after the last award, even if
+  everyone pressed READY.
+- **Timing > Intro / Card / Award Seconds** (0.8 / 0.45 / 0.75): the speed of the reveal.
+- **Extras > Discord Invite**: type e.g. `MORE CATS: discord.gg/yourcode` and that line appears at
+  the bottom of every report (the host's text is used). Empty = no line.
+- **Extras > Show Mess Stat**: the hidden **MESS MADE** line (see below).
+- **Colours**: the EXTRACTED / VACUUMED / STAYED HOME colours and the good / bad ending colours.
+
+The look of the screen: open `scenes/ui/hud.tscn`, click **HUD > Frame > RaidReportScreen**.
+Inspector: **Text Sizes** (title, names, cash, stats, award title / line, footer; HUD units, the
+screen is 720 tall), **Layout > Card Width**, **Margin**, **Dim** (how dark the game behind it gets)
+and **Min Scale** (it shrinks itself to fit small split-screen panes or lots of cats). The boxes
+are built by code (`scripts/ui/raid_report_screen.gd`), so the scene only has the empty node.
+
+Sounds (`sounds/sfx/`, made with the Sound Lab): `report_open` (when it appears), `report_row`
+(each card), `report_award` (each award stamp). Replace a file with your own of the same name.
+
+### The awards (and adding your own)
+Each award is a card in the `raid_awards/` folder (FileSystem dock). Click one to see it in the
+Inspector:
+- **Title** (big, keep it about 14 letters) and **Line** (small; `{value}` becomes the number, e.g.
+  `LOST {value} LOOT TO BOTS`).
+- **Stat**: which number decides it: `cash`, `loot`, `bonus`, `bots`, `bosses`, `downs`, `revives`,
+  `damage`, `vacuumed` (loot a VAC-COP sucked out of them), `knockouts`, `robbed`, `went_up`,
+  `extracted`, `left`, `mess`. Empty = anyone (a safety-net award).
+- **Pick**: MOST or LEAST of that stat wins. **At Least / At Most**: who qualifies (e.g. At Least 1
+  = did it at least once). **Needs**: another stat that must be 1+ (GHOST needs `extracted`).
+- **Order**: lower numbers are handed out first. **Color**: the title's colour.
+
+How they're handed out: cards are tried in Order; each goes to the best cat that doesn't have one
+yet and qualifies; a tie goes to the cat higher up the report (who joined first). The host works
+it out once and sends it to everyone, so every screen agrees.
+
+| Order | Award | Goes to |
+|---|---|---|
+| 10 | BIG FISH | most cash brought home |
+| 20 | AMBULANCE | most revives |
+| 30 | MEGA MAULER | most MEGA VAC-COPs smashed |
+| 40 | BUTTERPAWS | most loot vacuumed out by bots |
+| 50 | MOST SHED | most damage taken |
+| 60 | FLOOR INSPECTOR | downed 2+ times (most) |
+| 70 | BOT BLENDER | 3+ VAC-COPs smashed (most) |
+| 80 | SIDE HUSTLE | most quest bonus |
+| 90 | STICKY PAWS | robbed a rival (TURF WAR) |
+| 100 | AGENT OF CHAOS | most mess made (waiting for Phase 1) |
+| 110 | DUST BUNNY | got vacuumed |
+| 120 | GHOST | made it home without a scratch |
+| 130 | EMPTY PAWS | made it home with $0 |
+| 140 | COUCH POTATO | never went up |
+| 150 | GONE FISHIN' | quit before the end |
+| 200-270 | WARM LOAF, BACKGROUND CAT, GOOD KITTY, SUSPICIOUSLY QUIET, SNACK BREAK, MORALE OFFICER, PARTICIPANT, NAP CHAMPION | anyone left (safety net) |
+
+**To add one:** right-click a card (e.g. `butterpaws.tres`) > **Duplicate...**, give it a new file
+name, then change its **Id** (unique, no spaces), Title, Line, Stat and Order in the Inspector. No
+code. Keep at least 8 safety-net cards (empty Stat) so 8 players always get different awards.
+
+### MESS MADE (for Phase 1)
+Mess-making isn't built yet, but the report is ready for it: when it is, the code that knocks a bin
+over calls `Events.mess_made.emit(player_id, 1)` on the host. Then tick **RaidReport > Show Mess
+Stat** and every card shows MESS MADE; the AGENT OF CHAOS award already looks at it.
+
+### How it works (for Claude / the curious)
+`scripts/raid_report.gd` (node **Main > RaidReport**, a game system: §16) counts everything on the
+host from game Events (`player_went_up`, `player_extracted`, `player_downed`, `player_revived`,
+`player_robbed`, `player_knocked_out`, `enemy_destroyed`, `sewer_breach_ended`, and three new ones:
+`player_hurt` (cat_health.gd), `loot_vacuumed` (item_manager.gd), `mess_made` (nobody yet)). The two
+places a district ends (`fish_heist.gd` after the DEEP CLEAN, `mainframe.gd` after a breach banner)
+call `RaidReport.end_district()`; it shows the report and then calls `Game.new_district()` itself.
+
+### Testing
+- `--raid_report[=N]` (host): end the district now with made-up numbers (N = that many cards).
+  `--raid_report_after=F` waits F frames first. Every report prints `DevCapture report` lines (the
+  crew line, one line per card with its award, and `awards: ... (OK)` when none repeat).
+- `--report_ready=0,1` presses READY for those players with a real button
+  (`--report_ready_delay=N` frames after the report appears).
+- Solo, the real thing: `--solo --deploy --heat=80 --heat_hold=120 --goto_dropoff_after=90
+  --grab=sardine --frames=3400 --capture=shots/x.png`.
+- Couch: add `--join_pad=1,2,3`; PS1 look: `--setting=modern_ui:false`; wide: `--window=1720x720`.

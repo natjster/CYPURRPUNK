@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RaidAward" format=3]
+
+[ext_resource type="Script" path="res://scripts/raid_award.gd" id="1_award"]
+
+[resource]
+script = ExtResource("1_award")
+id = "floor_inspector"
+title = "FLOOR INSPECTOR"
+line = "DOWNED {value} TIMES"
+stat = "downs"
+pick = 0
+at_least = 2.0
+at_most = 999999.0
+needs = ""
+order = 60
+color = Color(1, 0.4, 0.35, 1)

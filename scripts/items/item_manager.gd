@@ -664,6 +664,7 @@ func take_one_loot(player_id: int) -> String:
 		return ""
 	var item_id: String = bag.pop_back()
 	_set_inventory.rpc(player_id, inventory)
+	Events.loot_vacuumed.emit(player_id, item_id)  # (scripts/events.gd: the RAID REPORT's BUTTERPAWS)
 	return item_id
 
 

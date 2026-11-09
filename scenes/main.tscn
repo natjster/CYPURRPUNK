@@ -41,6 +41,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/jittery_jax.tscn" id="q_jittery_jax"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/calamity_clara.tscn" id="q_calamity_clara"]
 [ext_resource type="Script" path="res://scripts/overclean_announcer.gd" id="34_announcer"]
+[ext_resource type="Script" path="res://scripts/raid_report.gd" id="35_report"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -188,6 +189,9 @@ script = ExtResource("33_tutorial")
 
 [node name="Announcer" type="Node" parent="."]
 script = ExtResource("34_announcer")
+
+[node name="RaidReport" type="Node" parent="."]
+script = ExtResource("35_report")
 
 [node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(0, -200, 0)

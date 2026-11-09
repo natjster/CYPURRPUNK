@@ -169,8 +169,11 @@ func damage(player_id: int, amount: int, cause: String, instant: bool = false) -
 			_knock_out(player_id, cause)
 		return
 	# (TUTORIAL: never below Tutorial > Min Health, so a beginner can't be knocked out.)
-	var left := maxi(get_health(player_id) - amount, Tutorial.health_floor())
+	var before := get_health(player_id)
+	var left := maxi(before - amount, Tutorial.health_floor())
 	_set_health.rpc(player_id, left)
+	if before > left:
+		Events.player_hurt.emit(player_id, before - left, cause)  # (the RAID REPORT counts it)
 	if left > 0:
 		return
 	if instant or not _anyone_could_help(player_id):

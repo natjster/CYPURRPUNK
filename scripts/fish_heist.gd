@@ -406,7 +406,9 @@ func _run_deep_clean() -> void:
 	# (A Mainframe on its last legs: the siren or the breach goes first. It may yet be fed.)
 	if _new_district_at >= 0.0 and _clock >= _new_district_at and not Mainframe.instance.breach_coming():
 		_new_district_at = -1.0
-		Game.instance.new_district()  # a new city seed for everyone; place_items() resets us
+		# The RAID REPORT first (scripts/raid_report.gd); it then builds the new district (a new
+		# city seed for everyone; place_items() resets us).
+		RaidReport.end_district()
 
 
 ## A payphone call (any computer -> host): switch the exit arrow on for the CALLER'S gang.

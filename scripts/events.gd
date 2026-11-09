@@ -68,6 +68,25 @@ signal item_picked_up(player_id: int, item_id: String)
 ## and is_boss are still readable.
 signal enemy_destroyed(enemy: Enemy)
 
+## HOST only: a player lost this much HP (what really came off, after the tutorial's floor).
+## cause = e.g. "A VAC-COP" (cat_health.gd damage). The RAID REPORT's "MOST SHED".
+signal player_hurt(player_id: int, amount: int, cause: String)
+
+## HOST only: a VAC-COP sucked one loot item out of this player's bag (item_manager.gd
+## take_one_loot, called by roomba.gd's bonk). The RAID REPORT's "BUTTERPAWS".
+signal loot_vacuumed(player_id: int, item_id: String)
+
+## HOST only. NOTHING SENDS THIS YET: it's waiting for MESS-MAKING (Phase 1: knocking bins over,
+## scratching posters). When that's built, emit it on the host each time a cat makes a mess:
+##     Events.mess_made.emit(player_id, 1)
+## and the RAID REPORT counts it (its MESS MADE line: tick RaidReport > Show Mess Stat; the
+## AGENT OF CHAOS award card already looks at it).
+signal mess_made(player_id: int, amount: int)
+
+## EVERY computer: the RAID REPORT for the district that just ended has gone up on every screen
+## (scripts/raid_report.gd). report = the whole finished report (rows, awards, crew line).
+signal raid_report_shown(report: Dictionary)
+
 
 # --- Testing: --event_log prints every event as it happens ("[Events] ..." lines) ---
 

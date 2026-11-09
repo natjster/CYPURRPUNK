@@ -616,7 +616,7 @@ func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
 ## Watching a rival's SEWER BREACH on the live feed counts too: the cat waits at home.
 func _menu_open() -> bool:
 	return PauseMenu.is_open or NpcDialog.is_open_for(slot) or PlayerPause.is_open_for(slot) \
-		or Mainframe.instance.is_spectating(self)
+		or Mainframe.instance.is_spectating(self) or RaidReportScreen.is_open_for(slot)  # (the report's buttons are for READY)
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
