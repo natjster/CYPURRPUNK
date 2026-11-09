@@ -114,7 +114,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   triangles makes textures shear and swim. DevCapture `--no_affine` / `--no_snap` help diagnose.
   Never stack visible surfaces a few cm apart (e.g. sidewalk over street): they z-fight and
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
-- GANGS (PvP phase 1): `scripts/teams.gd` static `Teams` (0 CATLEONE / 1 BURROW, NAMES/COLORS, `picks[seat]` set on the
+- GAME MODE: `Game.is_turf_war()` (static, `_turf_war_game`, reset in `_ready`) = the ONE answer to "classic one-crew layout or
+  gangs?". CO-OP (default; SOLO + TUTORIAL always) = everyone gang 0 (`Teams.picked` returns CATLEONE), one centre entry, one exit,
+  GangCar freed (`_set_mode`, on clients too), no hack (`hack_target` -1), no rival live feed (`is_spectating`), no "WINS" banner.
+  Host sets it in `_begin_game` from `Teams.turf_war_pick` (landing MODE row `[<] MODE [>]`, P1 only; online the host's wins) and
+  `_receive_mode` RPC goes to every joiner BEFORE `_receive_city_seed`. `Seats.coop` is only about controllers. `NpcPage.coop_lines`
+  (said instead of `lines` outside TURF WAR: Sal's respect quest). Advert `turf_war`. Test: `--mode=coop|turf` (`--teams=` implies turf;
+  `--mode` wins), `DevCapture mode:` line (cats id:gang, entries, exits, cars). Old PvP / two-gang recipes need `--teams=`.
+- GANGS (PvP phase 1, TURF WAR only): `scripts/teams.gd` static `Teams` (0 CATLEONE / 1 BURROW, NAMES/COLORS, `picks[seat]` set on the
   landing page: P1 GANG button, P2-4 LB/RB; SOLO resets to 0). `CatPlayer.team` (synced, set from `local_player_info`
   "team"; name tag colour). One `UndergroundHub` per gang: `Hub` (team 0, Don + Comrade Whiskers) and `GangHub` (team 1,
   x=200, Pawnie + Clawd shopkeeper; exports team/leader/shopkeeper/leader_glow/boss_name/lines). Use `UndergroundHub.of(cat)`
@@ -232,8 +239,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Only `CatModel` rotates; body never does (camera is a child). Remote copies start with `sync_position = position`
   (else they snap to (0,0,0) = the city for a moment, and the host marked new joiners `went_up`).
   8-player stress test recipe: SETUP_GUIDE §6 (host `--add_local=3 --heat=95`, clients 2+1+1, `--net_stats`).
-- SOLO (`Game.is_solo()` = `not Seats.coop`; local co-op also starts via solo_game, so never use "offline" for this):
-  classic layout: `entry_position` = centre, one exit, GangCar freed in `_begin_game`, GetawayCar at CAR_SPAWN.
+- SOLO / CO-OP layout (`not Game.is_turf_war()`; local co-op also starts via solo_game, so never use "offline" for this):
+  classic layout: `entry_position` = centre, one exit, GangCar freed in `_set_mode`, GetawayCar at CAR_SPAWN.
   `FishHeist.corner_position(team)` = a gang's corner regardless. Move cars ONLY via `_teleport` (done in
   `_integrate_forces`; plain `global_transform =` on a resting RigidBody is undone by physics).
 - CARS: one per gang in main.tscn (`GetawayCar` team 0, `GangCar` team 1; car export `team` only picks the parking

@@ -189,7 +189,8 @@ a world that hates mess.
 - **You:** post the waiting patch notes to Discord.
 - **Claude:** Raid Report screen.
 - **Claude:** OVERCLEAN announcer (lines and a robot voice).
-- **Claude:** co-op as the default mode, gangs moved to a TURF WAR option.
+- [x] **Claude:** co-op as the default mode, gangs moved to a TURF WAR option. (Done 9 Nov 2026:
+  MODE row on the landing page.)
 
 **Done when:** the playtest notes exist, a raid ends with a report, and your bin is standing on a street in the game.
 **Not doing:** anything new to fight or shoot with.

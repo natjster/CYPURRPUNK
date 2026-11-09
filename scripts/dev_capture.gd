@@ -10,7 +10,11 @@ extends Node
 ##   --tutorial        start a TUTORIAL run (scripts/tutorial.gd); prints "[Tutorial] Step X/9" lines
 ##   --tutorial_auto   (with --tutorial) play all 9 steps by itself, print what happened, then quit
 ##   --wait=N          wait N frames after our cat appears before doing anything else
-##   --teams=A,B,..    the gang of seat 0, 1, 2... (0 = Catleone Family, 1 = Burrow Gang: teams.gd)
+##   --teams=A,B,..    the gang of seat 0, 1, 2... (0 = Catleone Family, 1 = Burrow Gang: teams.gd).
+##                     Implies --mode=turf (gangs only exist in TURF WAR).
+##   --mode=coop|turf  the landing page's MODE (CO-OP is the default; only --host / local games use
+##                     it: a --join client always gets the host's). Wins over --teams' TURF WAR.
+##                     Prints a "DevCapture mode" line.
 ##   --add_local=N     split screen: N more players join in on this computer (slots 1..N,
 ##                     named COUCH 2, COUCH 3... with random looks; their cats stand still)
 ##   --as_local=S      (with --add_local) every action below (--pos, --give, --grab, --drive,
@@ -165,9 +169,12 @@ func _ready() -> void:
 
 	# --teams=1,0,1  the gang each seat plays for (scripts/teams.gd), as if picked on the landing page.
 	if args.has("teams"):
+		Teams.turf_war_pick = true  # (gangs only exist in TURF WAR)
 		var gangs: PackedStringArray = args["teams"].split(",")
 		for seat in mini(gangs.size(), Teams.picks.size()):
 			Teams.picks[seat] = int(gangs[seat])
+	if args.has("mode"):  # (after --teams, so "--teams=0,1 --mode=coop" = gangs picked, then CO-OP)
+		Teams.turf_war_pick = args["mode"] == "turf"
 
 	if args.has("saved_cats"):
 		var look_rng := RandomNumberGenerator.new()
@@ -775,6 +782,16 @@ func _ready() -> void:
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
+		# --mode: which mode this computer is playing, every cat's gang, and the layout it made.
+		var manholes := heist.get_children().filter(func(n): return n is Manhole and not n.is_queued_for_deletion()).size()
+		var cats_teams := []
+		for cat_node in scene.players.get_children():
+			cats_teams.append("%s:%d" % [cat_node.name, (cat_node as CatPlayer).team])
+		var live_cars: Array = scene.cars().filter(func(c): return not c.is_queued_for_deletion())
+		print("DevCapture mode: %s cats=%s entries=%d exits=%d manholes=%d cars=%s" % [
+			"TURF WAR" if Game.is_turf_war() else "CO-OP", cats_teams,
+			1 if heist.entry_position(0) == heist.entry_position(1) else 2, heist.exit_positions.size(), manholes,
+			live_cars.map(func(c): return "%s(team %d)" % [c.name, c.team])])
 		print("DevCapture heist: entries=%s exits=%s open=%s revealed=%s sealed=%s cash=%s" % [[heist.entry_position(0), heist.entry_position(1)], heist.exit_positions, [heist.exit_is_open(0), heist.exit_is_open(1)], heist.revealed, heist.sealed, Wallet.instance.cash])
 	if HeatMeter.instance != null:
 		var regulars := 0

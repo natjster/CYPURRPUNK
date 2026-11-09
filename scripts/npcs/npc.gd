@@ -227,7 +227,8 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 		push_warning("NPC %s has no page with Id '%s'." % [npc_name, page_id])
 		NpcDialog.for_cat(cat).close()
 		return
-	var line := "..." if page.lines.is_empty() else page.lines[randi() % page.lines.size()]
+	var lines := page.lines_now()  # (CO-OP: the page's Co-op Lines, if it has any: npc_page.gd)
+	var line := "..." if lines.is_empty() else lines[randi() % lines.size()]
 	var fallback := _greeting if _greeting != null else pages[0]
 	var choices := page.choices if not page.choices.is_empty() else fallback.choices
 	var buttons := []

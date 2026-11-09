@@ -24,9 +24,11 @@ extends Control
 ##       MULTIPLAYER -> LOCAL CO-OP / ONLINE CO-OP (CoopScreen)
 ##         either one -> the LANDING PAGE (LandingScreen): everyone on this computer gathers
 ##           [<] P1  WHISKERS [>]      <- player 1: A on < / > = pick cat, A on the name = make / edit cats
-##           [P1 GANG: CATLEONE FAMILY] <- A = switch gang (scripts/teams.gd)
+##           [<] MODE: CO-OP [>]       <- player 1 only: CO-OP (one crew, the default) or TURF WAR
+##                                        (gang against gang). Online, only the HOST's mode counts.
+##           [P1 GANG: CATLEONE FAMILY] <- TURF WAR only: A = switch gang (scripts/teams.gd)
 ##           P2  < MITTENS >  BURROW GANG <- joined with START on their controller (left / right = cat,
-##                                        LB / RB = gang, A = edit it in MY CAT, B = leave)
+##                                        LB / RB = gang in TURF WAR, A = edit it in MY CAT, B = leave)
 ##           P3  PRESS START TO JOIN
 ##           [START GAME] / [NEXT]  [BACK]
 ##           LOCAL:  START GAME = everyone into the sewers on this computer (no network)
@@ -84,7 +86,13 @@ var coop_screen: VBoxContainer
 var landing_screen: VBoxContainer
 var _landing_title: Label
 var _p1_button: Button          # "P1  WHISKERS" (A = make / edit cats), with < > buttons beside it
-var _p1_team_button: Button     # "GANG: CATLEONE FAMILY" (A = switch gang, scripts/teams.gd)
+var _p1_team_button: Button     # "GANG: CATLEONE FAMILY" (A = switch gang, scripts/teams.gd; TURF WAR only)
+var _p1_left: Button            # player 1's < and > (pick cat)
+var _p1_right: Button
+var _mode_button: Button        # "MODE: CO-OP" / "MODE: TURF WAR", with < > beside it
+var _mode_left: Button
+var _mode_right: Button
+var _back_button: Button        # the landing page's BACK
 ## On-screen keyboards for the city # and address boxes (controller typing: on_screen_keyboard.gd).
 var _seed_keyboard: OnScreenKeyboard
 var _address_keyboard: OnScreenKeyboard
@@ -170,7 +178,7 @@ func show_landing(online: bool) -> void:
 	_online = online
 	Seats.coop = true  # co-op: other controllers can join (scripts/seats.gd)
 	_show_only(landing_screen)
-	_landing_title.text = "ONLINE CO-OP: WHO'S ON THIS COMPUTER?" if online else "LOCAL CO-OP: WHO'S PLAYING?"
+	_landing_title.text = "ONLINE: WHO'S ON THIS COMPUTER?" if online else "LOCAL: WHO'S PLAYING?"
 	_start_button.text = "NEXT" if online else "START GAME"
 	_refresh_landing()
 	_start_button.grab_focus()
@@ -229,8 +237,9 @@ func _refresh_game_list() -> void:
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(0, 14)
 		var full: bool = int(info.get("players", 0)) >= int(info.get("max", Net.MAX_PLAYERS))
-		button.text = "%s  #%d  %d/%d%s" % [str(info.get("name", "?")).left(9), int(info.get("city", 0)),
-			int(info.get("players", 0)), int(info.get("max", Net.MAX_PLAYERS)), "  FULL" if full else ""]
+		button.text = "%s  #%d  %d/%d%s%s" % [str(info.get("name", "?")).left(9), int(info.get("city", 0)),
+			int(info.get("players", 0)), int(info.get("max", Net.MAX_PLAYERS)),
+			"  TURF WAR" if info.get("turf_war", false) else "", "  FULL" if full else ""]
 		button.disabled = full
 		button.pressed.connect(func():
 			address_input.text = address
@@ -254,7 +263,7 @@ func _input(event: InputEvent) -> void:
 			Seats.cycle_lobby_cat(seat, 1)
 		elif event.is_action_pressed("ui_tab_left") or event.is_action_pressed("ui_tab_right"):
 			# LB / RB: switch gang (scripts/teams.gd). (Only if they're sitting in the lobby.)
-			if Seats.lobby_cat_name(seat) != "":
+			if Seats.lobby_cat_name(seat) != "" and Teams.turf_war_pick:  # (TURF WAR only: CO-OP is one crew)
 				Teams.cycle_pick(seat, -1 if event.is_action_pressed("ui_tab_left") else 1)
 				_refresh_landing()
 		elif event.is_action_pressed("ui_accept") and landing_screen.visible:
@@ -300,7 +309,7 @@ func _build_coop_screen() -> void:
 
 func _build_landing_screen() -> void:
 	landing_screen = _screen_box("LandingScreen", Vector2(40, 82), Vector2(280, 236))
-	landing_screen.add_theme_constant_override("separation", 3)
+	landing_screen.add_theme_constant_override("separation", 2)
 	_landing_title = Label.new()
 	_landing_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_landing_title.add_theme_color_override("font_color", Color(1, 0.35, 0.8))
@@ -309,16 +318,26 @@ func _build_landing_screen() -> void:
 	var p1_row := HBoxContainer.new()
 	p1_row.add_theme_constant_override("separation", 3)
 	landing_screen.add_child(p1_row)
-	var p1_left := _menu_button(p1_row, "<", Seats.cycle_p1_cat.bind(-1), 14)
-	p1_left.custom_minimum_size.x = 16
+	_p1_left = _menu_button(p1_row, "<", Seats.cycle_p1_cat.bind(-1), 14)
+	_p1_left.custom_minimum_size.x = 16
 	_p1_button = _menu_button(p1_row, "P1", _on_p1_cat_pressed, 14)
 	_p1_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_p1_button.add_theme_color_override("font_color", Seats.color(0))
-	var p1_right := _menu_button(p1_row, ">", Seats.cycle_p1_cat.bind(1), 14)
-	p1_right.custom_minimum_size.x = 16
-	p1_left.focus_neighbor_left = p1_left.get_path_to(p1_left)
-	p1_right.focus_neighbor_right = p1_right.get_path_to(p1_right)
+	_p1_right = _menu_button(p1_row, ">", Seats.cycle_p1_cat.bind(1), 14)
+	_p1_right.custom_minimum_size.x = 16
+	# The GAME MODE: [<] [MODE: CO-OP] [>]. With two modes, <, > and A on the middle all switch it.
+	# (Only player 1 can: the other players' controllers never move this menu.)
+	var mode_row := HBoxContainer.new()
+	mode_row.add_theme_constant_override("separation", 3)
+	landing_screen.add_child(mode_row)
+	_mode_left = _menu_button(mode_row, "<", _on_mode_pressed, 13)
+	_mode_left.custom_minimum_size.x = 16
+	_mode_button = _menu_button(mode_row, "MODE", _on_mode_pressed, 13)
+	_mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mode_right = _menu_button(mode_row, ">", _on_mode_pressed, 13)
+	_mode_right.custom_minimum_size.x = 16
 	# Player 1's gang (scripts/teams.gd): A on it switches Catleone Family <-> Burrow Gang.
+	# (TURF WAR only: hidden in CO-OP.)
 	_p1_team_button = _menu_button(landing_screen, "", _on_p1_team_pressed, 13)
 	for seat in range(1, PlayerId.MAX_LOCAL):
 		var row := Label.new()
@@ -337,7 +356,8 @@ func _build_landing_screen() -> void:
 	landing_screen.add_child(buttons)
 	_start_button = _menu_button(buttons, "START GAME", _on_landing_start, 16)
 	_start_button.custom_minimum_size.x = 100
-	_menu_button(buttons, "BACK", show_coop_screen, 16).custom_minimum_size.x = 60
+	_back_button = _menu_button(buttons, "BACK", show_coop_screen, 16)
+	_back_button.custom_minimum_size.x = 60
 	Seats.changed.connect(_refresh_landing)
 	Settings.changed.connect(_refresh_landing)
 
@@ -348,22 +368,69 @@ func _refresh_landing() -> void:
 		return
 	var my_name := str(Settings.current_cat().get("name", ""))
 	_p1_button.text = "P1   %s" % (my_name.to_upper() if my_name != "" else "MAKE YOUR CAT")
-	_p1_team_button.text = "P1 GANG: %s" % Teams.name_of(Teams.picked(0))
-	_p1_team_button.add_theme_color_override("font_color", Teams.color_of(Teams.picked(0)))
+	var turf_war := Teams.turf_war_pick
+	_mode_button.text = "MODE: %s%s" % ["TURF WAR" if turf_war else "CO-OP", "  (HOST'S CHOICE)" if _online else ""]
+	_mode_button.add_theme_color_override("font_color", Color(1, 0.35, 0.3) if turf_war else Color(0.4, 1, 0.9))
+	# Gangs are only picked in TURF WAR (CO-OP: everyone is in the Catleone Family).
+	_p1_team_button.visible = turf_war
+	_p1_team_button.text = "P1 GANG: %s" % Teams.name_of(Teams.picks[0])
+	_p1_team_button.add_theme_color_override("font_color", Teams.color_of(Teams.picks[0]))
 	for i in _seat_labels.size():
 		var seat := i + 1
 		var cat := Seats.lobby_cat_name(seat)
-		_seat_labels[i].text = "P%d  < %s >  %s" % [seat + 1, cat, Teams.name_of(Teams.picked(seat))] if cat != "" \
+		var gang := "  %s" % Teams.name_of(Teams.picks[seat]) if turf_war else ""
+		_seat_labels[i].text = "P%d  < %s >%s" % [seat + 1, cat, gang] if cat != "" \
 			else "P%d   PRESS %s TO JOIN" % [seat + 1, Controls.display_name("Pad Start")]
 		_seat_labels[i].modulate.a = 1.0 if cat != "" else 0.55
 	# (Players 2-4 have no highlight on this page, so their left / right picks their cat.)
-	_landing_hint.text = "P2-4: LEFT/RIGHT = CAT  %s/%s = GANG  %s = EDIT  %s = LEAVE" % [
-		Controls.display_name("Pad LB"), Controls.display_name("Pad RB"),
+	var gang_keys := "  %s/%s = GANG" % [Controls.display_name("Pad LB"), Controls.display_name("Pad RB")] if turf_war else ""
+	_landing_hint.text = "P2-4: LEFT/RIGHT = CAT%s  %s = EDIT  %s = LEAVE" % [gang_keys,
 		Controls.display_name("Pad A"), Controls.display_name("Pad B")]
+	if not turf_war:
+		# (Room for one more line in CO-OP: in TURF WAR the gang button takes that space.)
+		_landing_hint.text += "\nCO-OP = ONE CREW.  TURF WAR = GANG VS GANG (BEST WITH 4+)"
+	_link_landing_focus()
 	if Seats.pads[0] != -1:
 		# Player 1 has been using a controller: its START hands it to a new player (scripts/seats.gd).
 		_landing_hint.text += "\nP1: %s ON YOUR CONTROLLER = GIVE IT TO A NEW PLAYER (YOU KEEP THE KEYBOARD)" % \
 			Controls.display_name("Pad Start")
+
+
+## The landing page's highlight paths, by hand (Godot's guess fails with rows that come and go):
+## up / down move between rows, left / right within a row. Stick and d-pad never change a value.
+func _link_landing_focus() -> void:
+	var gang_shown := _p1_team_button.visible
+	var below_mode: Button = _p1_team_button if gang_shown else _start_button
+	for button in [_p1_left, _p1_button, _p1_right]:
+		button.focus_neighbor_top = button.get_path_to(button)  # (the top row)
+		button.focus_neighbor_bottom = button.get_path_to(_mode_button)
+	for button in [_mode_left, _mode_button, _mode_right]:
+		button.focus_neighbor_top = button.get_path_to(_p1_button)
+		button.focus_neighbor_bottom = button.get_path_to(below_mode)
+	_link_row([_p1_left, _p1_button, _p1_right])
+	_link_row([_mode_left, _mode_button, _mode_right])
+	_p1_team_button.focus_neighbor_top = _p1_team_button.get_path_to(_mode_button)
+	_p1_team_button.focus_neighbor_bottom = _p1_team_button.get_path_to(_start_button)
+	_p1_team_button.focus_neighbor_left = _p1_team_button.get_path_to(_p1_team_button)
+	_p1_team_button.focus_neighbor_right = _p1_team_button.get_path_to(_p1_team_button)
+	for button in [_start_button, _back_button]:
+		button.focus_neighbor_top = button.get_path_to(_p1_team_button if gang_shown else _mode_button)
+		button.focus_neighbor_bottom = button.get_path_to(button)
+	_link_row([_start_button, _back_button])
+
+
+## Left / right along one row of buttons (the ends stay put).
+func _link_row(row: Array) -> void:
+	for i in row.size():
+		var button: Button = row[i]
+		button.focus_neighbor_left = button.get_path_to(row[maxi(i - 1, 0)])
+		button.focus_neighbor_right = button.get_path_to(row[mini(i + 1, row.size() - 1)])
+
+
+## <, > or A on the MODE row: switch CO-OP <-> TURF WAR (teams.gd turf_war_pick).
+func _on_mode_pressed() -> void:
+	Teams.turf_war_pick = not Teams.turf_war_pick
+	_refresh_landing()
 
 
 ## A on player 1's gang button: switch to the other gang (scripts/teams.gd).

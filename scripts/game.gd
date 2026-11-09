@@ -44,6 +44,12 @@ static var local_player_name: String = ""
 ## Is this game a TUTORIAL run (PLAY > TUTORIAL, scripts/tutorial.gd)? Ask Game.is_tutorial().
 ## (Static, so it's reset in _ready: leaving a game reloads the scene.)
 static var _tutorial_run: bool = false
+## The GAME MODE of the game in progress: false = CO-OP (one crew against OVERCLEAN, the
+## default, and every SOLO / TUTORIAL game), true = TURF WAR (gang against gang). Ask
+## Game.is_turf_war(). The host decides it when the game starts (from the landing page's MODE
+## row: Teams.turf_war_pick) and sends it to every computer that joins (_receive_mode), before the
+## city seed. (Static, so it's reset in _ready: leaving a game reloads the scene.)
+static var _turf_war_game: bool = false
 ## "--tutorial" (testing) only starts ONE tutorial: when it ends, the start menu stays up.
 static var _tutorial_shortcut_used: bool = false
 ## Why we were sent back to the start menu (e.g. "That game is full."), shown there once.
@@ -103,6 +109,7 @@ func _ready() -> void:
 	_apply_scene_settings()
 
 	_tutorial_run = false  # (back at the start menu: no tutorial running)
+	_turf_war_game = false  # (no game yet: the landing page's MODE row decides the next one)
 	Seats.reset()  # one player, no controllers claimed yet (scripts/seats.gd)
 	if leave_reason != "":
 		main_menu.show_status.call_deferred(leave_reason)
@@ -188,24 +195,43 @@ func _on_upnp_updated() -> void:
 				% [Net.room_code, copy_key], 12.0)
 
 
-## Is this a SOLO game (picked SOLO on the menu: one player, no gangs fighting)? Then the city
-## keeps the classic layout: one entry manhole in the centre crossroads and ONE car parked by it
-## (fish_heist.gd entry_position, getaway_car.gd parking_spot). LOCAL / ONLINE CO-OP use the
-## two-gang layout (a manhole and a car in each gang's corner).
-func is_solo() -> bool:
-	return not Seats.coop
+## Is this game TURF WAR (gang against gang)? Otherwise it's CO-OP (also every SOLO and TUTORIAL
+## game): one crew, everyone in the Catleone Family, and the classic layout - one entry manhole in
+## the centre crossroads, ONE car parked by it, one exit (fish_heist.gd entry_position / exits,
+## getaway_car.gd parking_spot). TURF WAR uses the two-gang layout: a manhole, a car and an exit
+## for each gang. (Which controllers belong to whom is a different question: Seats.coop.)
+static func is_turf_war() -> bool:
+	return _turf_war_game
 
 
-## Host (or solo): build the city and start.
-## showcase = true: Meow-Mart by the centre crossroads (the tutorial: city_generator.gd).
-func _begin_game(city_seed: int, showcase: bool = false) -> void:
-	if is_solo():
-		# Only the Catleone car: the Burrow Gang's (GangCar) isn't needed with one player.
+## Set the mode of the game in progress (host: when it starts; clients: when the host says so).
+## CO-OP: the rival gang's car is taken away, and our own cats join the Catleone Family.
+func _set_mode(turf_war: bool) -> void:
+	_turf_war_game = turf_war
+	print("[Game] Mode: %s" % ("TURF WAR" if turf_war else "CO-OP"))
+	if not turf_war:
+		# Only the Catleone car: the Burrow Gang's (GangCar) isn't needed with one crew.
 		# (It's back next time: leaving a game reloads the whole scene.)
 		for each_car in cars():
 			if each_car.team > 0:
 				each_car.remove_from_group("cars")
 				each_car.queue_free()
+	for cat in local_cats():
+		cat.team = Teams.picked(cat.slot)  # (a cat that appeared before the news: fix its gang)
+
+
+## Host -> a computer that just joined: this game's mode. Sent BEFORE the city seed, so their
+## city (manholes, exits) and HUD are built for the right mode.
+@rpc("authority", "call_remote", "reliable")
+func _receive_mode(turf_war: bool) -> void:
+	_set_mode(turf_war)
+
+
+## Host (or solo): build the city and start.
+## showcase = true: Meow-Mart by the centre crossroads (the tutorial: city_generator.gd).
+func _begin_game(city_seed: int, showcase: bool = false) -> void:
+	# TURF WAR only if it was picked on a multiplayer landing page (SOLO / TUTORIAL: always CO-OP).
+	_set_mode(Seats.coop and Teams.turf_war_pick and not _tutorial_run)
 	city.generate(city_seed, showcase)
 	_start_playing()
 	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player
@@ -299,7 +325,7 @@ func _receive_city_seed(city_seed: int) -> void:
 func _process(_delta: float) -> void:
 	if multiplayer.is_server():
 		Net.advert = {"name": local_player_name.to_upper(), "city": city.city_seed,
-			"players": player_count(), "max": Net.MAX_PLAYERS}
+			"players": player_count(), "max": Net.MAX_PLAYERS, "turf_war": _turf_war_game}
 
 
 ## How many players are in the game right now, on every computer (up to Net.MAX_PLAYERS = 8).
@@ -404,8 +430,11 @@ func local_player_info(slot: int) -> Dictionary:
 		var cat := Settings.current_cat()
 		return {"name": local_player_name, "look": cat.get("look", {}), "cat_id": str(cat.get("id", "")),
 			"team": Teams.picked(0)}
-	return extra_local_players.get(slot, {"name": "PLAYER %d" % (slot + 1), "look": {}, "cat_id": "",
-		"team": Teams.picked(slot)})
+	var info: Dictionary = extra_local_players.get(slot, {"name": "PLAYER %d" % (slot + 1), "look": {}, "cat_id": ""}).duplicate()
+	# Their gang is worked out now, not when they sat down: online, the host's mode (CO-OP = everyone
+	# in the Catleone Family) may only arrive after that (teams.gd picked).
+	info["team"] = Teams.picked(slot)
+	return info
 
 
 ## Split screen: one more player on this computer joins the game in "slot" (1, 2 or 3), playing
@@ -414,8 +443,6 @@ func local_player_info(slot: int) -> Dictionary:
 func add_local_player(slot: int, info: Dictionary) -> void:
 	if slot < 1 or slot >= PlayerId.MAX_LOCAL or extra_local_players.has(slot):
 		return
-	if not info.has("team"):
-		info["team"] = Teams.picked(slot)  # the gang they picked on the landing page (teams.gd)
 	extra_local_players[slot] = info
 	_request_add_player.rpc_id(1, slot)
 	$Profile.restore(PlayerId.make(multiplayer.get_unique_id(), slot), str(info.get("cat_id", "")), str(info.get("name", "")))
@@ -487,7 +514,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		multiplayer.multiplayer_peer.disconnect_peer(peer_id)
 		return
 	if multiplayer.is_server():
-		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # build the same city first
+		_receive_mode.rpc_id(peer_id, _turf_war_game)  # CO-OP or TURF WAR first (it shapes the city)...
+		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # ...then build the same city
 		# Then every game system catches them up: items, cash, quests, HP, heat, who drives...
 		# (scripts/game_systems.gd)
 		GameSystems.call_all(get_tree(), "send_state_to", [peer_id])

@@ -6,7 +6,7 @@
 script = ExtResource("1_data")
 id = "gang_disrespect"
 title = "GANG DISRESPECT"
-description = "Destroy a MEGA VAC-COP, rob a downed rival, or hit a rival with a melee weapon, then extract. A knockout resets it."
+description = "Destroy a MEGA VAC-COP (in TURF WAR: or rob a downed rival, or hit a rival with a melee weapon), then extract. A knockout resets it."
 kind = 3
 count = 1
 reward_cash = 200

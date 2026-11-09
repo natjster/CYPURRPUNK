@@ -244,6 +244,8 @@ func lowest_charge() -> float:
 ## The active rival gang a hack would hit (the fullest one above 0%), or -1 if there is none.
 func hack_target(team: int) -> int:
 	var target := -1
+	if not Game.is_turf_war():
+		return target  # CO-OP: no rival to hack. A full Mainframe just says FULL.
 	for other in active_gangs():
 		if other != team and charge_of(other) > 0.0 and (target < 0 or charge_of(other) > charge_of(target)):
 			target = other
@@ -301,7 +303,7 @@ func is_breached(team: int) -> bool:
 ## True while this cat's player is watching a rival's breach on the security camera: their gang
 ## is safe, somebody else's isn't. Their cat waits at home (cat_player.gd ignores their buttons).
 func is_spectating(cat: CatPlayer) -> bool:
-	return cat != null and not breached_teams.is_empty() and not is_breached(cat.team)
+	return Game.is_turf_war() and cat != null and not breached_teams.is_empty() and not is_breached(cat.team)
 
 
 ## The camera this cat's player should be looking through instead of their own, or null.
@@ -444,7 +446,7 @@ func _wipeout(wiped: Array[int]) -> void:
 	var gangs := active_gangs()
 	var text := "SEWER BREACHED!\nOVERCLEAN WIPED OUT THE REBELLION"
 	var winners := gangs.filter(func(team: int) -> bool: return not team in wiped)
-	if gangs.size() > 1 and winners.size() == 1:
+	if Game.is_turf_war() and gangs.size() > 1 and winners.size() == 1:  # (CO-OP: no rival to win)
 		text = "%s WINS!\nOVERCLEAN WIPED OUT THE %s" % [Teams.name_of(winners[0]), Teams.name_of(wiped[0])]
 	print("[Mainframe] WIPEOUT of gangs %s" % [wiped])
 	_breach_result.rpc(false, text)

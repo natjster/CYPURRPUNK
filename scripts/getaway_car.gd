@@ -26,8 +26,8 @@ extends RigidBody3D
 @export_group("Parking")
 ## Which gang's corner this car waits in (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang;
 ## -1 = the old spot by the centre crossroads). Only decides WHERE it parks: anyone can drive it.
-## main.tscn has one car per gang: GetawayCar (0) and GangCar (1). In a SOLO game only GetawayCar
-## is kept, parked by the centre crossroads (game.gd is_solo).
+## main.tscn has one car per gang: GetawayCar (0) and GangCar (1). Outside TURF WAR (CO-OP, SOLO)
+## only GetawayCar is kept, parked by the centre crossroads (game.gd is_turf_war).
 @export var team: int = -1
 ## How far (metres) up the street from its gang's entry manhole it parks, towards the middle.
 @export var park_distance: float = 10.0
@@ -386,8 +386,8 @@ func park_for_menu() -> void:
 func parking_spot() -> Transform3D:
 	if team < 0 or FishHeist.instance == null or FishHeist.instance.city == null:
 		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)
-	if team == 0 and Game.instance != null and Game.instance.is_solo():
-		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)  # SOLO: the classic spot by the centre (game.gd)
+	if team == 0 and not Game.is_turf_war():
+		return Transform3D(Basis(), CityGenerator.CAR_SPAWN)  # CO-OP / SOLO: the classic spot by the centre (game.gd)
 	var manhole := FishHeist.instance.corner_position(team)  # (its gang's corner, solo or not)
 	var north_south := -signf(manhole.z) if manhole.z != 0.0 else -1.0  # +1 = drive south, -1 = north
 	var spot := manhole + Vector3(0, 0.5, north_south * park_distance)

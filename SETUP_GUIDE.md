@@ -228,9 +228,9 @@ Keys are handled by the **Controls** framework (`scripts/controls.gd`) — playe
 
 ## 3. The arcade getaway car
 
-**SOLO games keep the classic layout:** ONE car (GetawayCar), parked by the centre crossroads,
-next to the single manhole you come up (the Burrow car is removed for that game). The rest of
-this paragraph is about LOCAL / ONLINE CO-OP.
+**CO-OP and SOLO games keep the classic layout:** ONE car (GetawayCar), parked by the centre
+crossroads, next to the single manhole you come up (the Burrow car is removed for that game, on
+every computer). The rest of this paragraph is about **TURF WAR** games (§8 "Game modes").
 (Moving a parked car is done inside its physics step, `_teleport` in `getaway_car.gd`: a resting
 RigidBody ignores a plain "global_transform =", which once left both cars stuck in the middle.)
 
@@ -388,6 +388,12 @@ The game starts on the **start menu** (PLAY / SETTINGS / QUIT, see §10). **PLAY
 **CHOOSE YOUR CAT** (§11), then **NEXT** to **SOLO / MULTIPLAYER**. **SOLO** starts a game just
 for you (no network, nobody can join). **MULTIPLAYER** shows **HOST** (with an optional city #)
 and **JOIN** (with the host's address).
+
+**Game mode online:** the **MODE** row on the landing page (CO-OP or TURF WAR, §8 "Game modes")
+only counts for the computer that HOSTS. Everyone who joins plays the host's mode: the host sends
+it to each computer as it connects, before the city number, so a late joiner gets it too. The
+network game list shows **TURF WAR** after a game's name when it's one. (A joiner who wants to
+pick a gang for a TURF WAR game sets their own MODE to TURF WAR first, so the gang rows show.)
 
 ### Play two cats on one PC
 1. In Godot, open the **Debug** menu > **Customize Run Instances...**
@@ -618,17 +624,43 @@ THE SEWERS (hub, safe)  --Don sends you up the entry manhole-->  THE CITY (grab 
   and the rebellion moves to a NEW DISTRICT (a new city seed).
 ```
 
+### Game modes: CO-OP and TURF WAR
+Multiplayer games have a **MODE**, picked on the landing page (§10) by player 1 (online: the host):
+
+- **CO-OP (the default):** one crew against OVERCLEAN. Everyone is in the **Catleone Family**
+  (Don's sewer); there's no gang to pick. The city has the classic layout: **one** entry manhole
+  in the centre crossroads, **one** car beside it, **one** exit. Nothing of the other gang shows
+  up: a full Mainframe just says **MAINFRAME FULL** (no hacking), there's no rival live feed in a
+  breach, a wipeout never says "... WINS!", and the payphones stop ringing once your crew has
+  called. **SOLO** and the **TUTORIAL** are always CO-OP.
+- **TURF WAR:** gang against gang, exactly the rules below ("Two gangs, two sewers"). Best with
+  4 or more players.
+
+In code: `Game.is_turf_war()` (static, game.gd) is the one place that says which mode the game
+in progress is; `Teams.turf_war_pick` is what the landing page's MODE row shows. `Teams.picked(seat)`
+is always the Catleone Family outside TURF WAR. (Which controllers belong to whom is a separate
+thing: `Seats.coop`, §10.) Quest pages can have **Co-op Lines** that are said instead of Lines in
+CO-OP (Sal the Slapper's respect quest uses them: no rivals to rob or slap, so it's just "destroy a
+MEGA VAC-COP"). Select a page in an NPC's **Pages** list to see them.
+
+**Test:** `--mode=coop` / `--mode=turf` (the landing page's MODE; `--teams=...` also means TURF
+WAR, and `--mode` wins if you give both). Every capture prints
+`DevCapture mode: CO-OP cats=["1:0", ...] entries=1 exits=1 manholes=2 cars=[...]` (each cat's
+id:gang). E.g. `--host --add_local=1` (couch CO-OP, both gang 0), `--host --teams=0,1 --add_local=1`
+(TURF WAR: entries=2 exits=2, two cars).
+
 ### Two gangs, two sewers (`scripts/teams.gd`, class **Teams**)
-Two rebellions hide under the city, and each blames the other for letting OVERCLEAN take over:
+**This is TURF WAR** (above). Two rebellions hide under the city, and each blames the other for
+letting OVERCLEAN take over:
 
 | Gang | Boss (sends you up) | Shop | Sewer node in `main.tscn` | Colour |
 |---|---|---|---|---|
 | **CATLEONE FAMILY** (team 0) | Don Catleone | Comrade Whiskers (Black Markitten) | **Hub**, at (0, -200, 0) | pink |
 | **BURROW GANG** (team 1) | **Pawnie** (red beret) | **Clawd** (fedora, sells the same gear) | **GangHub**, at (200, -200, 0) | orange |
 
-- **Picking:** every player picks a gang for each game on the landing page (P1: the **P1 GANG**
-  button; P2-4: **LB / RB**). SOLO always plays for the Catleone Family. Online, each computer
-  picks for its own players.
+- **Picking:** in TURF WAR every player picks a gang for each game on the landing page (P1: the
+  **P1 GANG** button; P2-4: **LB / RB**). CO-OP and SOLO always play for the Catleone Family.
+  Online, each computer picks for its own players.
 - **What a gang does so far:** you start in your gang's sewer, come home to it (extracting or
   knocked out), and use its stash and shop. The two sewers are sealed boxes 200 m apart: you can't
   walk into the other one. Names over heads are in **your gang's colour**; gang-mates get the cyan
@@ -656,8 +688,8 @@ Two rebellions hide under the city, and each blames the other for letting OVERCL
   gun hits is its **Damage** in `scenes/items/pistol.tscn` / `tommy_gun.tscn` (the same number it
   does to VAC-COPs). The feed: **Feed Seconds** / **Feed Lines** on the HUD root in `hud.tscn`.
 - **Each gang's own way in and out (phase 4):**
-  - **SOLO is different:** one manhole in the centre crossroads, one car beside it, one exit
-    (`Game.is_solo()`: you picked SOLO on the menu). Everything below is LOCAL / ONLINE CO-OP.
+  - **CO-OP and SOLO are different:** one manhole in the centre crossroads, one car beside it,
+    one exit (`Game.is_turf_war()` is false). Everything below is TURF WAR.
   - **Entry manholes in opposite corners:** the Catleone Family comes up the **south-west**
     corner crossroads, the Burrow Gang the **north-east** one (`entry_position` in
     `fish_heist.gd`, worked out from the city size so it's always on a street). You pop out a
@@ -1656,22 +1688,28 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
               SOLO  ->  CHOOSE YOUR CAT (pick / make / name / dress a cat, §11) -- NEXT --> a game just for you
               TUTORIAL  ->  straight into a guided training run with the cat you have now (§19)
               MULTIPLAYER  ->  LOCAL CO-OP / ONLINE CO-OP
-                                 -> the LANDING PAGE: everyone on this computer joins and picks a cat
+                                 -> the LANDING PAGE: everyone on this computer joins and picks a cat,
+                                    player 1 picks the MODE (CO-OP or TURF WAR)
                                       LOCAL:  START GAME = everyone into the sewers together
                                       ONLINE: NEXT -> HOST (+ city #) or JOIN (a game on your network)
   ```
   The landing page:
   ```
   [<] P1  WHISKERS [>]       <- player 1: A on < / > = pick your cat, A on the name = make / edit cats
-  [P1 GANG: CATLEONE FAMILY] <- player 1: A = switch gang (§8 "Two gangs")
+  [<] MODE: CO-OP [>]        <- player 1 only: A on <, > or the name = switch CO-OP <-> TURF WAR
+                                (§8 "Game modes"). Online it says (HOST'S CHOICE): only the host's counts.
+  [P1 GANG: CATLEONE FAMILY] <- TURF WAR only: player 1: A = switch gang (§8 "Two gangs")
   P2  < MITTENS >  BURROW GANG <- a friend pressed START on their controller; left / right = their cat
                                 (players 2-4 have no highlight on this page, so their stick picks),
-                                LB / RB = their gang, A = edit it (MY CAT), B = leave
+                                LB / RB = their gang (TURF WAR only), A = edit it (MY CAT), B = leave
   P3   PRESS START TO JOIN
   P4   PRESS START TO JOIN
   [START GAME]  [BACK]       (ONLINE CO-OP: [NEXT])
   ```
   **BACK** (or **Esc**) always goes one step back. The game version shows bottom-left.
+  Moving the highlight (stick, d-pad, arrow keys) never changes a value: only **A** / Enter / a click
+  does. The up / down paths between the rows are set by hand in `main_menu.gd` `_link_landing_focus`
+  (the gang row comes and goes with the mode).
 - **Pause menu (Esc, or START on a controller, in a game):** RESUME / MY CAT (restyle or rename the cat you're playing) /
   SETTINGS / LEAVE GAME / QUIT TO DESKTOP (in a tutorial, LEAVE GAME says **EXIT TUTORIAL**). The game does
   **not** stop (it's online) — your cat just stands still and the car rolls to a stop while it's
@@ -1751,13 +1789,15 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
   **left / right** on their own controller: one of your saved cats (MY CAT) that nobody else
   picked, or NEW CAT (made when the game starts, called "PLAYER 3" etc.). **A** = edit their cat
   in MY CAT (colours, hat, shades...; a NEW CAT is made right then so there's one to dress); only
-  their controller drives that screen, DONE or B comes back. **LB / RB** = switch their gang.
+  their controller drives that screen, DONE or B comes back. **LB / RB** = switch their gang
+  (TURF WAR only).
   **Been using a controller in the menus yourself?** It's player 1's then, so its START can't
   "join" like a spare one... except here: on the landing page, **START on player 1's controller
   hands it to a new player** (P2 sits down on it) and player 1 carries on with the keyboard +
   mouse. (The landing page shows a reminder line while player 1 has a controller.)
   **B** = stand up again. Player 1 picks their own cat on the P1 row (left /
-  right), or presses A on it to make / edit cats, and switches gang on the **P1 GANG** button.
+  right), or presses A on it to make / edit cats, picks the **MODE** (CO-OP / TURF WAR), and in
+  TURF WAR switches gang on the **P1 GANG** button.
   Their controllers don't move player 1's menu.
   LOCAL CO-OP: **START GAME** puts everyone in the sewers. ONLINE CO-OP: **NEXT** goes to HOST /
   JOIN, and everyone comes along into that game. Leaving the landing page (BACK) stands everyone

@@ -16,6 +16,10 @@ class_name Teams
 ## ADDING A THIRD GANG: add a line to NAMES and COLORS, then a third hub in main.tscn (copy
 ## GangHub, set its Team to 2, move it 200 m further along x).
 ##
+## GAME MODE: gangs only matter in TURF WAR. In CO-OP (the default) and SOLO every cat is in
+## the Catleone Family (gang 0) and the city has the classic one-crew layout. The landing page's
+## MODE row sets turf_war_pick; the game in progress asks Game.is_turf_war() (game.gd).
+##
 ## Everything here is "static": call it on the class, e.g. Teams.same_team(a, b).
 
 const CATLEONE := 0
@@ -31,6 +35,10 @@ const COLORS: Array[Color] = [Color(1, 0.4, 0.85), Color(1, 0.65, 0.15)]
 ## The gang each seat on this computer picked on the landing page (seat 0 = player 1).
 ## Kept between games, so a rematch keeps the same sides.
 static var picks: Array[int] = [CATLEONE, CATLEONE, CATLEONE, CATLEONE]
+## The MODE picked on the multiplayer landing page: false = CO-OP (one crew, the default),
+## true = TURF WAR (gang against gang). Kept between games, like picks. Only the host's
+## choice counts online: the game's real mode is Game.is_turf_war().
+static var turf_war_pick: bool = false
 
 
 static func count() -> int:
@@ -45,8 +53,11 @@ static func color_of(team: int) -> Color:
 	return COLORS[clampi(team, 0, count() - 1)]
 
 
-## The gang the player in this seat picked (for the game about to start).
+## The gang the player in this seat plays for in the game about to start: what they picked in
+## TURF WAR, always the Catleone Family otherwise (CO-OP / SOLO: one crew).
 static func picked(seat: int) -> int:
+	if not Game.is_turf_war():
+		return CATLEONE
 	return picks[seat] if seat >= 0 and seat < picks.size() else CATLEONE
 
 

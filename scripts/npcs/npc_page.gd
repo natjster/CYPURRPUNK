@@ -14,10 +14,15 @@ extends Resource
 ##            States: not_started, active, ready (active AND objective done), done.
 ##            (Jumping to a page with Go To ignores these.)
 
+##   Co-op Lines  (optional) said INSTEAD of Lines in CO-OP and SOLO games, when there's no rival
+##            gang around (game.gd is_turf_war). Empty = Lines in every mode.
+
 ## Short name for this page. Choices jump here by typing it into their "Go To".
 @export var id: String = "hello"
 ## What the NPC says. One is picked at random.
 @export_multiline var lines: PackedStringArray = ["..."]
+## CO-OP / SOLO only: said instead of Lines (e.g. without talk of rival gangs). Empty = use Lines.
+@export_multiline var coop_lines: PackedStringArray = []
 ## The answer buttons. Empty = use the greeting page's buttons.
 @export var choices: Array[NpcChoice] = []
 
@@ -26,6 +31,11 @@ extends Resource
 @export var only_if_quest: String = ""
 ## The state that quest must be in for this page to be the greeting.
 @export_enum("not_started", "active", "ready", "done") var only_if_state: String = "not_started"
+
+
+## The lines for the game being played: Co-op Lines outside TURF WAR (if there are any), else Lines.
+func lines_now() -> PackedStringArray:
+	return coop_lines if not coop_lines.is_empty() and not Game.is_turf_war() else lines
 
 
 ## True if this page may be the greeting for this player (see Only If Quest above).

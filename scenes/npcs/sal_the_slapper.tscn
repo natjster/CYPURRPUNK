@@ -74,6 +74,7 @@ only_if_state = "ready"
 script = ExtResource("3_page")
 id = "waiting"
 lines = PackedStringArray("Word ain't reached me yet. So it didn't happen.", "Message ain't sent till I hear it. Boss bot. Pockets. Or whiskers. Pick one.")
+coop_lines = PackedStringArray("Word ain't reached me yet. So it didn't happen.", "Message ain't sent till I hear it. One big boss bot, in pieces. That's the message.")
 choices = Array[ExtResource("4_choice")]([SubResource("Choice_onit"), SubResource("Choice_remind"), SubResource("Choice_city")])
 only_if_quest = "gang_disrespect"
 only_if_state = "active"
@@ -97,6 +98,7 @@ only_if_quest = "gang_disrespect"
 script = ExtResource("3_page")
 id = "ask"
 lines = PackedStringArray("RESPECT. Somebody's gotta send a message up top. Whack one of OVERCLEAN's MEGA VAC-COPs. Or empty a downed Burrow hick's pockets. Or slap a rival across the whiskers, with a bat, with a fish, I ain't fussy. Any one of 'em. Then get home with it. Two hundred bucks. You get knocked out first, you didn't send nothin'.")
+coop_lines = PackedStringArray("RESPECT. Somebody's gotta send OVERCLEAN a message. Whack one of its MEGA VAC-COPs, the big boss bots. Gun, bat, fish, I ain't fussy. Then get home with it. Two hundred bucks. You get knocked out first, you didn't send nothin'.")
 choices = Array[ExtResource("4_choice")]([SubResource("Choice_accept"), SubResource("Choice_no")])
 
 [sub_resource type="Resource" id="Page_about"]
@@ -113,6 +115,7 @@ lines = PackedStringArray("A hick in a fedora puts his elbow on the Family's Big
 script = ExtResource("3_page")
 id = "remind"
 lines = PackedStringArray("Destroy a MEGA VAC-COP, rob a downed rival, or land a melee hit on a rival. One's plenty. Then extract. A knockout wipes it.")
+coop_lines = PackedStringArray("Destroy a MEGA VAC-COP. One's plenty. Then extract. A knockout wipes it.")
 
 [sub_resource type="CapsuleShape3D" id="Shape_cat"]
 radius = 0.3
