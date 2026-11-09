@@ -228,7 +228,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - CASH = `scripts/wallet.gd` (`Wallet.instance`, `Wallet` node): host `earn(id, n, why)` / `spend(id, n) -> bool` /
   `set_cash`; anyone `cash_of(id)`, signal `cash_changed`; draws the sewer `Scoreboard`. Never keep cash elsewhere.
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
-  Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (lockers on the east wall,
+  Players see it as THE LITTERBOX (code names stay "stash"; prompt `hub.stash_prompt` "STORE YOUR SHIT").
+  Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (litterbox on the east wall,
   `hub._build_stash`); the inventory screen (`InventoryScreen`) swaps the loot bag for the stash there.
   (`request_put_away` = paw -> backpack.) `scripts/player_profile.gd` (`Profile` node): each player saves
   their OWN cash + stash to `user://profiles/<name>.cfg`, sends it to the host on start/join
@@ -296,7 +297,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (`TutorialStep`/`TutorialHint`), code-built cyan beacon. Training rules: `PlayerProfile.restore` sends $starting_cash + empty
   stash and never reads/writes the save; heat held each physics frame (priority 100; step 8 = `exit_heat`); `Tutorial.health_floor()`
   in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets `bag_size` 4 (inventory grid grows on open:
-  `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--tutorial --tutorial_auto` (headless, exit 0 = pass).
+  `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 - ANDROID (SETUP_GUIDE §17): `export_presets.cfg` preset "Android" (arm64, immersive, net + multicast permissions,
@@ -380,6 +381,9 @@ interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames 
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
 progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
 `complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more.)
+ONE QUEST AT A TIME: `current_quest(id)`, `giver_of(id)` (`givers`, 5th arg of `_set_quests`), `progress_text(id)`;
+host `_request_start` refuses while one is active; `Npc._choose` says `busy_lines` instead; inventory JOB box + ABANDON
+(`abandon_quest`, hub only, two presses). Test: `--quest=X --abandon_quest`.
 Five shared cards (table in SETUP_GUIDE §8), `QuestData.kind`: CARRY_ITEM (bag), DESTROY_ROOMBAS, EXTRACT_AT_HEAT
 (`heat_needed`), DISRESPECT. Kill / disrespect counts = host `tallies` from Events (`enemy_destroyed` + `Enemy.killed_by`,
 `player_robbed`, `player_slapped` from `request_shot`'s melee flag), synced in `_set_quests`, wiped by `player_knocked_out`.

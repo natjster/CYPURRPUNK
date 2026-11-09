@@ -91,10 +91,10 @@ extends Node
 @export var step2_title: String = "STEP 2/9: BUY A WEAPON AT THE BLACK MARKITTEN"
 @export_multiline var step2_hint: String = "Talk to Comrade Whiskers [{E}] -> SHOW ME THE GOODS -> buy a PAW-PISTOL ($60) or NEON BAT ($20) with your $100."
 @export_group("Step 3 - Stash")
-@export var step3_title: String = "STEP 3/9: CHECK YOUR STASH LOCKERS"
-@export_multiline var step3_hint: String = "Walk to the blue Stash Lockers on the east wall and press [{E}]. Anything stored here is safe if you get knocked out! Press [{TAB}] or [Esc] to close."
+@export var step3_title: String = "STEP 3/9: CHECK THE LITTERBOX"
+@export_multiline var step3_hint: String = "Walk to the glowing LITTERBOX on the east wall and press [{E}]. Anything buried here is safe if you get knocked out! Press [{TAB}] or [Esc] to close."
 ## Shown if you closed the stash with your weapon still inside it.
-@export_multiline var step3_take_back: String = "Your weapon is in the stash! Open it again [{E}] and click your weapon to take it back with you!"
+@export_multiline var step3_take_back: String = "Your weapon is in the litterbox! Open it again [{E}] and click your weapon to take it back with you!"
 @export_group("Step 4 - Mainframe")
 @export var step4_title: String = "STEP 4/9: CHECK THE MAINFRAME"
 @export_multiline var step4_hint: String = "Walk up to the giant CRT on the west wall. It drains 25% each district - if it hits 0%, OVERCLEAN breaches the sewer! Feed it SCRAP from bosses to charge it."

@@ -920,13 +920,14 @@ in `scripts/npcs/npc.gd`.
 `--teams=0,1 --add_local=1 --mainframe=75,0` = watching the rival's feed.
 `--breach_knock=100` drops a bot beside each NPC (the "DevCapture breach npcs" line counts them).
 
-### The stash & saved progress
-**THE STASH** is a row of lockers under a blue light on the **east wall**, across from the Black
-Markitten (north of Lil' Mittens). Walk up to it: the prompt says **[E] OPEN STASH**. Press E
-(or open the inventory with Tab while standing there) and the inventory shows your **STASH**
-(9 slots) under the loot bag:
-- **Click** something in your paws or backpack = put it in the stash.
-- **Click** something in the stash = take it into your backpack (equip it from there as usual).
+### The stash (THE LITTERBOX) & saved progress
+**THE STASH is a giant glowing LITTERBOX** (purple tray, sand pile, scoop, a cyan neon
+**LITTERBOX** sign) on the **east wall**, across from the Black Markitten (north of Lil' Mittens).
+Walk up to it: the prompt says **[E] STORE YOUR SHIT**. Press E (or open the inventory with Tab
+while standing there) and the inventory shows your **LITTERBOX** (9 slots) under the loot bag.
+(In the code and this guide it's still called "the stash": same thing.)
+- **Click** something in your paws or backpack = bury it in the litterbox.
+- **Click** something in the litterbox = dig it out into your backpack (equip it from there as usual).
 - **SCRAP** moves between your **loot bag** and the stash the same way.
 - Only gear and scrap go in the stash (no fish: fish are for cashing in at the exit manhole).
 
@@ -952,9 +953,12 @@ Neon Bat is $20, a Paw-Pistol $60). A cat that already existed with less is topp
 - In multiplayer, your computer sends your save to the host when you join; the host checks it
   (only real gear, at most 9 items, cash between $0 and $10,000,000) and uses it. Like the rest of
   the game this trusts players, so it's fine between friends but easy to cheat by editing the file.
-- **Tuning:** **Stash Size** on the **Items** node. Move the lockers: select **Hub** > Inspector >
-  **Stash** > **Stash Spot** (where you stand; the lockers are built against the east wall next
-  to it) and **Stash Radius** (how close you must be).
+- **Tuning:** **Stash Size** on the **Items** node. Move the litterbox: select **Hub** (or
+  **GangHub**) > Inspector > **Stash** > **Stash Spot** (where you stand; the litterbox is built
+  against the east wall next to it) and **Stash Radius** (how close you must be). Same group:
+  **Stash Prompt** (the "[E] STORE YOUR SHIT" text), **Litterbox Color**, **Litterbox Glow** (sign,
+  neon strip and light) and **Sand Color**. The model is built in code (`_build_stash()` in
+  `scripts/hub.gd`).
 
 **Test it without playing:** `--fresh_profile --cash=500 --give=pistol --to_stash=hand:0
 --inventory` stashes the pistol (and shows the screen); run again without `--fresh_profile` and
@@ -1035,14 +1039,24 @@ gangs share the same cards, so rewards are identical in either sewer:
 | `daredevil_extract` | Extract alive at 85 heat or more | $150 | Frankie "Espresso" | Jittery Jax | South-west crates |
 | `gang_disrespect` | Destroy a MEGA VAC-COP, rob a downed rival, or land a melee hit on a rival; extract | $200 | Sal "The Slapper" | Calamity Clara | West walkway by the Mainframe |
 
+**ONE JOB AT A TIME.** You can only have one quest. Talk to another quest giver and accept their
+job while you have one, and they refuse: *"You're already on a job for LIL' MITTENS. Finish that
+first."* (lines: **Busy Lines** on any NPC, in the Inspector; `{giver}` = who gave your job).
+**Your job shows at the top of the INVENTORY screen (Tab):** `JOB: MITTENS' FISH (for LIL' MITTENS)`
+then the progress and reward (`FISH in your loot bag: 1/3 +$100`, `DONE! EXTRACT TO GET PAID`
+when ready). The **ABANDON** button next to it drops the job (press it twice: the first press asks
+"SURE?"; progress is lost). Abandoning only works **down in the sewers**, not mid-raid.
+Test: `--quest=smash_roombas --talk=LilMittens --choose=0,0` (she refuses), `--quest=smash_roombas
+--abandon_quest` (prints both ABANDON presses).
+
 Getting knocked out drops your bag and resets VAC-COP / disrespect counts to 0. Extracting with
 part of a count done keeps it for the next trip. Only the cat that lands the killing blow (or the
 car's driver) gets a VAC-COP kill. There's only one Golden Koi in each district.
 
 How **MITTENS' FISH** goes, step by step (the others work the same way):
 1. Talk to **Lil' Mittens** > **WHAT DO YOU NEED?** > **FINE. THREE FISH.**
-2. Go get the fish. (There's no quest tracker on the HUD any more: the HUD was simplified. Check
-   your loot bag with the inventory screen.)
+2. Go get the fish. (There's no quest tracker on the HUD: open the inventory (Tab), your JOB and
+   its progress are at the top.)
 3. Climb down the exit manhole with **all 3 fish in your bag at once**: you get the fish's
    normal $150 **plus a $100 bonus** (the popup says `QUEST DONE +$100`). Extract with fewer
    and you just get the fish money — the quest stays active for your next trip.
@@ -1668,7 +1682,7 @@ On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-cli
 - **Hover** an item to read its description (the **Description** line on its item card).
 - **Picking things up:** a held item goes into a free paw first; if your paws are busy it goes
   into the backpack; only if the backpack is full too does it swap with what's in your paw.
-- **At the stash lockers** in the sewers your **STASH** (9 slots) shows under the LOOT BAG,
+- **At the litterbox (the stash)** in the sewers your **LITTERBOX** (9 slots) shows under the LOOT BAG,
   and clicking moves items between you and the stash instead (see **The stash &
   saved progress** in §8).
 - The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, §13) just has an empty
@@ -2223,7 +2237,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Banner           <- big wrapped text for long news (Sewer Breach results)
     │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
-    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] OPEN STASH" / "[E] GET IN" (hud.gd)
+    │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
     │   └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
     ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
     └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
@@ -2458,7 +2472,7 @@ feeding the MAINFRAME) needs nothing else. Want to react when cash changes? Conn
 ### Pressing E (`scripts/interactable.gd`, class **Interactable**)
 Everything you can use with E goes through one system: street items, NPCs, payphones, the stash
 lockers and the car. The cat just asks "what's the best thing in reach?" and uses it; the HUD
-shows that thing's line ("[E] TALK TO DON CATLEONE", "[E] OPEN STASH", "[E] GET IN"). When two are
+shows that thing's line ("[E] TALK TO DON CATLEONE", "[E] STORE YOUR SHIT", "[E] GET IN"). When two are
 in reach, the higher **priority** wins (items 30, NPCs 20, stash 10, car 0), then the nearer one.
 
 **Making something new usable, no code for the "where" part** (e.g. a MAINFRAME terminal):
@@ -2468,7 +2482,7 @@ in reach, the higher **priority** wins (items 30, NPCs 20, stash 10, car 0), the
 3. Node dock (next to the Inspector) > **Signals** > double-click **used** > connect it to the
    script that should react. That function gets the cat that pressed E.
 
-The stash lockers are made exactly like that, in code (`_build_stash()` in `scripts/hub.gd`).
+The stash (the litterbox) is made exactly like that, in code (`_build_stash()` in `scripts/hub.gd`).
 **A thing with its own idea of "in reach"** (like the car's door zone or the street items) can
 instead join the group `interactables` and write the answers itself:
 `interact_distance(cat)` (metres, or -1 = not now), `interact_prompt(cat)` (the line, "" = none),

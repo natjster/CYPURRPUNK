@@ -41,6 +41,8 @@ gives it to you, and starts a fresh draft.
 - **The Night of the Big Red Button:** ask around with WHO LET OVERCLEAN IN? and find out what really happened. Everyone has their own version.
 
 ## 🔧 Changes
+- **The stash is now a LITTERBOX:** the lockers are gone. Bury your gear in the giant glowing litterbox on the east wall of the sewer ([E] STORE YOUR SHIT). Same 9 safe slots, same spot, everything you had is still in there.
+- **One job at a time:** you can only take one quest now. Other cats will tell you to finish your current job first. Your job, who gave it to you, your progress and the reward now show at the top of your inventory (Tab), with an ABANDON button to drop it (only down in the sewers, and its progress is lost).
 - **CO-OP is now the way to play together:** in MULTIPLAYER, your whole crew is one family against OVERCLEAN. Everyone starts in Don's sewer, with one manhole in the middle of town, one getaway car and one exit to find. No gang picking needed.
 - **TURF WAR mode:** gang against gang is still here, unchanged. Switch the new MODE row on the multiplayer screen to TURF WAR to pick gangs, rob rivals and hack their Mainframe. Best with 4 or more players. Online, the host's mode is the one everybody plays.
 - **Sal's respect job in CO-OP:** just take down a MEGA VAC-COP and get home. No rival needed.

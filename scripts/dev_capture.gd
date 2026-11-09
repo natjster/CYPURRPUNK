@@ -54,6 +54,7 @@ extends Node
 ##                     (--roomba=drone / trapper: the nearest SQUIRT-DRONE / LINT-TRAPPER)
 ##   --stun_roomba=S   (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit
 ##   --quest=ID        take that quest right away, with no NPC (works with --deploy, unlike --talk)
+##   --abandon_quest   (with --quest) then press the inventory's ABANDON twice (only works in the hub)
 ##   --kill_roombas=N  (host) destroy N regular Roombas, as if shot (3 = the MEGA VAC-COP is called in);
 ##                     add --kill_bosses to destroy bosses too
 ##   --down=S          (host, after --deploy) the cat in slot S (0 = ours; 1.. with --add_local) stands
@@ -298,6 +299,19 @@ func _ready() -> void:
 			print("DevCapture mainframe: %s active=%s exits at %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charges, Mainframe.instance.active_gangs(), [Mainframe.instance.exit_heat(0), Mainframe.instance.exit_heat(1)], HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
 		if args.has("quest"):
 			QuestManager.instance.start_quest(player.player_id, args["quest"])
+			if args.has("abandon_quest"):
+				# --abandon_quest: press the inventory's ABANDON button twice (it asks "SURE?" first).
+				for i in 10:
+					await get_tree().physics_frame
+				var screen := InventoryScreen.for_seat(0)
+				screen._set_open(true)
+				screen._use_abandon(false)
+				await get_tree().physics_frame
+				print("DevCapture abandon 1st press: quest='%s' info=\"%s\"" % [QuestManager.instance.current_quest(player.player_id), screen._info.text])
+				screen._use_abandon(false)
+				for i in 10:
+					await get_tree().physics_frame
+				print("DevCapture abandon 2nd press: quest='%s' info=\"%s\"" % [QuestManager.instance.current_quest(player.player_id), screen._info.text])
 		if args.has("heat") and multiplayer.is_server():
 			# (host) force the heat, e.g. --heat=100 brings out the MEGA VAC-COP.
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))

@@ -104,11 +104,19 @@ const CITY_MOOD: int = -1
 @export var surface_distance: float = 3.5
 
 @export_group("Stash")
-## Where you stand to use THE STASH (the lockers on the east wall), relative to the Hub node.
-## The lockers are built just east of this spot, against the wall.
+## Where you stand to use THE LITTERBOX (your safe stash, on the east wall), relative to the Hub node.
+## The litterbox is built just east of this spot, against the wall.
 @export var stash_spot: Vector3 = Vector3(11.0, 0, -9.0)
-## How close (metres) you must be to the stash spot to open it.
+## How close (metres) you must be to the litterbox spot to open it.
 @export var stash_radius: float = 2.5
+## The HUD line after "[E] " when you're at the litterbox.
+@export var stash_prompt: String = "STORE YOUR SHIT"
+## The litterbox's plastic colour.
+@export var litterbox_color: Color = Color(0.55, 0.2, 0.6)
+## Its neon strip, sign and light.
+@export var litterbox_glow: Color = Color(0.4, 0.9, 1)
+## The sand.
+@export var sand_color: Color = Color(0.62, 0.55, 0.4)
 
 @export_group("Mainframe")
 ## Where you stand to feed THE MAINFRAME scrap (the big CRT on the west wall), relative to the Hub node.
@@ -696,18 +704,43 @@ func _build_shop() -> void:
 	LevelKit.add_light(self, Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
 
 
-## THE STASH: a row of battered lockers on the east wall where cats keep gear safe.
-## Built around stash_spot (change it in the Inspector: Hub > Stash and they follow).
+## THE LITTERBOX (the stash): one giant glowing litterbox on the east wall where cats bury their
+## gear to keep it safe. Built around stash_spot (change it in the Inspector: Hub > Stash and it
+## follows). Colours: Hub > Stash > Litterbox Color / Litterbox Glow / Sand Color.
+## (In code it's still called "the stash": ItemManager stash_size, near_stash, get_stash...)
 func _build_stash() -> void:
 	var at := stash_spot
-	# Press E here: the inventory opens with your stash in it (scripts/interactable.gd).
-	var lockers := Interactable.make(self, stash_spot, "OPEN STASH", stash_radius, 10)
-	lockers.used.connect(func(cat: CatPlayer): InventoryScreen.for_seat(cat.slot).open(cat))
+	# Press E here: the inventory opens with your litterbox in it (scripts/interactable.gd).
+	var box := Interactable.make(self, stash_spot, stash_prompt, stash_radius, 10)
+	box.used.connect(func(cat: CatPlayer): InventoryScreen.for_seat(cat.slot).open(cat))
 	var wall_x := half_width  # inside face of the east wall
-	# Four tall lockers against the wall, each with a glowing lock light.
-	for i in 4:
-		var z := at.z - 1.5 + i
-		LevelKit.add_box(self, Vector3(wall_x - 0.4, 1.1, z), Vector3(0.8, 2.2, 0.9), _metal, true)
-		var lock := LevelKit.add_box(self, Vector3(wall_x - 0.82, 1.2, z + 0.25), Vector3(0.04, 0.1, 0.1), _neon, false)
-		lock.set_instance_shader_parameter("instance_tint", Color(0.3, 1, 0.4))
-	LevelKit.add_light(self, Vector3(wall_x - 1.6, 2.6, at.z), Color(0.4, 0.9, 1), 2.5, 6.0)
+	var plastic := LevelKit.psx_material({"albedo_color": litterbox_color, "specular": 0.6, "roughness": 0.3})
+	var sand := LevelKit.psx_material({"albedo_color": sand_color, "world_uv": true})
+	# The tray: 2 m deep (out from the wall) x 4 m long, rim 0.5 m high, 0.12 m thick walls.
+	var depth := 2.0
+	var length := 4.0
+	var rim := 0.5
+	var t := 0.12
+	var cx := wall_x - depth * 0.5  # middle of the tray
+	LevelKit.add_box(self, Vector3(cx, rim * 0.5, at.z - length * 0.5 + t * 0.5), Vector3(depth, rim, t), plastic, true)  # north side
+	LevelKit.add_box(self, Vector3(cx, rim * 0.5, at.z + length * 0.5 - t * 0.5), Vector3(depth, rim, t), plastic, true)  # south side
+	LevelKit.add_box(self, Vector3(wall_x - depth + t * 0.5, rim * 0.5, at.z), Vector3(t, rim, length - t * 2), plastic, true)  # front lip
+	# The sand: fills the tray up to 0.15 m under the rim (its sides hide inside the tray walls,
+	# so no two faces touch: they'd flicker). Solid, so cats can hop in and stand on it.
+	LevelKit.add_box(self, Vector3(cx + t * 0.5, (rim - 0.15) * 0.5, at.z), Vector3(depth - t, rim - 0.15, length - t * 2), sand, true)
+	# A sand pile in the back corner (three stacked steps = a lumpy PS1 mound).
+	for step in 3:
+		var s := 0.9 - step * 0.28
+		LevelKit.add_box(self, Vector3(wall_x - 0.6, rim - 0.15 + 0.1 + step * 0.2, at.z + 1.0), Vector3(s, 0.2, s), sand, false)
+	# The scoop, leaning on the front lip: a flat head with a handle sticking up and out.
+	var scoop_head := LevelKit.add_box(self, Vector3(wall_x - depth + 0.35, rim - 0.05, at.z - 1.1), Vector3(0.4, 0.04, 0.32), plastic, false)
+	scoop_head.rotation.z = -0.35
+	scoop_head.set_instance_shader_parameter("instance_tint", Color(0.6, 1.4, 1.6))
+	var handle := LevelKit.add_box(self, Vector3(wall_x - depth - 0.05, rim + 0.25, at.z - 1.1), Vector3(0.06, 0.6, 0.08), plastic, false)
+	handle.rotation.z = 0.6
+	handle.set_instance_shader_parameter("instance_tint", Color(0.6, 1.4, 1.6))
+	# A neon strip along the top of the front lip, and a glowing sign on the wall above.
+	var strip := LevelKit.add_box(self, Vector3(wall_x - depth + t * 0.5, rim + 0.02, at.z), Vector3(t + 0.02, 0.04, length - t * 2), _neon, false)
+	strip.set_instance_shader_parameter("instance_tint", litterbox_glow)
+	LevelKit.add_sign(self, "LITTERBOX", Vector3(wall_x - 0.05, 2.4, at.z), litterbox_glow * 0.4, 32, -PI / 2)
+	LevelKit.add_light(self, Vector3(wall_x - 1.6, 2.6, at.z), litterbox_glow, 2.5, 6.0)

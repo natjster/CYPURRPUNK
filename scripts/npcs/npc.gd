@@ -42,6 +42,13 @@ signal action_chosen(action: String, cat: CatPlayer)
 @export var talk_radius: float = 3.0
 ## The conversation. The first page is the greeting. See npc_page.gd.
 @export var pages: Array[NpcPage] = []
+## ONE QUEST AT A TIME: said instead of handing out a quest when you already have one.
+## {giver} = whoever gave you your current job ("me" if it was this NPC). One picked at random.
+@export_multiline var busy_lines: PackedStringArray = [
+	"You're already on a job for {giver}. Finish that first.",
+	"One job at a time, kid. {giver} is still waitin' on you.",
+	"Whoa. You're workin' for {giver} right now. Drop that job first if you wanna help me.",
+]
 
 @export_group("Idle animation")
 ## Turn the Model to face the nearest cat.
@@ -248,6 +255,10 @@ func _find_page(page_id: String) -> NpcPage:
 
 ## A button was clicked: message, then action, then the next page (or close).
 func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
+	# ONE QUEST AT A TIME: already on a job? Then this NPC says so instead of giving theirs.
+	if choice.action.begins_with("quest:") and QuestManager.instance.current_quest(cat.player_id) != "":
+		_say_busy(cat)
+		return
 	if choice.go_to.is_empty():
 		NpcDialog.for_cat(cat).close()  # close first, so an action can open something else
 	if not choice.message.is_empty():
@@ -258,10 +269,22 @@ func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 		show_page(cat, choice.go_to)
 
 
+## "You're already on a job for PAULIE. Finish that first." (one of busy_lines) + an OK button.
+func _say_busy(cat: CatPlayer) -> void:
+	var giver := QuestManager.instance.giver_of(cat.player_id)
+	if giver == npc_name:
+		giver = "me"
+	elif giver == "":
+		giver = "somebody else"
+	var line := "You're already on a job. Finish that first." if busy_lines.is_empty() \
+			else busy_lines[randi() % busy_lines.size()]
+	NpcDialog.for_cat(cat).open(npc_name, line.replace("{giver}", giver), [["OK", NpcDialog.for_cat(cat).close]])
+
+
 func _run_action(action: String, cat: CatPlayer) -> void:
 	if action.begins_with("quest:"):
 		# "quest:mittens_fish" = give the player that quest (quest_manager.gd asks the host).
-		QuestManager.instance.start_quest(cat.player_id, action.trim_prefix("quest:"))
+		QuestManager.instance.start_quest(cat.player_id, action.trim_prefix("quest:"), npc_name)
 	else:
 		match action:
 			"send_up_top":

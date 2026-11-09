@@ -17,6 +17,11 @@ extends Node
 ##     (complete_on_extract) BEFORE the loot bag is emptied.
 ##   - Late joiners get everyone's quests (send_state_to); quitters are forgotten.
 ##
+## ONE QUEST AT A TIME: a player can only have one active quest. Other quest-givers refuse
+## ("You're already on a job for ...", npc.gd busy_lines) until it's done or ABANDONED from the
+## inventory screen (abandon_quest, only down in the sewers). current_quest / giver_of /
+## progress_text are what the inventory's JOB box shows.
+##
 ## Quest states, per player (what NpcPage's "Only If State" checks):
 ##   "not_started"  doesn't have it right now (never taken, or finished and repeatable)
 ##   "active"       has it right now
@@ -29,8 +34,11 @@ const QUESTS_FOLDER := "res://quests/"
 
 ## Quest id -> QuestData, for every card in res://quests/.
 var catalog := {}
-## Player ID -> Array of active quest ids. Everyone keeps a copy; only the host changes it.
+## Player ID -> Array of active quest ids (at most ONE, see the top). Everyone keeps a copy;
+## only the host changes it.
 var active := {}
+## Player ID -> name of the NPC who gave them their current quest ("" = unknown, e.g. a test).
+var givers := {}
 ## Player ID -> {quest id: times completed}. Same deal.
 var completed := {}
 ## Player ID -> {quest id: VAC-COPs smashed / disrespect done so far}. Same deal.
@@ -79,6 +87,38 @@ func is_in_state(player_id: int, quest_id: String, wanted: String) -> bool:
 	return state == wanted
 
 
+## This player's one active quest id, or "" if they're free.
+func current_quest(player_id: int) -> String:
+	var list: Array = active.get(player_id, [])
+	return list[0] if not list.is_empty() else ""
+
+
+## Who gave this player their current quest (an NPC's name), or "".
+func giver_of(player_id: int) -> String:
+	return givers.get(player_id, "")
+
+
+## One line saying how the current quest is going, for the inventory's JOB box, e.g.
+## "FISH in your loot bag: 1/3". "" if no quest.
+func progress_text(player_id: int) -> String:
+	var quest_id := current_quest(player_id)
+	if quest_id == "" or not catalog.has(quest_id):
+		return ""
+	var data: QuestData = catalog[quest_id]
+	var have := progress(player_id, quest_id)
+	match data.kind:
+		QuestData.Kind.CARRY_ITEM:
+			var item: ItemData = ItemManager.instance.catalog.get(data.item)
+			var item_name := item.display_name if item != null else data.item
+			return "%s in your loot bag: %d/%d" % [item_name, mini(have, data.count), data.count]
+		QuestData.Kind.DESTROY_ROOMBAS:
+			return "VAC-COPs smashed: %d/%d" % [mini(have, data.count), data.count]
+		QuestData.Kind.EXTRACT_AT_HEAT:
+			return "Extract at heat %d+ (heat now %d)" % [int(data.heat_needed), int(HeatMeter.instance.heat)]
+		_:
+			return "Disrespect done: %d/%d" % [mini(have, data.count), data.count]
+
+
 ## How far along this player is. Compare it with the card's Count.
 func progress(player_id: int, quest_id: String) -> int:
 	var data: QuestData = catalog[quest_id]
@@ -94,35 +134,59 @@ func progress(player_id: int, quest_id: String) -> int:
 # --- Taking a quest ---
 
 ## Call on your own computer (the NPC does this): ask the host to give this player the quest.
-func start_quest(player_id: int, quest_id: String) -> void:
+## giver = the NPC's name (shown in the inventory: "for LIL' MITTENS").
+## Refused if the player already has a quest (one at a time: npc.gd checks first and says so).
+func start_quest(player_id: int, quest_id: String, giver: String = "") -> void:
 	if not catalog.has(quest_id):
 		push_warning("No quest card with id '%s' in %s" % [quest_id, QUESTS_FOLDER])
 		return
-	_request_start.rpc_id(1, player_id, quest_id)
+	_request_start.rpc_id(1, player_id, quest_id, giver)
 
 
 @rpc("any_peer", "call_local", "reliable")
-func _request_start(player_id: int, quest_id: String) -> void:
+func _request_start(player_id: int, quest_id: String, giver: String = "") -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or not catalog.has(quest_id):
 		return
 	var data: QuestData = catalog[quest_id]
 	var state := state_of(player_id, quest_id)
-	if state == "active" or (state == "done" and not data.repeatable):
-		return  # already on it / one-time quest already done
-	var list: Array = active.get(player_id, []).duplicate()
-	list.append(quest_id)
+	if state == "done" and not data.repeatable:
+		return  # one-time quest already done
+	if current_quest(player_id) != "":
+		print("[Quests] Player %d already has '%s': refused '%s'" % [player_id, current_quest(player_id), quest_id])
+		return  # ONE QUEST AT A TIME (abandon it in the inventory first)
 	var tally: Dictionary = tallies.get(player_id, {}).duplicate()
 	tally.erase(quest_id)  # a fresh start
-	_set_quests.rpc(player_id, list, completed.get(player_id, {}), tally)
-	print("[Quests] Player %d started '%s'" % [player_id, quest_id])
+	_set_quests.rpc(player_id, [quest_id], completed.get(player_id, {}), tally, giver.left(40))
+	print("[Quests] Player %d started '%s' (from %s)" % [player_id, quest_id, giver])
 
 
-## Host -> everyone: this player's quests now.
+## Call on your own computer (the inventory's ABANDON button): drop this player's current quest.
+## Its progress is lost. Only works down in the sewers (not mid-raid).
+func abandon_quest(player_id: int) -> void:
+	_request_abandon.rpc_id(1, player_id)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func _request_abandon(player_id: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
+		return
+	var quest_id := current_quest(player_id)
+	var cat := Game.instance.cat_for(player_id)
+	if quest_id == "" or cat == null or not UndergroundHub.is_in_hub(cat.global_position):
+		return
+	var tally: Dictionary = tallies.get(player_id, {}).duplicate()
+	tally.erase(quest_id)
+	_set_quests.rpc(player_id, [], completed.get(player_id, {}), tally, "")
+	print("[Quests] Player %d abandoned '%s'" % [player_id, quest_id])
+
+
+## Host -> everyone: this player's quests now (and who gave the current one).
 @rpc("authority", "call_local", "reliable")
-func _set_quests(player_id: int, active_now: Array, completed_now: Dictionary, tally_now: Dictionary) -> void:
+func _set_quests(player_id: int, active_now: Array, completed_now: Dictionary, tally_now: Dictionary, giver_now: String = "") -> void:
 	active[player_id] = active_now
 	completed[player_id] = completed_now
 	tallies[player_id] = tally_now
+	givers[player_id] = giver_now if not active_now.is_empty() else ""
 
 
 # --- Counting kills and disrespect (host, from Events: scripts/events.gd) ---
@@ -137,7 +201,7 @@ func _add_tally(player_id: int, kind: QuestData.Kind) -> void:
 			changed = true
 			print("[Quests] Player %d: '%s' now %d" % [player_id, quest_id, tally[quest_id]])
 	if changed:
-		_set_quests.rpc(player_id, active[player_id], completed.get(player_id, {}), tally)
+		_set_quests.rpc(player_id, active[player_id], completed.get(player_id, {}), tally, giver_of(player_id))
 
 
 func _on_enemy_destroyed(enemy: Enemy) -> void:
@@ -161,7 +225,7 @@ func _on_player_slapped(_player_id: int, by: int) -> void:
 func _on_player_knocked_out(player_id: int, _cause: String) -> void:
 	if multiplayer.is_server() and not tallies.get(player_id, {}).is_empty():
 		print("[Quests] Player %d was knocked out: kill counts reset" % player_id)
-		_set_quests.rpc(player_id, active.get(player_id, []), completed.get(player_id, {}), {})
+		_set_quests.rpc(player_id, active.get(player_id, []), completed.get(player_id, {}), {}, giver_of(player_id))
 
 
 # --- Finishing quests (host, at the exit manhole) ---
@@ -186,7 +250,7 @@ func complete_on_extract(player_id: int) -> Array:
 		else:
 			still_active.append(quest_id)  # not done yet: keep it for the next trip up
 	if not titles.is_empty():
-		_set_quests.rpc(player_id, still_active, done, tally)
+		_set_quests.rpc(player_id, still_active, done, tally, giver_of(player_id))
 	return [bonus, titles]
 
 
@@ -194,14 +258,15 @@ func complete_on_extract(player_id: int) -> Array:
 
 ## Host -> a computer that just joined (network ID "peer"): everyone's quests.
 func send_state_to(peer: int) -> void:
-	_receive_state.rpc_id(peer, active, completed, tallies)
+	_receive_state.rpc_id(peer, active, completed, tallies, givers)
 
 
 @rpc("authority", "call_remote", "reliable")
-func _receive_state(active_now: Dictionary, completed_now: Dictionary, tallies_now: Dictionary) -> void:
+func _receive_state(active_now: Dictionary, completed_now: Dictionary, tallies_now: Dictionary, givers_now: Dictionary) -> void:
 	active = active_now
 	completed = completed_now
 	tallies = tallies_now
+	givers = givers_now
 
 
 ## Host: a player quit. Their quests go with them.
@@ -214,3 +279,4 @@ func _forget_player(player_id: int) -> void:
 	active.erase(player_id)
 	completed.erase(player_id)
 	tallies.erase(player_id)
+	givers.erase(player_id)

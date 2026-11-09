@@ -12,14 +12,16 @@ extends Control
 ##   BACKPACK  held items you're carrying but not using. Click = take it into your paws.
 ##   LOOT BAG  fish etc. Money loot is paid out at the exit manhole; SCRAP stays in it (feed it to
 ##             THE MAINFRAME in the sewers, or stash it).
+##   JOB       your one quest (scripts/quests/quest_manager.gd): title, who gave it, progress and
+##             reward. ABANDON (press twice) drops it, progress lost: only down in the sewers.
 ##   Right-click any item = drop it on the ground in front of you.
 ##   CONTROLLER: Y opens it, the d-pad / left stick picks a slot, A = click, X = drop, B / Y = close.
 ## SPLIT SCREEN: every player has their own inventory screen in their own HUD (Hud.seat), showing
 ## their own cat's things. InventoryScreen.for_seat(seat) finds it.
 ##
-## AT THE STASH (standing at the lockers in the sewers, or pressing E there) your STASH shows
-## under the loot bag, and clicks move things between you and the stash instead:
-##   click a paw / backpack item = put it in the stash; click a stash item = into the backpack.
+## AT THE LITTERBOX (the stash: standing at it in the sewers, or pressing E there) your LITTERBOX
+## shows under the loot bag, and clicks move things between you and it instead:
+##   click a paw / backpack item = bury it there; click a litterbox item = into the backpack.
 ##   SCRAP goes between the LOOT BAG and the stash (money loot can't be stashed).
 ##
 ## The screen only ASKS the item system (ItemManager) to move things; the host decides,
@@ -30,11 +32,13 @@ extends Control
 ##   Inventory (this)
 ##   ├── Dim (ColorRect)                   <- darkens the game behind it
 ##   └── Centre (CenterContainer) > Panel (PanelContainer) > VBox
-##       ├── Title, Paws (left + right paw slots)
+##       ├── Title
+##       ├── Job (JobTitle, JobLine + ABANDON button)
+##       ├── Paws (left + right paw slots)
 ##       ├── Quick (QUICK USE 1 + 2 slots)
 ##       ├── PackTitle + PackGrid           (3 slots per row)
 ##       ├── BagTitle + BagGrid
-##       ├── StashTitle + StashGrid         (only at the stash lockers)
+##       ├── StashTitle + StashGrid         (the LITTERBOX: only when standing at it)
 ##       └── Info (hints, item descriptions, "Backpack is full.")
 
 ## Player 1's inventory screen.
@@ -71,6 +75,14 @@ var _stash_grid: GridContainer
 var _info: Label
 var _last_key := ""
 var _at_stash := false
+var _job_title: Label
+var _job_line: Label
+var _abandon_button: Button
+## True after the first ABANDON press (the second one really drops the job).
+var _abandon_armed := false
+## The JOB box's colours.
+const JOB_COLOR := Color(1, 0.8, 0.3)
+const ABANDON_COLOR := Color(1, 0.35, 0.3)
 
 
 func _enter_tree() -> void:
@@ -117,6 +129,25 @@ func _build() -> void:
 
 	box.add_child(_label("INVENTORY", 34, Color(1, 0.4, 0.8)))
 
+	# YOUR JOB: the one quest you're on (filled in by _process).
+	var job := VBoxContainer.new()
+	job.name = "Job"
+	job.add_theme_constant_override("separation", 2)
+	box.add_child(job)
+	_job_title = _label("JOB", title_font_size, JOB_COLOR)
+	job.add_child(_job_title)
+	var job_row := HBoxContainer.new()
+	job_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	job_row.add_theme_constant_override("separation", 16)
+	job.add_child(job_row)
+	_job_line = _label("", title_font_size - 2, Color(1, 1, 1, 0.85))
+	job_row.add_child(_job_line)
+	_abandon_button = _slot("quest", 0)
+	_abandon_button.custom_minimum_size = Vector2(170, 34)
+	_abandon_button.text = "ABANDON"
+	_abandon_button.add_theme_color_override("font_color", ABANDON_COLOR)
+	job_row.add_child(_abandon_button)
+
 	# The two paws side by side, each with a little title above.
 	var paws := HBoxContainer.new()
 	paws.name = "Paws"
@@ -156,7 +187,7 @@ func _build() -> void:
 	box.add_child(_bag_title)
 	_bag_grid = _grid(_bag_buttons, "bag", items.bag_size)
 	box.add_child(_bag_grid)
-	_stash_title = _label("STASH", title_font_size, Color(0.4, 0.9, 1))
+	_stash_title = _label("LITTERBOX", title_font_size, Color(0.4, 0.9, 1))
 	box.add_child(_stash_title)
 	_stash_grid = _grid(_stash_buttons, "stash", items.stash_size)
 	box.add_child(_stash_grid)
@@ -218,7 +249,8 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE  # (the mouse is player 1's)
 		_info.text = ""  # filled in by _process (it depends on whether we're at the stash)
 		# A highlighted slot for the d-pad / arrows to move around from (left paw first).
-		_focus.set_buttons(_paw_buttons + _quick_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
+		_abandon_armed = false
+		_focus.set_buttons([_abandon_button] + _paw_buttons + _quick_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
 	else:
 		_focus.clear()
 		var first := Game.instance.my_cat() if Game.instance != null else null
@@ -236,13 +268,15 @@ func _process(_delta: float) -> void:
 		return
 	var at_stash := UndergroundHub.of(cat).near_stash(cat)
 	var inventory := items.get_inventory(cat.player_id)
-	var key := str(inventory) + str(at_stash)
+	var quests := QuestManager.instance
+	var key := str(inventory) + str(at_stash) + quests.current_quest(cat.player_id) 			+ quests.progress_text(cat.player_id) + str(_abandon_armed)
 	if key == _last_key:
 		return
 	_last_key = key  # only redraw when something changed
 	if at_stash != _at_stash or _info.text == "":
 		_at_stash = at_stash
 		_show_stash_section(at_stash)
+	_show_job(cat)
 
 	var hands: Array = inventory.hands
 	_fill(_paw_buttons[0], hands[1])
@@ -264,10 +298,30 @@ func _process(_delta: float) -> void:
 		_fill(_stash_buttons[i], stash[i] if i < stash.size() else "")
 	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size]
 	_bag_title.text = "LOOT BAG  %d/%d  (cash loot pays out at the exit; SCRAP stays)" % [items.bag_used(cat.player_id), items.bag_size]
-	_stash_title.text = "STASH  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
+	_stash_title.text = "LITTERBOX  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
 
 
-## At the lockers: show the stash too, under the loot bag (the box resizes itself to fit).
+## The JOB box: "JOB: MITTENS' FISH  (for LIL' MITTENS)" / "FISH in your loot bag: 1/3   +$100".
+func _show_job(cat: CatPlayer) -> void:
+	var quests := QuestManager.instance
+	var quest_id := quests.current_quest(cat.player_id)
+	var data: QuestData = quests.catalog.get(quest_id)
+	_abandon_button.visible = data != null
+	if data == null:
+		_abandon_armed = false
+		_job_title.text = "JOB: none"
+		_job_line.text = "Talk to the cats down in the sewers to get one."
+		return
+	var giver := quests.giver_of(cat.player_id)
+	_job_title.text = "JOB: %s%s" % [data.title, "  (for %s)" % giver if giver != "" else ""]
+	var line := quests.progress_text(cat.player_id)
+	if quests.is_in_state(cat.player_id, quest_id, "ready"):
+		line += "  - DONE! EXTRACT TO GET PAID"
+	_job_line.text = "%s   +$%d" % [line, data.reward_cash]
+	_abandon_button.text = "SURE? AGAIN" if _abandon_armed else "ABANDON"
+
+
+## At the litterbox: show it too, under the loot bag (the box resizes itself to fit).
 func _show_stash_section(at_stash: bool) -> void:
 	_bag_title.visible = true
 	_bag_grid.visible = true
@@ -277,7 +331,7 @@ func _show_stash_section(at_stash: bool) -> void:
 	var click := "%s:" % Controls.display_name("Pad A") if on_pad else "Click:"
 	var drop := "%s:" % Controls.display_name("Pad X") if on_pad else "Right-click:"
 	if at_stash:
-		_info.text = "%s move between you and the stash   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
+		_info.text = "%s bury in / dig out of the litterbox   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 	else:
 		_info.text = "%s equip / put away   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 
@@ -369,6 +423,9 @@ func _on_slot_input(event: InputEvent, button: Button, where: String, index: int
 
 ## What clicking a slot does (drop = right-click / X on a controller).
 func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
+	if where == "quest":
+		_use_abandon(drop)
+		return
 	if button.get_meta("item") == "":
 		return
 	var items := ItemManager.instance
@@ -394,9 +451,9 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 			else:
 				items.request_from_stash.rpc_id(1, cat.player_id, index)
 		elif where == "bag" and not items.is_stashable(button.get_meta("item")):
-			_info.text = "Money loot can't be stashed: cash it in at the exit manhole. (SCRAP can go in.)"
+			_info.text = "Money loot can't go in the litterbox: cash it in at the exit manhole. (SCRAP can go in.)"
 		elif items.get_stash(cat.player_id).size() >= items.stash_size:
-			_info.text = "Stash is full."
+			_info.text = "Litterbox is full."
 		else:
 			items.request_to_stash.rpc_id(1, cat.player_id, where, index)
 	else:
@@ -414,6 +471,25 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 				items.request_put_away.rpc_id(1, cat.player_id, index)
 		else:
 			_info.text = "Cash loot pays out at the exit manhole. SCRAP feeds THE MAINFRAME in the sewers."
+
+
+## ABANDON: first press asks "SURE?", the second drops the job (only down in the sewers).
+func _use_abandon(drop: bool) -> void:
+	var cat := owner_cat
+	if drop or cat == null or not is_instance_valid(cat):
+		return
+	if QuestManager.instance.current_quest(cat.player_id) == "":
+		return
+	if not UndergroundHub.is_in_hub(cat.global_position):
+		_info.text = "You can only drop a job down in the sewers."
+		return
+	if not _abandon_armed:
+		_abandon_armed = true
+		_info.text = "Abandon this job? Its progress is lost. Press ABANDON again to drop it."
+		return
+	_abandon_armed = false
+	QuestManager.instance.abandon_quest(cat.player_id)
+	_info.text = "Job dropped. You're free to take another."
 
 
 ## Hovering a slot shows what the item is.
