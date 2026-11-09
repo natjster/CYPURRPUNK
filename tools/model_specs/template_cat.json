@@ -1,0 +1,44 @@
+{
+  "name": "template_cat",
+  "kind": "character",
+  "about": "STARTER CAT for Blockbench. Same size and the same part names as the game's code-built cat (scenes/cat_model.tscn), so the colour system (fur / markings / eyes / nose) and the hat / shades / collar slots keep working. Faces NORTH (-Z). Groups = bones: Body, Head (with Ears inside), Tail, Paws. Markers: hat, shades, neck. Texture: top-left = fur, then markings, eyes, nose; paint over them freely.",
+  "texture_size": 128,
+  "seed": 11,
+  "background": "#00000000",
+  "paint": [
+    {"op": "comment", "note": "[0,0,32,32] FUR (Body, Head, Ears, Paws, Tail)"},
+    {"op": "fill", "rect": [0, 0, 32, 32], "color": "#d9d2c5"},
+    {"op": "noise", "rect": [0, 0, 32, 32], "amount": 0.3, "spread": 0.08},
+    {"op": "comment", "note": "[32,0,48,16] MARKINGS (Belly, Muzzle)"},
+    {"op": "fill", "rect": [32, 0, 48, 16], "color": "#ffffff"},
+    {"op": "comment", "note": "[48,0,56,8] EYES   [56,0,64,8] NOSE"},
+    {"op": "fill", "rect": [48, 0, 56, 8], "color": "#7fe08a"},
+    {"op": "fill", "rect": [51, 1, 53, 7], "color": "#101010"},
+    {"op": "fill", "rect": [56, 0, 64, 8], "color": "#e88aa0"},
+    {"op": "text", "pos": [2, 40], "text": "FUR MARK EYE NOSE", "color": "#ffffff80"}
+  ],
+  "groups": [
+    {"name": "Body", "origin": [0, 6, 0]},
+    {"name": "Paws", "origin": [0, 3, 0]},
+    {"name": "Head", "origin": [0, 9.5, 0]},
+    {"name": "Ears", "origin": [0, 15.5, 0], "parent": "Head"},
+    {"name": "Tail", "origin": [0, 6.7, 4.4]}
+  ],
+  "elements": [
+    {"type": "cube", "name": "Body", "group": "Body", "from": [-4.5, 1.6, -4.5], "to": [4.5, 10.2, 4.5], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "Belly", "group": "Body", "from": [-3, 3, -5.1], "to": [3, 9, -4.5], "all": [32, 0, 48, 16]},
+    {"type": "cube", "name": "LegL", "group": "Paws", "from": [-2.6, 0, -1.4], "to": [-0.6, 3.2, 1.4], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "LegR", "group": "Paws", "from": [0.6, 0, -1.4], "to": [2.6, 3.2, 1.4], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "Head", "group": "Head", "from": [-4, 9.4, -4], "to": [4, 16, 4], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "Muzzle", "group": "Head", "from": [-2, 10.2, -5], "to": [2, 12.6, -4], "all": [32, 0, 48, 16]},
+    {"type": "cube", "name": "Nose", "group": "Head", "from": [-0.5, 11.6, -5.6], "to": [0.5, 12.4, -5], "all": [56, 0, 64, 8]},
+    {"type": "cube", "name": "EyeL", "group": "Head", "from": [-2.5, 12.6, -4.25], "to": [-1.1, 14, -3.95], "all": [48, 0, 56, 8]},
+    {"type": "cube", "name": "EyeR", "group": "Head", "from": [1.1, 12.6, -4.25], "to": [2.5, 14, -3.95], "all": [48, 0, 56, 8]},
+    {"type": "cube", "name": "EarL", "group": "Ears", "from": [-3.6, 15.4, -1], "to": [-1.6, 18.4, 0.6], "origin": [-2.6, 15.6, 0], "rotation": [0, 0, 17], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "EarR", "group": "Ears", "from": [1.6, 15.4, -1], "to": [3.6, 18.4, 0.6], "origin": [2.6, 15.6, 0], "rotation": [0, 0, -17], "all": [0, 0, 32, 32]},
+    {"type": "cube", "name": "Tail", "group": "Tail", "from": [-0.7, 6.1, 4.2], "to": [0.7, 7.3, 11.4], "origin": [0, 6.7, 4.4], "rotation": [-37, 0, 0], "all": [0, 0, 32, 32]},
+    {"type": "locator", "name": "hat", "group": "Head", "position": [0, 16.3, 0.3]},
+    {"type": "locator", "name": "shades", "group": "Head", "position": [0, 13.3, -5.3]},
+    {"type": "locator", "name": "neck", "group": "Body", "position": [0, 9, 0]}
+  ]
+}

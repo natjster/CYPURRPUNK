@@ -54,6 +54,13 @@ signal player_knocked_out(player_id: int, cause: String)
 ## EVERY computer: the heat went up or down a level (1..5; 5 = max). (heat_meter.gd)
 signal heat_level_changed(level: int)
 
+## EVERY computer: a player made it up top for their one trip this district. first_in_district =
+## nobody had been up yet (the raid has begun). Not sent again to late joiners (fish_heist.gd).
+signal player_went_up(player_id: int, first_in_district: bool)
+
+## EVERY computer: a MEGA VAC-COP was just sent in (roomba_patrol.gd, with its siren).
+signal boss_deployed()
+
 ## HOST only: a player picked up (or bought) an item (item_manager.gd).
 signal item_picked_up(player_id: int, item_id: String)
 

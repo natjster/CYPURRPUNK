@@ -8,7 +8,8 @@ extends Node
 ##   res://sounds/music/     music loops (one per area)              -> MUSIC volume slider
 ## The sound's name is the file name without the extension: sfx/shoot.wav is "shoot".
 ## Several versions of one sound? Number them: meow_1.wav, meow_2.wav... are all "meow",
-## and a random one plays each time (great for footsteps and meows).
+## and a random one plays each time (great for footsteps and meows). One exact version can still
+## be asked for by its full name: Sound.play("meow_2").
 ## To replace a placeholder, just overwrite the file with your own (same name).
 ##
 ## Scripts play sounds like this:
@@ -210,6 +211,10 @@ func _load_folder(path: String) -> Dictionary:
 		var id := file.get_basename()
 		var cut := id.rfind("_")
 		if cut > 0 and id.substr(cut + 1).is_valid_int():
+			# A numbered version can ALSO be played on its own by its full name
+			# (Sound.play("overclean_deploy_2")): the announcer needs the take that matches
+			# its subtitle.
+			found[id] = [stream]
 			id = id.left(cut)
 		if not found.has(id):
 			found[id] = []

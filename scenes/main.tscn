@@ -40,6 +40,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/gold_tooth_gus.tscn" id="q_gold_tooth_gus"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/jittery_jax.tscn" id="q_jittery_jax"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/calamity_clara.tscn" id="q_calamity_clara"]
+[ext_resource type="Script" path="res://scripts/overclean_announcer.gd" id="34_announcer"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -184,6 +185,9 @@ spawn_path = NodePath("../Roombas")
 
 [node name="Tutorial" type="Node" parent="."]
 script = ExtResource("33_tutorial")
+
+[node name="Announcer" type="Node" parent="."]
+script = ExtResource("34_announcer")
 
 [node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(0, -200, 0)

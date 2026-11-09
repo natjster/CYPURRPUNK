@@ -186,9 +186,18 @@ a world that hates mess.
 - **You:** run one session with 3 friends. Stay quiet and record it. Write down 5 moments they
   laughed and 5 moments they were lost.
 - **You:** install Blockbench and follow a beginner tutorial. Make one bin and one traffic cone.
+  (Head start: Claude built a first bin and cone in Blockbench format. Open
+  `models/blockbench/trash_bin.bbmodel` and repaint or remodel it as your tutorial piece.)
 - **You:** post the waiting patch notes to Discord.
 - **Claude:** Raid Report screen.
-- **Claude:** OVERCLEAN announcer (lines and a robot voice).
+- [x] **Claude:** OVERCLEAN announcer (lines and a robot voice). (Done 9 Nov 2026: chime + robot
+  PA voice + subtitles for the first cat up top, heat levels 2-4, MEGA VAC-COPs, the seal and
+  knockouts. SETUP_GUIDE §21.)
+- [x] **Claude:** first Blockbench models in the game: a trash bin and a traffic cone on sidewalk
+  corners, in yard junk piles and by Meow-Mart, through a `.bbmodel` -> `.glb` -> PS1 pipeline
+  (`LevelKit.instantiate_model`). Also starter templates for the cat and the VAC-COP. (Done 9 Nov 2026, §20.)
+- [x] **Claude:** tool servers so Claude can build Blockbench models and make sounds/voices directly
+  (Model Shop + Sound Lab in `.mcp.json`). (Done 9 Nov 2026, §20.)
 - [x] **Claude:** co-op as the default mode, gangs moved to a TURF WAR option. (Done 9 Nov 2026:
   MODE row on the landing page.)
 

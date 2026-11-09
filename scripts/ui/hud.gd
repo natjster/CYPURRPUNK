@@ -82,6 +82,7 @@ var in_game: bool = false
 var _message_time: float = 0.0
 var _popup_time: float = 0.0
 var _banner_time: float = 0.0
+var _subtitle_time: float = 0.0
 
 @onready var frame: Control = $Frame
 @onready var middle: Control = $Frame/Middle
@@ -172,6 +173,17 @@ static func banner(text: String, seconds: float = 6.0, color: Color = Color.WHIT
 		set_color("Banner", color, hud.seat)
 		show_element("Banner", true, hud.seat)
 		hud._banner_time = seconds
+
+
+## A SUBTITLE near the bottom of the screen for what's being said over a speaker (OVERCLEAN's
+## city announcements, scripts/overclean_announcer.gd), in any colour. Fades out at the end.
+## seat_number = only that player sees it; left out (-1) = every player on this computer.
+static func subtitle(text: String, seconds: float = 6.0, color: Color = Color(0.75, 0.95, 1), seat_number: int = -1) -> void:
+	for hud in _targets(seat_number):
+		set_text("Subtitle", text, hud.seat)
+		set_color("Subtitle", color, hud.seat)
+		show_element("Subtitle", true, hud.seat)
+		hud._subtitle_time = seconds
 
 
 ## A line in the FEED, top-left under the health bar (e.g. "CLAWD DOWNED MITTENS"), on EVERY
@@ -277,6 +289,11 @@ func _process(delta: float) -> void:
 		var banner_label := element("Banner", seat)
 		banner_label.visible = _banner_time > 0.0
 		banner_label.modulate.a = clampf(_banner_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
+	if _subtitle_time > 0.0:
+		_subtitle_time -= delta
+		var subtitle_label := element("Subtitle", seat)
+		subtitle_label.visible = _subtitle_time > 0.0
+		subtitle_label.modulate.a = clampf(_subtitle_time / maxf(popup_fade_seconds, 0.01), 0.0, 1.0)
 
 	# The feed: count each line down, drop the old ones.
 	if not _feed.is_empty():

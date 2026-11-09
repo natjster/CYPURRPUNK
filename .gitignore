@@ -18,3 +18,6 @@ steam_appid.txt
 *.tmp
 Thumbs.db
 desktop.ini
+
+# Python caches from tools/ (the Model Shop and Sound Lab).
+__pycache__/

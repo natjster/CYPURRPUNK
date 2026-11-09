@@ -312,6 +312,24 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   scene's `PackedStringArray` values (NPC `lines` came out empty) in exports only. Editor runs never show this: test
   data-driven text in an export too (`--export-debug` build accepts the `-- --host --talk=` test args; add `--capture` or it never quits).
 
+## Models + tool servers + OVERCLEAN (Phase 0, SETUP_GUIDE §20-21)
+- `.mcp.json` = two local stdio MCP servers (Python, mcp 2.x `MCPServer` with 1.x `FastMCP` fallback): `tools/model_mcp.py`
+  (logic `tools/cypurr_models.py`: spec JSON -> `.bbmodel` (Blockbench 4.10 "free" format, groups inline in outliner, cubes +
+  "prism" meshes + locators, embedded PNG painted by ops) -> `.glb` (group = node, locator = empty node, 16 px = 1 m, NEAREST,
+  writes a minimal `.glb.import`: embedded uncompressed image, no LODs) + `inspect` (props <150 tris, chars <600, 64/128 tex))
+  and `tools/sound_mcp.py` (`tools/cypurr_sound.py`: edge-tts + ffmpeg decode + numpy robot/PA/chime; cat blips; modal PS1 sfx).
+  Recipes: `tools/model_specs/*.json` (`python tools/cypurr_models.py all <spec>`), `tools/sound_specs/overclean.json` (`batch`).
+  `tools/` has a .gdignore. Building a model = edit the spec, rerun `all` (or user edits the .bbmodel, then `export`).
+- `LevelKit.instantiate_model(path|name, parent, pos, yaw)` (cached PackedScene) + `psx_ify(root)` (shared psx_lit copy per source
+  material, keeps albedo texture/colour, world_uv false). City props: `_add_bin` (StaticBody box) / `_add_cone` (no collision,
+  `knocked_over`), yard pile = shuffled 4x4 grid, `_place_corner_props` (sidewalk corners, along 9.6-10.2 m: outside loot's ±9 m
+  and clear of lamps), Meow-Mart door ±4.4 m; all on `_rng`. DevCapture prints `DevCapture props:` counts.
+- `OvercleanAnnouncer` (`scripts/overclean_announcer.gd`, node `Announcer` under Main, `instance`, `say(sound, text, everyone, delay, why)`):
+  local only (Events fire everywhere), queue sorted by start time, one line at a time, heard/subtitled (`Hud.subtitle`, HUD
+  `Frame/Middle/Subtitle`) only by local cats up top, seal = everyone. New Events: `player_went_up(id, first_in_district)`
+  (fish_heist `_mark_went_up`, late-join catch-up passes announce=false), `boss_deployed` (roomba_patrol `_boss_siren`).
+  `Sound` also registers numbered files by full name (`Sound.play("overclean_deploy_2")`). Test: `--deploy --heat_ramp=S --sound_log`.
+
 ## Character creator (MY CAT)
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).

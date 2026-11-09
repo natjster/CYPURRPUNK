@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "cypurrpunk-models": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/model_mcp.py"]
+    },
+    "cypurrpunk-sound-lab": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["tools/sound_mcp.py"]
+    }
+  }
+}

@@ -25,6 +25,10 @@ Meow-City/
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
+├── models/                    <- REAL 3D MODELS (.glb) the game loads: trash_bin, traffic_cone (§20)
+│   └── blockbench/            <- their Blockbench projects (.bbmodel): double-click to edit (§20)
+├── tools/                     <- Claude's helpers: the Model Shop + Sound Lab (Python, §20)
+├── .mcp.json                  <- tells Claude Code to start those helpers in this project (§20)
 ├── scripts/
 │   ├── game.gd                <- main scene: start a game, spawn cats, late joiners
 │   ├── game_systems.gd        <- GameSystems: the list of host-run systems (§16)
@@ -33,6 +37,7 @@ Meow-City/
 │   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
 │   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
 │   ├── events.gd              <- autoload "Events": the big moments (sealed, extracted, knocked out...) (§16)
+│   ├── overclean_announcer.gd <- OVERCLEAN's voice over the city speakers + subtitles (§21)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -581,7 +586,8 @@ number, the **city seed**. Same number = exact same city.
   itself (the test tool prints a city "fingerprint"; host and joined player always match).
 - **What it builds:** a 6x6 grid of blocks with streets between. Each block has 4 lots: a building
   (taller towards downtown, glowing windows, sometimes a rooftop box and a neon sign with coloured
-  light) or an empty yard with crates, dumpsters and trash bags. Street lamps sit at every
+  light) or an empty yard with crates, a dumpster and a junk pile of trash bins and traffic cones
+  (real Blockbench models, §20; more stand on some sidewalk corners and by Meow-Mart's door). Street lamps sit at every
   crossroads and halfway along each block. Invisible walls stop you driving off the edge.
 - **Always in the same place, whatever the seed:** each gang's **entry manhole** (Catleone
   Family: the south-west corner crossroads, Burrow Gang: the north-east one) and the car, which
@@ -2111,6 +2117,9 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `koi_grab` | someone grabs a golden koi | everyone (2D) |
 | `heat_up` | the HEAT goes up a level | everyone (2D) |
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
+| `overclean_*` | OVERCLEAN's announcements (chime + robot voice, §21) | players up top (the seal: everyone) |
+| `pa_chime`, `bin_clatter`, `cone_bounce`, `scratch` | made by the Sound Lab (§20) for the mess-making to come; not used yet | |
+| `meow_blip_don`, `meow_blip_whiskers` (`_1`..`_4`) | talking-cat voice blips (Sound Lab); not used yet | |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
 
@@ -2548,6 +2557,8 @@ the PS1 look and the rules below for free:
 | `LevelKit.add_light(self, at, color, energy, range)` | a pool of coloured light glowing into the fog |
 | `LevelKit.add_sign(self, "TEXT", at, color, font_size, facing)` | glowing neon letters |
 | `LevelKit.subdivided_plane(Vector2(w, d))` | a flat floor piece |
+| `LevelKit.instantiate_model("trash_bin", self, at, yaw)` | a copy of `res://models/trash_bin.glb` with the PS1 look (§20) |
+| `LevelKit.psx_ify(node)` | gives every mesh under a node the PS1 look, keeping its painted texture (§20) |
 
 **The rules it keeps for you:** big surfaces are cut into ~2.5 m pieces (on big triangles the PS1
 textures shear and "swim"), and boxes of the same shape share one mesh (a city has hundreds).
@@ -2756,3 +2767,130 @@ The HUD box is `scenes/ui/hud.tscn` > **Frame > Top > TutorialBox** (a PanelCont
 `[Tutorial] Step X/9: ...` line for each, then `TUTORIAL COMPLETE!`, checks the start menu came
 back and the real save wasn't touched, and quits (exit code 0 = passed, 1 = a step got stuck).
 
+
+---
+
+## 20. Real models from Blockbench + Claude's tool servers (Model Shop, Sound Lab)
+
+The game is moving from code-built boxes to real low-poly models (ROADMAP.md §5). The first two
+are the **trash bin** and the **traffic cone** you see on street corners and in empty yards.
+
+### The folders
+| Where | What | Who edits it |
+|---|---|---|
+| `models/blockbench/*.bbmodel` | the **Blockbench projects** (the master copy of each model, texture inside) | you, in Blockbench (double-click the file) |
+| `models/*.glb` | what **Godot** loads (made from the .bbmodel) | nobody by hand: it's exported |
+| `tools/model_specs/*.json` | Claude's "recipes" the starter models were built from | Claude |
+| `tools/sound_specs/overclean.json` | the list of every OVERCLEAN line + effect the Sound Lab made | Claude |
+
+Starter templates, also in `models/blockbench/`:
+- `template_cat.bbmodel`: a cat the same size as the game's cat, with the part names the colour
+  system needs (Body, Belly, LegL/LegR, Head, Muzzle, Nose, EyeL/EyeR, EarL/EarR, Tail) in the
+  groups **Body, Paws, Head (with Ears inside), Tail**, plus three markers: **hat**, **shades**,
+  **neck** (where accessories go). Facing north. Model your cat over it and keep the names.
+- `template_roomba.bbmodel`: the VAC-COP, with the groups the enemy code looks for: **Body, Eye,
+  SirenRed, SirenBlue, Brush**. Keep those names.
+
+(The templates aren't in the game yet: swapping the real cat / VAC-COP for a model is Phase 1.)
+
+**The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**;
+textures **64x64** (props) or **128x128** (characters). In Blockbench 16 pixels = 1 metre, Y is
+up, and the front of a model faces **north**.
+
+### Changing a model yourself
+1. Double-click `models/blockbench/trash_bin.bbmodel` (Blockbench opens it).
+2. Repaint it (Paint tab) or move / add boxes (Edit tab). **Ctrl+S** to save.
+3. Tell Claude "re-export the trash bin" (or run the line below). The new look is in the game the
+   next time it starts. Blockbench's own **File > Export > Export glTF Model** (saved over
+   `models/trash_bin.glb`) also works.
+```powershell
+python tools/cypurr_models.py export models/blockbench/trash_bin.bbmodel
+```
+It prints the triangle count, texture size and groups, and says **NEEDS WORK** if a rule is broken.
+
+### Putting a model into the game (code)
+`LevelKit.instantiate_model("res://models/trash_bin.glb", parent, position, yaw)` loads the
+model once, puts a copy where you say, and gives it the game's PS1 look: the wobbly vertices,
+flat shading and crisp pixels of `psx_lit.gdshader`, keeping the model's own painted texture and
+colours. `LevelKit.psx_ify(node)` does just the look, for a model that's already in a scene.
+Models have **no collision** on their own: the city puts each bin inside a `StaticBody3D` with a
+box (`_add_bin` in `scripts/city_generator.gd`); cones stay walk-through so cars don't stop dead.
+
+**In the editor (no code):** you can drag a `.glb` from the FileSystem dock into a scene. It looks
+plain there (Godot's normal material); call `LevelKit.psx_ify($TheModel)` in that scene's script
+to give it the PS1 look, or ask Claude.
+
+**Import settings:** a new `.glb` comes with a `.glb.import` file that keeps the texture inside
+the model, uncompressed (exact pixels), without level-of-detail copies. Changes you make in
+Godot's **Import** tab stay (the export never overwrites an existing .import file).
+
+### How many bins and cones (no code)
+Select **City** in `main.tscn` > Inspector > **Street Props (Blockbench Models)**:
+**Trash Bin Model / Traffic Cone Model** (which .glb files), **Yard Bins Min/Max** and
+**Yard Cones Min/Max** (the junk pile in each empty yard; some cones lie knocked over),
+**Corner Prop Chance** (0-1, per sidewalk corner), **Props At Meow Mart**, **Bins Are Solid**.
+They're placed with the city's own random numbers, so every player's city still comes out identical.
+(This changed the layout of every city seed once: a seed now gives a different city than before.)
+
+### Claude's tool servers (`.mcp.json` + `tools/`)
+`.mcp.json` (in the project folder) lists two small helper programs that **Claude Code starts by
+itself** when it works in this project (the first time, it asks you to allow them: say yes).
+They give Claude new tools. You never run them; they're free and run on this PC.
+
+| Server (file) | Tools it gives Claude |
+|---|---|
+| **Model Shop** (`tools/model_mcp.py`) | `create_or_edit_bbmodel` (write/change a Blockbench project: boxes, round cans and cones, groups, markers, a painted pixel-art texture), `export_bbmodel_to_glb`, `inspect_model` (triangles, texture size, groups vs the rules), `list_models` |
+| **Sound Lab** (`tools/sound_mcp.py`) | `generate_overclean_voice` (free text-to-speech + robot + loudspeaker echo + chime), `generate_cat_voice_blips` (Animal Crossing style talking cats: `meow_blip_<name>_1..4.wav`), `generate_ps1_sfx` (crunchy effects: bin clatter, cone bounce, scratch, PA chime, metal clang, plastic tap, or a custom recipe), `list_sounds` |
+
+The real work is in `tools/cypurr_models.py` and `tools/cypurr_sound.py`, which also run from a
+terminal (each prints its instructions when run with no arguments). Remake every OVERCLEAN line:
+```powershell
+python tools/cypurr_sound.py batch tools/sound_specs/overclean.json
+```
+
+**One-time setup on a new PC:** Python 3, then `python -m pip install -r tools/requirements.txt`,
+and ffmpeg (`winget install Gyan.FFmpeg`). The voice needs internet while it's being made (it uses
+Microsoft Edge's free voices); the game never does. `tools/` has a `.gdignore`, so Godot skips it.
+If Claude says the tools aren't there, restart Claude Code in this folder (or type `/mcp` in a
+terminal Claude Code to see them).
+
+---
+
+## 21. OVERCLEAN, the announcer (`scripts/overclean_announcer.gd`)
+
+OVERCLEAN talks over the city's loudspeakers: a two-tone chime, then a calm, polite, slightly
+robotic voice with an echo off the buildings, and a cyan **subtitle** near the bottom of the screen.
+
+| Moment | What it says (subtitle) | File in `sounds/sfx/` |
+|---|---|---|
+| The first cat of a district climbs up top | "Unregistered shedding has been detected..." (one of 3) | `overclean_deploy_1` .. `_3` |
+| Heat level 2 | "Cleanliness alert. Hairball levels exceeding municipal tolerance..." | `overclean_level2` |
+| Heat level 3 | "Warning. Unauthorized fish handling in progress..." | `overclean_level3` |
+| Heat level 4 | "Critical mess threshold reached..." | `overclean_level4` |
+| A MEGA VAC-COP rolls out | "Heavy sanitation unit deployed. Have a spotless day." | `overclean_boss` |
+| Heat 100: the hatch seals (DEEP CLEAN) | "Sector quarantine initiated. Commencing total Deep Clean..." | `overclean_seal` |
+| A cat is knocked out up top | "One stray removed from the premises. Street hygiene restored by 14 percent." | `overclean_ko` |
+
+**Who hears it:** only players who are **up top** (the speakers are in the city; the sewers are
+safe). The seal is the exception: everyone hears it. Lines never talk over each other (they wait
+their turn), each heat level is said once per district, and the boss and knockout lines have a
+cooldown so they don't repeat. It stays quiet in the TUTORIAL.
+
+**Changing it (no code):** select **Announcer** in `main.tscn` (Scene dock: **Main > Announcer**).
+Inspector: **Enabled**, **In Tutorial**, **Volume Db**, **Min Gap Seconds**, **Subtitle Prefix /
+Color**, then one group per moment with its **sound** (a file name in `sounds/sfx/` without `.wav`),
+its **line** (the subtitle), and delays / cooldowns. Changing a subtitle doesn't change what the
+voice says: ask Claude to remake that line with the Sound Lab (or edit
+`tools/sound_specs/overclean.json` and run the batch command in §20), and keep the two matching.
+
+**Adding a new announcement from a script:**
+`OvercleanAnnouncer.instance.say("overclean_my_line", "The subtitle text.")`
+(add `true` to make everyone hear it, not just players up top).
+
+**Where the moments come from:** game Events (§16): `player_went_up` (new, fish_heist.gd),
+`heat_level_changed`, `boss_deployed` (new, roomba_patrol.gd), `district_sealed`,
+`player_knocked_out`. The subtitle is the HUD's **Frame > Middle > Subtitle** label (`Hud.subtitle`).
+
+**Testing:** `--deploy --heat_ramp=40 --sound_log --frames=3300` (plus `--capture=shots/x.png`)
+sends your cat up and raises the heat to 100 over 40 seconds; the console prints an
+`[Announcer]` line for each announcement (and `[Sound] overclean_...`).

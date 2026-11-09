@@ -1,0 +1,7 @@
+# Python packages for the CYPURRPUNK tools (Model Shop + Sound Lab MCP servers).
+# Install once with:  python -m pip install -r tools/requirements.txt
+# The Sound Lab also needs ffmpeg (winget install Gyan.FFmpeg).
+mcp
+pillow
+numpy
+edge-tts

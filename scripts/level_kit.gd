@@ -9,6 +9,8 @@ class_name LevelKit
 ##   LevelKit.add_light(parent, at, color, energy, light_range[, fade_from])  - a glowing light pool
 ##   LevelKit.add_sign(parent, text, at, color, font_size, facing)  - glowing neon letters
 ##   LevelKit.subdivided_plane(size)                             - a flat ground piece
+##   LevelKit.instantiate_model("res://models/trash_bin.glb", parent, pos, yaw) - a Blockbench model
+##   LevelKit.psx_ify(node)                                      - give a model the PS1 look
 ##
 ## THE TWO RULES these keep for you:
 ##   1. Big surfaces are cut into pieces of about PIECE_SIZE metres. The PS1 shader's wobbly
@@ -29,6 +31,81 @@ const PSX_SHADER: Shader = preload("res://shaders/psx_lit.gdshader")
 
 ## The shared 1x1x1 boxes, by how many cuts they have (see box_mesh_for).
 static var _box_meshes := {}
+## Models already loaded from res://models/: path -> PackedScene (each file is read once).
+static var _models := {}
+## PS1 materials made from a model's own materials: original material -> ShaderMaterial, so every
+## copy of a trash bin shares ONE material (cheap to draw, like the shared boxes).
+static var _psx_copies := {}
+
+
+# --- Real models (.glb files made in Blockbench, see SETUP_GUIDE "Models from Blockbench") ---
+
+## Puts a copy of a .glb model under "parent" at "pos", turned "yaw" radians around the vertical
+## axis, with the game's PS1 look already on it (psx_ify). "path" can be the full
+## "res://models/trash_bin.glb" or just "trash_bin". Returns the new model (null if the file is
+## missing). parent = null: the model isn't added anywhere; add it yourself.
+## The model has NO collision: add one with LevelKit.add_collision on a StaticBody3D if cats
+## should bump into it (city_generator.gd does that for the trash bins).
+static func instantiate_model(path: String, parent: Node3D = null, pos: Vector3 = Vector3.ZERO, yaw: float = 0.0) -> Node3D:
+	if not path.begins_with("res://"):
+		path = "res://models/%s%s" % [path, "" if path.ends_with(".glb") else ".glb"]
+	if not _models.has(path):
+		var scene := load(path) as PackedScene if ResourceLoader.exists(path) else null
+		if scene == null:
+			push_warning("[LevelKit] No model at %s (export it from Blockbench as .glb into res://models/)" % path)
+			_models[path] = null
+		else:
+			_models[path] = scene
+	var packed: PackedScene = _models[path]
+	if packed == null:
+		return null
+	var model := packed.instantiate() as Node3D
+	psx_ify(model)
+	model.position = pos
+	model.rotation.y = yaw
+	if parent != null:
+		parent.add_child(model)
+	return model
+
+
+## Gives every mesh under "root" the PS1 look (shaders/psx_lit.gdshader): wobbly vertices, flat
+## shading, crisp pixels. Each surface keeps its painted texture (albedo_texture), its colour
+## (albedo_color) and its own UV map (world_uv = false), so a model painted in Blockbench looks
+## like it did there, just PS1. Per-copy colour still works with "instance_tint".
+static func psx_ify(root: Node) -> void:
+	var meshes: Array[Node] = root.find_children("*", "MeshInstance3D", true, false)
+	if root is MeshInstance3D:
+		meshes.append(root)
+	for node in meshes:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null:
+			continue
+		for surface in mesh_instance.mesh.get_surface_count():
+			var original := mesh_instance.get_active_material(surface)
+			mesh_instance.set_surface_override_material(surface, _psx_copy_of(original))
+
+
+## The shared PS1 version of a model's material (made the first time it's asked for).
+static func _psx_copy_of(original: Material) -> ShaderMaterial:
+	if original is ShaderMaterial and (original as ShaderMaterial).shader == PSX_SHADER:
+		return original  # already PS1
+	var key: Variant = "none"
+	if original != null:
+		key = original
+	if _psx_copies.has(key):
+		return _psx_copies[key]
+	var params := {"world_uv": false}
+	var standard := original as BaseMaterial3D
+	if standard != null:
+		if standard.albedo_texture != null:
+			params["albedo_texture"] = standard.albedo_texture
+		params["albedo_color"] = standard.albedo_color
+		if standard.emission_enabled:
+			params["emission_color"] = standard.emission
+			params["emission_energy"] = standard.emission_energy_multiplier
+	var material := psx_material(params)
+	_psx_copies[key] = material
+	return material
 
 
 ## A material with the game's PS1 look (shaders/psx_lit.gdshader). "params" = the shader's

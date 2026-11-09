@@ -1,0 +1,46 @@
+{
+  "name": "traffic_cone",
+  "kind": "prop",
+  "about": "A weathered orange street cone with two scuffed reflective bands on a square rubber foot. 16 px = 1 m.",
+  "texture_size": 64,
+  "seed": 3,
+  "background": "#e2641c",
+  "paint": [
+    {"op": "comment", "note": "[0,0,64,40]: the cone (wraps round its 10 sides; row 0 = the tip)"},
+    {"op": "gradient", "rect": [0, 0, 64, 40], "top": "#f07a26", "bottom": "#c2501a"},
+    {"op": "fill", "rect": [0, 9, 64, 15], "color": "#e8ecef"},
+    {"op": "fill", "rect": [0, 22, 64, 27], "color": "#dfe4e8"},
+    {"op": "stripes", "rect": [0, 9, 64, 15], "colors": ["#ffffff30", "#00000000", "#00000000"], "width": 1},
+    {"op": "noise", "rect": [0, 9, 64, 15], "color": "#c8ccd0", "amount": 0.25, "spread": 0.15},
+    {"op": "noise", "rect": [0, 22, 64, 27], "color": "#c8ccd0", "amount": 0.3, "spread": 0.15},
+    {"op": "noise", "rect": [0, 0, 64, 40], "amount": 0.3, "spread": 0.15},
+    {"op": "text", "pos": [14, 32], "text": "OVERCLEAN", "color": "#2a1a10c0", "spacing": 1, "worn": 0.08},
+    {"op": "gradient", "rect": [0, 26, 64, 40], "top": "#3a281800", "bottom": "#3a2818b0"},
+    {"op": "spots", "rect": [0, 0, 64, 40], "color": "#5a3a22a0", "count": 8, "size": 1.6},
+    {"op": "line", "from": [40, 10], "to": [44, 14], "color": "#8a5a3a"},
+    {"op": "line", "from": [12, 23], "to": [15, 26], "color": "#8a5a3a"},
+    {"op": "comment", "note": "[0,40,8,48]: tip cap"},
+    {"op": "fill", "rect": [0, 40, 8, 48], "color": "#d9631e"},
+    {"op": "comment", "note": "[8,40,40,48]: collar sides   [0,48,16,52]: foot edges"},
+    {"op": "fill", "rect": [8, 40, 40, 48], "color": "#b84a16"},
+    {"op": "noise", "rect": [8, 40, 40, 48], "amount": 0.4, "spread": 0.2},
+    {"op": "fill", "rect": [0, 48, 16, 52], "color": "#1e1c1b"},
+    {"op": "noise", "rect": [0, 48, 16, 52], "amount": 0.5, "spread": 0.3},
+    {"op": "comment", "note": "[40,40,64,64]: rubber foot from above (orange stain, scuffs)"},
+    {"op": "fill", "rect": [40, 40, 64, 64], "color": "#242221"},
+    {"op": "spots", "rect": [44, 44, 60, 60], "color": "#a8461890", "count": 4, "size": 3},
+    {"op": "noise", "rect": [40, 40, 64, 64], "amount": 0.45, "spread": 0.3},
+    {"op": "edge", "rect": [40, 40, 64, 64], "color": "#141312"}
+  ],
+  "groups": [
+    {"name": "Cone", "origin": [0, 0, 0]}
+  ],
+  "elements": [
+    {"type": "cube", "name": "foot", "group": "Cone", "from": [-5.5, 0, -5.5], "to": [5.5, 1.1, 5.5],
+     "sides": [0, 48, 16, 52], "top": [40, 40, 64, 64]},
+    {"type": "prism", "name": "collar", "group": "Cone", "sides": 10, "center": [0, 1.1, 0], "height": 0.8, "radius": 4.3,
+     "side_uv": [8, 40, 40, 48], "top_uv": [8, 40, 16, 48]},
+    {"type": "prism", "name": "cone", "group": "Cone", "sides": 10, "center": [0, 1.9, 0], "height": 9.6, "radius_bottom": 3.7, "radius_top": 0.7,
+     "side_uv": [0, 0, 64, 40], "top_uv": [0, 40, 8, 48]}
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "name": "template_roomba",
+  "kind": "character",
+  "about": "STARTER VAC-COP for Blockbench, the same size as the game's code-built one (scenes/roomba.tscn). Faces NORTH (-Z). The groups have the names scripts/roomba.gd looks for: Body, Eye (glows when it spots you), SirenRed, SirenBlue (flash), Brush (spins). Keep those names.",
+  "texture_size": 64,
+  "seed": 5,
+  "background": "#2a2d33",
+  "paint": [
+    {"op": "comment", "note": "[0,0,64,8] shell side   [0,8,24,32] shell top   [24,8,48,32] cap top"},
+    {"op": "fill", "rect": [0, 0, 64, 8], "color": "#d8dde4"},
+    {"op": "fill", "rect": [0, 6, 64, 8], "color": "#3a3f46"},
+    {"op": "fill", "rect": [0, 8, 24, 32], "color": "#e4e8ee"},
+    {"op": "text", "pos": [2, 18], "text": "VAC", "color": "#2050c0"},
+    {"op": "fill", "rect": [24, 8, 48, 32], "color": "#30343c"},
+    {"op": "comment", "note": "[48,8,56,16] eye   [48,16,56,24] red siren   [56,16,64,24] blue siren   [48,24,64,32] bumper + brush"},
+    {"op": "fill", "rect": [48, 8, 56, 16], "color": "#ff3030"},
+    {"op": "fill", "rect": [48, 16, 56, 24], "color": "#ff2020"},
+    {"op": "fill", "rect": [56, 16, 64, 24], "color": "#2060ff"},
+    {"op": "fill", "rect": [48, 24, 64, 32], "color": "#1a1c20"}
+  ],
+  "groups": [
+    {"name": "Body", "origin": [0, 0, 0]},
+    {"name": "Eye", "origin": [0, 2.4, -8.5]},
+    {"name": "SirenRed", "origin": [-1.45, 4.6, 0.3]},
+    {"name": "SirenBlue", "origin": [1.45, 4.6, 0.3]},
+    {"name": "Brush", "origin": [-5.8, 0.5, -5.8]}
+  ],
+  "elements": [
+    {"type": "prism", "name": "shell", "group": "Body", "sides": 10, "center": [0, 0.5, 0], "height": 2.6, "radius_bottom": 7.7, "radius_top": 8,
+     "side_uv": [0, 0, 64, 8], "top_uv": [0, 8, 24, 32], "bottom_uv": [48, 24, 64, 32]},
+    {"type": "prism", "name": "cap", "group": "Body", "sides": 10, "center": [0, 3.1, 0.6], "height": 1.3, "radius": 5.6,
+     "side_uv": [24, 8, 48, 12], "top_uv": [24, 8, 48, 32]},
+    {"type": "cube", "name": "bumper", "group": "Body", "from": [-5.6, 0.6, -8.3], "to": [5.6, 2.2, -6.4], "all": [48, 24, 64, 32]},
+    {"type": "cube", "name": "eye", "group": "Eye", "from": [-1.8, 2.1, -8.9], "to": [1.8, 2.7, -8.1], "all": [48, 8, 56, 16]},
+    {"type": "cube", "name": "siren_red", "group": "SirenRed", "from": [-2.5, 4.0, -0.5], "to": [-0.4, 5.3, 1.1], "all": [48, 16, 56, 24]},
+    {"type": "cube", "name": "siren_blue", "group": "SirenBlue", "from": [0.4, 4.0, -0.5], "to": [2.5, 5.3, 1.1], "all": [56, 16, 64, 24]},
+    {"type": "cube", "name": "bristle_1", "group": "Brush", "from": [-5.8, 0.3, -6.1], "to": [-1.3, 0.7, -5.5], "origin": [-5.8, 0.5, -5.8], "rotation": [0, 0, 0], "all": [48, 24, 64, 32]},
+    {"type": "cube", "name": "bristle_2", "group": "Brush", "from": [-5.8, 0.3, -6.1], "to": [-1.3, 0.7, -5.5], "origin": [-5.8, 0.5, -5.8], "rotation": [0, 120, 0], "all": [48, 24, 64, 32]},
+    {"type": "cube", "name": "bristle_3", "group": "Brush", "from": [-5.8, 0.3, -6.1], "to": [-1.3, 0.7, -5.5], "origin": [-5.8, 0.5, -5.8], "rotation": [0, 240, 0], "all": [48, 24, 64, 32]}
+  ]
+}

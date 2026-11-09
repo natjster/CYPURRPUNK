@@ -384,6 +384,7 @@ func _far_from_cats(spot: Vector3, distance: float) -> bool:
 @rpc("authority", "call_local", "reliable")
 func _boss_siren() -> void:
 	Sound.play("boss_siren")  # sounds/sfx/boss_siren.wav
+	Events.boss_deployed.emit()  # (scripts/events.gd: OVERCLEAN announces it)
 
 
 ## Everyone: a flash of orange light and bits of Roomba flying everywhere.

@@ -111,6 +111,7 @@ extends Node
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
+##   --heat_ramp=S     (host) raise the heat steadily to 100 over S seconds (every level, bosses, the seal)
 ##   --breach_seconds=S (host) a SEWER BREACH lasts S seconds (a short one tests THE 1% MIRACLE)
 ##   --breach_warning=S (host) the siren before a SEWER BREACH lasts S seconds
 ##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
@@ -357,6 +358,19 @@ func _ready() -> void:
 						UndergroundHub.of(cat).deploy(cat)
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
+		if args.has("heat_ramp") and multiplayer.is_server():
+			# --heat_ramp=S (host): raise the heat steadily to 100 over S seconds, so one run sees every
+			# heat level, the MEGA VAC-COPs and the seal (OVERCLEAN announces each: --sound_log).
+			var ramp_seconds := maxf(1.0, float(args["heat_ramp"]))
+			var ramp := func() -> void:
+				var heat_meter := HeatMeter.instance
+				var start := heat_meter.heat
+				var t := 0.0
+				while t < ramp_seconds:
+					await get_tree().physics_frame
+					t += get_physics_process_delta_time()
+					heat_meter.heat = maxf(heat_meter.heat, lerpf(start, HeatMeter.MAX_HEAT, t / ramp_seconds))
+			ramp.call()
 		if args.has("pos"):
 			var p: PackedFloat64Array = args["pos"].split_floats(",")
 			player.global_position = Vector3(p[0], p[1], p[2])
@@ -794,6 +808,16 @@ func _ready() -> void:
 			if not child.is_queued_for_deletion():
 				layout += str((child as Node3D).position.snapped(Vector3.ONE * 0.01))
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
+		# The Blockbench street props (models from res://models/): how many, and a few spots.
+		var props := {}
+		for node in city.find_children("*", "Node3D", true, false):
+			var file := node.scene_file_path.get_file().get_basename()
+			if file in ["trash_bin", "traffic_cone"]:
+				if not props.has(file):
+					props[file] = []
+				props[file].append((node as Node3D).global_position.snapped(Vector3.ONE * 0.1))
+		for file in props:
+			print("DevCapture props: %d x %s, e.g. %s" % [props[file].size(), file, props[file].slice(0, 4)])
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
 		# --mode: which mode this computer is playing, every cat's gang, and the layout it made.

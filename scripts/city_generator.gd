@@ -8,9 +8,11 @@ extends Node3D
 ## Layout: a grid of square blocks separated by streets. The very centre of the map is
 ## always a crossroads (cats spawn there), and the street just north of it always has
 ## room for the getaway car. Each block is cut into 4 lots; each lot becomes a building
-## (taller towards downtown), or an empty yard with crates and trash. Some buildings get
+## (taller towards downtown), or an empty yard with crates, bins and cones. Some buildings get
 ## glowing neon signs, and every crossroads gets a street lamp. One random lot is MEOW-MART
 ## (a "point of interest": it's somewhere different in every district).
+## Trash bins and traffic cones (real low-poly models made in Blockbench, res://models/) stand on
+## some sidewalk corners, in the yards' junk piles and by Meow-Mart's door.
 ## The manholes and payphones (the other points of interest) are placed by fish_heist.gd.
 ##
 ## All tuning knobs are in the Inspector when you select the City node in main.tscn.
@@ -35,6 +37,25 @@ signal generated(city_seed: int)
 @export_range(0.0, 1.0) var neon_chance: float = 0.55
 ## Chance (0-1) of a little box (vents, water tank) on a roof.
 @export_range(0.0, 1.0) var rooftop_chance: float = 0.5
+
+@export_group("Street props (Blockbench models)")
+## The trash bin model (made in Blockbench: models/blockbench/trash_bin.bbmodel).
+@export_file("*.glb") var trash_bin_model: String = "res://models/trash_bin.glb"
+## The traffic cone model (models/blockbench/traffic_cone.bbmodel).
+@export_file("*.glb") var traffic_cone_model: String = "res://models/traffic_cone.glb"
+## Empty yards: how many trash bins in the junk pile (a random number between these two).
+@export_range(0, 6) var yard_bins_min: int = 1
+@export_range(0, 6) var yard_bins_max: int = 3
+## Empty yards: how many traffic cones in the junk pile (some lie knocked over).
+@export_range(0, 6) var yard_cones_min: int = 0
+@export_range(0, 6) var yard_cones_max: int = 3
+## Chance (0-1) that a sidewalk corner gets a bin, a cone, or both. There are 4 corners per block
+## (144 in a 6x6 city), so 0.3 = roughly 40 corners with something on them.
+@export_range(0.0, 1.0) var corner_prop_chance: float = 0.3
+## A bin and a couple of cones by Meow-Mart's front door (either side, out of the loot's way).
+@export var props_at_meow_mart: bool = true
+## Trash bins are solid (cats bump into them). Cones never are, so cars don't stop dead on them.
+@export var bins_are_solid: bool = true
 
 @export_group("Materials")
 @export var street_material: Material
@@ -72,6 +93,7 @@ var _rng := RandomNumberGenerator.new()
 # Boxes, ground pieces and lights come from the level kit (scripts/level_kit.gd): it cuts big
 # surfaces into ~2.5 m pieces (giant triangles make the PS1 texture warp extreme and the windows
 # "swim") and shares one mesh between boxes of the same shape.
+# (The trash-bag blob is only a stand-in for when a model file is missing: see _add_trash_bag.)
 var _trash_mesh := SphereMesh.new()
 
 
@@ -108,6 +130,7 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 			var block_center := Vector3((bx + 0.5 - blocks_per_side / 2.0) * pitch, 0, (bz + 0.5 - blocks_per_side / 2.0) * pitch)
 			_build_block(block_center)
 	_place_street_lamps(pitch)
+	_place_corner_props(pitch)
 	print("[City] Built city #%d" % new_seed)
 	generated.emit(new_seed)
 
@@ -266,6 +289,15 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 	_add_glow_light(Vector3(center.x, 4.0, front_z + street_side.y * 1.5), pink)
 	meow_mart_position = Vector3(center.x, 0, front_z + street_side.y * 1.0)
 
+	# A bin on one side of the door, cones on the other (the loot lines up in the middle, about
+	# 2.6 m either side of the door, so these stand 4.4 m out, by the corners of the shop).
+	if props_at_meow_mart:
+		var bin_side := 1.0 if _rng.randf() < 0.5 else -1.0
+		var by_wall := front_z + street_side.y * 0.45
+		_add_bin(Vector3(center.x + bin_side * 4.4, 0, by_wall), _rng.randf() * TAU)
+		_add_cone(Vector3(center.x - bin_side * 4.4, 0, by_wall), _rng.randf() * TAU, false)
+		_add_cone(Vector3(center.x - bin_side * 3.7, 0, by_wall), _rng.randf() * TAU, _rng.randf() < 0.3)
+
 
 # --- Empty yards ---
 
@@ -280,13 +312,106 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 		var spot := lot_center + Vector3(_rng.randf_range(-spread, spread), 0.65, _rng.randf_range(-spread, spread))
 		var dumpster := LevelKit.add_box(self, spot, Vector3(2.2, 1.3, 1.2), building_material, true)
 		dumpster.set_instance_shader_parameter("instance_tint", Color(0.3, 0.6, 0.45))
-	for i in _rng.randi_range(2, 5):
-		var bag := MeshInstance3D.new()
-		bag.mesh = _trash_mesh
-		bag.material_override = trash_material
-		bag.position = lot_center + Vector3(_rng.randf_range(-spread, spread), 0.22, _rng.randf_range(-spread, spread))
-		bag.rotation = Vector3(_rng.randf_range(-0.3, 0.3), _rng.randf() * TAU, 0)
-		add_child(bag)
+	# The junk pile: a cluster of trash bins and traffic cones (Blockbench models) around one spot,
+	# some cones knocked over. (Every random number comes from _rng, in a fixed order: the city
+	# must come out the same on every computer.)
+	var pile := lot_center + Vector3(_rng.randf_range(-spread, spread) * 0.6, 0, _rng.randf_range(-spread, spread) * 0.6)
+	# The pile's spots: a 4x4 grid 1.2 m apart, shuffled, so two things never stand inside each other.
+	var spots: Array[Vector3] = []
+	for gx in 4:
+		for gz in 4:
+			spots.append(pile + Vector3((gx - 1.5) * 1.2, 0, (gz - 1.5) * 1.2))
+	for i in range(spots.size() - 1, 0, -1):  # shuffle with the city's own random numbers
+		var j := _rng.randi_range(0, i)
+		var swap := spots[i]
+		spots[i] = spots[j]
+		spots[j] = swap
+	for i in _rng.randi_range(yard_bins_min, maxi(yard_bins_min, yard_bins_max)):
+		if not spots.is_empty():
+			_add_bin(spots.pop_back() + _jiggle(), _rng.randf() * TAU)
+	for i in _rng.randi_range(yard_cones_min, maxi(yard_cones_min, yard_cones_max)):
+		if not spots.is_empty():
+			_add_cone(spots.pop_back() + _jiggle(), _rng.randf() * TAU, _rng.randf() < 0.4)
+
+
+## A small random nudge (up to 0.2 m) so a pile doesn't look laid out on a grid.
+func _jiggle() -> Vector3:
+	return Vector3(_rng.randf_range(-0.2, 0.2), 0, _rng.randf_range(-0.2, 0.2))
+
+
+# --- Street props: trash bins and traffic cones (real models, made in Blockbench) ---
+
+## Some sidewalk corners get a bin, a cone, or a bin AND a cone. They stand 1.6-2 m along the
+## kerb from the very corner: clear of the corner lamp posts, and outside the middle stretch of
+## each sidewalk where loot and payphones go (ItemManager.random_sidewalk_spot: up to 9 m from
+## the middle of a side; corners are 11.5 m out).
+func _place_corner_props(pitch: float) -> void:
+	var in_from_edge := block_size * 0.5 - 0.5  # half a metre in from the kerb
+	for bx in blocks_per_side:
+		for bz in blocks_per_side:
+			var block_center := Vector3((bx + 0.5 - blocks_per_side / 2.0) * pitch, 0, (bz + 0.5 - blocks_per_side / 2.0) * pitch)
+			for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+				if _rng.randf() >= corner_prop_chance:
+					continue
+				var along := _rng.randf_range(9.6, 10.2)
+				# Which of the corner's two kerbs: the one along the z axis or the one along x.
+				# "back" = the way along that kerb towards the middle of the sidewalk.
+				var spot: Vector3
+				var back: Vector3
+				if _rng.randf() < 0.5:
+					spot = block_center + Vector3(corner.x * in_from_edge, 0, corner.y * along)
+					back = Vector3(0, 0, -corner.y)
+				else:
+					spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
+					back = Vector3(-corner.x, 0, 0)
+				var roll := _rng.randf()
+				if roll < 0.5:
+					_add_bin(spot, _rng.randf() * TAU)
+				elif roll < 0.85:
+					_add_cone(spot, _rng.randf() * TAU, _rng.randf() < 0.25)
+				else:  # a bin with a cone next to it (towards the corner, away from the loot)
+					_add_bin(spot, _rng.randf() * TAU)
+					_add_cone(spot - back * 0.8, _rng.randf() * TAU, false)
+
+
+## A trash bin standing at "at" (feet on the ground), turned "yaw" radians. Solid (a box the
+## size of the can) unless bins_are_solid is off. Falls back to an old trash-bag blob if the model
+## file is missing.
+func _add_bin(at: Vector3, yaw: float) -> void:
+	var holder: Node3D = self
+	if bins_are_solid:
+		var body := StaticBody3D.new()
+		body.position = at
+		add_child(body)
+		LevelKit.add_collision(body, Vector3(0, 0.55, 0), Vector3(0.66, 1.1, 0.66))
+		holder = body
+		at = Vector3.ZERO
+	if LevelKit.instantiate_model(trash_bin_model, holder, at, yaw) == null:
+		_add_trash_bag(holder, at + Vector3(0, 0.22, 0), yaw)
+
+
+## A traffic cone at "at", turned "yaw". knocked_over = lying on its side (a little mess).
+func _add_cone(at: Vector3, yaw: float, knocked_over: bool) -> void:
+	var cone := LevelKit.instantiate_model(traffic_cone_model, self, at, yaw)
+	if cone == null:
+		_add_trash_bag(self, at + Vector3(0, 0.22, 0), yaw)
+		return
+	if knocked_over:
+		# Tip it over a bit past flat (104 degrees around its own sideways axis) and lift it
+		# 0.22 m: then the rim of the cone and its tip both rest on the pavement, like a real
+		# fallen cone (the far edge of the square foot dips out of sight under the ground).
+		cone.rotate_object_local(Vector3.RIGHT, deg_to_rad(104.0))
+		cone.position.y += 0.22
+
+
+## The old placeholder: a squashed sphere of trash (used only when a model file is missing).
+func _add_trash_bag(parent: Node3D, at: Vector3, yaw: float) -> void:
+	var bag := MeshInstance3D.new()
+	bag.mesh = _trash_mesh
+	bag.material_override = trash_material
+	bag.position = at
+	bag.rotation.y = yaw
+	parent.add_child(bag)
 
 
 # --- Street lamps at every crossroads, plus one halfway along each block ---

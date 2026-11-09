@@ -458,9 +458,14 @@ func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
 
 
 ## Host -> everyone: this player has used their one trip up in this district.
+## announce = false: just catching a late joiner up (no "a cat went up" event for old news).
 @rpc("authority", "call_local", "reliable")
-func _mark_went_up(player_id: int) -> void:
+func _mark_went_up(player_id: int, announce: bool = true) -> void:
+	var first := went_up.is_empty()
+	var new := not went_up.has(player_id)
 	went_up[player_id] = true
+	if announce and new:
+		Events.player_went_up.emit(player_id, first)  # (scripts/events.gd: OVERCLEAN's welcome)
 
 
 ## Host -> a computer that just joined (network ID "peer"): which gangs found their exit, the
@@ -468,7 +473,7 @@ func _mark_went_up(player_id: int) -> void:
 func send_state_to(peer: int) -> void:
 	_set_state.rpc_id(peer, sealed, revealed, exit_opened)
 	for player_id in went_up:
-		_mark_went_up.rpc_id(peer, player_id)
+		_mark_went_up.rpc_id(peer, player_id, false)
 
 
 # --- HUD (the arrow to the exit: scenes/ui/hud.tscn. Everyone's cash is the Wallet's.) ---
