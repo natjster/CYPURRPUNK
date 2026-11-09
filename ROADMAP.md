@@ -234,6 +234,7 @@ cosmetics, or bringing TURF WAR up to the level of co-op.
 ## Decisions that are yours
 These three shape everything above. The plan assumes "yes" to each.
 
-1. **Co-op first, gangs as a side mode?** This parks a lot of recent work.
+1. **Co-op first, gangs as a side mode?** DECIDED 9 Nov 2026: yes. Co-op is the default and
+   gang-versus-gang becomes the TURF WAR mode.
 2. **Direction A, Chaos versus Clean?** It changes what the game is about.
 3. **Steam in phase 2?** It costs $100 and is the main route to strangers.
