@@ -2195,7 +2195,7 @@ are just files in the `sounds/` folder — **adding or replacing a sound needs n
 sounds/
 ├── sfx/          <- one-off effects        (SOUND FX slider)
 ├── ambience/     <- background loops        (SOUND FX slider)
-└── music/        <- music loops, one per area (MUSIC slider)
+└── music/        <- music loops (MUSIC slider): hub, city, city_ridge, city_wipeout, escape, breach
 ```
 
 The files there now are **placeholder bleeps** made by Claude. Replace them with real ones.
@@ -2250,10 +2250,43 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `click` | any menu button | just you |
 | `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's row slides in / each award stamps down (§22) | just you |
 
-Music and background loops change by area (they fade into each other): in the sewers
-`music/hub` + `ambience/sewer`, up top (and on the start menu) `music/city` + `ambience/rain`.
-To use other files, select **Hub** in `main.tscn` > Inspector > **Music** group (Hub Music,
-City Music, Hub Ambience, City Ambience: file names without `.wav`; empty = silence).
+### The music: 4 stages that climb as a raid heats up
+The music follows what your screens are looking at and gets more frantic as the district heats
+up. Each change fades smoothly into the next (2 seconds).
+
+| Stage | When | Track (file in `music/`) |
+|---|---|---|
+| 1. SAFE SEWERS | everyone on this computer is down in the sewers | `hub` |
+| 2. STREET RAID | someone on this computer is up top, the exit isn't open yet | one of `city`, `city_ridge` ("NEON APEX", 138 BPM arcade techno), `city_wipeout` ("ANTI-GRAV WHISKERS", 160 BPM liquid drum & bass) |
+| 3. EXIT OPEN | up top, and your gang's exit is open: run for the payphone and the exit! | `escape` ("HOT PAWS", 168 BPM jungle) |
+| 4. BREACH | THE DEEP CLEAN (the hatch is sealed at 100 heat) for anyone watching the city, or a SEWER BREACH and its warning siren, wherever you are | `breach` ("TOTAL SANITATION", 176 BPM hardcore) |
+
+- **Which street track?** Each district plays ONE of the three, picked from the district's city
+  number, so everyone in the game hears the same one and the next district usually has another.
+  The start menu's showcase city always picks the same one.
+- **Watching someone (CAT-CAM, the breach live feed) counts as being where the camera is:** from
+  the sewer you hear the city's music and rain while you watch a teammate up top.
+- Background loops: `ambience/sewer` in the sewers, `ambience/rain` up top (and on the start menu).
+- **Change which files play:** select **Hub** in `main.tscn` > Inspector > **Music** group:
+  Hub Music, **City Tracks** (the street rotation: add or remove names with the list's + / bin
+  buttons), Escape Music, Breach Music, Hub Ambience, City Ambience (file names without `.wav`;
+  empty = silence).
+
+### Making or changing the music tracks (Python)
+`city_ridge`, `city_wipeout`, `escape` and `breach` are made from maths (no samples, no licence
+worries) by `tools/make_music_tracks.py`. They loop seamlessly (32-42 seconds each).
+```
+python tools/make_music_tracks.py                 <- makes all four (about a minute)
+python tools/make_music_tracks.py escape breach   <- only these two
+python tools/make_music_tracks.py --levels        <- also prints how loud each instrument is
+```
+To tweak one, open the file and find its function (`track_neon_apex`, `track_anti_grav`,
+`track_hot_paws`, `track_total_sanitation`). At its top are the plain settings: `bpm` and `bars`
+(the loop's length), the `CHORDS`, the drum patterns (16 letters per bar: `X` loud, `x` normal,
+`o` soft, `.` nothing), the tunes (lists of step, note, length; note 60 = middle C, +12 = an octave
+up) and which bars each instrument plays in. The numbers at the end (`song.save({...})`) are each
+instrument's volume. Run it again and press Play: Godot picks the new file up by itself. A track
+of your own works too: drop `escape.wav` (or `.ogg`) into `sounds/music/` instead.
 
 "Everyone nearby" sounds come from a spot in the 3D world: louder when your camera is close,
 left/right speaker by direction, silent beyond 45 m.
@@ -2295,9 +2328,15 @@ ears" when it does it.)
 - `Sound.attach_loop("engine_loop", self)` — a looping sound that rides along on a node; keep the
   returned player to change its `pitch_scale` / `volume_db`.
 - `Sound.play_music("city")` / `Sound.play_ambience("rain")` — fade over to another track.
+  (Every music file is its own name: `Sound.play_music("city_ridge")` plays exactly that one. The
+  game's music choice is made in one place, `hub.gd` `_pick_music`.)
 
 ### Testing shortcut
 Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] footstep at (...)`).
+Music checks: `--solo` (hub), `--solo --deploy --seed=1` / `=2` / `=3` (city_ridge / city_wipeout /
+city), `--solo --deploy --heat=80` (escape), `--solo --deploy --heat=100 --heat_hold=30` (breach),
+`--solo --mainframe=0 --heat=100 --heat_hold=30 --breach_warning=2 --breach_seconds=6 --frames=1500`
+(breach, then hub after the Miracle). Look for `[Sound] music now playing: ...`.
 
 ---
 

@@ -87,7 +87,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by
   name (`meow_1/_2` = random variants of "meow"); `play` (2D, local), `play_at` (3D, local: use where
   every peer already runs the code), `play_everywhere` (3D, RPC to all), `attach_loop`, `play_music` /
-  `play_ambience` (crossfade; hub.gd picks per area). Missing files are silent. Split screen: only player 1's
+  `play_ambience` (crossfade). MUSIC = 4 stages in hub.gd `_pick_music` (exports hub_music / `city_tracks` rotated by `city_seed` / escape_music when
+  a local cat's `exit_is_open` / breach_music on `breach_busy`, `warning_teams` or `sealed` up top), by `view_cameras()`; tracks from `tools/make_music_tracks.py`. Missing files are silent. Split screen: only player 1's
   camera listens, so 3D sounds / loops nearer another local player are moved via `Sound.hearing_position`. Never hand-build
   AudioStreamPlayers elsewhere. Sound table in SETUP_GUIDE.md section 12. Test: `--sound_log`.
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,

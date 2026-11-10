@@ -43,7 +43,7 @@ teach us something. It is built around your answers:
 - **It looks like a prototype in screenshots.** There is not one modelled 3D asset in the project:
   cat, cars, bots, NPCs and guns are all simple shapes. In motion with fog and the CRT effect it
   works. In a still image on a store page it reads as unfinished, not as PS1.
-- **Two music tracks.** One for the city, one for the hub.
+- **Two music tracks.** One for the city, one for the hub. (Now six, climbing in 4 stages per raid: §7.)
 - **The rules are hard to explain.** Mainframe percentages, five different exit heat numbers, hacks,
   one trip per district, last raids. Each is fine alone. Together they need a guide.
 - **PvP is built for 8 and played by 3.** Two gangs need at least 4 players to be fun. With a few
@@ -237,7 +237,10 @@ a world that hates mess.
   watching): "<NAME> (RADIO): BEHIND YOU!" types out over their head in your voice, and nearby VAC-COPs hear it. §24.)
 - **Claude:** hideout upgrades, first three.
 - **Claude:** three or four district twists.
-- **Claude:** two or three more music tracks using the existing music tools.
+- [x] **Claude:** two or three more music tracks using the existing music tools. (Done 10 Nov 2026: four 90s PS1
+  arcade techno / drum & bass loops made by `tools/make_music_tracks.py`: NEON APEX and ANTI-GRAV WHISKERS join
+  the old city track in a per-district street rotation, HOT PAWS plays once the exit opens, TOTAL SANITATION during
+  THE DEEP CLEAN and a SEWER BREACH. The music now climbs in 4 stages as a raid heats up. SETUP_GUIDE §12.)
 
 **Done when:** a friend who has not played for a month says it looks like a different game, and
 your group chooses to play a second evening in a week without being asked.
