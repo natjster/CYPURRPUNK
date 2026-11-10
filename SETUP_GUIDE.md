@@ -14,7 +14,7 @@ Meow-City/
 │   ├── player.tscn            <- the cat
 │   ├── cat_model.tscn         <- the cat's body (used by player.tscn and the MY CAT preview, §11)
 │   ├── cat_parts/             <- accessory models: fedora, beanie, neon_halo, shades... (§11)
-│   ├── getaway_car.tscn       <- the car (with headlight beam + taillights)
+│   ├── getaway_car.tscn       <- the car (the Blockbench model models/getaway_car.glb + headlight beam)
 │   ├── roomba.tscn            <- the VAC-COP police Roomba (the enemy)
 │   ├── items/                 <- item models: tommy_gun, pistol, catnip, catdip, fish
 │   ├── npcs/                  <- characters you talk to: don_catleone, lil_mittens, npc_template (§8)
@@ -256,7 +256,9 @@ is in.) Test: `--teams=1 --deploy --drive --hold=move_forward` drives the Burrow
 GetawayCar (RigidBody3D)            script: getaway_car.gd
 │   Mass 800, Can Sleep OFF, Axis Lock > Angular X + Z ON, Physics Material: friction 0
 ├── CollisionShape3D                 BoxShape3D 1.8 x 0.8 x 3.6
-├── Model (Node3D)                   Body, Cabin, 4 wheels, 2 headlights (MeshInstance3D)
+├── Model (Node3D)
+│   ├── CarModel                     models/getaway_car.glb (the WEDGE CYBER-INTERCEPTOR, see below)
+│   └── HeadlightBeam (SpotLight3D)  lights the road ahead
 ├── GroundRay (RayCast3D)            Target Position (0, -0.8, 0)
 ├── DoorZone (Area3D)                "press E" range
 │   └── CollisionShape3D             BoxShape3D 5 x 2 x 6
@@ -270,6 +272,29 @@ Why those settings:
 - **Can Sleep OFF** — a sleeping body ignores our driving code.
 - **Angular X/Z locked** — the car can only turn left/right, so it can never flip. (Ramps will come later.)
 - **Friction 0** — our script handles grip; real friction would fight it.
+
+### The look: the WEDGE CYBER-INTERCEPTOR (`models/getaway_car.glb`)
+An 80s/90s wedge car: low sharp nose with a cyan visor headlight bar, dark gunmetal body, tinted
+cabin with stepped louvers over the rear window, a little **cat-ear spoiler** on the roof (the
+inner ears glow), wide wheel arches, side skirts, twin blue rear **thrusters** and a full-width red
+taillight bar. 360 triangles, one 128x128 pixel-art texture.
+- **Gang colour:** the neon racing rail along each side, the nose and tail lips and the inner cat
+  ears are the model's **Trim** part. The game paints it the car's gang colour and makes it glow:
+  **GetawayCar = Catleone pink, GangCar = Burrow orange** (from the car's **Team**, colours in
+  `scripts/teams.gd`).
+- **Wheels** (`WheelFL/FR/BL/BR`) roll with the car's speed and the front two turn when you steer,
+  on every player's screen (other players' cars guess the steering from how they turn).
+- **Knobs:** select GetawayCar (or GangCar) in `main.tscn` > Inspector > **Look**: **Trim Glow**,
+  **Light Glow** (headlights, taillights, thrusters), **Body Shine** (wet-metal shine),
+  **Wheel Steer Degrees** (28), **Wheel Steer Speed**, **Wheel Radius**.
+- **Changing the model:** double-click `models/blockbench/getaway_car.bbmodel` to repaint it in
+  Blockbench (keep the group names: Body, Trim, HeadlightL/R, TaillightL/R, Thrusters,
+  WheelFL/FR/BL/BR), then ask Claude to re-export it (section 20). Claude's recipe is
+  `tools/model_specs/getaway_car.json`. The car's collision box is not the model: it stays
+  the 1.8 x 0.8 x 3.6 m box in CollisionShape3D.
+- Test: `--host --no_hud --car_light=4 --cam_from=6.0,1.0,-13.6 --look_from=3,-0.1,-10 --capture=shots/car.png`
+  (`--car_light` = a test-only lamp over each car; `--mode=turf` shows the orange GangCar at 72,0,-62).
+  The `DevCapture car_look` line prints each car's trim colour, wheel spin and steering.
 
 ### What `scripts/getaway_car.gd` does
 Arcade-style: each physics step it nudges velocity directly instead of simulating tyres.
@@ -1165,10 +1190,31 @@ new district. In the code that just means a new city seed: the whole city is gen
 Fish and sardines grow back after 20 seconds, the koi after 2 minutes. If you drove onto the exit,
 the getaway car goes back to its parking spot.
 
-**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = `EXIT ^ 120m`
-(direction and distance to the exit) **only after someone
-called Don on a payphone**, or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
+**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = the **big green 3D
+arrow** (below), or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
 **only while you're in the sewers**.
+
+**THE GREEN ARROW ("Crazy Taxi" style, `scripts/ui/hud_compass_arrow.gd`):** a chunky bevelled 3D
+arrow at the top-middle of every player's screen. It appears the moment **your gang's exit opens**
+while you're up in the city:
+1. `PAYPHONE  45m`: it points at the **nearest ringing payphone**. Call your boss on it.
+2. `EXIT  80m`: once anyone in your gang has made that call, it points at **your exit manhole**.
+
+It turns to match your camera (on foot or driving), so pointing "up" = straight ahead on screen.
+From **90 heat** it bobs and pulses faster (the hatch is about to seal); it's hidden in the sewers,
+during a Sewer Breach alarm, before your exit opens and once the hatch seals. In the tutorial it
+slides down under the tutorial box. It's drawn in code (no extra 3D scene), so four split-screen
+arrows cost nothing.
+- **Where:** `scenes/ui/hud.tscn` > HUD > Frame > Top > **Compass** (move it like any Control).
+  Select it for the knobs: **Arrow Color**, **Edge Color**, **Label Color**, **Arrow Size**,
+  **Tilt Degrees** (how much of its top you see), **Thickness**, **Bevel**, **Snap** (PS1 wobble;
+  0 = smooth), **Label Font Size**, **Turn Speed**, **Bob Height/Speed**, **Pulse Amount**,
+  **Urgent Speed**, **Urgent Pulse**.
+- **When it hurries:** **Heist** node in `main.tscn` > Inspector > **The green arrow (HUD)** >
+  **Seal Warning At Heat** (90).
+- Test: `--host --deploy --heat=80 --capture=shots/arrow.png` (payphone), add
+  `--talk=Payphone0 --choose=0` (exit), `--heat=93 --heat_hold=30` (hurrying). The
+  `DevCapture compass` line prints what each player's arrow says and where it points.
 
 **Where it lives:**
 - `scripts/fish_heist.gd` on the **Heist** node in `main.tscn`: places loot, manholes and
@@ -2794,7 +2840,8 @@ back and the real save wasn't touched, and quits (exit code 0 = passed, 1 = a st
 ## 20. Real models from Blockbench + Claude's tool servers (Model Shop, Sound Lab)
 
 The game is moving from code-built boxes to real low-poly models (ROADMAP.md §5). The first two
-are the **trash bin** and the **traffic cone** you see on street corners and in empty yards.
+were the **trash bin** and the **traffic cone** you see on street corners and in empty yards; the
+**getaway car** (the WEDGE CYBER-INTERCEPTOR, section 3) is one too.
 
 ### The folders
 | Where | What | Who edits it |
@@ -2814,8 +2861,8 @@ Starter templates, also in `models/blockbench/`:
 
 (The templates aren't in the game yet: swapping the real cat / VAC-COP for a model is Phase 1.)
 
-**The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**;
-textures **64x64** (props) or **128x128** (characters). In Blockbench 16 pixels = 1 metre, Y is
+**The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**,
+vehicles under **500**; textures **64x64** (props) or **128x128** (characters, vehicles). In Blockbench 16 pixels = 1 metre, Y is
 up, and the front of a model faces **north**.
 
 ### Changing a model yourself
@@ -2860,7 +2907,7 @@ They give Claude new tools. You never run them; they're free and run on this PC.
 
 | Server (file) | Tools it gives Claude |
 |---|---|
-| **Model Shop** (`tools/model_mcp.py`) | `create_or_edit_bbmodel` (write/change a Blockbench project: boxes, round cans and cones, groups, markers, a painted pixel-art texture), `export_bbmodel_to_glb`, `inspect_model` (triangles, texture size, groups vs the rules), `list_models` |
+| **Model Shop** (`tools/model_mcp.py`) | `create_or_edit_bbmodel` (write/change a Blockbench project: boxes, round cans and cones, free-form "poly" shapes like the car's wedge, groups, markers, a painted pixel-art texture), `export_bbmodel_to_glb`, `inspect_model` (triangles, texture size, groups vs the rules), `list_models` |
 | **Sound Lab** (`tools/sound_mcp.py`) | `generate_overclean_voice` (free text-to-speech + robot + loudspeaker echo + chime), `generate_cat_voice_blips` (Animal Crossing style talking cats: `meow_blip_<name>_1..4.wav`), `generate_ps1_sfx` (crunchy effects: bin clatter, cone bounce, scratch, PA chime, metal clang, plastic tap, or a custom recipe), `list_sounds` |
 
 The real work is in `tools/cypurr_models.py` and `tools/cypurr_sound.py`, which also run from a

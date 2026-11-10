@@ -419,6 +419,14 @@ func _ready() -> void:
 				var hud := Hud.of(seat)
 				if hud != null:
 					hud.visible = false
+		if args.has("car_light"):
+			# --car_light[=E]: a test-only "showroom" lamp over every car, to judge the model at night.
+			for car in Game.instance.cars():
+				var lamp := OmniLight3D.new()
+				lamp.light_energy = float(args["car_light"]) if args["car_light"] != "" else 3.0
+				lamp.omni_range = 9.0
+				car.add_child(lamp)
+				lamp.position = Vector3(1.5, 3.0, 1.0)
 		if args.has("cam_from") or args.has("cam_orbit"):
 			_film_camera(player, args)  # runs alongside everything below (not awaited)
 		if args.has("mouse_test"):
@@ -894,9 +902,16 @@ func _ready() -> void:
 		for cat in scene.get_node("Players").get_children():
 			print("DevCapture sticky: cat %s paws=%.1f s, patches=%d, speed=%.1f, hp=%d" % [cat.name, cat._sticky_left,
 				StickyPatch.count(), Motion.flat(cat.velocity).length(), CatHealth.instance.get_health(cat.player_id)])
+	for seat in 4:
+		var compass := Hud.element("Compass", seat) as HudCompassArrow
+		if compass != null:
+			print("DevCapture compass seat %d: shown=%s text='%s' yaw=%.0f deg urgent=%s top=%.0f" % [seat, compass.visible,
+				compass._text, rad_to_deg(compass._target_yaw), compass._urgent, compass.offset_top])
 	for car in (scene as Game).cars():
 		print("DevCapture car %s (gang %d): position=%s driver=%d passengers=%s frozen=%s" % [car.name, car.team,
 			car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
+		print("DevCapture car_look %s: trim=%s wheels=%d spin=%.2f steer=%.1f deg (input %.2f) speed=%.1f" % [car.name,
+			car.trim_color().to_html(false), car._wheels.size(), car._wheel_spin, rad_to_deg(car._wheel_steer), car.steer, car._rolling_speed])
 	var players := scene.get_node_or_null("Players")
 	if players != null:
 		for cat in players.get_children():

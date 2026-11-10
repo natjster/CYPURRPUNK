@@ -4,12 +4,14 @@ Claude Code starts it by itself (it's listed in .mcp.json at the top of the proj
 run it by hand. What it gives Claude:
 
   create_or_edit_bbmodel   write / change a Blockbench project in models/blockbench/<name>.bbmodel
-                           (boxes, n-sided cans and cones, groups = bones, markers, and a painted
+                           (boxes, n-sided cans and cones, free-form "poly" wedges / slopes / fins,
+                           groups = bones, markers, and a painted
                            64x64 or 128x128 pixel-art texture). Double-click the file to open it in
                            Blockbench and tweak it yourself.
   export_bbmodel_to_glb    turn a .bbmodel into models/<name>.glb for Godot (no Blockbench needed)
   inspect_model            triangle count, texture size and group names, checked against the
-                           ROADMAP.md style rules (props < 150 triangles, characters < 600)
+                           ROADMAP.md style rules (props < 150 triangles, characters < 600,
+                           vehicles < 500)
   list_models              what's in models/ and models/blockbench/
 
 All the real work is in tools/cypurr_models.py (which also runs from the command line).
@@ -48,7 +50,8 @@ def create_or_edit_bbmodel(name: str, spec: str, replace: bool = True) -> str:
     """Create or edit the Blockbench project models/blockbench/<name>.bbmodel.
 
     spec = JSON text with any of:
-      texture_size  64 (props) or 128 (characters)
+      kind          "prop" (default), "character" or "vehicle" (for the triangle check)
+      texture_size  64 (props) or 128 (characters, vehicles)
       background    starting colour of a new texture, e.g. "#5d6b66"
       paint         list of paint ops on the texture, in order. Each has "op":
                     fill{rect,color} noise{rect,amount,spread[,color]} stripes{rect,colors,width,direction}
@@ -61,6 +64,11 @@ def create_or_edit_bbmodel(name: str, spec: str, replace: bool = True) -> str:
                       cube:    from, to, [origin, rotation], UVs: faces{north..down: rect} or all / sides / top / bottom
                       prism:   sides, center (bottom middle), height, radius | radius_bottom+radius_top,
                                [twist, origin, rotation], side_uv (wraps round), top_uv, bottom_uv
+                      poly:    vertices {name: [x,y,z]}, faces [{v: [3 or 4 names], uv: rect}], [uv (default
+                               rect), outward_from [x,y,z] (only for a lone flat piece), origin, rotation].
+                               Any shape from corner points (a car's wedge nose, a sloped roof, a fin).
+                               Corner order doesn't matter: faces are turned outward by themselves, and
+                               the rect is laid flat on each face from the side it faces most.
                       locator: position (an invisible marker, e.g. "hat")
       remove        [names] of elements/groups to delete (when editing)
     Units: 16 px = 1 metre, Y up, the front faces north (-Z).
@@ -78,7 +86,7 @@ def create_or_edit_bbmodel(name: str, spec: str, replace: bool = True) -> str:
 def export_bbmodel_to_glb(bbmodel: str, glb_name: str = "", kind: str = "prop") -> str:
     """Export a .bbmodel (name or path) to models/<glb_name or same name>.glb for Godot.
     Groups become nodes with the same names, locators become empty marker nodes, textures are
-    embedded with nearest (crisp pixel) filtering. kind = "prop" or "character" (for the check).
+    embedded with nearest (crisp pixel) filtering. kind = "prop", "character" or "vehicle" (for the check).
     In Godot, load it with LevelKit.instantiate_model("res://models/<name>.glb") to get the PS1 look."""
     src = _resolve(bbmodel, models.BLOCKBENCH_DIR, ".bbmodel")
     out = _resolve(glb_name, models.GLB_DIR, ".glb") if glb_name else None

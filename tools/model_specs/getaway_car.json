@@ -1,0 +1,2610 @@
+{
+ "name": "getaway_car",
+ "kind": "vehicle",
+ "about": "The getaway car: an 80s/90s WEDGE CYBER-INTERCEPTOR. Low sharp nose with a cyan visor headlight bar, tinted cabin with stepped louvers over the fastback, a cat-ear roof spoiler, wide arches, side skirts, twin rear thrusters and a full-width taillight bar. Forward = -Z. Fits the car's 1.8 x 0.8 x 3.6 m collision box (centre = 0,0,0). Groups the game uses: Body, Trim (tinted the gang colour + glows), HeadlightL/R, TaillightL/R, Thrusters (glow), WheelFL/FR/BL/BR (pivot = axle, spun and steered by getaway_car.gd). 16 px = 1 m.",
+ "texture_size": 128,
+ "seed": 1999,
+ "background": "#2e333c",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "Wedge Cyber-Interceptor. Layout (x1,y1,x2,y2): side_rear 0,0,64,16 | side_front 64,0,96,16 | nose 96,0,128,16 | hood 0,16,32,48 | deck 32,16,64,48 | rear 64,16,96,32 | glass 96,16,128,32 | windshield 64,32,96,48 | roof 96,32,128,40 | louver 96,40,128,48 | tread 0,48,64,56 | rim 64,48,80,64 | headlight 80,48,96,56 | taillight 80,56,96,64 | thruster 96,48,112,64 | TRIM 112,48,128,64 (near white: the game tints it the gang colour) | vents 0,56,64,64 | gunmetal 0,64,32,80 | underside 32,64,64,80"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    128,
+    128
+   ],
+   "color": "#2e333c"
+  },
+  {
+   "op": "comment",
+   "note": "side_rear: door + rear quarter (front of the car is on the LEFT seen from the left side)"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    64,
+    16
+   ],
+   "top": "#68717f",
+   "bottom": "#3a404b"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    64,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "line",
+   "from": [
+    2,
+    1
+   ],
+   "to": [
+    2,
+    15
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "line",
+   "from": [
+    28,
+    1
+   ],
+   "to": [
+    28,
+    15
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "line",
+   "from": [
+    3,
+    8
+   ],
+   "to": [
+    27,
+    8
+   ],
+   "color": "#5d6676"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    22,
+    6,
+    26,
+    7
+   ],
+   "color": "#8a93a3"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    44,
+    9,
+    58,
+    14
+   ],
+   "colors": [
+    "#14161b",
+    "#3b414d"
+   ],
+   "width": 1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    43,
+    8,
+    59,
+    15
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    15
+   ],
+   "to": [
+    63,
+    15
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "comment",
+   "note": "side_front: fender"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    64,
+    0,
+    96,
+    16
+   ],
+   "top": "#68717f",
+   "bottom": "#3a404b"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    64,
+    0,
+    96,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "line",
+   "from": [
+    94,
+    1
+   ],
+   "to": [
+    94,
+    15
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "line",
+   "from": [
+    66,
+    8
+   ],
+   "to": [
+    93,
+    8
+   ],
+   "color": "#5d6676"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    80,
+    10,
+    90,
+    13
+   ],
+   "colors": [
+    "#14161b",
+    "#3b414d"
+   ],
+   "width": 1
+  },
+  {
+   "op": "comment",
+   "note": "nose: recessed grille in the middle"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    96,
+    0,
+    128,
+    16
+   ],
+   "color": "#3d434e"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    106,
+    3,
+    118,
+    13
+   ],
+   "color": "#0c0d10"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    107,
+    4,
+    117,
+    12
+   ],
+   "colors": [
+    "#0c0d10",
+    "#2f3540"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    105,
+    2,
+    119,
+    14
+   ],
+   "color": "#5d6676"
+  },
+  {
+   "op": "comment",
+   "note": "hood: gunmetal with a centre seam + vents"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "top": "#59616f",
+   "bottom": "#6b7482"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "line",
+   "from": [
+    15,
+    16
+   ],
+   "to": [
+    15,
+    47
+   ],
+   "color": "#1b1e24"
+  },
+  {
+   "op": "line",
+   "from": [
+    16,
+    16
+   ],
+   "to": [
+    16,
+    47
+   ],
+   "color": "#5d6676"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    5,
+    34,
+    12,
+    42
+   ],
+   "colors": [
+    "#14161b",
+    "#3b414d"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    20,
+    34,
+    27,
+    42
+   ],
+   "colors": [
+    "#14161b",
+    "#3b414d"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "comment",
+   "note": "deck (behind the windshield, mostly under the cabin) + boot lid seam"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    64,
+    48
+   ],
+   "color": "#525a67"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    16,
+    64,
+    48
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    34,
+    40,
+    62,
+    48
+   ],
+   "color": "#1b1e24"
+  },
+  {
+   "op": "comment",
+   "note": "rear panel"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    16,
+    96,
+    32
+   ],
+   "color": "#3f4550"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    64,
+    16,
+    96,
+    32
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "line",
+   "from": [
+    64,
+    21
+   ],
+   "to": [
+    95,
+    21
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "text",
+   "pos": [
+    69,
+    25
+   ],
+   "text": "CYPURR",
+   "color": "#7d8696",
+   "spacing": 1,
+   "worn": 0.1
+  },
+  {
+   "op": "comment",
+   "note": "side glass: dark tinted cyber glass with a cyan streak"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    96,
+    16,
+    128,
+    32
+   ],
+   "color": "#0b1018"
+  },
+  {
+   "op": "line",
+   "from": [
+    100,
+    30
+   ],
+   "to": [
+    110,
+    18
+   ],
+   "color": "#1f6b8a"
+  },
+  {
+   "op": "line",
+   "from": [
+    102,
+    30
+   ],
+   "to": [
+    112,
+    18
+   ],
+   "color": "#174f66"
+  },
+  {
+   "op": "line",
+   "from": [
+    116,
+    30
+   ],
+   "to": [
+    124,
+    20
+   ],
+   "color": "#174f66"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    96,
+    16,
+    128,
+    32
+   ],
+   "color": "#1a1d23"
+  },
+  {
+   "op": "comment",
+   "note": "windshield"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    32,
+    96,
+    48
+   ],
+   "color": "#0b1018"
+  },
+  {
+   "op": "line",
+   "from": [
+    68,
+    46
+   ],
+   "to": [
+    80,
+    34
+   ],
+   "color": "#2a86a8"
+  },
+  {
+   "op": "line",
+   "from": [
+    71,
+    46
+   ],
+   "to": [
+    83,
+    34
+   ],
+   "color": "#174f66"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    64,
+    32,
+    96,
+    48
+   ],
+   "color": "#1a1d23"
+  },
+  {
+   "op": "comment",
+   "note": "roof + louver slats"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    96,
+    32,
+    128,
+    40
+   ],
+   "color": "#5a6270"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    96,
+    32,
+    128,
+    40
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    96,
+    40,
+    128,
+    48
+   ],
+   "colors": [
+    "#717a8a",
+    "#1c1f25"
+   ],
+   "width": 2,
+   "direction": "horizontal"
+  },
+  {
+   "op": "comment",
+   "note": "tyre tread + rim"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    48,
+    64,
+    56
+   ],
+   "color": "#2a2c31"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    49,
+    64,
+    55
+   ],
+   "colors": [
+    "#1b1c20",
+    "#45484f"
+   ],
+   "width": 2
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    48,
+    80,
+    64
+   ],
+   "color": "#2a2c31"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    66,
+    50,
+    78,
+    62
+   ],
+   "color": "#b8c0cc"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    69,
+    53,
+    75,
+    59
+   ],
+   "color": "#2a2e36"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    71,
+    55,
+    73,
+    57
+   ],
+   "color": "#e8eef5"
+  },
+  {
+   "op": "line",
+   "from": [
+    66,
+    56
+   ],
+   "to": [
+    77,
+    56
+   ],
+   "color": "#e8eef5"
+  },
+  {
+   "op": "line",
+   "from": [
+    72,
+    50
+   ],
+   "to": [
+    72,
+    61
+   ],
+   "color": "#e8eef5"
+  },
+  {
+   "op": "comment",
+   "note": "headlight visor bar: cyan with amber ends (glows in the game)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    48,
+    96,
+    56
+   ],
+   "color": "#7ff6ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    48,
+    83,
+    56
+   ],
+   "color": "#ffbf4a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    93,
+    48,
+    96,
+    56
+   ],
+   "color": "#ffbf4a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    83,
+    48,
+    93,
+    56
+   ],
+   "colors": [
+    "#c8fdff",
+    "#7ff6ff"
+   ],
+   "width": 2
+  },
+  {
+   "op": "comment",
+   "note": "taillight bar: red segments"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    56,
+    96,
+    64
+   ],
+   "color": "#ff2a3a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    80,
+    56,
+    96,
+    64
+   ],
+   "colors": [
+    "#ff2a3a",
+    "#ff7a85",
+    "#ff2a3a",
+    "#7a0c14"
+   ],
+   "width": 1
+  },
+  {
+   "op": "comment",
+   "note": "thruster cap: hot blue core in a dark ring"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    96,
+    48,
+    112,
+    64
+   ],
+   "color": "#1a1d23"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    99,
+    51,
+    109,
+    61
+   ],
+   "color": "#2b7cff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    101,
+    53,
+    107,
+    59
+   ],
+   "color": "#a8e4ff"
+  },
+  {
+   "op": "comment",
+   "note": "TRIM: near-white with chevrons, tinted to the gang colour in the game"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    112,
+    48,
+    128,
+    64
+   ],
+   "color": "#ffffff"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    112,
+    48,
+    128,
+    64
+   ],
+   "colors": [
+    "#ffffff",
+    "#ffffff",
+    "#d8d8d8"
+   ],
+   "width": 1
+  },
+  {
+   "op": "comment",
+   "note": "vents (skirts, splitter, diffuser)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    56,
+    64,
+    64
+   ],
+   "color": "#3a3f49"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    2,
+    58,
+    62,
+    62
+   ],
+   "colors": [
+    "#0c0d10",
+    "#3b414d"
+   ],
+   "width": 2
+  },
+  {
+   "op": "comment",
+   "note": "plain gunmetal + underside"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    64,
+    32,
+    80
+   ],
+   "top": "#646c7a",
+   "bottom": "#454b57"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    64,
+    32,
+    80
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    64,
+    64,
+    80
+   ],
+   "color": "#111216"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Trim",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "HeadlightL",
+   "origin": [
+    -6.5,
+    -1.2,
+    -29
+   ]
+  },
+  {
+   "name": "HeadlightR",
+   "origin": [
+    6.5,
+    -1.2,
+    -29
+   ]
+  },
+  {
+   "name": "TaillightL",
+   "origin": [
+    -7,
+    2.7,
+    29
+   ]
+  },
+  {
+   "name": "TaillightR",
+   "origin": [
+    7,
+    2.7,
+    29
+   ]
+  },
+  {
+   "name": "Thrusters",
+   "origin": [
+    0,
+    -0.6,
+    29
+   ]
+  },
+  {
+   "name": "WheelFL",
+   "origin": [
+    -12.4,
+    -2,
+    -19
+   ]
+  },
+  {
+   "name": "WheelFR",
+   "origin": [
+    12.4,
+    -2,
+    -19
+   ]
+  },
+  {
+   "name": "WheelBL",
+   "origin": [
+    -12.4,
+    -2,
+    19
+   ]
+  },
+  {
+   "name": "WheelBR",
+   "origin": [
+    12.4,
+    -2,
+    19
+   ]
+  }
+ ],
+ "elements": [
+  {
+   "type": "poly",
+   "name": "hull",
+   "group": "Body",
+   "vertices": {
+    "bfl": [
+     -14,
+     -3,
+     -29
+    ],
+    "bfr": [
+     14,
+     -3,
+     -29
+    ],
+    "bml": [
+     -14,
+     -3,
+     -8
+    ],
+    "bmr": [
+     14,
+     -3,
+     -8
+    ],
+    "brl": [
+     -14,
+     -3,
+     29
+    ],
+    "brr": [
+     14,
+     -3,
+     29
+    ],
+    "nl": [
+     -14,
+     0,
+     -29
+    ],
+    "nr": [
+     14,
+     0,
+     -29
+    ],
+    "wl": [
+     -14,
+     4,
+     -8
+    ],
+    "wr": [
+     14,
+     4,
+     -8
+    ],
+    "rl": [
+     -14,
+     5,
+     29
+    ],
+    "rr": [
+     14,
+     5,
+     29
+    ]
+   },
+   "faces": [
+    {
+     "v": [
+      "nl",
+      "nr",
+      "bfr",
+      "bfl"
+     ],
+     "uv": [
+      96,
+      0,
+      128,
+      16
+     ]
+    },
+    {
+     "v": [
+      "rl",
+      "rr",
+      "brr",
+      "brl"
+     ],
+     "uv": [
+      64,
+      16,
+      96,
+      32
+     ]
+    },
+    {
+     "v": [
+      "nl",
+      "nr",
+      "wr",
+      "wl"
+     ],
+     "uv": [
+      0,
+      16,
+      32,
+      48
+     ]
+    },
+    {
+     "v": [
+      "wl",
+      "wr",
+      "rr",
+      "rl"
+     ],
+     "uv": [
+      32,
+      16,
+      64,
+      48
+     ]
+    },
+    {
+     "v": [
+      "bfl",
+      "bfr",
+      "brr",
+      "brl"
+     ],
+     "uv": [
+      32,
+      64,
+      64,
+      80
+     ]
+    },
+    {
+     "v": [
+      "nl",
+      "wl",
+      "bml",
+      "bfl"
+     ],
+     "uv": [
+      64,
+      0,
+      96,
+      16
+     ]
+    },
+    {
+     "v": [
+      "wl",
+      "rl",
+      "brl",
+      "bml"
+     ],
+     "uv": [
+      0,
+      0,
+      64,
+      16
+     ]
+    },
+    {
+     "v": [
+      "nr",
+      "wr",
+      "bmr",
+      "bfr"
+     ],
+     "uv": [
+      64,
+      0,
+      96,
+      16
+     ]
+    },
+    {
+     "v": [
+      "wr",
+      "rr",
+      "brr",
+      "bmr"
+     ],
+     "uv": [
+      0,
+      0,
+      64,
+      16
+     ]
+    }
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "cabin",
+   "group": "Body",
+   "vertices": {
+    "wl": [
+     -11,
+     4,
+     -8
+    ],
+    "wr": [
+     11,
+     4,
+     -8
+    ],
+    "fl": [
+     -8,
+     11,
+     2
+    ],
+    "fr": [
+     8,
+     11,
+     2
+    ],
+    "bl": [
+     -8,
+     11,
+     10
+    ],
+    "br": [
+     8,
+     11,
+     10
+    ],
+    "tl": [
+     -11,
+     4.9,
+     24
+    ],
+    "tr": [
+     11,
+     4.9,
+     24
+    ]
+   },
+   "outward_from": [
+    0,
+    5,
+    6
+   ],
+   "faces": [
+    {
+     "v": [
+      "wl",
+      "wr",
+      "fr",
+      "fl"
+     ],
+     "uv": [
+      64,
+      32,
+      96,
+      48
+     ]
+    },
+    {
+     "v": [
+      "fl",
+      "fr",
+      "br",
+      "bl"
+     ],
+     "uv": [
+      96,
+      32,
+      128,
+      40
+     ]
+    },
+    {
+     "v": [
+      "bl",
+      "br",
+      "tr",
+      "tl"
+     ],
+     "uv": [
+      96,
+      16,
+      128,
+      32
+     ]
+    },
+    {
+     "v": [
+      "fl",
+      "bl",
+      "tl",
+      "wl"
+     ],
+     "uv": [
+      96,
+      16,
+      128,
+      32
+     ]
+    },
+    {
+     "v": [
+      "fr",
+      "br",
+      "tr",
+      "wr"
+     ],
+     "uv": [
+      96,
+      16,
+      128,
+      32
+     ]
+    }
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "louver0",
+   "group": "Body",
+   "from": [
+    -9.071428571428573,
+    9.13,
+    11.6
+   ],
+   "to": [
+    9.071428571428573,
+    10.9,
+    13.6
+   ],
+   "faces": {
+    "up": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "north": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "south": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "louver1",
+   "group": "Body",
+   "from": [
+    -9.714285714285715,
+    7.82,
+    14.6
+   ],
+   "to": [
+    9.714285714285715,
+    9.6,
+    16.6
+   ],
+   "faces": {
+    "up": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "north": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "south": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "louver2",
+   "group": "Body",
+   "from": [
+    -10.357142857142858,
+    6.52,
+    17.6
+   ],
+   "to": [
+    10.357142857142858,
+    8.29,
+    19.6
+   ],
+   "faces": {
+    "up": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "north": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "south": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "louver3",
+   "group": "Body",
+   "from": [
+    -11.0,
+    5.21,
+    20.6
+   ],
+   "to": [
+    11.0,
+    6.98,
+    22.6
+   ],
+   "faces": {
+    "up": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "north": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "south": [
+     96,
+     40,
+     128,
+     48
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "poly",
+   "name": "earL",
+   "group": "Body",
+   "vertices": {
+    "p1": [
+     -4.2,
+     11,
+     10.3
+    ],
+    "p2": [
+     -7.8,
+     11,
+     10.3
+    ],
+    "p3": [
+     -6,
+     11,
+     7
+    ],
+    "t": [
+     -6.6,
+     14.5,
+     10.6
+    ]
+   },
+   "outward_from": [
+    -6.2,
+    11.8,
+    9.3
+   ],
+   "faces": [
+    {
+     "v": [
+      "p3",
+      "p1",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    },
+    {
+     "v": [
+      "p3",
+      "p2",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    },
+    {
+     "v": [
+      "p1",
+      "p2",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    }
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "inner_earL",
+   "group": "Trim",
+   "vertices": {
+    "a": [
+     -4.9,
+     11.41,
+     10.84
+    ],
+    "b": [
+     -7.24,
+     11.41,
+     10.84
+    ],
+    "c": [
+     -6.46,
+     13.68,
+     11.03
+    ]
+   },
+   "outward_from": [
+    -6.2,
+    12.2,
+    0
+   ],
+   "faces": [
+    {
+     "v": [
+      "a",
+      "b",
+      "c"
+     ],
+     "uv": [
+      112,
+      48,
+      128,
+      64
+     ]
+    }
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "earR",
+   "group": "Body",
+   "vertices": {
+    "p1": [
+     4.2,
+     11,
+     10.3
+    ],
+    "p2": [
+     7.8,
+     11,
+     10.3
+    ],
+    "p3": [
+     6,
+     11,
+     7
+    ],
+    "t": [
+     6.6,
+     14.5,
+     10.6
+    ]
+   },
+   "outward_from": [
+    6.2,
+    11.8,
+    9.3
+   ],
+   "faces": [
+    {
+     "v": [
+      "p3",
+      "p1",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    },
+    {
+     "v": [
+      "p3",
+      "p2",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    },
+    {
+     "v": [
+      "p1",
+      "p2",
+      "t"
+     ],
+     "uv": [
+      0,
+      64,
+      32,
+      80
+     ]
+    }
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "inner_earR",
+   "group": "Trim",
+   "vertices": {
+    "a": [
+     4.9,
+     11.41,
+     10.84
+    ],
+    "b": [
+     7.24,
+     11.41,
+     10.84
+    ],
+    "c": [
+     6.46,
+     13.68,
+     11.03
+    ]
+   },
+   "outward_from": [
+    6.2,
+    12.2,
+    0
+   ],
+   "faces": [
+    {
+     "v": [
+      "a",
+      "b",
+      "c"
+     ],
+     "uv": [
+      112,
+      48,
+      128,
+      64
+     ]
+    }
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "arch_frontL",
+   "group": "Body",
+   "from": [
+    -15.4,
+    -2.6,
+    -25.2
+   ],
+   "to": [
+    -13.6,
+    3.6,
+    -12.8
+   ],
+   "faces": {
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "arch_backL",
+   "group": "Body",
+   "from": [
+    -15.4,
+    -2.6,
+    12.8
+   ],
+   "to": [
+    -13.6,
+    3.6,
+    25.2
+   ],
+   "faces": {
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "skirtL",
+   "group": "Body",
+   "from": [
+    -14.6,
+    -4.4,
+    -12.6
+   ],
+   "to": [
+    -13.4,
+    -2.6,
+    12.6
+   ],
+   "faces": {
+    "west": [
+     0,
+     56,
+     64,
+     64
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "down": [
+     32,
+     64,
+     64,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "arch_frontR",
+   "group": "Body",
+   "from": [
+    13.6,
+    -2.6,
+    -25.2
+   ],
+   "to": [
+    15.4,
+    3.6,
+    -12.8
+   ],
+   "faces": {
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "arch_backR",
+   "group": "Body",
+   "from": [
+    13.6,
+    -2.6,
+    12.8
+   ],
+   "to": [
+    15.4,
+    3.6,
+    25.2
+   ],
+   "faces": {
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "skirtR",
+   "group": "Body",
+   "from": [
+    13.4,
+    -4.4,
+    -12.6
+   ],
+   "to": [
+    14.6,
+    -2.6,
+    12.6
+   ],
+   "faces": {
+    "east": [
+     0,
+     56,
+     64,
+     64
+    ],
+    "north": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "south": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "down": [
+     32,
+     64,
+     64,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "splitter",
+   "group": "Body",
+   "from": [
+    -13.5,
+    -4.4,
+    -29.6
+   ],
+   "to": [
+    13.5,
+    -2.8,
+    -23
+   ],
+   "faces": {
+    "north": [
+     0,
+     56,
+     64,
+     64
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "diffuser",
+   "group": "Body",
+   "from": [
+    -13.5,
+    -4.4,
+    23
+   ],
+   "to": [
+    13.5,
+    -2.8,
+    29.6
+   ],
+   "faces": {
+    "south": [
+     0,
+     56,
+     64,
+     64
+    ],
+    "up": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "east": [
+     0,
+     64,
+     32,
+     80
+    ],
+    "west": [
+     0,
+     64,
+     32,
+     80
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "stripeL",
+   "group": "Trim",
+   "from": [
+    -15.8,
+    -1.3,
+    -28.6
+   ],
+   "to": [
+    -14,
+    -0.5,
+    28.6
+   ],
+   "faces": {
+    "west": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "down": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "north": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "south": [
+     112,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "stripeR",
+   "group": "Trim",
+   "from": [
+    14,
+    -1.3,
+    -28.6
+   ],
+   "to": [
+    15.8,
+    -0.5,
+    28.6
+   ],
+   "faces": {
+    "east": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "down": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "north": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "south": [
+     112,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "nose_lip",
+   "group": "Trim",
+   "from": [
+    -13.6,
+    -0.2,
+    -29.5
+   ],
+   "to": [
+    13.6,
+    0.4,
+    -28.9
+   ],
+   "faces": {
+    "north": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "east": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "west": [
+     112,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "tail_lip",
+   "group": "Trim",
+   "from": [
+    -13.6,
+    4.6,
+    29
+   ],
+   "to": [
+    13.6,
+    5.3,
+    29.5
+   ],
+   "faces": {
+    "south": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "east": [
+     112,
+     48,
+     128,
+     64
+    ],
+    "west": [
+     112,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "headlightL",
+   "group": "HeadlightL",
+   "from": [
+    -12.6,
+    -2.1,
+    -29.6
+   ],
+   "to": [
+    -1.4,
+    -0.4,
+    -29
+   ],
+   "faces": {
+    "north": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "up": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "down": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "east": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "west": [
+     80,
+     48,
+     96,
+     56
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "taillightL",
+   "group": "TaillightL",
+   "from": [
+    -13.0,
+    2.0,
+    29
+   ],
+   "to": [
+    -1.0,
+    3.5,
+    29.6
+   ],
+   "faces": {
+    "south": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "up": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "down": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "east": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "west": [
+     80,
+     56,
+     96,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "headlightR",
+   "group": "HeadlightR",
+   "from": [
+    1.4,
+    -2.1,
+    -29.6
+   ],
+   "to": [
+    12.6,
+    -0.4,
+    -29
+   ],
+   "faces": {
+    "north": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "up": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "down": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "east": [
+     80,
+     48,
+     96,
+     56
+    ],
+    "west": [
+     80,
+     48,
+     96,
+     56
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "taillightR",
+   "group": "TaillightR",
+   "from": [
+    1.0,
+    2.0,
+    29
+   ],
+   "to": [
+    13.0,
+    3.5,
+    29.6
+   ],
+   "faces": {
+    "south": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "up": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "down": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "east": [
+     80,
+     56,
+     96,
+     64
+    ],
+    "west": [
+     80,
+     56,
+     96,
+     64
+    ]
+   }
+  },
+  {
+   "type": "prism",
+   "name": "thrusterL",
+   "group": "Thrusters",
+   "sides": 6,
+   "center": [
+    -6.5,
+    -0.6,
+    28.5
+   ],
+   "height": 2.4,
+   "radius_bottom": 2.0,
+   "radius_top": 1.7,
+   "origin": [
+    -6.5,
+    -0.6,
+    28.5
+   ],
+   "rotation": [
+    90,
+    0,
+    0
+   ],
+   "side_uv": [
+    64,
+    0,
+    96,
+    4
+   ],
+   "top_uv": [
+    96,
+    48,
+    112,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "thrusterR",
+   "group": "Thrusters",
+   "sides": 6,
+   "center": [
+    6.5,
+    -0.6,
+    28.5
+   ],
+   "height": 2.4,
+   "radius_bottom": 2.0,
+   "radius_top": 1.7,
+   "origin": [
+    6.5,
+    -0.6,
+    28.5
+   ],
+   "rotation": [
+    90,
+    0,
+    0
+   ],
+   "side_uv": [
+    64,
+    0,
+    96,
+    4
+   ],
+   "top_uv": [
+    96,
+    48,
+    112,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "wheelfl",
+   "group": "WheelFL",
+   "sides": 8,
+   "center": [
+    -12.4,
+    -4.4,
+    -19
+   ],
+   "height": 4.8,
+   "radius": 5,
+   "origin": [
+    -12.4,
+    -2,
+    -19
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    48,
+    64,
+    56
+   ],
+   "top_uv": [
+    64,
+    48,
+    80,
+    64
+   ],
+   "bottom_uv": [
+    64,
+    48,
+    80,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "wheelfr",
+   "group": "WheelFR",
+   "sides": 8,
+   "center": [
+    12.4,
+    -4.4,
+    -19
+   ],
+   "height": 4.8,
+   "radius": 5,
+   "origin": [
+    12.4,
+    -2,
+    -19
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    48,
+    64,
+    56
+   ],
+   "top_uv": [
+    64,
+    48,
+    80,
+    64
+   ],
+   "bottom_uv": [
+    64,
+    48,
+    80,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "wheelbl",
+   "group": "WheelBL",
+   "sides": 8,
+   "center": [
+    -12.4,
+    -4.4,
+    19
+   ],
+   "height": 4.8,
+   "radius": 5,
+   "origin": [
+    -12.4,
+    -2,
+    19
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    48,
+    64,
+    56
+   ],
+   "top_uv": [
+    64,
+    48,
+    80,
+    64
+   ],
+   "bottom_uv": [
+    64,
+    48,
+    80,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "wheelbr",
+   "group": "WheelBR",
+   "sides": 8,
+   "center": [
+    12.4,
+    -4.4,
+    19
+   ],
+   "height": 4.8,
+   "radius": 5,
+   "origin": [
+    12.4,
+    -2,
+    19
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    48,
+    64,
+    56
+   ],
+   "top_uv": [
+    64,
+    48,
+    80,
+    64
+   ],
+   "bottom_uv": [
+    64,
+    48,
+    80,
+    64
+   ]
+  }
+ ]
+}

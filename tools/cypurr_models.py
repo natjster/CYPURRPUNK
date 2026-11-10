@@ -38,7 +38,7 @@ GLB_DIR = os.path.join(PROJECT_ROOT, "models")
 PIXELS_PER_METRE = 16.0
 
 # ROADMAP.md style rules.
-TRIANGLE_LIMITS = {"prop": 150, "character": 600}
+TRIANGLE_LIMITS = {"prop": 150, "character": 600, "vehicle": 500}
 TEXTURE_SIZES = (64, 128)
 
 
@@ -365,6 +365,69 @@ def _prism_element(spec: dict) -> dict:
     return el
 
 
+def _poly_element(spec: dict) -> dict:
+    """A free-form shape (a Blockbench MESH) from named corner points: wedges, slopes, fins.
+    spec:
+      name, vertices {"nl": [x,y,z], ...}  (pixels, like everything else),
+      faces [{"v": ["nl", "nr", "wr", "wl"], "uv": [x1,y1,x2,y2]}, ...]  (3 or 4 corners each),
+      uv            default rect for faces that don't give their own,
+      outward_from  [x,y,z]: faces are turned to point AWAY from this point. Leave it out and the
+                    middle of the shape is used, which is right for any closed, bulging shape
+                    (a wedge, a pyramid). Give it for a single flat piece (which way is "out"?).
+      origin / rotation like the other shapes.
+    You don't have to care about corner order: each face is turned to face outward by itself.
+    The texture is laid flat onto each face from the side it faces most (like a projector):
+    side faces show the rect with up = up, top faces with north (-Z) at the top of the rect."""
+    raw = {k: [float(c) for c in v] for k, v in spec["vertices"].items()}
+    origin = spec.get("origin", [0, 0, 0])
+    if "outward_from" in spec:
+        middle = spec["outward_from"]
+    else:
+        middle = [sum(v[i] for v in raw.values()) / len(raw) for i in range(3)]
+    default_uv = spec.get("uv", [0, 0, 16, 16])
+    faces = {}
+    for index, fspec in enumerate(spec["faces"]):
+        keys = list(fspec["v"])
+        pts = [raw[k] for k in keys]
+        # Newell's method: the face's normal for this corner order (anticlockwise = outward).
+        n = [0.0, 0.0, 0.0]
+        for i in range(len(pts)):
+            a, b = pts[i], pts[(i + 1) % len(pts)]
+            n[0] += (a[1] - b[1]) * (a[2] + b[2])
+            n[1] += (a[2] - b[2]) * (a[0] + b[0])
+            n[2] += (a[0] - b[0]) * (a[1] + b[1])
+        centre = [sum(p[i] for p in pts) / len(pts) for i in range(3)]
+        if sum(n[i] * (centre[i] - middle[i]) for i in range(3)) < 0:
+            keys.reverse()
+            n = [-c for c in n]
+        # Lay the rect onto the face from the axis it faces most.
+        axis = max(range(3), key=lambda i: abs(n[i]))
+        def project(p):
+            x, y, z = p
+            if axis == 0:   # east / west side: front of the car (-Z) on the left seen from the west
+                return (z if n[0] < 0 else -z, -y)
+            if axis == 2:   # north / south
+                return (-x if n[2] < 0 else x, -y)
+            return (x, z if n[1] > 0 else -z)  # top (north at the top) / bottom
+        flat = [project(raw[k]) for k in keys]
+        umin, umax = min(f[0] for f in flat), max(f[0] for f in flat)
+        vmin, vmax = min(f[1] for f in flat), max(f[1] for f in flat)
+        x1, y1, x2, y2 = fspec.get("uv", default_uv)
+        uv = {}
+        for k, (u, v) in zip(keys, flat):
+            tu = (u - umin) / (umax - umin) if umax > umin else 0.0
+            tv = (v - vmin) / (vmax - vmin) if vmax > vmin else 0.0
+            uv[k] = [x1 + (x2 - x1) * tu, y1 + (y2 - y1) * tv]
+        faces["f%d" % index] = {"uv": uv, "vertices": keys, "texture": 0}
+    return {
+        "name": spec.get("name", "poly"), "color": spec.get("color", 0), "origin": list(origin),
+        "rotation": list(spec.get("rotation", [0, 0, 0])), "export": True, "visibility": True,
+        "locked": False, "render_order": "default", "allow_mirror_modeling": True,
+        "vertices": {k: [v[i] - origin[i] for i in range(3)] for k, v in raw.items()},
+        "faces": faces, "type": "mesh", "uuid": _uuid(),
+    }
+
+
 def _locator_element(spec: dict) -> dict:
     """An invisible marker (e.g. where a hat goes). spec: name, position [x,y,z]."""
     return {
@@ -374,7 +437,7 @@ def _locator_element(spec: dict) -> dict:
     }
 
 
-ELEMENT_BUILDERS = {"cube": _cube_element, "prism": _prism_element, "locator": _locator_element}
+ELEMENT_BUILDERS = {"cube": _cube_element, "prism": _prism_element, "poly": _poly_element, "locator": _locator_element}
 
 
 def _new_group(spec: dict) -> dict:

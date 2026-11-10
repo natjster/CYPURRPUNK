@@ -5,6 +5,11 @@ extends RigidBody3D
 ##   GetawayCar (RigidBody3D)   <- this script
 ##   ├── CollisionShape3D       <- box around the car body
 ##   ├── Model (Node3D)         <- all the car's meshes
+##   │   ├── CarModel           <- res://models/getaway_car.glb (the WEDGE CYBER-INTERCEPTOR, made with
+##   │   │                         tools/model_specs/getaway_car.json; open models/blockbench/getaway_car.bbmodel
+##   │   │                         in Blockbench to repaint it). Its parts, by name: Body, Trim (neon, tinted
+##   │   │                         the gang colour), HeadlightL/R, TaillightL/R, Thrusters, WheelFL/FR/BL/BR.
+##   │   └── HeadlightBeam      <- the SpotLight3D lighting the road ahead
 ##   ├── GroundRay (RayCast3D)  <- points down; tells us if the wheels are on the ground
 ##   ├── DoorZone (Area3D)      <- "press E" range
 ##   │   └── CollisionShape3D
@@ -99,6 +104,21 @@ extends RigidBody3D
 ## Engine loudness in decibels while someone is in the car. Empty + parked = silent.
 @export var engine_volume_db: float = -6.0
 
+@export_group("Look")
+## How brightly the neon trim (racing stripes, nose + tail lips, the glowing inner cat ears) glows.
+## Its colour is the gang's (scripts/teams.gd: Catleone pink, Burrow orange), set from "team" above.
+@export var trim_glow: float = 1.3
+## How brightly the headlight bar, the taillight bar and the thrusters glow.
+@export var light_glow: float = 3.0
+## Wet-metal shine on the gunmetal bodywork (0 = matte, 0.5 = very shiny). Catches street lights.
+@export var body_shine: float = 0.35
+## How far the front wheels turn when you steer (degrees).
+@export var wheel_steer_degrees: float = 28.0
+## How quickly the front wheels turn to where you steer (higher = snappier).
+@export var wheel_steer_speed: float = 10.0
+## Wheel size in metres (radius), for how fast the wheels spin at a given speed.
+@export var wheel_radius: float = 0.31
+
 @export_group("Network Smoothing")
 ## How quickly other players' copies of the car catch up. Higher = snappier.
 @export var network_smoothing: float = 12.0
@@ -151,6 +171,15 @@ var _base_pitch: float = 0.0
 var _engine: AudioStreamPlayer3D
 var _sound_last_position: Vector3
 var _sound_speed: float = 0.0
+## Signed forward speed (m/s, + = forward), measured from movement so it works on frozen copies too.
+var _rolling_speed: float = 0.0
+var _wheel_last_position: Vector3
+## The four wheel nodes (from the model) and how far they've rolled / turned.
+var _wheels: Array[Node3D] = []
+var _front_wheels: Array[Node3D] = []
+var _wheel_spin: float = 0.0
+var _wheel_steer: float = 0.0
+var _wheel_last_yaw: float = 0.0
 
 
 # --- MULTIPLAYER ---
@@ -177,9 +206,94 @@ func _ready() -> void:
 	sync_rotation = global_rotation
 	_engine = Sound.attach_loop("engine_loop", self, -80.0)
 	_sound_last_position = global_position
+	_wheel_last_position = global_position
+	_set_up_model()
 	# Our network ID changes when we join a game, so re-check who simulates the car.
 	multiplayer.connected_to_server.connect(_update_freeze)
 	_update_freeze()
+
+
+## The PS1 look for the Blockbench model (shaders/psx_lit.gdshader via LevelKit.psx_ify), then the
+## glowing bits: the Trim in the gang colour, the lights and thrusters lit up. Each car gets its own
+## copies of those materials, so the pink car and the orange car don't share a colour.
+func _set_up_model() -> void:
+	var model := get_node_or_null("Model/CarModel")
+	if model == null:
+		return
+	LevelKit.psx_ify(model)
+	var gang_colour := Teams.color_of(maxi(0, team))
+	var body := model.find_child("Body", true, false) as MeshInstance3D
+	if body != null and body.get_active_material(0) is ShaderMaterial:
+		var shiny := body.get_active_material(0).duplicate() as ShaderMaterial
+		shiny.set_shader_parameter("specular", body_shine)
+		shiny.set_shader_parameter("roughness", 0.45)
+		body.set_surface_override_material(0, shiny)
+	_glow(model, "Trim", gang_colour, trim_glow, true)
+	for part in ["HeadlightL", "HeadlightR", "TaillightL", "TaillightR", "Thrusters"]:
+		_glow(model, part, Color.WHITE, light_glow, false)
+	for wheel_name in ["WheelFL", "WheelFR", "WheelBL", "WheelBR"]:
+		var wheel := model.find_child(wheel_name, true, false) as Node3D
+		if wheel != null:
+			_wheels.append(wheel)
+			if wheel_name.begins_with("WheelF"):
+				_front_wheels.append(wheel)
+
+
+## Make one part of the model glow: tint = albedo colour (white = keep the painted colours);
+## tinted_glow true = it glows in the tint colour, false = its own bright pixels glow.
+## The neon trim's colour right now (for tests: DevCapture prints it).
+func trim_color() -> Color:
+	var trim := get_node_or_null("Model/CarModel")
+	trim = trim.find_child("Trim", true, false) as MeshInstance3D if trim != null else null
+	if trim == null or not trim.get_active_material(0) is ShaderMaterial:
+		return Color.BLACK
+	return (trim.get_active_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
+
+
+func _glow(model: Node, part_name: String, tint: Color, energy: float, tinted_glow: bool) -> void:
+	var part := model.find_child(part_name, true, false) as MeshInstance3D
+	if part == null or part.mesh == null:
+		return
+	for surface in part.mesh.get_surface_count():
+		var material := part.get_active_material(surface)
+		if not material is ShaderMaterial:
+			continue
+		var copy := material.duplicate() as ShaderMaterial
+		copy.set_shader_parameter("albedo_color", tint)
+		if tinted_glow:
+			copy.set_shader_parameter("emission_color", tint)
+			copy.set_shader_parameter("emission_energy", energy)
+		else:
+			copy.set_shader_parameter("texture_glow", energy)
+		part.set_surface_override_material(surface, copy)
+
+
+## Every frame, every computer: roll the wheels with the car's speed and turn the front ones with
+## the steering. (Speed comes from how far the car moved, so frozen copies on other computers
+## spin their wheels too; their steering follows how fast the car is turning.)
+func _update_wheels(delta: float) -> void:
+	var moved := global_position - _wheel_last_position
+	_wheel_last_position = global_position
+	if moved.length() > 3.0:
+		moved = Vector3.ZERO  # a teleport (parked back at the start)
+	var forward := -global_basis.z
+	var speed := forward.dot(moved) / maxf(delta, 0.0001)
+	_rolling_speed = lerpf(_rolling_speed, speed, 1.0 - exp(-12.0 * delta))
+	# Rolling: distance / radius = how far round the wheel turns. Rolling forward (-Z) is a
+	# negative turn around X.
+	_wheel_spin = wrapf(_wheel_spin - _rolling_speed * delta / maxf(wheel_radius, 0.05), -PI, PI)
+	var steer_amount := steer
+	if not is_multiplayer_authority():
+		# A copy following someone else's car has no steering input: guess it from the turning.
+		var turn_rate := angle_difference(_wheel_last_yaw, global_rotation.y) / maxf(delta, 0.0001)
+		if signf(_rolling_speed) < 0.0:
+			turn_rate = -turn_rate  # reversing turns the other way for the same steering
+		steer_amount = clampf(turn_rate / maxf(turn_speed, 0.1), -1.0, 1.0)
+	_wheel_last_yaw = global_rotation.y
+	_wheel_steer = lerpf(_wheel_steer, steer_amount * deg_to_rad(wheel_steer_degrees), 1.0 - exp(-wheel_steer_speed * delta))
+	for wheel in _wheels:
+		# Godot turns Y first, then X: steer (Y) and roll (X) don't mix each other up.
+		wheel.rotation = Vector3(_wheel_spin, _wheel_steer if _front_wheels.has(wheel) else 0.0, 0.0)
 
 
 func _update_freeze() -> void:
@@ -446,6 +560,7 @@ func _process(delta: float) -> void:
 	camera_rig.rotation.y = _chase_yaw + look_yaw
 	camera_arm.rotation.x = _base_pitch + look_pitch
 	_update_engine_sound(delta)
+	_update_wheels(delta)
 
 
 ## Driver only, every frame: right-stick look, and swinging the camera back behind the car.

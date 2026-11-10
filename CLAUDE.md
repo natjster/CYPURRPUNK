@@ -207,6 +207,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
   `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
+  GREEN ARROW: HUD `Compass` (`HudCompassArrow`, scripts/ui/hud_compass_arrow.gd, software-projected 3D, `point_at(yaw, text, urgent)` /
+  `hide_arrow`), driven by `fish_heist._update_hud_for`: up top + own exit open + not sealed -> nearest payphone (`nearest_payphone`)
+  until `is_revealed(team)`, then `exit_for(team)`; urgent at `seal_warning_at_heat`. DropOff now only = sewers / breach text. `DevCapture compass`.
 - Health: `scripts/cat_health.gd` (`CatHealth.instance`, `Health` node, HUD label `Health`): host-only
   `damage(player_id, n, cause, instant=false)` (Roomba `bonk_damage`). 0 HP = DOWNED (`downed` {id: bleed secs left},
   `is_downed`; keeps loot, crawls at `crawl_speed`, no jump/drop/items/E) unless `instant` (DEEP CLEAN) or nobody else
@@ -253,6 +256,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Passengers: `passenger_ids` (`passenger_seats` 3, `set_passengers` RPC = whole list); use `has_occupant(id)` /
   `Game.car_of(id)` (driver OR passenger), `remove_occupant(id)`, `empty_car()`. Test: `--drive --ride_along=1,2 --ride_exit=1`.
   Drive input (`throttle`/`steer`/`handbrake`) is filled by `_read_driver_keys()`; physics only reads it.
+  LOOK: `Model/CarModel` = `models/getaway_car.glb` (spec `tools/model_specs/getaway_car.json`, kind "vehicle" <500 tris; model kit
+  element `poly` = free-form corner points). `_set_up_model` psx_ifies it, tints `Trim` `Teams.color_of(max(0, team))` + glow,
+  `_update_wheels` spins WheelFL/FR/BL/BR (from moved distance, works on frozen copies) + steers the fronts. Test `--car_light`, `DevCapture car_look`.
 - `shaders/psx_lit.gdshader` (all 3D: jitter, affine UVs, flat shading, emission, specular) and
   `shaders/psx_post.gdshader` (CRT + 15-bit dither, on a ColorRect). Renders at 320x240.
 - `scripts/controls.gd` autoload `Controls` = the controls framework: `ACTIONS` list (action, menu label,

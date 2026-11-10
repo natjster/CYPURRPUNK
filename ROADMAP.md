@@ -156,7 +156,8 @@ a world that hates mess.
    system working with the new model.
 2. **The VAC-COP.** The face of the enemy and the co-star of every clip.
 3. **Street props.** Bins, cones, vending machines, signs. These are also the things you knock over.
-4. **The car.**
+4. **The car.** DONE (Nov 2026): the WEDGE CYBER-INTERCEPTOR, gang-coloured neon trim, spinning
+   and steering wheels (`models/blockbench/getaway_car.bbmodel`).
 5. **NPCs.** Rebuilt from the new cat model plus outfits, so one good cat fixes fifteen characters.
 6. **Weapons.** Last. They are small on screen and already read well.
 

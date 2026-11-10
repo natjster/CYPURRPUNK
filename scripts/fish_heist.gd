@@ -66,6 +66,11 @@ extends Node3D
 ## ...and from every entry manhole, where cats come up.
 @export var payphone_min_distance: float = 25.0
 
+@export_group("The green arrow (HUD)")
+## From this heat on, the big green arrow at the top of the screen (scripts/ui/hud_compass_arrow.gd)
+## bobs and pulses faster: the hatch seals at 100!
+@export var seal_warning_at_heat: float = 90.0
+
 @export_group("The DEEP CLEAN (max heat)")
 ## Once the hatch is sealed, the swarm hunts whoever is still up top for this many seconds.
 ## Then anyone still standing is knocked out anyway (loot lost), and a new district is built.
@@ -497,32 +502,64 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var mainframe := Mainframe.instance
 	var alarm := mainframe.breach_busy or not mainframe.warning_teams.is_empty()
 	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if alarm else DROP_OFF_COLOR, seat)
+	# THE GREEN ARROW (Hud "Compass", scripts/ui/hud_compass_arrow.gd): up top, once our gang's exit
+	# is open and the hatch isn't sealed. First it points at the nearest ringing payphone; once
+	# someone in our gang has called the boss, at our exit manhole.
+	var compass := Hud.element("Compass", seat) as HudCompassArrow
 	if alarm:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)
+		_hide_compass(compass)
 		return
-	# The arrow to OUR gang's exit only shows once our boss has told us where it is (a payphone call).
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE", seat)
+		_hide_compass(compass)
+		return
+	Hud.show_element("DropOff", false, seat)
+	if sealed or not exit_is_open(my_cat.team):
+		_hide_compass(compass)
+		return
+	var target := Vector3.INF
+	var what := "EXIT"
+	if is_revealed(my_cat.team):
+		target = exit_for(my_cat.team)
 	else:
-		var show_arrow := is_revealed(my_cat.team) and exit_is_open(my_cat.team)
-		Hud.show_element("DropOff", show_arrow, seat)
-		if show_arrow:
-			Hud.set_text("DropOff", _direction_text(where, exit_for(my_cat.team), GameScreen.instance.camera_for_seat(seat)), seat)
+		target = nearest_payphone(where)
+		what = "PAYPHONE"
+	if target == Vector3.INF or compass == null:
+		_hide_compass(compass)
+		return
+	var flat := Vector2(target.x - where.x, target.z - where.z)
+	var urgent := HeatMeter.instance != null and HeatMeter.instance.heat >= seal_warning_at_heat
+	compass.point_at(_screen_angle(where, target, GameScreen.instance.camera_for_seat(seat)),
+		"%s  %dm" % [what, int(flat.length())], urgent)
 
 
-## "EXIT > 120m": distance and rough direction to an exit manhole from where the camera looks.
-func _direction_text(where: Vector3, exit_at: Vector3, camera: Camera3D) -> String:
-	var to_exit := exit_at - where
-	var arrow := "^"
-	if camera != null:
-		var look := -camera.global_transform.basis.z
-		var angle := rad_to_deg(Vector2(look.x, look.z).angle_to(Vector2(to_exit.x, to_exit.z)))
-		if absf(angle) > 135.0:
-			arrow = "v"
-		elif angle > 30.0:
-			arrow = ">"
-		elif angle < -30.0:
-			arrow = "<"
-	return "EXIT %s %dm" % [arrow, int(Vector2(to_exit.x, to_exit.z).length())]
+## Where the payphone nearest to "where" is (flat distance), or Vector3.INF if there are none.
+func nearest_payphone(where: Vector3) -> Vector3:
+	var best := Vector3.INF
+	var best_distance := INF
+	for phone in _payphones:
+		if not is_instance_valid(phone):
+			continue
+		var d := Motion.flat_distance(phone.global_position, where)
+		if d < best_distance:
+			best_distance = d
+			best = phone.global_position
+	return best
+
+
+func _hide_compass(compass: HudCompassArrow) -> void:
+	if compass != null:
+		compass.hide_arrow()
+
+
+## Which way "target" is from "where", as seen through this camera: 0 = straight ahead on
+## screen, + = to the right, - = to the left (radians; PI = right behind you).
+func _screen_angle(where: Vector3, target: Vector3, camera: Camera3D) -> float:
+	var to_target := target - where
+	if camera == null:
+		return Vector2(0, -1).angle_to(Vector2(to_target.x, to_target.z))
+	var look := -camera.global_transform.basis.z
+	return Vector2(look.x, look.z).angle_to(Vector2(to_target.x, to_target.z))
