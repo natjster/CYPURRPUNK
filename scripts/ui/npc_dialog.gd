@@ -46,7 +46,8 @@ var is_open: bool = false
 ## plays at most once every this many seconds: the Animal Crossing "mi-mra-nya" chatter.
 @export var blip_gap_seconds: float = 0.13
 ## A long speech stops chattering after this many blips (the text keeps typing).
-@export var max_blips_per_line: int = 16
+## 0 = never stop: the NPC keeps talking until the whole line has typed out.
+@export var max_blips_per_line: int = 0
 ## How loud the blips are, in decibels (0 = as loud as the files, -6 = about half).
 @export var blip_volume_db: float = -6.0
 
@@ -134,7 +135,7 @@ func open(speaker: String, line: String, choices: Array, voice: String = "") -> 
 	line_label.text = line
 	_voice = voice
 	_blip_wait = 0.0
-	_blips_left = max_blips_per_line
+	_blips_left = max_blips_per_line if max_blips_per_line > 0 else 1_000_000  # (0 = no limit)
 	_typed = 0.0 if letters_per_second > 0.0 else -1.0
 	# Lay the WHOLE line out first and only hide the letters not typed yet, so the answer buttons
 	# sit still instead of sliding down as the text wraps onto more lines.

@@ -265,12 +265,17 @@ func _spill_debris(push: Vector3) -> void:
 	elif kind == Kind.CONE:
 		colors = [Color(0.95, 0.45, 0.12), Color(0.9, 0.9, 0.9)]
 	var out := push if push != Vector3.ZERO else Vector3.FORWARD
+	# How far below the prop's own origin the pavement is. Bins / cones / boxes stand ON the
+	# pavement (0), but a poster hangs on the wall a bit above it, so its paper bits must drop
+	# down by its height or they'd float in the air in front of the wall.
+	var floor_drop := 0.0
 	if kind == Kind.POSTER:
 		out = Vector3.FORWARD  # paper bits fall on the pavement in front of the wall
+		floor_drop = global_position.y  # (the city's pavement is at height 0)
 	for i in count:
 		var spot := out * rng.randf_range(0.4, 1.6) + out.cross(Vector3.UP) * rng.randf_range(-0.6, 0.6)
 		var size := Vector3(rng.randf_range(0.12, 0.28), 0.08, rng.randf_range(0.1, 0.22))
 		# (0.08 m tall, never a flat sheet: a sheet a few cm above the street would flicker.)
-		var bit := LevelKit.add_box(_debris, spot + Vector3.UP * 0.04, size, MessManager.instance.debris_material if MessManager.instance != null else null, false)
+		var bit := LevelKit.add_box(_debris, spot + Vector3.UP * (0.04 - floor_drop), size, MessManager.instance.debris_material if MessManager.instance != null else null, false)
 		bit.rotation.y = rng.randf() * TAU
 		bit.set_instance_shader_parameter("instance_tint", colors[rng.randi() % colors.size()])
