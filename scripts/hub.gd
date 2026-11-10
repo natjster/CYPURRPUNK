@@ -79,11 +79,11 @@ const CITY_MOOD: int = -1
 @export_group("Payphone (the boss on the line)")
 ## What this gang's boss says when one of their cats calls from a payphone up top
 ## (scripts/npcs/payphone.gd). Before the exits open (no way down yet; no hint where)...
-@export_multiline var phone_too_early: String = "Kid! You're still kickin'. Listen - there ain't a way back down yet. Every pipe we know, OVERCLEAN's got plugged. My boys are diggin' as fast as their little paws go. Grab what you can and keep your head down. When we break through, every phone in town's gonna ring."
+@export_multiline var phone_too_early: String = "Keep your whiskers on, kid! My boys are still diggin' through the pipes!"
 ## ...once they're open (the gang's exit arrow switches on; {where} = "north-east" etc.)...
-@export_multiline var phone_exit_open: String = "THERE you are! The boys broke through - there's a hole open, {where} side. I put it on your map. Get down here before the vacuums find it too!"
+@export_multiline var phone_exit_open: String = "My boys' little paws found a way down, sending you the deets now!"
 ## ...and after the hatch is sealed (the DEEP CLEAN).
-@export_multiline var phone_sealed: String = "...kid? They found our hole. We had to seal it. I'm sorry. Nobody's comin'. Make 'em remember you."
+@export_multiline var phone_sealed: String = "They found our hole, kid! We had to seal it - you're on your own!"
 
 @export_group("Size")
 ## Half the tunnel's width (metres, east-west).

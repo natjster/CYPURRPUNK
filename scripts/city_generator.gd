@@ -67,9 +67,23 @@ signal generated(city_seed: int)
 ## never crash into props (MessProp.SOLID_LAYER), and cones, boxes and posters are never solid.
 @export var bins_are_solid: bool = true
 
+@export_group("Loudspeakers (OVERCLEAN's PA poles)")
+## The loudspeaker pole scene (OVERCLEAN's announcements type out beside its horns).
+@export_file("*.tscn") var loudspeaker_scene: String = "res://scenes/props/loudspeaker.tscn"
+## Chance (0-1) that a city block gets a loudspeaker pole on one of its corners (36 blocks in a
+## 6x6 city, so 0.4 = about 14 poles). 0 = no loudspeakers at all.
+@export_range(0.0, 1.0) var loudspeaker_chance: float = 0.4
+## How far along the kerb from the very corner a pole stands (metres; corners are ~11.5 m from
+## the middle of the side, loot and payphones stay within 9 m of it).
+@export var loudspeaker_along: float = 10.8
+
 ## Every MESS prop (bins, standing cones, boxes, posters) in the order they were built: a prop's
 ## place in this list is its id, the same on every computer (scripts/mess_manager.gd).
 var mess_props: Array[MessProp] = []
+## Every loudspeaker pole built for this city (scripts/loudspeaker.gd).
+var loudspeakers: Array[Node3D] = []
+## Spots already used by lamps and corner props, so a loudspeaker pole doesn't stand in them.
+var _taken_spots: Array[Vector3] = []
 
 @export_group("Materials")
 @export var street_material: Material
@@ -127,6 +141,8 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 	for child in get_children():
 		child.queue_free()
 	mess_props.clear()
+	loudspeakers.clear()
+	_taken_spots.clear()
 
 	var pitch := block_size + street_width  # distance from one block to the next
 	var city_half_width := blocks_per_side * pitch * 0.5
@@ -146,6 +162,7 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 			_build_block(block_center)
 	_place_street_lamps(pitch)
 	_place_corner_props(pitch)
+	_place_loudspeakers(pitch)
 	print("[City] Built city #%d" % new_seed)
 	generated.emit(new_seed)
 
@@ -388,6 +405,7 @@ func _place_corner_props(pitch: float) -> void:
 				else:
 					spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
 					back = Vector3(-corner.x, 0, 0)
+				_taken_spots.append(spot)
 				var roll := _rng.randf()
 				if roll < 0.42:
 					_add_bin(spot, _rng.randf() * TAU)
@@ -398,6 +416,53 @@ func _place_corner_props(pitch: float) -> void:
 				else:  # a bin with a cone next to it (towards the corner, away from the loot)
 					_add_bin(spot, _rng.randf() * TAU)
 					_add_cone(spot - back * 0.8, _rng.randf() * TAU, false)
+
+
+## OVERCLEAN's loudspeaker poles: each block may get one (Loudspeaker Chance), on a random corner,
+## on one of that corner's two kerbs, horns facing the street. A spot too close to a lamp post or a
+## corner prop tries the other kerb, then gives up. All on _rng, in a fixed order, so every
+## computer builds the same poles in the same spots.
+func _place_loudspeakers(pitch: float) -> void:
+	if loudspeaker_chance <= 0.0 or not ResourceLoader.exists(loudspeaker_scene):
+		return
+	var scene := load(loudspeaker_scene) as PackedScene
+	var in_from_edge := block_size * 0.5 - 0.6
+	var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]
+	for bx in blocks_per_side:
+		for bz in blocks_per_side:
+			var block_center := Vector3((bx + 0.5 - blocks_per_side / 2.0) * pitch, 0, (bz + 0.5 - blocks_per_side / 2.0) * pitch)
+			if _rng.randf() >= loudspeaker_chance:
+				continue
+			var corner: Vector2 = corners[_rng.randi_range(0, 3)]
+			var first_kerb := _rng.randi_range(0, 1)
+			for k in 2:
+				var kerb := (first_kerb + k) % 2
+				var spot: Vector3
+				var outward: Vector3  # from the pole out into the street
+				if kerb == 0:  # the kerb along the z axis (street to the east or west)
+					spot = block_center + Vector3(corner.x * in_from_edge, 0, corner.y * loudspeaker_along)
+					outward = Vector3(corner.x, 0, 0)
+				else:  # the kerb along the x axis (street to the north or south)
+					spot = block_center + Vector3(corner.x * loudspeaker_along, 0, corner.y * in_from_edge)
+					outward = Vector3(0, 0, corner.y)
+				if not _spot_is_clear(spot, 1.4):
+					continue
+				var pole := scene.instantiate() as Node3D
+				pole.name = "Loudspeaker%d" % loudspeakers.size()
+				pole.position = spot
+				pole.rotation.y = atan2(-outward.x, -outward.z)  # the horns (the model's -Z) face the street
+				add_child(pole)
+				loudspeakers.append(pole)
+				_taken_spots.append(spot)
+				break
+
+
+## Is nothing already standing within "room" metres of this spot (lamps, corner props, poles)?
+func _spot_is_clear(spot: Vector3, room: float) -> bool:
+	for taken in _taken_spots:
+		if Vector2(taken.x - spot.x, taken.z - spot.z).length() < room:
+			return false
+	return true
 
 
 ## A trash bin standing at "at" (feet on the ground), turned "yaw" radians: a MESS prop (cats
@@ -499,6 +564,7 @@ func _place_street_lamps(pitch: float) -> void:
 ## A lamp post; "facing" turns it so its arm hangs over the road.
 func _add_lamp(at: Vector3, facing: float) -> void:
 	var lamp := STREET_LAMP.instantiate() as Node3D
+	_taken_spots.append(at)
 	lamp.position = at
 	lamp.rotation.y = facing
 	add_child(lamp)

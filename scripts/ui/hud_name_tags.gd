@@ -88,19 +88,18 @@ func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2) ->
 
 	# Size: how many HUD units one metre is at that distance, times the name's height in metres.
 	var units_per_metre := size.y / (2.0 * distance * tan(deg_to_rad(camera.fov) / 2.0))
-	var font_size := clampi(roundi(world_text_height * units_per_metre), min_font_size, max_font_size)
+	# A tag can cap its own size (meta "max_font_size": long floating lines, e.g. a payphone's).
+	var biggest: int = tag.get_meta("max_font_size", max_font_size)
+	var height: float = tag.get_meta("text_height", world_text_height)  # (a tag's own size, metres)
+	var font_size := clampi(roundi(height * units_per_metre), mini(min_font_size, biggest), biggest)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_constant_override("outline_size", maxi(4, font_size / 4))
 	label.text = tag.text
 	label.add_theme_color_override("font_color", Color(tag.modulate, 1.0))
-	# A typing line (a cat's MEOW taunt): only the first "typed" letters show, but the label keeps
-	# the whole line's size, so its bubble doesn't grow letter by letter.
+	# A typing line (a cat's MEOW taunt, a payphone, an OVERCLEAN loudspeaker): only the first
+	# "typed" letters show, but the label keeps the whole line's size, so it doesn't jump about
+	# while it types. No box behind it: just outlined text, like item and NPC names.
 	label.visible_characters = int(tag.get_meta("typed", -1))
-	# meta "bubble" = a little speech bubble: a dark box with a border in the text's colour.
-	if tag.has_meta("bubble"):
-		_bubble_style(label, Color(tag.modulate, 1.0), font_size)
-	else:
-		label.remove_theme_stylebox_override("normal")
 	var fade := clampf((limit - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
 	label.modulate.a = tag.modulate.a * fade
 
@@ -128,22 +127,6 @@ func _behind_wall(camera: Camera3D, tag: Label3D) -> bool:
 			skip.append(car.get_rid())
 	query.exclude = skip
 	return not camera.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
-
-
-## The speech-bubble box for a label (thicker border in the PS1 UI look: Hud.line).
-func _bubble_style(label: Label, color: Color, font_size: int) -> void:
-	var box := label.get_theme_stylebox("normal") as StyleBoxFlat
-	if box == null or not label.has_theme_stylebox_override("normal"):
-		box = StyleBoxFlat.new()
-		label.add_theme_stylebox_override("normal", box)
-	box.bg_color = Color(0.04, 0.03, 0.08, 0.85)
-	box.border_color = color
-	box.set_border_width_all(int(Hud.line(maxf(1.0, font_size / 14.0))))
-	box.set_corner_radius_all(maxi(2, font_size / 4))
-	box.content_margin_left = font_size * 0.5
-	box.content_margin_right = font_size * 0.5
-	box.content_margin_top = font_size * 0.15
-	box.content_margin_bottom = font_size * 0.15
 
 
 func _new_label() -> Label:

@@ -9,15 +9,18 @@ extends Node
 ##   the hatch seals (heat 100, the DEEP CLEAN) ...... "Sector quarantine initiated..."
 ##   a cat is knocked out up top ..................... "One stray removed from the premises..."
 ##
-## Each line = a voice file (a two-tone chime, then the voice) + a SUBTITLE on the HUD. Only
-## players who are UP TOP hear it (they're the ones near the city's speakers; the sewers are
-## safe from it), except the seal, which everyone hears.
+## Each line = a voice file (a two-tone chime, then the voice) + the WORDS, which type out as
+## floating cyan text beside the horns of every LOUDSPEAKER POLE in the city
+## (scenes/props/loudspeaker.tscn, scripts/loudspeaker.gd), in time with the voice. Nothing shows
+## at the bottom of the screen: run past a pole to read what OVERCLEAN is saying. Only players
+## who are UP TOP hear it (they're the ones near the city's speakers; the sewers are safe from
+## it), except the seal, which everyone hears.
 ##
 ## Lives on the "Announcer" node in main.tscn. Everything below is in its Inspector: switch it off,
-## change the words of a subtitle, or point a moment at a different sound file.
+## change the words of a line, or point a moment at a different sound file.
 ## The voice files are in sounds/sfx/ (overclean_*.wav). They were made with the Sound Lab
 ## (tools/cypurr_sound.py; the full list is tools/sound_specs/overclean.json). To change what the
-## VOICE says, ask Claude to remake that file with new words, and change the subtitle here too.
+## VOICE says, ask Claude to remake that file with new words, and change the words here too.
 ##
 ## How it hears about the moments: it listens to the game's Events (scripts/events.gd), which fire
 ## on EVERY computer, so each computer plays the line for its own players. Nothing is networked.
@@ -38,15 +41,15 @@ static var instance: OvercleanAnnouncer
 @export var min_gap_seconds: float = 1.5
 ## Lines waiting longer than this many seconds are dropped (old news by then).
 @export var max_wait_seconds: float = 25.0
-## Written in front of every subtitle.
-@export var subtitle_prefix: String = "OVERCLEAN: "
-## The subtitle's colour (a cold clinical cyan).
-@export var subtitle_color: Color = Color(0.75, 0.95, 1.0)
+## Written in front of every line on the loudspeakers ("" = nothing: the pole says who's talking).
+@export var subtitle_prefix: String = ""
+## The words' colour on the loudspeakers (a cold clinical cyan).
+@export var subtitle_color: Color = Color(0.55, 0.95, 1.0)
 
 @export_group("First cat up top")
 ## The voice files to pick from (sounds/sfx/<name>.wav), one at random each district.
 @export var deploy_sounds: Array[String] = ["overclean_deploy_1", "overclean_deploy_2", "overclean_deploy_3"]
-## The subtitle for each of those files, in the same order.
+## The words for each of those files, in the same order.
 @export var deploy_lines: Array[String] = [
 	"Attention citizens. Unregistered shedding has been detected in this sector. Please remain still for disposal.",
 	"Attention citizens. A stray has entered a clean zone. Please remain still for disposal.",
@@ -93,6 +96,8 @@ var _busy_until: float = 0.0
 var _levels_said: Dictionary = {}
 var _last_boss_at: float = -1000.0
 var _last_knockout_at: float = -1000.0
+## Just for tests and DevCapture: the last words typed on the loudspeakers.
+var last_text: String = ""
 
 
 func _enter_tree() -> void:
@@ -165,7 +170,7 @@ func _on_player_knocked_out(player_id: int, _cause: String) -> void:
 
 # --- Saying things ---
 
-## Queue a line: play sounds/sfx/<sound>.wav and show "text" as a subtitle, "delay" seconds from
+## Queue a line: play sounds/sfx/<sound>.wav and type "text" out on the loudspeakers, "delay" seconds from
 ## now, after any line already playing. everyone = every player on this computer hears it (else
 ## only the ones up top). why = for the test log. Any script may call it:
 ##   OvercleanAnnouncer.instance.say("overclean_boss", "Have a spotless day.")
@@ -197,16 +202,25 @@ func _process(delta: float) -> void:
 	if seats.is_empty():
 		print("[Announcer] (nobody up top to hear: %s)" % line.why)
 		return
-	var seconds := 4.0  # (if the sound file is missing, the subtitle still shows this long)
+	var seconds := 4.0  # (if the sound file is missing, the words still show this long)
 	var player := Sound.play(line.sound, volume_db)
 	if player != null:
 		player.pitch_scale = 1.0  # a voice shouldn't get Sound's random pitch nudge
 		seconds = player.stream.get_length()
 	_busy_until = _clock + seconds + min_gap_seconds
 	if line.text != "":
-		for seat in seats:
-			Hud.subtitle(subtitle_prefix + line.text, seconds + 0.5, subtitle_color, seat)
+		_type_on_speakers(subtitle_prefix + line.text, seconds)
 	print("[Announcer] %s: %s (%s, %.1f s, seats %s)" % [line.why, line.sound, line.text.left(40) + "...", seconds, seats])
+
+
+## Type the words out beside every loudspeaker pole's horns (each pole's Readout, a FloatingLine
+## in the "overclean_speakers" group), finishing just before the voice does.
+func _type_on_speakers(text: String, seconds: float) -> void:
+	for node in get_tree().get_nodes_in_group(Loudspeaker.GROUP):
+		var readout := node as FloatingLine
+		if readout != null and readout.is_inside_tree():
+			readout.say(text, subtitle_color, maxf(0.5, seconds * 0.9))
+	last_text = text
 
 
 ## Which players on THIS computer hear it (their seat numbers): everyone, or only those up top.

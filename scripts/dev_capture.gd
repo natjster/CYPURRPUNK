@@ -40,7 +40,8 @@ extends Node
 ##                     (the car camera turns); prints the camera's look angle
 ##   --car_watch=N     print the car camera's look angle every N frames until the snap
 ##   --talk[=NAME]     walk up to an NPC (node name, e.g. LilMittens; default Don Catleone)
-##                     and press E (talk box open)
+##                     and press E (talk box open). A payphone (--talk=Payphone0) opens no box:
+##                     the boss's line types out over the phone ("DevCapture payphone" line)
 ##   --choose=N,M      (with --talk) click talk-box button N, then M... (0 = top button)
 ##   --click_choice=N  (with --talk) a REAL mouse click on button N (tests clicks reach the HUD)
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
@@ -100,6 +101,9 @@ extends Node
 ##                     it's only open with --heat=80 or more)
 ##   --near_exit=D     stand D metres south of our gang's exit manhole, facing it
 ##   --exit_team=N     (with --near_exit / --goto_dropoff_after) use gang N's exit instead of ours
+##   --near_speaker=D  stand D metres out in the street from the city's nearest OVERCLEAN loudspeaker
+##                     pole, facing it; --announce[=moment] then makes OVERCLEAN say a line
+##                     (boss, seal, level2..4, ko, deploy; default boss) -> "DevCapture speaker" lines
 ##   --mouse_test      check mouse-look gets the mouse through the game screen (prints how far it turned)
 ##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
@@ -413,6 +417,8 @@ func _ready() -> void:
 			player.global_position = exit_at + Vector3(0, 0.5, float(args["near_exit"]))
 			player.camera_pivot.rotation.y = 0.0
 			print("DevCapture near_exit: exit manhole at %s" % exit_at)
+		if args.has("near_speaker"):
+			_near_speaker(player, args)
 		if args.has("yaw"):
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
@@ -447,6 +453,8 @@ func _ready() -> void:
 			print("DevCapture mouse: 100 screen px = %.2f game px (expected %.2f)" % [moved, 100.0 * 240.0 / get_window().size.y])
 		if args.has("talk"):
 			await _talk(player, args)
+		if args.has("announce"):
+			await _announce(args)
 		if args.has("portrait"):
 			_portrait(player, args)
 		if args.has("drive"):
@@ -1331,9 +1339,8 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	player.teleport_to(phone_npc.global_position + phone_npc.global_basis.z * 1.8, 0.0)
 	for i in 15:
 		await get_tree().physics_frame
-	print("DevCapture tutorial payphone E: %s" % Interactable.try_use(player))
+	print("DevCapture tutorial payphone E: %s line=\"%s\" talk box open=%s" % [Interactable.try_use(player), (phone_npc as Payphone).last_line, NpcDialog.is_open_for(player.slot)])
 	await _seconds(0.5)
-	NpcDialog.for_cat(player).close()
 	print("DevCapture tutorial revealed=%s phase=%d hint=\"%s\"" % [FishHeist.instance.is_revealed(player.team), tutorial.phase, (Hud.element("TutorialHint") as Label).text])
 	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
 	if not await _until_step(9): return
@@ -1503,6 +1510,46 @@ func _film_camera(player: CatPlayer, args: Dictionary) -> void:
 		await get_tree().process_frame
 
 
+## --near_speaker=D: stand D metres out in the street from the loudspeaker pole nearest the
+## city's middle (its horns face the street), facing it.
+func _near_speaker(player: CatPlayer, args: Dictionary) -> void:
+	var poles := Game.instance.city.loudspeakers
+	print("DevCapture speaker: %d loudspeaker poles in this city" % poles.size())
+	if poles.is_empty():
+		return
+	var pole: Node3D = poles[0]
+	for p in poles:
+		if Vector2(p.global_position.x, p.global_position.z).length() < Vector2(pole.global_position.x, pole.global_position.z).length():
+			pole = p
+	var front := -pole.global_basis.z  # the way the horns point
+	var side := pole.global_basis.x
+	player.global_position = pole.global_position + front * float(args["near_speaker"]) + side * float(args.get("speaker_side", "2.5")) + Vector3(0, 0.5, 0)
+	var look := (pole.global_position - player.global_position) * Vector3(1, 0, 1)
+	player.camera_pivot.rotation.y = atan2(-look.x, -look.z) + deg_to_rad(float(args.get("speaker_turn", "0")))
+	player.unseen_by_bots = true  # (a test: keep the VAC-COPs off while we look)
+	print("DevCapture speaker: %s at %s, cat at %s" % [pole.name, pole.global_position, player.global_position])
+
+
+## --announce[=moment]: OVERCLEAN says one of its lines now (after a short wait), on the poles.
+func _announce(args: Dictionary) -> void:
+	await _seconds(1.0)
+	var a := OvercleanAnnouncer.instance
+	var moment: String = args["announce"] if not args["announce"] in ["", "true"] else "boss"
+	var pick: Array = {
+		"boss": [a.boss_sound, a.boss_line], "seal": [a.seal_sound, a.seal_line],
+		"level2": [a.level_2_sound, a.level_2_line], "level3": [a.level_3_sound, a.level_3_line],
+		"level4": [a.level_4_sound, a.level_4_line], "ko": [a.knockout_sound, a.knockout_line],
+		"deploy": [a.deploy_sounds[0], a.deploy_lines[0]],
+	}.get(moment, [a.boss_sound, a.boss_line])
+	a.say(pick[0], pick[1], true, 0.0, "test --announce=" + moment)
+	await _seconds(1.5)
+	var talking := 0
+	for node in get_tree().get_nodes_in_group(Loudspeaker.GROUP):
+		if (node as FloatingLine).is_talking():
+			talking += 1
+	print("DevCapture speaker: announced \"%s\" on %d poles, subtitle shown=%s" % [a.last_text.left(50), talking, (Hud.element("Subtitle") as Control).visible if Hud.element("Subtitle") != null else false])
+
+
 func _talk(player: CatPlayer, args: Dictionary) -> void:
 	var npc: Npc = UndergroundHub.of(player).npc  # (our own gang's boss)
 	for node in get_tree().get_nodes_in_group(Npc.GROUP):
@@ -1510,6 +1557,18 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			npc = node
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
+	if npc is Payphone:
+		# A payphone opens no talk box: the boss's line types out over the phone, and the cat can
+		# keep moving. Face the phone (the line floats above it) and print what the boss said.
+		var facing := npc.global_basis.z
+		player.camera_pivot.rotation.y = atan2(facing.x, facing.z)
+		var used := Interactable.try_use(player)
+		print("DevCapture payphone: %s used=%s line=\"%s\" talk box open=%s" % [npc.name, used, (npc as Payphone).last_line, NpcDialog.is_open_for(player.slot)])
+		for i in 20:
+			await get_tree().physics_frame
+		print("DevCapture payphone: revealed=%s typing=\"%s\"" % [FishHeist.instance.is_revealed(player.team), npc.get_node("Readout").text.replace("
+", " / ")])
+		return
 	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):
 		# --click_choice=N: a REAL mouse click on talk-box button N (through the game screen and

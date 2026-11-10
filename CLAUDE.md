@@ -331,8 +331,15 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `knocked_over`), yard pile = shuffled 4x4 grid, `_place_corner_props` (sidewalk corners, along 9.6-10.2 m: outside loot's ±9 m
   and clear of lamps), Meow-Mart door ±4.4 m; all on `_rng`. DevCapture prints `DevCapture props:` counts.
 - `OvercleanAnnouncer` (`scripts/overclean_announcer.gd`, node `Announcer` under Main, `instance`, `say(sound, text, everyone, delay, why)`):
-  local only (Events fire everywhere), queue sorted by start time, one line at a time, heard/subtitled (`Hud.subtitle`, HUD
-  `Frame/Middle/Subtitle`) only by local cats up top, seal = everyone. New Events: `player_went_up(id, first_in_district)`
+  local only (Events fire everywhere), queue sorted by start time, one line at a time, heard only by local cats up top, seal = everyone.
+  NO HUD subtitle: the words type onto every LOUDSPEAKER pole's `Readout` (`_type_on_speakers`, group `Loudspeaker.GROUP`
+  "overclean_speakers", `last_text`). Poles: `scenes/props/loudspeaker.tscn` (`scripts/loudspeaker.gd`, `models/loudspeaker.glb`,
+  spec `tools/model_specs/loudspeaker.json`), placed by `CityGenerator._place_loudspeakers` (on `_rng`, `loudspeaker_chance`,
+  `_taken_spots` keeps them off lamps/corner props; `city.loudspeakers`). FLOATING TEXT = `FloatingLine` (`scripts/ui/floating_line.gd`,
+  Label3D marker: `say(text, color, seconds, voice, pitch, hold)`, wraps at `wrap_at`, per-word 3D blips; HUD metas `typed`,
+  `max_distance`, `max_font_size`, `text_height`). No speech-bubble boxes anywhere (meta "bubble" is gone). PAYPHONES open no
+  NpcDialog: `Payphone.talk` reveals (exit open) + `Readout.say(boss line, boss voice)`, `last_line`. Test: `--near_speaker=D
+  [--speaker_side --speaker_turn] --announce[=boss|seal|level2..4|ko|deploy]`, `--talk=Payphone0` ("DevCapture payphone"). New Events: `player_went_up(id, first_in_district)`
   (fish_heist `_mark_went_up`, late-join catch-up passes announce=false), `boss_deployed` (roomba_patrol `_boss_siren`).
   `Sound` also registers numbered files by full name (`Sound.play("overclean_deploy_2")`). Test: `--deploy --heat_ramp=S --sound_log`.
 - NPC VOICES: `Npc.voice` (e.g. "meow_blip_don", set on each npcs/*.tscn root; blips from `tools/sound_specs/npc_voices.json`) ->
@@ -351,8 +358,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Remarks: every computer counts knocks -> `OvercleanAnnouncer.say(overclean_mess_N)`. Bots (`roomba.gd`): states appended
   `TIDY_GO/TIDYING/INVESTIGATE` (keep new states at the END: synced int), `_look_for_mess` -> `claim_nearest` (claim valid while
   `tidying_prop()`), `distracted_sight`, `MessManager.tidy(id)`; `tidies_messes` false for drone/trapper (their `_ready`), never
-  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (`TauntBubble` name-tag marker under CatModel with metas
-  `bubble` (HudNameTags draws a box) + `typed` (visible_characters); `_type_taunt` types it and plays `CatLook.voice_sound(look)`
+  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (`TauntBubble` name-tag marker under CatModel, plain outlined text, meta
+  `typed` (visible_characters); `_type_taunt` types it and plays `CatLook.voice_sound(look)`
   blips at `voice_pitch()`; voice = look key `voice` (`CatLook.VOICES` male/female, `voice_of`, MY CAT VOICE row)) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
   Test: `--mess=N`, `--ram_prop=bin|cone|box [--ram_trace]`, `--scratch`, `--shoot_prop`, `--ghost`, `--face_mess`,
   `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`

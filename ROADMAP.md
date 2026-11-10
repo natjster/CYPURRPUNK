@@ -197,7 +197,7 @@ a world that hates mess.
   revives and how their raid ended, plus one silly award each, stamped in last; READY-up to skip the
   wait; Discord invite line; TURF WAR grouped by gang; MESS MADE ready for Phase 1. SETUP_GUIDE §22.)
 - [x] **Claude:** OVERCLEAN announcer (lines and a robot voice). (Done 9 Nov 2026: chime + robot
-  PA voice + subtitles for the first cat up top, heat levels 2-4, MEGA VAC-COPs, the seal and
+  PA voice + words (on loudspeaker poles since 10 Nov) for the first cat up top, heat levels 2-4, MEGA VAC-COPs, the seal and
   knockouts. SETUP_GUIDE §21.)
 - [x] **Claude:** first Blockbench models in the game: a trash bin and a traffic cone on sidewalk
   corners, in yard junk piles and by Meow-Mart, through a `.bbmodel` -> `.glb` -> PS1 pipeline
@@ -224,6 +224,11 @@ a world that hates mess.
   RAID REPORT MESS + AGENT OF CHAOS; VAC-COPs stop to tidy, half-blind while busy; OVERCLEAN complains.
   Also the MEOW taunt ("GO LICK YOURSELF!" types out in a bubble, NPC-style talking, MALE / FEMALE voice in MY
   CAT) that bots hear and come to check. §23.)
+- [x] **Claude:** words float in the world instead of boxes. (Done 10 Nov 2026: the MEOW taunt, payphone calls and
+  OVERCLEAN's announcements all type out as clean outlined text in 3D, no boxes. Payphones no longer open a talk
+  box: the boss's one-liner floats over the phone and the arrow switches to EXIT. New OVERCLEAN **loudspeaker
+  poles** (Blockbench model) on sidewalk corners: the announcements type out beside their horns instead of a
+  subtitle. §8, §21.)
 - **Claude:** buyable cosmetics and boss-only rare drops.
 - **Claude:** spectating after a knockout.
 - **Claude:** hideout upgrades, first three.

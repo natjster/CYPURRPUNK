@@ -25,7 +25,7 @@ Meow-City/
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
-├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster (§20, §23)
+├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster, loudspeaker (§20, §21, §23)
 │   └── blockbench/            <- their Blockbench projects (.bbmodel): double-click to edit (§20)
 ├── tools/                     <- Claude's helpers: the Model Shop + Sound Lab (Python, §20)
 ├── .mcp.json                  <- tells Claude Code to start those helpers in this project (§20)
@@ -37,7 +37,8 @@ Meow-City/
 │   ├── controls.gd            <- autoload "Controls": every key + controller button, rebinding, rumble, saved to controls.cfg
 │   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
 │   ├── events.gd              <- autoload "Events": the big moments (sealed, extracted, knocked out...) (§16)
-│   ├── overclean_announcer.gd <- OVERCLEAN's voice over the city speakers + subtitles (§21)
+│   ├── overclean_announcer.gd <- OVERCLEAN's voice over the city loudspeaker poles (§21)
+│   ├── loudspeaker.gd         <- one OVERCLEAN loudspeaker pole: its words + blinking light (§21)
 │   ├── mess_manager.gd        <- MESS-MAKING rules: knocking props over, heat, the bots tidying (§23)
 │   ├── mess_prop.gd           <- one knock-over-able bin / cone / box / poster (§23)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
@@ -1042,8 +1043,9 @@ whole line at once). Each NPC's **Voice** is a set of 4 sound files, e.g.
 already has their own (Don deep and bossy, Mittens a squeaky kitten, Jax nervous...): the list,
 with each cat's pitch and mood, is `tools/sound_specs/npc_voices.json`. A new NPC: ask Claude
 for "a voice for my fishmonger, low and grumpy" (the Sound Lab, §20), or reuse another's name.
-Payphone calls use your boss's voice. They blip once per word (**Blip Per Word**; untick it for
-faster, choppier chatter). Typing speed, how often a blip plays, the most blips per line
+Payphone calls use your boss's voice too, but they don't use the talk box: the line floats over
+the phone and blips once per word from the phone itself (settings on the payphone's **Readout**, §8).
+The talk box blips once per word (**Blip Per Word**; untick it for faster, choppier chatter). Typing speed, how often a blip plays, the most blips per line
 (**0 = no limit**, the default: they chatter until the line is done) and their volume: `scenes/ui/hud.tscn` > **Frame > NpcDialog** > Inspector > **Talking Voice**.
 
 **Add a new NPC:**
@@ -1163,8 +1165,9 @@ new district. In the code that just means a new city seed: the whole city is gen
    the city (the lid slides off and a glow in the gang's colour comes out of the hole). At the
    same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
 4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
-   your boss. They tell you which side of town your exit is on, and the **HUD arrow to it
-   switches on for your whole gang** (not the rival's). (Call before 75 and they say there's no
+   your boss. No talk box opens and your cat never stops: the boss's line **types out as floating
+   text right above the phone** (in their voice, coming out of the phone), and the **green HUD
+   arrow switches from PAYPHONE to EXIT for your whole gang** (not the rival's). (Call before 75 and they say there's no
    way down yet: the crew is still digging. No hint where.)
 5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. That was
    your trip for this district.
@@ -1224,8 +1227,13 @@ arrows cost nothing.
   `textures/manhole_closed.png` and `textures/manhole_open.png` - repaint them in any paint
   program (keep them square, round art in the middle).
 - `scenes/props/payphone.tscn` + `scripts/npcs/payphone.gd`: the payphone, an NPC you **USE**.
-  Select its root to edit what Don says (**Line Too Early**, **Line Exit Open**, **Line Sealed**;
-  `{where}` becomes e.g. "north-east"). The ring is `sounds/sfx/phone_ring.wav`.
+  What the boss says lives on the boss's sewer: select **Hub** (Don) or **GangHub** (Pawnie) in
+  `main.tscn` > Inspector > **Payphone (the boss on the line)**: **Phone Too Early**, **Phone Exit
+  Open**, **Phone Sealed** (short one-liners read best floating in the street; `{where}` still
+  becomes e.g. "north-east" if you write it). The words appear on the payphone's **Readout** child
+  (a Label3D with `scripts/ui/floating_line.gd`): select it to change **Letters Per Second**, **Hold
+  Seconds** (how long it stays after typing), **Wrap At** (letters per line) and **Readable From**
+  (metres). The payphone root's **Line Color** is the text colour. The ring is `sounds/sfx/phone_ring.wav`.
 - `Game.new_district()` in `scripts/game.gd`: builds the next district.
 - Loot items (§9): `items/sardine.tres`, `items/fish.tres`, `items/golden_koi.tres`. Where
   they lie and how many: the loot table `loot/city.tres` (§9 "The loot table").
@@ -1243,8 +1251,10 @@ arrows cost nothing.
 - How much you can carry: **Bag Size** on the **Items** node.
 
 **Test it without playing:**
-- `--deploy --heat=80 --heat_hold=400 --talk=Payphone0` calls Don on the first payphone (the line
-  is printed, and `DevCapture heist: ... revealed=true`).
+- `--deploy --heat=80 --heat_hold=400 --talk=Payphone0` calls Don on the first payphone (prints
+  `DevCapture payphone: ... line="..." talk box open=false` and then `revealed=true`).
+  `--host --heat=80 --talk=Payphone0 --pitch=-8 --frames=100 --capture=shots/payphone_readout.png`
+  photographs the floating line over the phone.
 - `--deploy --heat=80 --heat_hold=600 --near_exit=6 --hold=move_forward --hold_frames=120` walks
   onto the open exit (prints `extracted`).
 - `--deploy --heat=100 --heat_hold=30 --frames=4800` runs a whole DEEP CLEAN and prints
@@ -2987,9 +2997,35 @@ terminal Claude Code to see them).
 ## 21. OVERCLEAN, the announcer (`scripts/overclean_announcer.gd`)
 
 OVERCLEAN talks over the city's loudspeakers: a two-tone chime, then a calm, polite, slightly
-robotic voice with an echo off the buildings, and a cyan **subtitle** near the bottom of the screen.
+robotic voice with an echo off the buildings. **Nothing appears at the bottom of the screen:** the
+words **type out as floating cyan text beside the horns of every LOUDSPEAKER POLE** in the city,
+in time with the voice, and vanish a moment after it ends. Run or drive past a pole to read it.
 
-| Moment | What it says (subtitle) | File in `sounds/sfx/` |
+### The loudspeaker poles
+- A tall steel pole on a concrete base, a junction box with an OVERCLEAN stencil, three flared
+  megaphone horns facing the street, and a little light on top that blinks **red and cyan while
+  OVERCLEAN talks**. Model: `models/loudspeaker.glb` (104 triangles, 64x64 texture; master copy
+  `models/blockbench/loudspeaker.bbmodel`, recipe `tools/model_specs/loudspeaker.json`, §20).
+- Scene: `scenes/props/loudspeaker.tscn`:
+  ```
+  Loudspeaker (StaticBody3D, scripts/loudspeaker.gd)
+  ├── PoleShape / BaseShape   (cats and cars bump into it)
+  ├── Model                   (the .glb, made PS1 when the city loads)
+  ├── LedGlow + LedLight      (the blinking light)
+  └── Readout (Label3D, scripts/ui/floating_line.gd, groups "hud_name_tags" + "overclean_speakers")
+  ```
+  Select **Readout** to change Wrap At (40 letters per line), Text Height (how big the words are),
+  Readable From (55 m), Hold Seconds, Biggest Font Size. Move it to move the words.
+  Select the root for the light's Idle / Talking Color and brightness.
+- **Where they stand:** the city puts them on sidewalk corners, horns towards the street, never
+  on top of a lamp post or corner prop. **Main > City** > Inspector > **Loudspeakers**:
+  **Loudspeaker Chance** (0.4 = about 14 poles per city; 0 = none), **Loudspeaker Along** (how far
+  from the very corner). They come from the city number, so every player has the same poles.
+- Test: `--host --near_speaker=6 --speaker_side=1.5 --speaker_turn=-22 --pitch=6 --announce
+  --frames=130 --capture=shots/loudspeaker_readout.png` (prints `DevCapture speaker:` lines:
+  how many poles, and how many typed the line; `--announce=seal|level2|ko|...` picks the line).
+
+| Moment | What it says (on the poles) | File in `sounds/sfx/` |
 |---|---|---|
 | The first cat of a district climbs up top | "Unregistered shedding has been detected..." (one of 3) | `overclean_deploy_1` .. `_3` |
 | Heat level 2 | "Cleanliness alert. Hairball levels exceeding municipal tolerance..." | `overclean_level2` |
@@ -3006,18 +3042,19 @@ cooldown so they don't repeat. It stays quiet in the TUTORIAL.
 
 **Changing it (no code):** select **Announcer** in `main.tscn` (Scene dock: **Main > Announcer**).
 Inspector: **Enabled**, **In Tutorial**, **Volume Db**, **Min Gap Seconds**, **Subtitle Prefix /
-Color**, then one group per moment with its **sound** (a file name in `sounds/sfx/` without `.wav`),
-its **line** (the subtitle), and delays / cooldowns. Changing a subtitle doesn't change what the
+Color** (written in front of / the colour of the words on the poles), then one group per moment
+with its **sound** (a file name in `sounds/sfx/` without `.wav`), its **line** (the words on the
+poles), and delays / cooldowns. Changing the words doesn't change what the
 voice says: ask Claude to remake that line with the Sound Lab (or edit
 `tools/sound_specs/overclean.json` and run the batch command in §20), and keep the two matching.
 
 **Adding a new announcement from a script:**
-`OvercleanAnnouncer.instance.say("overclean_my_line", "The subtitle text.")`
+`OvercleanAnnouncer.instance.say("overclean_my_line", "The words on the poles.")`
 (add `true` to make everyone hear it, not just players up top).
 
 **Where the moments come from:** game Events (§16): `player_went_up` (new, fish_heist.gd),
 `heat_level_changed`, `boss_deployed` (new, roomba_patrol.gd), `district_sealed`,
-`player_knocked_out`. The subtitle is the HUD's **Frame > Middle > Subtitle** label (`Hud.subtitle`).
+`player_knocked_out`. The words go to every pole's **Readout** (group `overclean_speakers`).
 
 **Testing:** `--deploy --heat_ramp=40 --sound_log --frames=3300` (plus `--capture=shots/x.png`)
 sends your cat up and raises the heat to 100 over 40 seconds; the console prints an
@@ -3195,9 +3232,9 @@ Cones lying down when the district starts are old mess (scenery): only standing 
 Not counted: bosses, SEWER BREACH bots, SQUIRT-DRONES and LINT-TRAPPERS never stop to tidy.
 
 ### MEOW = the taunt
-Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). A little
-speech bubble pops up over your cat on everyone's screen and **"GO LICK YOURSELF!"** types out in
-it, letter by letter, while your cat "talks" it in little cat syllables, exactly like the NPCs do.
+Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). **"GO LICK
+YOURSELF!"** types out over your cat on everyone's screen, letter by letter, as clean outlined
+text (no box, the same look as names and item tags), while your cat "talks" it in little cat syllables, exactly like the NPCs do.
 Pick your cat's **VOICE** in MY CAT: **MALE** (low) or **FEMALE** (high). On top of that, every
 cat's pitch is nudged by its fur, eye and marking colours, so two cats never sound quite the same. VAC-COPs within **22 m hear it**: they turn amber, a **?**
 pops up over them and they drive over to look. Lure them away from a teammate, or into a trap.
@@ -3214,7 +3251,7 @@ pops up over them and they drive over to look. Lure them away from a teammate, o
   Range, Tidy Seconds, Distracted Sight, Hears Meows, Investigate Seconds.
 - **scenes/player.tscn** (root) > Meow Taunt: Taunt Lines (add more and one is picked at random),
   Taunt Letters Per Second (typing speed), Taunt Blip Gap / Max Blips / Blip Volume Db, Taunt Seconds
-  (how long the bubble stays after typing), Taunt Color, Meow Heard From. Sounds > Meow Cooldown.
+  (how long the line stays after typing), Taunt Color, Meow Heard From. Sounds > Meow Cooldown.
 - **A new voice** (e.g. "robot"): add it to `VOICES` and `VOICE_NAMES` in `scripts/cat/cat_look.gd`
   and make its blips: a `"kind": "blips", "cat_id": "cat_robot"` line in `tools/sound_specs/mess.json`.
 

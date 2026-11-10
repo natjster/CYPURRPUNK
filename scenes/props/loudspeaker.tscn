@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/loudspeaker.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://models/loudspeaker.glb" id="2_model"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="3_psx"]
+[ext_resource type="Script" path="res://scripts/ui/floating_line.gd" id="4_line"]
+
+[sub_resource type="CylinderShape3D" id="Shape_pole"]
+height = 3.9
+radius = 0.12
+
+[sub_resource type="BoxShape3D" id="Shape_base"]
+size = Vector3(0.5, 0.32, 0.5)
+
+[sub_resource type="ShaderMaterial" id="Mat_led"]
+render_priority = 0
+shader = ExtResource("3_psx")
+shader_parameter/albedo_color = Color(0.5, 0.9, 1, 1)
+shader_parameter/emission_color = Color(0.5, 0.9, 1, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_led"]
+size = Vector3(0.14, 0.14, 0.14)
+
+[node name="Loudspeaker" type="StaticBody3D"]
+script = ExtResource("1_script")
+
+[node name="PoleShape" type="CollisionShape3D" parent="."]
+position = Vector3(0, 1.95, 0)
+shape = SubResource("Shape_pole")
+
+[node name="BaseShape" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.16, 0)
+shape = SubResource("Shape_base")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]
+
+[node name="LedGlow" type="MeshInstance3D" parent="."]
+position = Vector3(0, 3.875, 0)
+mesh = SubResource("Mesh_led")
+surface_material_override/0 = SubResource("Mat_led")
+
+[node name="LedLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 3.6, -0.7)
+light_color = Color(0.5, 0.9, 1, 1)
+light_energy = 1.5
+light_volumetric_fog_energy = 1.5
+omni_range = 4.5
+
+[node name="Readout" type="Label3D" parent="." groups=["overclean_speakers"]]
+position = Vector3(0, 3.55, -0.9)
+billboard = 1
+texture_filter = 0
+modulate = Color(0.55, 0.95, 1, 1)
+outline_size = 6
+font_size = 32
+pixel_size = 0.009
+script = ExtResource("4_line")
+hold_seconds = 1.5
+wrap_at = 40
+readable_from = 55.0
+text_height = 0.45
+biggest_font_size = 24

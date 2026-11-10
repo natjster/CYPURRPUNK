@@ -14,6 +14,10 @@ extends Npc
 ##     gang's exit is, and the HUD arrow to it switches on for your gang only.
 ##   - After the hatch is sealed: nobody's coming. Good luck.
 ##
+## Picking up NEVER opens a talk box: your cat keeps moving. The boss's line TYPES OUT as floating
+## outlined text right above the phone (the "Readout" child, scripts/ui/floating_line.gd), and the
+## boss's voice blips come out of the phone itself.
+##
 ## The LINES belong to each boss, not the phone: select Hub (Don) or GangHub (Pawnie) in main.tscn
 ## and look under "Payphone (the boss on the line)" in the Inspector (scripts/hub.gd). Write {where}
 ## in a line and it's replaced by the direction, e.g. "north-east".
@@ -23,6 +27,13 @@ extends Npc
 
 ## A small light on top that blinks while the phone rings.
 @onready var _ring_light: OmniLight3D = get_node_or_null("RingLight")
+## The floating words over the phone (a FloatingLine) and the "PAYPHONE" name (hidden while it talks).
+@onready var _readout: FloatingLine = get_node_or_null("Readout")
+@onready var _name_tag: Label3D = get_node_or_null("NameTag")
+## The colour of the boss's floating line.
+@export var line_color: Color = Color(1, 0.85, 0.35)
+## Just for tests and DevCapture: the last line the boss said on this phone.
+var last_line: String = ""
 var _ring_sound: AudioStreamPlayer3D
 var _ringing: bool = false
 
@@ -38,7 +49,8 @@ func _ready() -> void:
 	set_ringing(false)
 
 
-## Pick up the phone: your own boss answers, and what they say depends on the heat.
+## Pick up the phone: your own boss answers, and what they say depends on the heat. Once your
+## exit is open the call also switches your gang's green arrow from PAYPHONE to EXIT.
 func talk(cat: CatPlayer) -> void:
 	var heist := FishHeist.instance
 	var boss := UndergroundHub.of(cat)
@@ -50,10 +62,12 @@ func talk(cat: CatPlayer) -> void:
 		line = boss.phone_exit_open
 		heist.request_reveal_exit.rpc_id(1, cat.player_id)  # the host switches our gang's arrow on
 	Sound.play("click")
-	var dialog := NpcDialog.for_cat(cat)
-	# The boss talks in their own voice (their hub's leader NPC's Voice) down the line.
+	last_line = line.replace("{where}", where)
+	# The boss talks in their own voice (their hub's leader NPC's Voice), out of the phone.
 	var boss_voice := boss.leader.voice if boss.leader != null else voice
-	dialog.open("%s (PHONE)" % boss.boss_name, line.replace("{where}", where), [["HANG UP", dialog.close]], boss_voice)
+	if _readout != null:
+		_readout.say(last_line, line_color, -1.0, boss_voice)
+	print("[Payphone] %s answered %s: \"%s\"" % [boss.boss_name, name, last_line])
 
 
 ## Ring (bell sound + blinking light) or stop. fish_heist.gd calls this on every computer.
@@ -72,5 +86,7 @@ func set_ringing(ringing: bool) -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
+	if _name_tag != null and _readout != null:
+		_name_tag.visible = not _readout.is_talking()  # the boss's words take the name's place
 	if _ringing and _ring_light != null:
 		_ring_light.light_energy = 3.0 if fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.3 else 0.3

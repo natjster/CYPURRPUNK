@@ -140,8 +140,8 @@ var sync_model_rotation: Vector3
 @export var meow_cooldown: float = 1.2
 
 @export_group("Meow Taunt")
-## MEOW (M / pad B): one of these lines (picked at random) TYPES OUT in a little speech bubble over
-## the cat, and the cat "talks" it in its own voice, like an NPC (voice blips: MY CAT > VOICE picks
+## MEOW (M / pad B): one of these lines (picked at random) TYPES OUT as floating outlined text over
+## the cat (no box), and the cat "talks" it in its own voice, like an NPC (voice blips: MY CAT > VOICE picks
 ## MALE or FEMALE; CatLook.voice_sound).
 @export var taunt_lines: Array[String] = ["GO LICK YOURSELF!"]
 ## How fast the line types out (letters per second; NPC talk boxes use 55, a taunt is slower).
@@ -150,9 +150,9 @@ var sync_model_rotation: Vector3
 @export var taunt_blip_gap: float = 0.085
 @export var taunt_max_blips: int = 12
 @export var taunt_blip_volume_db: float = -2.0
-## How long the bubble stays up after the line has finished typing.
+## How long the line stays up after the line has finished typing.
 @export var taunt_seconds: float = 1.4
-## The bubble's text and border colour.
+## The line's text colour.
 @export var taunt_color: Color = Color(1, 0.9, 0.35)
 ## VAC-COPs within this many metres HEAR a meow and come to look (roomba.gd INVESTIGATE).
 @export var meow_heard_from: float = 22.0
@@ -162,7 +162,7 @@ var _step_last_position: Vector3
 var _next_meow_at: float = 0.0
 ## TESTS ONLY (DevCapture --ghost): VAC-COPs never notice this cat (roomba.gd _can_chase).
 var unseen_by_bots: bool = false
-var _taunt_label: Label3D  # the "GO LICK YOURSELF!" bubble (made the first time we meow)
+var _taunt_label: Label3D  # the "GO LICK YOURSELF!" line (made the first time we meow)
 var _taunt_hide_at: float = 0.0
 var _taunt_typed: float = -1.0  # letters shown so far (-1 = not typing)
 var _taunt_blip_wait: float = 0.0
@@ -470,7 +470,7 @@ func meow() -> void:
 	_meow.rpc(randi() % maxi(1, taunt_lines.size()))
 
 
-## Every computer: pop this cat's speech bubble and start typing the taunt out (_type_taunt,
+## Every computer: pop this cat's taunt line up and start typing the taunt out (_type_taunt,
 ## every frame, plays the voice blips). The host also lets the VAC-COPs hear it.
 @rpc("authority", "call_local", "reliable")
 func _meow(line: int) -> void:
@@ -493,10 +493,9 @@ static func voice_pitch_of(cat_look: Dictionary) -> float:
 	return lerpf(VOICE_PITCH_LOW, VOICE_PITCH_HIGH, amount)
 
 
-## The speech bubble over our head. It's a HUD name-tag marker (hud_name_tags.gd draws it sharp on
-## every player's HUD, ours too: it hangs off the CatModel, not the cat itself). Meta "bubble" =
-## drawn in a little box; meta "typed" = how many letters show so far (the box is full size from
-## the start, the words type into it).
+## The taunt line over our head. It's a HUD name-tag marker (hud_name_tags.gd draws it sharp on
+## every player's HUD, ours too: it hangs off the CatModel, not the cat itself), plain outlined
+## text with no box; meta "typed" = how many letters show so far (the words type out in place).
 func _show_taunt(text: String) -> void:
 	if _taunt_label == null:
 		_taunt_label = Label3D.new()
@@ -505,7 +504,6 @@ func _show_taunt(text: String) -> void:
 		_taunt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_taunt_label.add_to_group(HudNameTags.GROUP)
 		_taunt_label.set_meta("max_distance", 35.0)
-		_taunt_label.set_meta("bubble", true)
 		cat_model.add_child(_taunt_label)
 	_taunt_label.text = text
 	_taunt_label.modulate = taunt_color
