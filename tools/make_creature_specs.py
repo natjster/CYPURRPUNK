@@ -358,7 +358,8 @@ def cat_spec() -> dict:
     # --- Eyes: big domed lenses popping out of the face. ---
     for side, x in (("L", -1.95), ("R", 1.95)):
         els.append(lathe("Eye" + side, "Eye" + side, "z", [
-            (-2.6, 1.5, 1.8, x, 13.3), (-3.7, 1.4, 1.7, x, 13.3), (-4.05, 1.05, 1.3, x, 13.3)],
+            # (Radii are 75% of the first version's 1.5/1.8, 1.4/1.7, 1.05/1.3: eyes 25% smaller.)
+            (-2.6, 1.125, 1.35, x, 13.3), (-3.7, 1.05, 1.275, x, 13.3), (-4.05, 0.79, 0.975, x, 13.3)],
             6, U["eye_rim"], cap_end=U["eye"]))
     # --- Tail: segmented, curling up behind. Hinge = its root in the body. ---
     els += tube("Tail", "Tail", [[0, 4.4, 2.6], [0, 6.6, 5.4], [0, 10.0, 6.8], [0, 13.0, 6.2]],
