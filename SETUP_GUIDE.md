@@ -3417,7 +3417,7 @@ The TUTORIAL always starts with none, so it's the same for everyone.
 |---|---|---|
 | Comrade Whiskers / Clawd | UNLOCK NEW WEAPON CRATES (also on the shop page) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher. Without crates the shop sells only the Neon Bat, Paw-Pistol, Catnip and Catdip (locked guns show as LOCKED). |
 | Don Catleone / Pawnie | UPGRADE MY RANK | **DEEP POCKETS** (2): loot bag 3 -> 4 -> 5. **BIGGER BACKPACK** (2): 6 -> 8 -> 10. |
-| The TINKER WORKBENCH (new, east wall, between the litterbox and the cardboard shanties) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
+| The TINKER WORKBENCH (east wall, between the litterbox and the CAT-CAM TV) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
 | Frankie "Espresso" / Jittery Jax | GARAGE & ZOOMIES UPGRADES | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), then SELECT VEHICLE buttons. |
 | Paulie "No-Brooms" / Bumper-Car Benny | COMBAT TRAINING | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): bots you smash have a 15% / 30% chance to drop a SCRAP (not bosses). |
 | Nonna Catleone / "Gold-Tooth" Gus | NONNA'S KITCHEN / GUS'S FENCE | **GOURMET FENCE** (2): fish, sardines and koi pay +20% / +40% at the exit. **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. |

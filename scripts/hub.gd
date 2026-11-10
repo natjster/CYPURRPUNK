@@ -123,8 +123,10 @@ const CITY_MOOD: int = -1
 @export_group("Tinker Workbench")
 ## Where you stand to use the TINKER WORKBENCH (SEWER UPGRADES: DELUXE LITTERBOX + MAINFRAME
 ## CAPACITOR, scripts/upgrades.gd), relative to the Hub node. The bench (models/workbench.glb)
-## is built just east of this spot, against the east wall, facing you.
-@export var workbench_spot: Vector3 = Vector3(11.0, 0, 0)
+## is built just east of this spot, against the east wall, facing you. (z -4 = between the
+## litterbox (z -11..-7) and the CAT-CAM TV (z 0). Keep it 4+ m from both: closer and the E prompts
+## overlap, and it used to sit right on top of the TV.)
+@export var workbench_spot: Vector3 = Vector3(11.0, 0, -4.0)
 ## How close (metres) you must be to use it.
 @export var workbench_radius: float = 2.5
 ## The HUD line after "[E] " at the bench.
@@ -775,8 +777,9 @@ func _build_props() -> void:
 	for z in [4.0, 9.0, 14.0]:
 		LevelKit.add_box(self, Vector3(w - 1.4, 0.6, z), Vector3(2.0, 1.2, 2.6), _cardboard, true)
 		LevelKit.add_box(self, Vector3(w - 1.4, 1.45, z - 0.3), Vector3(1.4, 0.5, 1.6), _cardboard, false)
-	# Crates, trash and junk.
-	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -4), Vector3(-4, 0.5, -17)]:
+	# Crates, trash and junk. (The east-wall crate sits in the corner past the litterbox: z -4 on that
+	# wall is the TINKER WORKBENCH's spot now.)
+	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -17.5), Vector3(-4, 0.5, -17)]:
 		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
 
 
