@@ -1042,7 +1042,8 @@ whole line at once). Each NPC's **Voice** is a set of 4 sound files, e.g.
 already has their own (Don deep and bossy, Mittens a squeaky kitten, Jax nervous...): the list,
 with each cat's pitch and mood, is `tools/sound_specs/npc_voices.json`. A new NPC: ask Claude
 for "a voice for my fishmonger, low and grumpy" (the Sound Lab, §20), or reuse another's name.
-Payphone calls use your boss's voice. Typing speed, how often a blip plays, the most blips per line
+Payphone calls use your boss's voice. They blip once per word (**Blip Per Word**; untick it for
+faster, choppier chatter). Typing speed, how often a blip plays, the most blips per line
 (**0 = no limit**, the default: they chatter until the line is done) and their volume: `scenes/ui/hud.tscn` > **Frame > NpcDialog** > Inspector > **Talking Voice**.
 
 **Add a new NPC:**

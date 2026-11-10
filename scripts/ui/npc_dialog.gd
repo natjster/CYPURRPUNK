@@ -41,10 +41,13 @@ var is_open: bool = false
 @export_group("Talking voice")
 ## How fast an NPC's line types itself out, in letters per second (0 = the whole line at once).
 ## Press A / E / Enter while it types to show the rest straight away.
-@export var letters_per_second: float = 55.0
-## While the line types, a voice blip (the NPC's Voice, e.g. sounds/sfx/meow_blip_don_1..4.wav)
-## plays at most once every this many seconds: the Animal Crossing "mi-mra-nya" chatter.
-@export var blip_gap_seconds: float = 0.13
+@export var letters_per_second: float = 32.0
+## On = one voice blip (the NPC's Voice, e.g. sounds/sfx/meow_blip_don_1..4.wav) at the start of
+## every WORD as it types. Off = a blip every Blip Gap Seconds while letters appear (faster chatter).
+@export var blip_per_word: bool = true
+## The shortest time between two blips, in seconds (with Blip Per Word on, a short word right
+## after another can be skipped so the blips never pile on top of each other).
+@export var blip_gap_seconds: float = 0.06
 ## A long speech stops chattering after this many blips (the text keeps typing).
 ## 0 = never stop: the NPC keeps talking until the whole line has typed out.
 @export var max_blips_per_line: int = 0
@@ -179,15 +182,24 @@ func _process(delta: float) -> void:
 		var text := line_label.text
 		for i in range(before, mini(shown, text.length())):
 			var letter := text[i]
-			if letter.to_upper() != letter.to_lower() or letter.is_valid_int():  # a letter or a digit
-				Sound.play(_voice, blip_volume_db)
-				_blip_wait = blip_gap_seconds
-				_blips_left -= 1
-				break
+			if not _is_letter(letter):
+				continue
+			# One blip per word: only the first letter of a word (the letter before it isn't one).
+			if blip_per_word and i > 0 and _is_letter(text[i - 1]):
+				continue
+			Sound.play(_voice, blip_volume_db)
+			_blip_wait = blip_gap_seconds
+			_blips_left -= 1
+			break
 	if shown >= total:
 		_finish_typing()
 	else:
 		line_label.visible_characters = shown
+
+
+## A letter or a digit (not a space or punctuation). Apostrophes count, so "I'll" is one word.
+static func _is_letter(letter: String) -> bool:
+	return letter.to_upper() != letter.to_lower() or letter.is_valid_int() or letter == "'"
 
 
 ## Show the whole line now (typing done or skipped).
