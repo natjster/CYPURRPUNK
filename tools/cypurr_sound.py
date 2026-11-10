@@ -279,18 +279,31 @@ def _syllable(f0: float, mood: str, rng: np.random.Generator) -> np.ndarray:
 
 
 def cat_blips(cat_id: str, base_pitch: float = 420.0, mood: str = "happy", count: int = 4, seed: int = 1,
-              crunch: bool = True, folder: str = "sfx") -> dict:
+              crunch: bool = False, soft: bool = True, folder: str = "sfx") -> dict:
     """Talking-cat syllables -> sounds/<folder>/meow_blip_<cat_id>_1.wav .. _<count>.wav.
-    base_pitch Hz (kittens ~600, Don ~150), mood = one of MOODS."""
+    base_pitch Hz (kittens ~600, Don ~150), mood = one of MOODS.
+    soft (default) = easy on the ear: highs rolled off, a gentle fade in and out, a bit quieter.
+    crunch = the old bright PS1 bit-crushed chatter (louder and harsher)."""
     if mood not in MOODS:
         raise ValueError("mood must be one of: " + ", ".join(MOODS))
     rng = np.random.default_rng(seed)
     files = []
     for i in range(1, count + 1):
         s = _syllable(base_pitch, mood, rng)
+        peak = -3.0
+        if soft:
+            # Keep only the warm middle (no hiss / squeak up top), then fade in over 30 ms and
+            # out over the last 40% so every blip is a rounded "mm" instead of a click.
+            s = band(s, 80, 2200)
+            t = np.arange(len(s)) / RATE
+            seconds = len(s) / RATE
+            fade_in = np.clip(t / 0.03, 0, 1)
+            tail = np.clip((seconds - t) / (seconds * 0.4), 0, 1)
+            s = s * np.sin(fade_in * np.pi / 2) ** 2 * np.sin(tail * np.pi / 2) ** 2
+            peak = -8.0
         if crunch:
             s = crush(band(s, 120, 5000), hold=2, bits=10)
-        files.append(os.path.relpath(write_wav(out_path("meow_blip_%s_%d" % (cat_id, i), folder), s, peak_db=-3.0), PROJECT_ROOT))
+        files.append(os.path.relpath(write_wav(out_path("meow_blip_%s_%d" % (cat_id, i), folder), s, peak_db=peak), PROJECT_ROOT))
     return {"files": files, "sound_id": "meow_blip_" + cat_id,
             "how_to_play": 'Sound.play("meow_blip_%s") picks a random one' % cat_id}
 

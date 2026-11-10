@@ -2968,7 +2968,7 @@ They give Claude new tools. You never run them; they're free and run on this PC.
 | Server (file) | Tools it gives Claude |
 |---|---|
 | **Model Shop** (`tools/model_mcp.py`) | `create_or_edit_bbmodel` (write/change a Blockbench project: boxes, round cans and cones, free-form "poly" shapes like the car's wedge, groups, markers, a painted pixel-art texture), `export_bbmodel_to_glb`, `inspect_model` (triangles, texture size, groups vs the rules), `list_models` |
-| **Sound Lab** (`tools/sound_mcp.py`) | `generate_overclean_voice` (free text-to-speech + robot + loudspeaker echo + chime), `generate_cat_voice_blips` (Animal Crossing style talking cats: `meow_blip_<name>_1..4.wav`), `generate_ps1_sfx` (crunchy effects: bin clatter, cone bounce, scratch, PA chime, metal clang, plastic tap, or a custom recipe), `list_sounds` |
+| **Sound Lab** (`tools/sound_mcp.py`) | `generate_overclean_voice` (free text-to-speech + robot + loudspeaker echo + chime), `generate_cat_voice_blips` (Animal Crossing style talking cats: `meow_blip_<name>_1..4.wav`; soft and rounded by default, ask for "crunch" for the old harsh PS1 chatter), `generate_ps1_sfx` (crunchy effects: bin clatter, cone bounce, scratch, PA chime, metal clang, plastic tap, or a custom recipe), `list_sounds` |
 
 The real work is in `tools/cypurr_models.py` and `tools/cypurr_sound.py`, which also run from a
 terminal (each prints its instructions when run with no arguments). Remake every OVERCLEAN line:

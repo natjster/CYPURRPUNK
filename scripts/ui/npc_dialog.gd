@@ -41,18 +41,18 @@ var is_open: bool = false
 @export_group("Talking voice")
 ## How fast an NPC's line types itself out, in letters per second (0 = the whole line at once).
 ## Press A / E / Enter while it types to show the rest straight away.
-@export var letters_per_second: float = 32.0
+@export var letters_per_second: float = 26.0
 ## On = one voice blip (the NPC's Voice, e.g. sounds/sfx/meow_blip_don_1..4.wav) at the start of
 ## every WORD as it types. Off = a blip every Blip Gap Seconds while letters appear (faster chatter).
 @export var blip_per_word: bool = true
 ## The shortest time between two blips, in seconds (with Blip Per Word on, a short word right
 ## after another can be skipped so the blips never pile on top of each other).
-@export var blip_gap_seconds: float = 0.06
+@export var blip_gap_seconds: float = 0.2
 ## A long speech stops chattering after this many blips (the text keeps typing).
 ## 0 = never stop: the NPC keeps talking until the whole line has typed out.
 @export var max_blips_per_line: int = 0
 ## How loud the blips are, in decibels (0 = as loud as the files, -6 = about half).
-@export var blip_volume_db: float = -6.0
+@export var blip_volume_db: float = -10.0
 
 @onready var speaker_label: Label = $Panel/VBox/Speaker
 @onready var scroll: ScrollContainer = $Panel/VBox/Scroll
