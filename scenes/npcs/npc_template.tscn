@@ -100,6 +100,7 @@ rings = 1
 [node name="StrayCat" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "STRAY CAT"
+voice = "meow_blip_stray"
 pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about")])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

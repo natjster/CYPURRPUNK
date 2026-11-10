@@ -42,6 +42,7 @@ gives it to you, and starts a fresh draft.
 - **The Night of the Big Red Button:** ask around with WHO LET OVERCLEAN IN? and find out what really happened. Everyone has their own version.
 - **OVERCLEAN speaks:** the city's loudspeakers now ding-dong and a calm, polite robot voice announces your raid: when your crew climbs up, at each new heat level, when a MEGA VAC-COP rolls out, when the hatch seals, and (smugly) when a cat gets knocked out. Only cats up top hear it, with subtitles at the bottom of the screen.
 - **First real 3D models:** dented OVERCLEAN trash bins and battered traffic cones now stand on street corners, in junk piles in the empty yards and outside Meow-Mart. Bins are solid, cones you can walk (and drive) through. Some cones have already been knocked over...
+- **The sewer cats have voices:** when you talk to someone, their words type out while they chatter in little cat syllables. Every character sounds like themselves: the Don is deep and bossy, Lil' Mittens squeaks, Jittery Jax can't sit still, and the boss's voice even comes down the payphone. Too slow? Press A / E / Enter to show the whole line.
 
 ## 🔧 Changes
 - **The old trash-bag blobs are gone** from the empty yards (replaced by the bins and cones). Every city seed now builds a slightly different city than before.

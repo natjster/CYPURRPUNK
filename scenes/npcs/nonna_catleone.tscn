@@ -212,6 +212,7 @@ rings = 1
 [node name="NonnaCatleone" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "NONNA CATLEONE"
+voice = "meow_blip_nonna"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
 turn_speed = 3
 tail_swish = 0.15

@@ -38,6 +38,18 @@ var is_open: bool = false
 ## Height of each answer button (HUD units).
 @export var choice_height: float = 40.0
 
+@export_group("Talking voice")
+## How fast an NPC's line types itself out, in letters per second (0 = the whole line at once).
+## Press A / E / Enter while it types to show the rest straight away.
+@export var letters_per_second: float = 55.0
+## While the line types, a voice blip (the NPC's Voice, e.g. sounds/sfx/meow_blip_don_1..4.wav)
+## plays at most once every this many seconds: the Animal Crossing "mi-mra-nya" chatter.
+@export var blip_gap_seconds: float = 0.13
+## A long speech stops chattering after this many blips (the text keeps typing).
+@export var max_blips_per_line: int = 16
+## How loud the blips are, in decibels (0 = as loud as the files, -6 = about half).
+@export var blip_volume_db: float = -6.0
+
 @onready var speaker_label: Label = $Panel/VBox/Speaker
 @onready var scroll: ScrollContainer = $Panel/VBox/Scroll
 @onready var line_label: Label = $Panel/VBox/Scroll/Body/Line
@@ -48,6 +60,12 @@ var is_open: bool = false
 var _design: Array[float] = []
 ## This player's highlighted answer (scripts/ui/seat_focus.gd), moved by their own d-pad / arrows.
 var _focus := SeatFocus.new()
+## The typewriter: how many letters of the line are showing (a fraction while typing), -1 = done.
+var _typed: float = -1.0
+## The voice blip sound being used for this line ("" = silent).
+var _voice: String = ""
+var _blip_wait: float = 0.0
+var _blips_left: int = 0
 
 
 func _enter_tree() -> void:
@@ -95,6 +113,11 @@ static func is_open_for(seat_number: int) -> bool:
 func _input(event: InputEvent) -> void:
 	if Seats.seat_of_event(event) != seat:
 		return  # another player's button (player 1's HUD hears every button first)
+	# Still typing? A / E / Enter shows the rest of the line (instead of picking an answer).
+	if is_open and _typed >= 0.0 and (event.is_action_pressed("ui_accept") or event.is_action_pressed("interact")):
+		get_viewport().set_input_as_handled()
+		_finish_typing()
+		return
 	if is_open and _focus.handle(event):  # up / down picks an answer, A / Enter says it
 		get_viewport().set_input_as_handled()
 		return
@@ -104,9 +127,19 @@ func _input(event: InputEvent) -> void:
 
 
 ## Show a line and the answer buttons. choices = [[text, Callable], ...]
-func open(speaker: String, line: String, choices: Array) -> void:
+## voice = the speaker's blip sound (a name in sounds/sfx/, e.g. "meow_blip_don"): the line types
+## itself out while it chatters. "" = no voice (the line still types out).
+func open(speaker: String, line: String, choices: Array, voice: String = "") -> void:
 	speaker_label.text = speaker
 	line_label.text = line
+	_voice = voice
+	_blip_wait = 0.0
+	_blips_left = max_blips_per_line
+	_typed = 0.0 if letters_per_second > 0.0 else -1.0
+	# Lay the WHOLE line out first and only hide the letters not typed yet, so the answer buttons
+	# sit still instead of sliding down as the text wraps onto more lines.
+	line_label.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
+	line_label.visible_characters = 0 if _typed >= 0.0 else -1
 	for old in choices_box.get_children():
 		choices_box.remove_child(old)
 		old.queue_free()
@@ -127,9 +160,46 @@ func open(speaker: String, line: String, choices: Array) -> void:
 	scroll.set_deferred("scroll_vertical", 0)
 
 
+## The typewriter and the voice: a few more letters each frame, and a blip now and then while
+## letters (not spaces or punctuation) are appearing.
+func _process(delta: float) -> void:
+	if _typed < 0.0 or not is_open:
+		return
+	# Keep the box as tall as the WHOLE line (all its wrapped rows), not just the typed part, so
+	# the answer buttons don't slide down as the text types onto a new row.
+	line_label.custom_minimum_size.y = line_label.get_line_count() * (line_label.get_line_height()
+			+ line_label.get_theme_constant("line_spacing"))
+	var before := int(_typed)
+	_typed += letters_per_second * delta
+	var shown := int(_typed)
+	var total := line_label.get_total_character_count()
+	_blip_wait -= delta
+	if _voice != "" and _blip_wait <= 0.0 and _blips_left > 0:
+		var text := line_label.text
+		for i in range(before, mini(shown, text.length())):
+			var letter := text[i]
+			if letter.to_upper() != letter.to_lower() or letter.is_valid_int():  # a letter or a digit
+				Sound.play(_voice, blip_volume_db)
+				_blip_wait = blip_gap_seconds
+				_blips_left -= 1
+				break
+	if shown >= total:
+		_finish_typing()
+	else:
+		line_label.visible_characters = shown
+
+
+## Show the whole line now (typing done or skipped).
+func _finish_typing() -> void:
+	_typed = -1.0
+	line_label.visible_characters = -1
+	line_label.custom_minimum_size.y = 0.0  # (back to sizing itself)
+
+
 ## Back to the game: grab the mouse again.
 func close() -> void:
 	is_open = false
+	_typed = -1.0
 	hide()
 	_focus.clear()
 	if seat == 0:

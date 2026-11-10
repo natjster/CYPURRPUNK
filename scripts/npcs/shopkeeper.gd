@@ -45,7 +45,7 @@ func open_shop(cat: CatPlayer) -> void:
 			continue  # unknown item, or it has no price on its card
 		buttons.append(["BUY %s - $%d" % [data.display_name, data.price], _buy.bind(cat, item_id)])
 	buttons.append([back_text, talk.bind(cat)])
-	NpcDialog.for_cat(cat).open(npc_name, line, buttons)
+	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)
 
 
 ## A BUY button: ask the host, then re-open the shop page (so the cash line is fresh).

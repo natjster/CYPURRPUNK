@@ -180,6 +180,7 @@ rings = 1
 script = ExtResource("1_script")
 shop_lines = PackedStringArray("Take your pick. You've got $%d. Spend it on freedom.", "All genuine. Mostly. You've got $%d.", "Prices set by the people. The people is me. You've got $%d.")
 npc_name = "COMRADE WHISKERS"
+voice = "meow_blip_whiskers"
 talk_radius = 3.5
 pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_place"), SubResource("Page_blame")])
 turn_speed = 4.0

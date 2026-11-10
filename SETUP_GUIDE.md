@@ -994,6 +994,7 @@ data in the Inspector — no code needed:
 ```
 Npc Name        "DON CATLEONE"  (also used for the floating name tag and the [E] prompt)
 Talk Radius     how close you must be to press E
+Voice           their talking voice: a sound name, e.g. "meow_blip_don" (empty = silent)
 Pages           the conversation. The first page (that fits) is what they say when you walk up.
   Page          Id      short name, e.g. "about"
                 Lines   what they say (put several: one is picked at random)
@@ -1006,6 +1007,16 @@ Pages           the conversation. The first page (that fits) is what they say wh
                 Go To   Id of the page to show next. EMPTY = close the talk box
 Idle Animation  Look At Players, Look Range, Turn Speed, Tail Swish, Tail Speed
 ```
+
+**Talking voices:** when an NPC talks, their line types itself out in the talk box while
+they chatter in little cat syllables, Animal Crossing style (press **A / E / Enter** to show the
+whole line at once). Each NPC's **Voice** is a set of 4 sound files, e.g.
+`sounds/sfx/meow_blip_don_1.wav` .. `_4.wav` (one is picked at random for every blip). Every NPC
+already has their own (Don deep and bossy, Mittens a squeaky kitten, Jax nervous...): the list,
+with each cat's pitch and mood, is `tools/sound_specs/npc_voices.json`. A new NPC: ask Claude
+for "a voice for my fishmonger, low and grumpy" (the Sound Lab, §20), or reuse another's name.
+Payphone calls use your boss's voice. Typing speed, how often a blip plays, the most blips per line
+and their volume: `scenes/ui/hud.tscn` > **Frame > NpcDialog** > Inspector > **Talking Voice**.
 
 **Add a new NPC:**
 1. In the FileSystem dock, right-click `scenes/npcs/npc_template.tscn` > **Duplicate...** and
@@ -2119,7 +2130,7 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
 | `overclean_*` | OVERCLEAN's announcements (chime + robot voice, §21) | players up top (the seal: everyone) |
 | `pa_chime`, `bin_clatter`, `cone_bounce`, `scratch` | made by the Sound Lab (§20) for the mess-making to come; not used yet | |
-| `meow_blip_don`, `meow_blip_whiskers` (`_1`..`_4`) | talking-cat voice blips (Sound Lab); not used yet | |
+| `meow_blip_<name>` (`_1`..`_4`) | an NPC's talking voice while their line types out (each NPC's **Voice**, §8) | just you |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
 | `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's row slides in / each award stamps down (§22) | just you |

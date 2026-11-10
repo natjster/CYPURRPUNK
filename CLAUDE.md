@@ -329,6 +329,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `Frame/Middle/Subtitle`) only by local cats up top, seal = everyone. New Events: `player_went_up(id, first_in_district)`
   (fish_heist `_mark_went_up`, late-join catch-up passes announce=false), `boss_deployed` (roomba_patrol `_boss_siren`).
   `Sound` also registers numbered files by full name (`Sound.play("overclean_deploy_2")`). Test: `--deploy --heat_ramp=S --sound_log`.
+- NPC VOICES: `Npc.voice` (e.g. "meow_blip_don", set on each npcs/*.tscn root; blips from `tools/sound_specs/npc_voices.json`) ->
+  `NpcDialog.open(speaker, line, choices, voice)` types the line (`letters_per_second`, VC_CHARS_AFTER_SHAPING + label min height
+  = full line count) and blips every `blip_gap_seconds` on letters (cap `max_blips_per_line`); accept/interact while typing = show all.
+  Payphone uses `boss.leader.voice`. Test: `--talk=DonCatleone --sound_log`.
 
 - RAID REPORT (SETUP_GUIDE §22): `scripts/raid_report.gd` (`RaidReport.instance`, node `RaidReport` under Main, in `GameSystems.GROUP`).
   Host counts per PLAYER id from Events (went_up, extracted, downed, revived, robbed, knocked_out, enemy_destroyed+`killed_by`,

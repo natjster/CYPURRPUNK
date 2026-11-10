@@ -42,6 +42,10 @@ signal action_chosen(action: String, cat: CatPlayer)
 @export var talk_radius: float = 3.0
 ## The conversation. The first page is the greeting. See npc_page.gd.
 @export var pages: Array[NpcPage] = []
+## Their talking VOICE: a sound name in sounds/sfx/ (e.g. "meow_blip_don" plays meow_blip_don_1..4.wav),
+## chattered while their line types out in the talk box. Empty = silent. New voices are made with the
+## Sound Lab (tools/sound_specs/npc_voices.json, SETUP_GUIDE §20).
+@export var voice: String = ""
 ## ONE QUEST AT A TIME: said instead of handing out a quest when you already have one.
 ## {giver} = whoever gave you your current job ("me" if it was this NPC). One picked at random.
 @export_multiline var busy_lines: PackedStringArray = [
@@ -243,7 +247,7 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 		buttons.append([choice.text, _choose.bind(cat, choice)])
 	if buttons.is_empty():
 		buttons.append(["BYE", NpcDialog.for_cat(cat).close])  # never leave the player stuck
-	NpcDialog.for_cat(cat).open(npc_name, line, buttons)  # in the talking player's own HUD
+	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)  # in the talking player's own HUD
 
 
 func _find_page(page_id: String) -> NpcPage:
@@ -278,7 +282,7 @@ func _say_busy(cat: CatPlayer) -> void:
 		giver = "somebody else"
 	var line := "You're already on a job. Finish that first." if busy_lines.is_empty() \
 			else busy_lines[randi() % busy_lines.size()]
-	NpcDialog.for_cat(cat).open(npc_name, line.replace("{giver}", giver), [["OK", NpcDialog.for_cat(cat).close]])
+	NpcDialog.for_cat(cat).open(npc_name, line.replace("{giver}", giver), [["OK", NpcDialog.for_cat(cat).close]], voice)
 
 
 func _run_action(action: String, cat: CatPlayer) -> void:

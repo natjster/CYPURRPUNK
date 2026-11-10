@@ -1,0 +1,20 @@
+{
+  "about": "Talking-cat voice blips for every NPC (the 'voice' setting on each NPC scene). Remake with: python tools/cypurr_sound.py batch tools/sound_specs/npc_voices.json. base_pitch in Hz (kitten ~600, big boss ~150); mood = happy, grumpy, sly, nervous, bossy, sleepy, angry; seed = a different set of syllables.",
+  "jobs": [
+    {"kind": "blips", "cat_id": "don", "base_pitch": 150, "mood": "bossy", "seed": 1, "note": "Don Catleone"},
+    {"kind": "blips", "cat_id": "whiskers", "base_pitch": 330, "mood": "sly", "seed": 2, "note": "Comrade Whiskers (shop)"},
+    {"kind": "blips", "cat_id": "pawnie", "base_pitch": 185, "mood": "bossy", "seed": 3, "note": "Pawnie (Burrow boss)"},
+    {"kind": "blips", "cat_id": "clawd", "base_pitch": 260, "mood": "sly", "seed": 4, "note": "Clawd (Burrow shop)"},
+    {"kind": "blips", "cat_id": "mittens", "base_pitch": 640, "mood": "happy", "seed": 5, "note": "Lil' Mittens"},
+    {"kind": "blips", "cat_id": "nonna", "base_pitch": 300, "mood": "sleepy", "seed": 6, "note": "Nonna Catleone"},
+    {"kind": "blips", "cat_id": "paulie", "base_pitch": 205, "mood": "grumpy", "seed": 7, "note": "Paulie No-Brooms"},
+    {"kind": "blips", "cat_id": "frankie", "base_pitch": 470, "mood": "nervous", "seed": 8, "note": "Frankie Espresso"},
+    {"kind": "blips", "cat_id": "sal", "base_pitch": 215, "mood": "angry", "seed": 9, "note": "Sal the Slapper"},
+    {"kind": "blips", "cat_id": "billy", "base_pitch": 600, "mood": "happy", "seed": 10, "note": "Billy the Kitten"},
+    {"kind": "blips", "cat_id": "benny", "base_pitch": 380, "mood": "happy", "seed": 11, "note": "Bumper-Car Benny"},
+    {"kind": "blips", "cat_id": "gus", "base_pitch": 235, "mood": "sly", "seed": 12, "note": "Gold-Tooth Gus"},
+    {"kind": "blips", "cat_id": "jax", "base_pitch": 520, "mood": "nervous", "seed": 13, "note": "Jittery Jax"},
+    {"kind": "blips", "cat_id": "clara", "base_pitch": 450, "mood": "angry", "seed": 14, "note": "Calamity Clara"},
+    {"kind": "blips", "cat_id": "stray", "base_pitch": 420, "mood": "happy", "seed": 15, "note": "the NPC template's stray cat"}
+  ]
+}

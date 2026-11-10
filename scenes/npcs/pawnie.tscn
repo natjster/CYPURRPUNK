@@ -193,6 +193,7 @@ size = Vector3(0.05, 0.05, 0.03)
 [node name="Pawnie" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "PAWNIE"
+voice = "meow_blip_pawnie"
 pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_howto")])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

@@ -220,6 +220,7 @@ size = Vector3(0.64, 0.03, 0.03)
 [node name="GoldToothGus" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "\"GOLD-TOOTH\" GUS"
+voice = "meow_blip_gus"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
 turn_speed = 3
 tail_swish = 0.15

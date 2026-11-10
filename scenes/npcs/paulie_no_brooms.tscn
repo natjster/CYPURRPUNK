@@ -210,6 +210,7 @@ size = Vector3(0.03, 0.2, 0.02)
 [node name="PaulieNoBrooms" type="StaticBody3D"]
 script = ExtResource("1_script")
 npc_name = "PAULIE \"NO-BROOMS\""
+voice = "meow_blip_paulie"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])
 turn_speed = 3
 tail_swish = 0.9

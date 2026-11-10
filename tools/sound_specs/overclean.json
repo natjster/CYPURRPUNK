@@ -1,22 +1,81 @@
 {
-  "about": "Every OVERCLEAN announcement (scripts/overclean_announcer.gd) plus the Phase 0 sound effects. Remake them all with: python tools/cypurr_sound.py batch tools/sound_specs/overclean.json  (needs internet for the voice). The subtitles in the game are typed in the Announcer node's Inspector: keep them matching the text here.",
+  "about": "Every OVERCLEAN announcement (scripts/overclean_announcer.gd) plus the Phase 0 sound effects. Remake them all with: python tools/cypurr_sound.py batch tools/sound_specs/overclean.json  (needs internet for the voice). The subtitles in the game are typed in the Announcer node's Inspector: keep them matching the text here. NPC voice blips are in npc_voices.json.",
   "jobs": [
-    {"kind": "voice", "sound_id": "overclean_deploy_1", "text": "Attention citizens. Unregistered shedding has been detected in this sector. Please remain still for disposal."},
-    {"kind": "voice", "sound_id": "overclean_deploy_2", "text": "Attention citizens. A stray has entered a clean zone. Please remain still for disposal."},
-    {"kind": "voice", "sound_id": "overclean_deploy_3", "text": "Good evening, citizens. Unauthorized paw prints have been detected on the pavement. Disposal units are on their way."},
-    {"kind": "voice", "sound_id": "overclean_level2", "text": "Cleanliness alert. Hairball levels exceeding municipal tolerance. Additional VAC-COPs dispatched."},
-    {"kind": "voice", "sound_id": "overclean_level3", "text": "Warning. Unauthorized fish handling in progress. Littering is punishable by immediate suction."},
-    {"kind": "voice", "sound_id": "overclean_level4", "text": "Critical mess threshold reached. Please step into the nearest dustbin in an orderly fashion."},
-    {"kind": "voice", "sound_id": "overclean_boss", "text": "Heavy sanitation unit deployed. Have a spotless day."},
-    {"kind": "voice", "sound_id": "overclean_seal", "text": "Sector quarantine initiated. Commencing total Deep Clean. Thank you for your cooperation.", "pitch_shift": -2.0, "pa_reverb": 0.7},
-    {"kind": "voice", "sound_id": "overclean_ko", "text": "One stray removed from the premises. Street hygiene restored by 14 percent."},
-
-    {"kind": "sfx", "sound_id": "pa_chime", "params": "pa_chime"},
-    {"kind": "sfx", "sound_id": "bin_clatter", "params": {"preset": "metal_bin_clatter", "seed": 4}},
-    {"kind": "sfx", "sound_id": "cone_bounce", "params": {"preset": "cone_bounce", "seed": 2}},
-    {"kind": "sfx", "sound_id": "scratch", "params": {"preset": "scratch", "seed": 6}},
-
-    {"kind": "blips", "cat_id": "don", "base_pitch": 150, "mood": "bossy", "seed": 1},
-    {"kind": "blips", "cat_id": "whiskers", "base_pitch": 330, "mood": "sly", "seed": 2}
+    {
+      "kind": "voice",
+      "sound_id": "overclean_deploy_1",
+      "text": "Attention citizens. Unregistered shedding has been detected in this sector. Please remain still for disposal."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_deploy_2",
+      "text": "Attention citizens. A stray has entered a clean zone. Please remain still for disposal."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_deploy_3",
+      "text": "Good evening, citizens. Unauthorized paw prints have been detected on the pavement. Disposal units are on their way."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_level2",
+      "text": "Cleanliness alert. Hairball levels exceeding municipal tolerance. Additional VAC-COPs dispatched."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_level3",
+      "text": "Warning. Unauthorized fish handling in progress. Littering is punishable by immediate suction."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_level4",
+      "text": "Critical mess threshold reached. Please step into the nearest dustbin in an orderly fashion."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_boss",
+      "text": "Heavy sanitation unit deployed. Have a spotless day."
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_seal",
+      "text": "Sector quarantine initiated. Commencing total Deep Clean. Thank you for your cooperation.",
+      "pitch_shift": -2.0,
+      "pa_reverb": 0.7
+    },
+    {
+      "kind": "voice",
+      "sound_id": "overclean_ko",
+      "text": "One stray removed from the premises. Street hygiene restored by 14 percent."
+    },
+    {
+      "kind": "sfx",
+      "sound_id": "pa_chime",
+      "params": "pa_chime"
+    },
+    {
+      "kind": "sfx",
+      "sound_id": "bin_clatter",
+      "params": {
+        "preset": "metal_bin_clatter",
+        "seed": 4
+      }
+    },
+    {
+      "kind": "sfx",
+      "sound_id": "cone_bounce",
+      "params": {
+        "preset": "cone_bounce",
+        "seed": 2
+      }
+    },
+    {
+      "kind": "sfx",
+      "sound_id": "scratch",
+      "params": {
+        "preset": "scratch",
+        "seed": 6
+      }
+    }
   ]
 }

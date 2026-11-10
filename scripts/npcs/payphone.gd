@@ -51,7 +51,9 @@ func talk(cat: CatPlayer) -> void:
 		heist.request_reveal_exit.rpc_id(1, cat.player_id)  # the host switches our gang's arrow on
 	Sound.play("click")
 	var dialog := NpcDialog.for_cat(cat)
-	dialog.open("%s (PHONE)" % boss.boss_name, line.replace("{where}", where), [["HANG UP", dialog.close]])
+	# The boss talks in their own voice (their hub's leader NPC's Voice) down the line.
+	var boss_voice := boss.leader.voice if boss.leader != null else voice
+	dialog.open("%s (PHONE)" % boss.boss_name, line.replace("{where}", where), [["HANG UP", dialog.close]], boss_voice)
 
 
 ## Ring (bell sound + blinking light) or stop. fish_heist.gd calls this on every computer.

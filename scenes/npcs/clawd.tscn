@@ -186,6 +186,7 @@ script = ExtResource("1_script")
 shop_lines = PackedStringArray("Cash first, questions never. You got $%d.", "All fell off a VAC-COP. You got $%d.", "Pick somethin' loud. You got $%d.")
 talk_radius = 3.5
 npc_name = "CLAWD"
+voice = "meow_blip_clawd"
 pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_blame")])
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
