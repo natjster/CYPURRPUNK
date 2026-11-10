@@ -541,6 +541,17 @@ func _input(event: InputEvent) -> void:
 		# was already handled by scripts/seats.gd.)
 		get_viewport().set_input_as_handled()
 		return
+	if RaidReportScreen.is_up() and not Hud.big_menu_open():
+		# THE RAID REPORT (one screen for the whole couch, scripts/ui/raid_report_screen.gd): EVERY
+		# local player's presses go to it, tagged with their seat (their button readies their own
+		# row). Nothing reaches the HUDs or the game. Only player 1's Esc / START gets through, to
+		# the menus: the pause menu opens on top (to leave the game) and the report waits under it.
+		if seat == 0 and event.is_action("pause"):
+			menu_viewport.push_input(event, true)
+		else:
+			RaidReportScreen.instance.seat_input(event, seat)
+		get_viewport().set_input_as_handled()
+		return
 	if Hud.menu_open() and seat != _menu_driver():
 		get_viewport().set_input_as_handled()  # a full-screen menu: only the player who opened it drives it
 		return

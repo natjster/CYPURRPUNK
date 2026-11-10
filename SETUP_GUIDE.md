@@ -2122,7 +2122,7 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `meow_blip_don`, `meow_blip_whiskers` (`_1`..`_4`) | talking-cat voice blips (Sound Lab); not used yet | |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
-| `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's card flips in / each award stamps down (§22) | just you |
+| `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's row slides in / each award stamps down (§22) | just you |
 
 Music and background loops change by area (they fade into each other): in the sewers
 `music/hub` + `ambience/sewer`, up top (and on the start menu) `music/city` + `ambience/rain`.
@@ -2898,57 +2898,82 @@ sends your cat up and raises the heat to 100 over 40 seconds; the console prints
 
 ## 22. The RAID REPORT (end of every district)
 
-When a district ends, every player gets a **report card for the round** before the next city is
-built. It's meant to be the moment your friends laugh about, and a good 10-second clip.
+When a district ends, the whole window turns into a **report card for the round** before the next
+city is built. It's meant to be the moment your friends laugh about, and a good 10-second clip.
 
-**What it shows** (one screen per player, also in split screen):
+**One screen per computer.** With 2-4 players on one couch, the split screens and everyone's HUD
+fold away behind ONE big report that everyone reads together (like the pause menu covers the whole
+window). Online, every computer shows its own copy of the same report.
+
+**What it shows:**
 - **RAID REPORT**, the district number, and how it ended for the crew: CLEAN GETAWAY (everyone
   who went up came home), MESSY GETAWAY (someone got vacuumed), CAUGHT IN THE DEEP CLEAN (someone
-  was still up top at the end), NOBODY LEFT THE COUCH, SURVIVED THE SEWER BREACH, or WIPED OUT BY
-  THE BREACH.
-- **One card per cat:** name (each card has its own colour, plus a little square in the cat's fur
-  colour), how their raid ended (EXTRACTED / VACUUMED / STAYED HOME / LEFT EARLY), cash brought
-  home (quest bonus shown on its own line), VAC-COPs smashed (MEGA VAC-COPs called out),
-  times DOWNED and team-mates REVIVED. A cat whose player quit keeps their card.
+  was still up top after the seal), NOBODY LEFT THE COUCH, SURVIVED THE SEWER BREACH, or WIPED OUT
+  BY THE BREACH.
+- **A table with one row per cat** in the game (every computer's): name (with a little square in
+  the cat's fur colour) and under it how their raid ended (EXTRACTED / VACUUMED / STAYED HOME /
+  LEFT EARLY, "(LEFT)" if they quit afterwards); CASH brought home (quest bonus on its own line);
+  BOTS smashed (MEGA VAC-COPs called out); DOWN/REV = times downed / team-mates revived; the AWARD;
+  and READY. A cat whose player quit keeps their row.
+- **Players on THIS computer** get a coloured **P1..P4** tag and their name in their seat colour
+  (the same colours as the lobby and their pause menus). Other computers' cats are plain.
 - **One silly award per cat**, stamped down last, one by one (that's the clip). Every cat gets
   exactly one, never two cats the same.
-- The crew's **CASH BROUGHT HOME** total, a **READY** button with the countdown, and an optional
-  Discord invite line.
-- **TURF WAR:** the same cards, grouped under each gang's name, colour and cash. No winner, no score.
+- The crew's **CASH BROUGHT HOME**, the countdown with **WAITING FOR N**, and an optional Discord line.
+- **TURF WAR:** the same table, with each gang's name, colour and cash above its cats. No winner.
 - No report in the **TUTORIAL** or behind the start menu.
+- The reveal and its sounds play once per computer, however many players sit there.
+
+**READY (one per player):** each player presses their own GRAB / TALK button (or A / Enter): the
+READY appears on THEIR row only. Until then their row shows their button, blinking ([E] for player
+1 on the keyboard, the controller button for pad players). A controller nobody has claimed does
+nothing, and sticks / d-pads never change anything. No mouse needed.
 
 **How long it holds the next district:** up to **14 seconds** (a bit longer with lots of cats so
-every award is seen). Everyone can press **READY** (A on a controller, or the GRAB/TALK key, or
-click it): when every player is ready the next district starts at once, but never before the
-awards have all been shown plus 2 seconds. While it's up the hatch is sealed and everyone is home,
-so nothing can hurt anyone, and the cats' buttons go to the report (the big pause menu waits until it's done).
+every award is seen). When every player in the game is READY the next district starts at once, but
+never before the awards have all been shown plus 2 seconds. While it's up the hatch is sealed and
+everyone is home, so nothing can hurt anyone, and nobody's cat moves, shoots, opens the inventory or
+drives.
+
+**Esc / START:** player 1's Esc (or START on player 1's controller) opens the pause menu ON TOP of
+the report, so someone can still leave the game. Close it and the report is still there (the clock
+keeps running underneath). Players 2-4's START does nothing while the report is up, and while
+player 1's pause menu is open only player 1 can press anything.
 
 ### Changing it (no code)
-Scene dock: open `scenes/main.tscn`, click **Main > RaidReport**. Inspector:
+The numbers and timing: open `scenes/main.tscn`, click **Main > RaidReport**. Inspector:
 - **Timing > Enabled**: untick to switch the report off (districts change straight away).
 - **Timing > Report Seconds** (14): the longest it stays up.
 - **Timing > Read Seconds After Awards** (2): how long it stays after the last award, even if
   everyone pressed READY.
-- **Timing > Intro / Card / Award Seconds** (0.8 / 0.45 / 0.75): the speed of the reveal.
+- **Timing > Intro / Card / Award Seconds** (0.8 / 0.45 / 0.75): the speed of the reveal (Card = one
+  row).
 - **Extras > Discord Invite**: type e.g. `MORE CATS: discord.gg/yourcode` and that line appears at
   the bottom of every report (the host's text is used). Empty = no line.
 - **Extras > Show Mess Stat**: the hidden **MESS MADE** line (see below).
 - **Colours**: the EXTRACTED / VACUUMED / STAYED HOME colours and the good / bad ending colours.
 
-The look of the screen: open `scenes/ui/hud.tscn`, click **HUD > Frame > RaidReportScreen**.
-Inspector: **Text Sizes** (title, names, cash, stats, award title / line, footer; HUD units, the
-screen is 720 tall), **Layout > Card Width**, **Margin**, **Dim** (how dark the game behind it gets)
-and **Min Scale** (it shrinks itself to fit small split-screen panes or lots of cats). The boxes
-are built by code (`scripts/ui/raid_report_screen.gd`), so the scene only has the empty node.
+The look of the screen: in `scenes/main.tscn` click **Main > PS1Overlay > RaidReportScreen** (it
+sits with the other full-screen menus, just above PauseMenu so the pause menu draws on top).
+Inspector (sizes are in GAME PIXELS: the picture is 240 tall, 320 wide on 4:3):
+- **Text Sizes**: Title Size (16) and Compact Title Size (12, used with lots of cats), Subtitle Size,
+  Row Size / Small Size (8 / 7: names and numbers / the small second lines), and with up to
+  **Roomy Rows** (4) cats the bigger **Roomy Row Size / Roomy Small Size** (10 / 8), used only if
+  they fit the screen without shrinking.
+- **Layout**: Line Squeeze (pulls a row's two lines together with lots of cats, so 8 fit), Column
+  Gap, Margin, Dim (how dark the game behind gets), Min Scale (it shrinks to fit only as a last
+  resort: shrinking blurs small text in the PS1 look), Max Name Letters (longer names get "...").
+
+The table is built by code (`scripts/ui/raid_report_screen.gd`), so the scene only has the empty node.
 
 Sounds (`sounds/sfx/`, made with the Sound Lab): `report_open` (when it appears), `report_row`
-(each card), `report_award` (each award stamp). Replace a file with your own of the same name.
+(each row), `report_award` (each award stamp). Replace a file with your own of the same name.
 
 ### The awards (and adding your own)
 Each award is a card in the `raid_awards/` folder (FileSystem dock). Click one to see it in the
 Inspector:
-- **Title** (big, keep it about 14 letters) and **Line** (small; `{value}` becomes the number, e.g.
-  `LOST {value} LOOT TO BOTS`).
+- **Title** (big, keep it about 14 letters) and **Line** (small, about 18 letters; `{value}` becomes
+  the number, e.g. `LOST {value} LOOT TO BOTS`). The whole report shares one 240-pixel-tall screen.
 - **Stat**: which number decides it: `cash`, `loot`, `bonus`, `bots`, `bosses`, `downs`, `revives`,
   `damage`, `vacuumed` (loot a VAC-COP sucked out of them), `knockouts`, `robbed`, `went_up`,
   `extracted`, `left`, `mess`. Empty = anyone (a safety-net award).
@@ -2991,17 +3016,27 @@ Stat** and every card shows MESS MADE; the AGENT OF CHAOS award already looks at
 ### How it works (for Claude / the curious)
 `scripts/raid_report.gd` (node **Main > RaidReport**, a game system: §16) counts everything on the
 host from game Events (`player_went_up`, `player_extracted`, `player_downed`, `player_revived`,
-`player_robbed`, `player_knocked_out`, `enemy_destroyed`, `sewer_breach_ended`, and three new ones:
-`player_hurt` (cat_health.gd), `loot_vacuumed` (item_manager.gd), `mess_made` (nobody yet)). The two
-places a district ends (`fish_heist.gd` after the DEEP CLEAN, `mainframe.gd` after a breach banner)
-call `RaidReport.end_district()`; it shows the report and then calls `Game.new_district()` itself.
+`player_robbed`, `player_knocked_out`, `enemy_destroyed`, `sewer_breach_ended`, and `player_hurt`
+(cat_health.gd), `loot_vacuumed` (item_manager.gd), `mess_made` (nobody yet)). The two places a
+district ends (`fish_heist.gd` after the DEEP CLEAN, `mainframe.gd` after a breach banner) call
+`RaidReport.end_district()`; the host builds the report once and sends it to every computer, where
+`RaidReportScreen` (one per computer) shows it; then the host calls `Game.new_district()` itself.
+`RaidReportScreen.is_up()` is the one "is the report up here?" check: `Hud.menu_open()` counts it
+(HUDs and split screen fold away), cats ignore their buttons, and `game_screen.gd` hands every local
+player's presses to it with their seat.
 
 ### Testing
-- `--raid_report[=N]` (host): end the district now with made-up numbers (N = that many cards).
-  `--raid_report_after=F` waits F frames first. Every report prints `DevCapture report` lines (the
-  crew line, one line per card with its award, and `awards: ... (OK)` when none repeat).
-- `--report_ready=0,1` presses READY for those players with a real button
-  (`--report_ready_delay=N` frames after the report appears).
+- `--raid_report[=N]` (host): end the district now with made-up numbers (N = that many rows; made-up
+  quitters fill the gap). `--raid_report_after=F` waits F frames first. Every report prints
+  `DevCapture report` lines (the crew line, one per row with its award, `awards: ... (OK)` when none
+  repeat, the screen's scale and whether split screen folded away) and, once it closes,
+  `DevCapture after report` (split screen, HUDs and moving cats back).
+- `--report_ready=A,B,...` (with `--report_ready_delay=N` frames): real presses, one by one:
+  `S` = seat S's own button, `S:pad`, `S:key`, `S:stick` (must do nothing), `spare:D` (an unclaimed
+  controller, must do nothing), `S:pause` (Esc / START). Prints who's ready and whether the report /
+  pause menu are up.
+- Four on a couch: `--solo --join_pad=1,2,3 --raid_report=4 --report_ready=1:stick,spare:7,2,0,3,1
+  --report_ready_delay=300 --frames=2000 --capture=shots/x.png`.
 - Solo, the real thing: `--solo --deploy --heat=80 --heat_hold=120 --goto_dropoff_after=90
   --grab=sardine --frames=3400 --capture=shots/x.png`.
-- Couch: add `--join_pad=1,2,3`; PS1 look: `--setting=modern_ui:false`; wide: `--window=1720x720`.
+- Looks: add `--setting=modern_ui:false` (PS1), `--window=1720x720` (wide), `--raid_report=8` (8 rows).

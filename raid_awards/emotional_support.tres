@@ -6,7 +6,7 @@
 script = ExtResource("1_award")
 id = "emotional_support"
 title = "MORALE OFFICER"
-line = "EMOTIONAL SUPPORT CAT"
+line = "MORALE: SKY HIGH"
 stat = ""
 pick = 0
 at_least = 0.0

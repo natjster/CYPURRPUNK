@@ -121,8 +121,11 @@ extends Node
 ##                     (N = that many cards; made-up quitters fill the gap). --raid_report_after=F waits
 ##                     F frames first (default 30). Every report prints "DevCapture report" lines
 ##                     (also real ones, e.g. after --heat=100).
-##   --report_ready=S,S  once a report is up, wait --report_ready_delay frames (default 60), then
-##                     seat S presses READY with a REAL button (its controller's A, or E for seat 0)
+##   --report_ready=A,B  once a report is up, wait --report_ready_delay frames (default 60), then
+##                     press READY with REAL input, one by one: S = seat S's own button (E for seat 0
+##                     on the keyboard, A on a pad), S:pad / S:key / S:stick (must do nothing),
+##                     spare:D = A on unclaimed controller D (must do nothing), S:pause = Esc / START.
+##                     Prints who is ready, and whether the report / pause menu are up.
 ##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
@@ -1490,12 +1493,26 @@ func _print_report(report: Dictionary) -> void:
 	for id in ids:
 		unique[id] = true
 	print("DevCapture report awards: %d cards, %d different awards (%s)" % [ids.size(), unique.size(), "OK" if unique.size() == ids.size() else "DUPLICATE!"])
-	# Where each local player's screen stands (split screen: one each).
+	# The ONE report screen on this computer (scripts/ui/raid_report_screen.gd).
 	await get_tree().create_timer(0.5).timeout
+	var screen := RaidReportScreen.instance
+	var hud_frames: Array = []
 	for seat in 4:
-		var screen := RaidReportScreen.for_seat(seat)
-		if screen != null and Hud.of(seat) != null:
-			print("DevCapture report screen seat %d: open=%s wants_input=%s size=%s scale=%.2f" % [seat, screen.is_open, Hud.wants_input(seat), screen.size, screen._scale])
+		hud_frames.append(Hud.of(seat) != null and Hud.of(seat).frame.visible)
+	print("DevCapture report screen: up=%s size=%s scale=%.2f rows=%d shown_seats=%s hud_frames=%s menu_view=%s" % [
+		RaidReportScreen.is_up(), screen.size, screen._content.scale.x, screen._row_cells.size(),
+		GameScreen.instance.shown_seats(), hud_frames, GameScreen.instance.menu_view.visible])
+	# ...and once it has gone: split screen, HUDs and moving cats should all be back.
+	while RaidReportScreen.is_up():
+		await get_tree().process_frame
+	for i in 30:
+		await get_tree().process_frame
+	hud_frames.clear()
+	for seat in 4:
+		hud_frames.append(Hud.of(seat) != null and Hud.of(seat).frame.visible)
+	print("DevCapture after report: up=%s shown_seats=%s hud_frames=%s cats=%s" % [RaidReportScreen.is_up(),
+		GameScreen.instance.shown_seats(), hud_frames,
+		Game.instance.local_cats().map(func(c): return "slot %d can_move=%s" % [c.slot, not c._input_blocked()])])
 
 
 ## --raid_report[=N]: (host) made-up numbers, then the report (scripts/raid_report.gd test_report).
@@ -1505,35 +1522,65 @@ func _force_report(cards: int, after: int) -> void:
 	RaidReport.instance.test_report(cards)
 
 
-## --report_ready=S,S: once the report is up, those seats press READY with a real button.
-func _report_ready(seats: PackedStringArray, delay: int) -> void:
+## --report_ready=A,B,...: once the report is up (after --report_ready_delay frames), press these
+## one by one with REAL input events, printing who is ready after each:
+##   S         seat S presses their own READY button (E for seat 0 on the keyboard, A on a pad)
+##   S:pad     seat S presses A on their controller (seat 0: the first controller)
+##   S:stick   seat S pushes their stick down (must change nothing)
+##   spare:D   A on controller D, which nobody has claimed (must change nothing)
+##   S:pause   seat S presses Esc / START (player 1: the pause menu opens over the report; others: nothing)
+func _report_ready(presses: PackedStringArray, delay: int) -> void:
 	for i in 3000:
 		if RaidReport.instance.showing:
 			break
 		await get_tree().physics_frame
 	for i in delay:
 		await get_tree().process_frame
-	for seat_text in seats:
-		var seat := int(seat_text)
-		var device: int = Seats.pads[seat] if seat < Seats.pads.size() else -1
+	for press in presses:
+		var parts := press.split(":")
+		var events: Array[InputEvent] = []
 		for pressed in [true, false]:
 			var event: InputEvent
-			if seat > 0 or device >= 0:
+			if parts[0] == "spare":
 				event = Controls._event_from_name("Pad A")
-				event.device = device
+				event.device = int(parts[1])
 				event.pressed = pressed
 			else:
-				event = InputEventKey.new()
-				event.keycode = KEY_E
-				event.physical_keycode = KEY_E
-				event.pressed = pressed
+				var seat := int(parts[0])
+				var how := parts[1] if parts.size() > 1 else ("key" if seat == 0 and Seats.pads[0] < 0 else "pad")
+				var device: int = Seats.pads[seat] if Seats.pads[seat] >= 0 else int(_args.get("pad_device", "0"))
+				if how == "pause" and seat == 0 and Seats.pads[0] < 0:
+					event = InputEventKey.new()  # player 1's Esc
+					event.keycode = KEY_ESCAPE
+					event.physical_keycode = KEY_ESCAPE
+					event.pressed = pressed
+				elif how == "pause":
+					event = Controls._event_from_name("Pad Start")
+					event.device = device
+					event.pressed = pressed
+				elif how == "key":
+					event = InputEventKey.new()
+					event.keycode = KEY_E
+					event.physical_keycode = KEY_E
+					event.pressed = pressed
+				elif how == "stick":
+					event = Controls._event_from_name("Pad Left Stick Down")
+					event.device = device
+					if not pressed:
+						event.axis_value = 0.0
+				else:
+					event = Controls._event_from_name("Pad A")
+					event.device = device
+					event.pressed = pressed
+			events.append(event)
+		for event in events:
 			Input.parse_input_event(event)
 			await get_tree().process_frame
 		for i in 10:
 			await get_tree().process_frame
 		var counts := RaidReport.instance.ready_count()
-		print("DevCapture report_ready seat %d: ready=%d/%d showing=%s button=\"%s\"" % [seat, counts[0], counts[1],
-			RaidReport.instance.showing, RaidReportScreen.for_seat(seat)._ready_button.text if RaidReportScreen.for_seat(seat) != null else "-"])
+		print("DevCapture report_ready %s: ready=%d/%d ready_ids=%s showing=%s report_up=%s paused=%s" % [press, counts[0], counts[1],
+			RaidReport.instance.ready_ids, RaidReport.instance.showing, RaidReportScreen.is_up(), PauseMenu.is_open])
 
 
 ## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all

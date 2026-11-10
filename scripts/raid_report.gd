@@ -3,17 +3,18 @@ extends Node
 ## CYPURRPUNK — THE RAID REPORT: when a district ends, every player gets a report card for the
 ## round before the next district starts. Attach to the "RaidReport" node in main.tscn.
 ##
-## WHAT IT SHOWS (drawn by scripts/ui/raid_report_screen.gd, one per player, in their own HUD):
+## WHAT IT SHOWS (drawn by scripts/ui/raid_report_screen.gd: ONE full-window screen per computer,
+## read by everyone on that couch; READY is still per player, each with their own button):
 ##   - a title, the district number and how it ended for the crew: CLEAN GETAWAY, MESSY GETAWAY
 ##     (someone got vacuumed), CAUGHT IN THE DEEP CLEAN, NOBODY LEFT THE COUCH, SURVIVED THE
 ##     SEWER BREACH, or WIPED OUT BY THE BREACH
-##   - one CARD per cat: name, how the raid ended for them (EXTRACTED / VACUUMED / STAYED HOME /
+##   - one ROW per cat: name, how the raid ended for them (EXTRACTED / VACUUMED / STAYED HOME /
 ##     LEFT EARLY), cash brought home (the quest bonus shown separately), VAC-COPs smashed
 ##     (MEGA VAC-COPs called out), times downed, team-mates revived
 ##   - one SILLY AWARD per cat, revealed last (the clip!). Awards are cards in res://raid_awards/
 ##     (scripts/raid_award.gd explains how to add one)
 ##   - the crew's total cash, and a small Discord invite line (Discord Invite below; empty = hidden)
-##   TURF WAR: the same cards, grouped under each gang's name and colour. No scores, no winner.
+##   TURF WAR: the same rows, grouped under each gang's name and colour. No scores, no winner.
 ##   No report in the TUTORIAL, or behind the start menu's showcase city.
 ##
 ## HOW LONG IT HOLDS THE NEXT DISTRICT: the report is up for Report Seconds. Every player can
@@ -29,7 +30,7 @@ extends Node
 ## mainframe.gd (after a SEWER BREACH's banner). It starts the new district itself when done.
 ## The host builds the finished report (numbers + awards) and sends ONE message to every
 ## computer, so every screen shows exactly the same thing. All numbers are kept by PLAYER id
-## (scripts/player_id.gd): couch players on one computer get their own cards.
+## (scripts/player_id.gd): couch players on one computer get their own rows.
 ##
 ## Testing: --raid_report[=N] (host) shows a report right now with made-up numbers (N = that many
 ## cards, made-up quitters fill the gap); every computer prints "DevCapture report:" lines.
@@ -49,9 +50,9 @@ const AWARDS_FOLDER := "res://raid_awards/"
 ## After the last award shows up, the report stays at least this long (seconds), even if everyone
 ## is already READY (so the awards can't be skipped: they're the punchline).
 @export var read_seconds_after_awards: float = 2.0
-## The reveal: pause before the first card (seconds)...
+## The reveal: pause before the first row (seconds)...
 @export var intro_seconds: float = 0.8
-## ...then one card every this many seconds...
+## ...then one row every this many seconds...
 @export var card_seconds: float = 0.45
 ## ...then a pause, and one AWARD every this many seconds (with a stamp sound).
 @export var award_seconds: float = 0.75
@@ -61,7 +62,7 @@ const AWARDS_FOLDER := "res://raid_awards/"
 ## (ROADMAP section 6: every stranger who plays sees the invite.) The host's text is the one shown.
 @export var discord_invite: String = ""
 ## MESS MADE: the number of messes each cat made. Hidden until mess-making exists (Phase 1).
-## Tick this when it does: the line appears on every card. (The number comes from
+## Tick this when it does: the line appears on every row. (The number comes from
 ## Events.mess_made: see scripts/events.gd.)
 @export var show_mess_stat: bool = false
 
@@ -400,10 +401,10 @@ func _show_report(report: Dictionary) -> void:
 		_elapsed = 0.0
 		_earliest_end = float(report.reveal_end) + read_seconds_after_awards
 		_latest_end = float(report.seconds_left)
-	for cat in Game.instance.playing_cats():
-		var screen := RaidReportScreen.for_seat(cat.slot)
-		if screen != null:
-			screen.open(report)
+	# ONE screen per computer, read by everyone on the couch (scripts/ui/raid_report_screen.gd).
+	# (Also for a computer that's still joining: its cat may not exist yet, but it sees the report.)
+	if RaidReportScreen.instance != null:
+		RaidReportScreen.instance.open(report)
 	Events.raid_report_shown.emit(report)  # (scripts/events.gd; DevCapture prints it)
 
 
@@ -420,10 +421,8 @@ func _hide_report() -> void:
 	print("[RaidReport] Report closed")
 	showing = false
 	current = {}
-	for seat in Hud.huds.size():
-		var screen := RaidReportScreen.for_seat(seat)
-		if screen != null:
-			screen.close()
+	if RaidReportScreen.instance != null:
+		RaidReportScreen.instance.close()
 
 
 ## A player pressed READY (any computer -> host).

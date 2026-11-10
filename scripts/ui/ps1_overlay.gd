@@ -21,7 +21,8 @@ extends CanvasLayer
 ## The width the menus were designed for.
 @export var design_width: float = 320.0
 ## Direct children that should span the full screen width instead of the middle column.
-@export var full_width_children: Array[String] = ["ColorDepthDither"]
+## (The RAID REPORT uses the whole width: its table is wider than the 320 column on a wide screen.)
+@export var full_width_children: Array[String] = ["ColorDepthDither", "RaidReportScreen"]
 
 
 # Listen to whichever screen we're on right now (we get moved to the sharp menu layer).
@@ -60,6 +61,7 @@ func fit_columns() -> void:
 ## Is any menu showing right now? (If not, the sharp menu layer isn't drawn at all.)
 func any_menu_visible() -> bool:
 	for child in get_children():
-		if child is CanvasItem and child.visible and not child.name in full_width_children:
+		# (The CRT effect isn't a menu. The RAID REPORT is full width, but it IS one.)
+		if child is CanvasItem and child.visible and child.name != "ColorDepthDither":
 			return true
 	return false

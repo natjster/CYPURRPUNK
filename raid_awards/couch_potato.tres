@@ -6,7 +6,7 @@
 script = ExtResource("1_award")
 id = "couch_potato"
 title = "COUCH POTATO"
-line = "NEVER LEFT THE SEWER"
+line = "NEVER WENT UP"
 stat = "went_up"
 pick = 1
 at_least = 0.0

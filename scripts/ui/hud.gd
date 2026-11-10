@@ -24,7 +24,6 @@ extends CanvasLayer
 ##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt, Held
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
-##       ├── RaidReportScreen <- end-of-district report (scripts/ui/raid_report_screen.gd)
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
 ## HOW OTHER SCRIPTS USE IT (every function is "static": call it on the class, from anywhere):
@@ -230,16 +229,24 @@ static func _targets(seat_number: int) -> Array:
 	return all
 
 
-## True while this player's HUD window (talk box, inventory, pause or RAID REPORT) is open: it gets their buttons
+## True while this player's HUD window (talk box, inventory or their own pause menu) is open: it gets their buttons
 ## (and for player 1 the mouse and keys), not the game.
 static func wants_input(seat_number: int = 0) -> bool:
 	var inventory := InventoryScreen.for_seat(seat_number)
 	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible) \
-		or PlayerPause.is_open_for(seat_number) or RaidReportScreen.is_open_for(seat_number)
+		or PlayerPause.is_open_for(seat_number)
 
 
-## True while a full-screen game menu (pause, settings, MY CAT) is open; the HUD hides under it.
+## True while something covers the whole window: a full-screen game menu (pause, settings, MY CAT)
+## or the RAID REPORT (scripts/ui/raid_report_screen.gd). Every HUD hides under it, and split screen
+## folds back to one picture (game_screen.gd shown_seats).
 static func menu_open() -> bool:
+	return big_menu_open() or RaidReportScreen.is_up()
+
+
+## True while a full-screen game MENU (pause, settings, MY CAT) is open: one player drives it
+## (game_screen.gd _menu_driver). The RAID REPORT doesn't count here: every player uses it.
+static func big_menu_open() -> bool:
 	var game := Game.instance
 	if game == null or not is_instance_valid(game):
 		return true

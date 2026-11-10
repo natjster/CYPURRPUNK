@@ -33,10 +33,10 @@ enum Pick { MOST, LEAST }
 ## Short unique name, used by tests and the "DevCapture report" line. No spaces, e.g. "butterpaws".
 @export var id: String = ""
 ## The award's name, BIG on the report, e.g. "BUTTERPAWS". Keep it short (about 14 letters):
-## it has to fit on a quarter of the screen.
+## the whole report shares one 240-pixel-tall screen.
 @export var title: String = ""
 ## The small line under the title. {value} becomes the stat's number, e.g.
-## "LOST {value} LOOT TO BOTS" -> "LOST 3 LOOT TO BOTS". Keep it short too (about 22 letters).
+## "LOST {value} LOOT TO BOTS" -> "LOST 3 LOOT TO BOTS". Keep it short too (about 18 letters).
 @export var line: String = ""
 ## Which stat decides it (from the list at the top of this script). Empty = anyone qualifies
 ## (a safety-net award: ties go to whoever is highest on the report).

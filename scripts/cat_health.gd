@@ -567,7 +567,7 @@ func _watch_hold_button(cat: CatPlayer) -> void:
 		if reviving[downed_id].by != cat.player_id:
 			continue
 		var holding := Seats.is_pressed(cat.slot, "interact") and not Hud.wants_input(cat.slot) \
-			and not PauseMenu.is_open
+			and not Hud.menu_open()  # (pause, settings, MY CAT or the RAID REPORT)
 		if not holding:
 			if not multiplayer.is_server():
 				reviving.erase(downed_id)  # (so we only ask once; the host confirms for everyone)
@@ -586,7 +586,7 @@ func _downed_hud(cat: CatPlayer, delta: float) -> void:
 		_give_up_held.erase(cat.slot)
 	else:
 		var held: float = _give_up_held.get(cat.slot, 0.0)
-		if Seats.is_pressed(cat.slot, "interact") and not Hud.wants_input(cat.slot) and not PauseMenu.is_open:
+		if Seats.is_pressed(cat.slot, "interact") and not Hud.wants_input(cat.slot) and not Hud.menu_open():
 			held += delta
 		else:
 			held = 0.0

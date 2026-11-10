@@ -6,7 +6,7 @@
 script = ExtResource("1_award")
 id = "ambulance"
 title = "AMBULANCE"
-line = "{value} TEAM-MATES REVIVED"
+line = "REVIVED {value} PALS"
 stat = "revives"
 pick = 0
 at_least = 1.0

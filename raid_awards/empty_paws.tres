@@ -6,7 +6,7 @@
 script = ExtResource("1_award")
 id = "empty_paws"
 title = "EMPTY PAWS"
-line = "CAME HOME WITH NOTHING"
+line = "HOME WITH NOTHING"
 stat = "cash"
 pick = 1
 at_least = 0.0

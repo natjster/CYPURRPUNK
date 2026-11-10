@@ -6,7 +6,7 @@
 script = ExtResource("1_award")
 id = "mega_mauler"
 title = "MEGA MAULER"
-line = "{value} MEGA VAC-COP DOWN"
+line = "{value} MEGA SMASHED"
 stat = "bosses"
 pick = 0
 at_least = 1.0
