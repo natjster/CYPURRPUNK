@@ -140,16 +140,20 @@ var sync_model_rotation: Vector3
 @export var meow_cooldown: float = 1.2
 
 @export_group("Meow Taunt")
-## MEOW (M / pad B) plays this sound (sounds/sfx/cat_taunt.wav: a meow, then a squeaky "Go lick
-## yourself!", made by tools/sound_specs/mess.json) in this cat's own voice pitch...
-@export var taunt_sound: String = "cat_taunt"
-## ...and shows one of these over the cat's head for Taunt Seconds (picked at random).
+## MEOW (M / pad B): one of these lines (picked at random) TYPES OUT in a little speech bubble over
+## the cat, and the cat "talks" it in its own voice, like an NPC (voice blips: MY CAT > VOICE picks
+## MALE or FEMALE; CatLook.voice_sound).
 @export var taunt_lines: Array[String] = ["GO LICK YOURSELF!"]
-@export var taunt_seconds: float = 1.8
+## How fast the line types out (letters per second; NPC talk boxes use 55, a taunt is slower).
+@export var taunt_letters_per_second: float = 16.0
+## Shortest gap between two voice blips (seconds), and the most blips one taunt plays.
+@export var taunt_blip_gap: float = 0.085
+@export var taunt_max_blips: int = 12
+@export var taunt_blip_volume_db: float = -2.0
+## How long the bubble stays up after the line has finished typing.
+@export var taunt_seconds: float = 1.4
+## The bubble's text and border colour.
 @export var taunt_color: Color = Color(1, 0.9, 0.35)
-## Every cat's voice is pitched from its look (fur + eye colour): between these two (1 = as recorded).
-@export var voice_pitch_low: float = 0.8
-@export var voice_pitch_high: float = 1.35
 ## VAC-COPs within this many metres HEAR a meow and come to look (roomba.gd INVESTIGATE).
 @export var meow_heard_from: float = 22.0
 
@@ -160,6 +164,13 @@ var _next_meow_at: float = 0.0
 var unseen_by_bots: bool = false
 var _taunt_label: Label3D  # the "GO LICK YOURSELF!" bubble (made the first time we meow)
 var _taunt_hide_at: float = 0.0
+var _taunt_typed: float = -1.0  # letters shown so far (-1 = not typing)
+var _taunt_blip_wait: float = 0.0
+var _taunt_blips_left: int = 0
+
+## Every cat's voice pitch is nudged by its colours, so two FEMALE cats still sound different.
+const VOICE_PITCH_LOW: float = 0.88
+const VOICE_PITCH_HIGH: float = 1.15
 
 @export_group("Running Animation")
 ## How far the legs swing forward/back at full running speed (radians, 0.6 = about 35 degrees).
@@ -346,8 +357,11 @@ func _ready() -> void:
 ## Our own cat: turn the camera with the controller's right stick.
 ## Other players' cats: ease toward the latest position from the network.
 func _process(delta: float) -> void:
-	if _taunt_label != null and _taunt_label.visible and Time.get_ticks_msec() / 1000.0 > _taunt_hide_at:
-		_taunt_label.hide()
+	if _taunt_label != null and _taunt_label.visible:
+		if _taunt_typed >= 0.0:
+			_type_taunt(delta)
+		elif Time.get_ticks_msec() / 1000.0 > _taunt_hide_at:
+			_taunt_label.hide()
 	if is_multiplayer_authority():
 		_stick_look(delta)
 		return
@@ -458,15 +472,10 @@ func meow() -> void:
 	_meow.rpc(randi() % maxi(1, taunt_lines.size()))
 
 
-## Every computer: play this cat's taunt and pop its speech bubble. The host also lets the
-## VAC-COPs hear it.
+## Every computer: pop this cat's speech bubble and start typing the taunt out (_type_taunt,
+## every frame, plays the voice blips). The host also lets the VAC-COPs hear it.
 @rpc("authority", "call_local", "reliable")
 func _meow(line: int) -> void:
-	var player := Sound.play_at(taunt_sound, global_position + Vector3.UP * 0.6)
-	if player == null:
-		player = Sound.play_at("meow", global_position + Vector3.UP * 0.6)  # (no taunt file: a plain meow)
-	if player != null:
-		player.pitch_scale = voice_pitch()
 	if not taunt_lines.is_empty():
 		_show_taunt(taunt_lines[line % taunt_lines.size()])
 	if multiplayer.is_server() and RoombaPatrol.instance != null and not UndergroundHub.is_in_hub(global_position):
@@ -476,26 +485,63 @@ func _meow(line: int) -> void:
 
 ## This cat's voice pitch, worked out from its look (the same on every computer).
 func voice_pitch() -> float:
-	var key := str(look.get("fur", "")) + str(look.get("eyes", "")) + str(look.get("markings", ""))
+	return voice_pitch_of(look)
+
+
+## A look's voice pitch (MY CAT's preview uses it too).
+static func voice_pitch_of(cat_look: Dictionary) -> float:
+	var key := str(cat_look.get("fur", "")) + str(cat_look.get("eyes", "")) + str(cat_look.get("markings", ""))
 	var amount := float(absi(key.hash()) % 1000) / 999.0
-	return lerpf(voice_pitch_low, voice_pitch_high, amount)
+	return lerpf(VOICE_PITCH_LOW, VOICE_PITCH_HIGH, amount)
 
 
 ## The speech bubble over our head. It's a HUD name-tag marker (hud_name_tags.gd draws it sharp on
-## every player's HUD, ours too: it hangs off the CatModel, not the cat itself).
+## every player's HUD, ours too: it hangs off the CatModel, not the cat itself). Meta "bubble" =
+## drawn in a little box; meta "typed" = how many letters show so far (the box is full size from
+## the start, the words type into it).
 func _show_taunt(text: String) -> void:
 	if _taunt_label == null:
 		_taunt_label = Label3D.new()
 		_taunt_label.name = "TauntBubble"
-		_taunt_label.position = Vector3.UP * 1.35
+		_taunt_label.position = Vector3.UP * 1.15
 		_taunt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_taunt_label.add_to_group(HudNameTags.GROUP)
 		_taunt_label.set_meta("max_distance", 35.0)
+		_taunt_label.set_meta("bubble", true)
 		cat_model.add_child(_taunt_label)
 	_taunt_label.text = text
 	_taunt_label.modulate = taunt_color
+	_taunt_label.set_meta("typed", 0)
 	_taunt_label.show()
-	_taunt_hide_at = Time.get_ticks_msec() / 1000.0 + taunt_seconds
+	_taunt_typed = 0.0
+	_taunt_blip_wait = 0.0
+	_taunt_blips_left = taunt_max_blips
+	_taunt_hide_at = INF  # (set once the typing is done)
+
+
+## Every computer, every frame while the taunt types out: one more letter now and then, and a
+## voice blip on letters (never closer together than Taunt Blip Gap), like NpcDialog does.
+func _type_taunt(delta: float) -> void:
+	var text := _taunt_label.text
+	var before := int(_taunt_typed)
+	_taunt_typed += taunt_letters_per_second * delta
+	var shown := mini(int(_taunt_typed), text.length())
+	_taunt_blip_wait -= delta
+	if _taunt_blip_wait <= 0.0 and _taunt_blips_left > 0:
+		for i in range(before, shown):
+			var letter := text[i]
+			if letter.to_upper() != letter.to_lower():  # a letter (not a space or "!")
+				var player := Sound.play_at(CatLook.voice_sound(look), global_position + Vector3.UP * 0.6, taunt_blip_volume_db)
+				if player != null:
+					player.pitch_scale = voice_pitch() * randf_range(0.94, 1.06)
+				_taunt_blip_wait = taunt_blip_gap
+				_taunt_blips_left -= 1
+				break
+	_taunt_label.set_meta("typed", shown)
+	if shown >= text.length():
+		_taunt_typed = -1.0
+		_taunt_label.set_meta("typed", -1)
+		_taunt_hide_at = Time.get_ticks_msec() / 1000.0 + taunt_seconds
 
 
 ## Controller camera: the right stick (LOOK UP / DOWN / LEFT / RIGHT in SETTINGS > KEYS) turns

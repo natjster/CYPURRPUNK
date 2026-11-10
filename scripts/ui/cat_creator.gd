@@ -44,7 +44,7 @@ const CAT_MODEL: PackedScene = preload("res://scenes/cat_model.tscn")
 ## Menu names for the colour keys and slots.
 const LABELS: Dictionary = {
 	"fur": "FUR", "markings": "MARKINGS", "eyes": "EYES", "nose": "NOSE",
-	"hat": "HAT", "face": "FACE", "neck": "NECK",
+	"hat": "HAT", "face": "FACE", "neck": "NECK", "voice": "VOICE",
 }
 const HEADER_COLOR := Color(1, 0.35, 0.8)
 const VALUE_COLOR := Color(0.4, 1, 1)
@@ -102,14 +102,15 @@ func _ready() -> void:
 
 	_build_cat_row(38)
 
-	# One row per colour, then one per accessory slot.
-	var y := 60.0
+	# One row per colour, then one per accessory slot, then the VOICE (MALE / FEMALE).
+	var y := 59.0
 	for key in CatLook.COLOR_KEYS:
 		_add_row(key, y, true)
-		y += 19
+		y += 17
 	for slot in CatLook.SLOTS:
 		_add_row(slot, y, false)
-		y += 19
+		y += 17
+	_add_row(CatLook.VOICE_KEY, y, false)
 
 	_build_preview(Vector2(178, 60), Vector2(118, 130))
 
@@ -326,6 +327,17 @@ func _step(key: String, direction: int) -> void:
 	var index := options.find(_look.get(key, options[0]))
 	_look[key] = options[posmod(index + direction, options.size())]
 	_changed()
+	if key == CatLook.VOICE_KEY:
+		_say_hello()
+
+
+## Let the player hear the voice they just picked: a few blips, like the cat's first words.
+func _say_hello() -> void:
+	for i in 3:
+		var player := Sound.play(CatLook.voice_sound(_look), -4.0)
+		if player != null:
+			player.pitch_scale = CatPlayer.voice_pitch_of(_look) * randf_range(0.95, 1.05)
+		await get_tree().create_timer(0.11).timeout
 
 
 func _randomize() -> void:
@@ -344,6 +356,8 @@ func _refresh() -> void:
 		var node: Control = _value_nodes[key]
 		if node is ColorRect:
 			node.color = _look.get(key, Color.WHITE)
+		elif key == CatLook.VOICE_KEY:
+			(node as Label).text = CatLook.VOICE_NAMES.get(CatLook.voice_of(_look), "?")
 		else:
 			var part: CatPart = CatLook.parts().get(_look.get(key, ""))
 			(node as Label).text = part.display_name if part != null else "NONE"
@@ -354,6 +368,8 @@ func _refresh() -> void:
 func _options_for(key: String) -> Array:
 	if key in CatLook.COLOR_KEYS:
 		return Array(CatLook.palette().colors_for(key))
+	if key == CatLook.VOICE_KEY:
+		return Array(CatLook.VOICES)
 	return Array(CatLook.part_ids_for(key))
 
 

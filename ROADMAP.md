@@ -216,7 +216,8 @@ a world that hates mess.
 - [x] **Claude:** mess-making (knock-over props, scratching, bots that stop to clean). (Done 10 Nov 2026: bins,
   cones, cardboard boxes and OVERCLEAN posters knock over / shred by running, driving, shooting or E; heat +
   RAID REPORT MESS + AGENT OF CHAOS; VAC-COPs stop to tidy, half-blind while busy; OVERCLEAN complains.
-  Also the MEOW taunt ("GO LICK YOURSELF!", own voice pitch per cat) that bots hear and come to check. §23.)
+  Also the MEOW taunt ("GO LICK YOURSELF!" types out in a bubble, NPC-style talking, MALE / FEMALE voice in MY
+  CAT) that bots hear and come to check. §23.)
 - **Claude:** buyable cosmetics and boss-only rare drops.
 - **Claude:** spectating after a knockout.
 - **Claude:** hideout upgrades, first three.

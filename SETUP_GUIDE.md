@@ -2011,6 +2011,7 @@ NOSE      <  [colour]  >
 HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / GREEN MOHAWK / MOHAWK / NEON HALO
 FACE      <  SHADES    >        NONE / CIGAR / CYBER VISOR / HEADBAND / SHADES
 NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
+VOICE     <  MALE      >        MALE / FEMALE: how your cat sounds when it taunts (you hear it when you switch)
 [ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
 ```
 - **Your cats:** you can have as many as you like. **NEW** starts a fresh one (type its name in the
@@ -2110,8 +2111,8 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 |---|---|---|
 | `footstep` (`_1`, `_2`, `_3`) | every cat's steps, quicker when running | everyone nearby |
 | `jump` | jumping (and catdip double jumps) | everyone nearby |
-| `cat_taunt` | pressing **M** / pad **B** (MEOW): a meow, then a squeaky "Go lick yourself!" in your cat's own voice pitch (§23) | everyone nearby |
-| `meow` (`_1`, `_2`) | a downed cat's sad meow, NPCs; also MEOW's fallback if `cat_taunt` is missing | everyone nearby |
+| `meow_blip_cat_male` / `meow_blip_cat_female` (`_1`..`_4`) | your cat "talking" its MEOW taunt as it types out over its head (MY CAT > VOICE picks which; each cat a slightly different pitch, §23) | everyone nearby |
+| `meow` (`_1`, `_2`) | a downed cat's sad meow, NPCs | everyone nearby |
 | `shoot` | each gun shot (per gun: **Shot Sound** on the gun scene's root) | everyone nearby |
 | `pickup` | grabbing an item / fish | everyone nearby |
 | `roomba_hum` (loops) | every VAC-COP, revs up while chasing (higher-pitched on a SQUIRT-DRONE) | everyone nearby |
@@ -3087,10 +3088,11 @@ Cones lying down when the district starts are old mess (scenery): only standing 
 Not counted: bosses, SEWER BREACH bots, SQUIRT-DRONES and LINT-TRAPPERS never stop to tidy.
 
 ### MEOW = the taunt
-Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). Your cat
-meows and squeaks **"GO LICK YOURSELF!"** (a yellow speech bubble over your head on everyone's
-screen). Every cat's voice has its own pitch, worked out from its fur, eye and marking colours, so
-your friends can tell who's taunting. VAC-COPs within **22 m hear it**: they turn amber, a **?**
+Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). A little
+speech bubble pops up over your cat on everyone's screen and **"GO LICK YOURSELF!"** types out in
+it, letter by letter, while your cat "talks" it in little cat syllables, exactly like the NPCs do.
+Pick your cat's **VOICE** in MY CAT: **MALE** (low) or **FEMALE** (high). On top of that, every
+cat's pitch is nudged by its fur, eye and marking colours, so two cats never sound quite the same. VAC-COPs within **22 m hear it**: they turn amber, a **?**
 pops up over them and they drive over to look. Lure them away from a teammate, or into a trap.
 (1.2 seconds between meows.)
 
@@ -3103,8 +3105,11 @@ pops up over them and they drive over to look. Lure them away from a teammate, o
   Poster Chance (0.35 per building), Corner Prop Chance, Bins Are Solid.
 - **Every VAC-COP scene** (`scenes/roomba.tscn`, root) > Mess + Meows: Tidies Messes, Mess Notice
   Range, Tidy Seconds, Distracted Sight, Hears Meows, Investigate Seconds.
-- **scenes/player.tscn** (root) > Meow Taunt: Taunt Sound, Taunt Lines (add more and one is picked at
-  random), Taunt Seconds / Color, Voice Pitch Low / High, Meow Heard From. Sounds > Meow Cooldown.
+- **scenes/player.tscn** (root) > Meow Taunt: Taunt Lines (add more and one is picked at random),
+  Taunt Letters Per Second (typing speed), Taunt Blip Gap / Max Blips / Blip Volume Db, Taunt Seconds
+  (how long the bubble stays after typing), Taunt Color, Meow Heard From. Sounds > Meow Cooldown.
+- **A new voice** (e.g. "robot"): add it to `VOICES` and `VOICE_NAMES` in `scripts/cat/cat_look.gd`
+  and make its blips: a `"kind": "blips", "cat_id": "cat_robot"` line in `tools/sound_specs/mess.json`.
 
 ### The new models and sounds
 - `models/blockbench/cardboard_box.bbmodel` (36 triangles, the Flaps group = the two top flaps) and
@@ -3112,9 +3117,9 @@ pops up over them and they drive over to look. Lure them away from a teammate, o
   **Torn** is the shredded strips shown once scratched — keep those two group names if you repaint
   it). Recipes: `tools/model_specs/cardboard_box.json`, `overclean_poster.json`.
 - Sounds: `python tools/cypurr_sound.py batch tools/sound_specs/mess.json` remakes them all (the
-  three OVERCLEAN lines, box thump, poster scratch, vacuum tidy, stand-up tap, curious chirp and
-  `cat_taunt`). New Sound Lab tool: **generate_cat_taunt** (a meow + any line in a squeaky cat voice),
-  and the presets `cardboard_thump` and `vacuum`.
+  three OVERCLEAN lines, box thump, poster scratch, vacuum tidy, stand-up tap, curious chirp and the
+  MALE / FEMALE player voices). New Sound Lab presets `cardboard_thump` and `vacuum`, and a spare tool
+  **generate_cat_taunt** (a meow + any line in a squeaky text-to-speech cat voice; not used in the game).
 
 ### How it works (for Claude / the curious)
 The city builds every mess prop in a fixed order (`CityGenerator.mess_props`, `_add_mess_prop`), so

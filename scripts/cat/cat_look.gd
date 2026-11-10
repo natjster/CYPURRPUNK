@@ -6,7 +6,8 @@ extends RefCounted
 ##
 ## A LOOK is a plain Dictionary (easy to save and send over the network):
 ##   {"fur": Color, "markings": Color, "eyes": Color, "nose": Color,
-##    "hat": "fedora", "face": "", "neck": "bell_collar"}      ("" = nothing in that slot)
+##    "hat": "fedora", "face": "", "neck": "bell_collar",     ("" = nothing in that slot)
+##    "voice": "female"}                                         (how it sounds when it talks: VOICES)
 ## Anything missing just keeps the model's own colour / wears nothing.
 ##
 ## The OPTIONS are data, not code:
@@ -38,6 +39,14 @@ const SLOT_ANCHORS: Dictionary = {
 	"face": Vector3(0, 0.83, -0.33),
 	"neck": Vector3(0, 0.56, 0),
 }
+
+## The talking voices a cat can have (MY CAT > VOICE). Each one is a set of voice blips,
+## sounds/sfx/meow_blip_cat_<voice>_1..4.wav (made by tools/sound_specs/mess.json), played when
+## the cat's MEOW taunt types out over its head (cat_player.gd). Add a voice = add its name here,
+## its words in VOICE_NAMES, and its blip files.
+const VOICE_KEY: String = "voice"
+const VOICES: Array[String] = ["male", "female"]
+const VOICE_NAMES: Dictionary = {"male": "MALE", "female": "FEMALE"}
 
 static var _parts: Dictionary = {}  # part id -> CatPart (loaded once)
 static var _palette: CatPalette
@@ -85,6 +94,7 @@ static func default_look() -> Dictionary:
 			look[key] = colors[0]
 	for slot in SLOTS:
 		look[slot] = ""
+	look[VOICE_KEY] = VOICES[0]
 	return look
 
 
@@ -98,6 +108,7 @@ static func random_look(rng: RandomNumberGenerator) -> Dictionary:
 	for slot in SLOTS:
 		var ids := part_ids_for(slot)
 		look[slot] = ids[rng.randi() % ids.size()]
+	look[VOICE_KEY] = VOICES[rng.randi() % VOICES.size()]
 	return look
 
 
@@ -113,7 +124,19 @@ static func clean(look: Variant) -> Dictionary:
 	for slot in SLOTS:
 		var id: Variant = look.get(slot, "")
 		result[slot] = id if id is String and (id == "" or parts().has(id)) else ""
+	result[VOICE_KEY] = voice_of(look)
 	return result
+
+
+## A look's voice ("male" / "female"). Cats saved before voices existed get the first one.
+static func voice_of(look: Dictionary) -> String:
+	var voice: Variant = look.get(VOICE_KEY, "")
+	return voice if voice is String and voice in VOICES else VOICES[0]
+
+
+## The Sound name of a look's voice blips, e.g. "meow_blip_cat_female" (Sound picks one of _1.._4).
+static func voice_sound(look: Dictionary) -> String:
+	return "meow_blip_cat_" + voice_of(look)
 
 
 # --- Dressing a cat ---

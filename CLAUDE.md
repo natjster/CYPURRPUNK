@@ -345,8 +345,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Remarks: every computer counts knocks -> `OvercleanAnnouncer.say(overclean_mess_N)`. Bots (`roomba.gd`): states appended
   `TIDY_GO/TIDYING/INVESTIGATE` (keep new states at the END: synced int), `_look_for_mess` -> `claim_nearest` (claim valid while
   `tidying_prop()`), `distracted_sight`, `MessManager.tidy(id)`; `tidies_messes` false for drone/trapper (their `_ready`), never
-  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (taunt sound at `voice_pitch()` from look, `TauntBubble` name-tag marker
-  under CatModel) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
+  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (`TauntBubble` name-tag marker under CatModel with metas
+  `bubble` (HudNameTags draws a box) + `typed` (visible_characters); `_type_taunt` types it and plays `CatLook.voice_sound(look)`
+  blips at `voice_pitch()`; voice = look key `voice` (`CatLook.VOICES` male/female, `voice_of`, MY CAT VOICE row)) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
   Test: `--mess=N`, `--ram_prop=bin|cone|box [--ram_trace]`, `--scratch`, `--shoot_prop`, `--ghost`, `--face_mess`,
   `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`
   kind / `generate_cat_taunt`, presets `cardboard_thump`, `vacuum`).

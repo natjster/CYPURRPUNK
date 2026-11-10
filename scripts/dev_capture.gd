@@ -908,7 +908,7 @@ func _ready() -> void:
 				var part := model.get_node_or_null("Look_" + slot.capitalize())
 				worn.append("%s=%s" % [slot, part.get_meta("part_id") if part != null else "-"])
 			var fur: Color = ((model.get_node("Body") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
-			print("DevCapture look %s: fur=#%s %s" % [cat.name, fur.to_html(false), " ".join(worn)])
+			print("DevCapture look %s: fur=#%s %s voice=%s" % [cat.name, fur.to_html(false), " ".join(worn), CatLook.voice_of(cat.look)])
 
 	# The whole window: the blown-up game picture plus the sharp HUD on top.
 	# --scale=N saves it as if each game pixel were N screen pixels (N x 240 tall).

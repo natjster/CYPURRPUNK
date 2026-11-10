@@ -93,6 +93,14 @@ func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2) ->
 	label.add_theme_constant_override("outline_size", maxi(4, font_size / 4))
 	label.text = tag.text
 	label.add_theme_color_override("font_color", Color(tag.modulate, 1.0))
+	# A typing line (a cat's MEOW taunt): only the first "typed" letters show, but the label keeps
+	# the whole line's size, so its bubble doesn't grow letter by letter.
+	label.visible_characters = int(tag.get_meta("typed", -1))
+	# meta "bubble" = a little speech bubble: a dark box with a border in the text's colour.
+	if tag.has_meta("bubble"):
+		_bubble_style(label, Color(tag.modulate, 1.0), font_size)
+	else:
+		label.remove_theme_stylebox_override("normal")
 	var fade := clampf((limit - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
 	label.modulate.a = tag.modulate.a * fade
 
@@ -122,9 +130,27 @@ func _behind_wall(camera: Camera3D, tag: Label3D) -> bool:
 	return not camera.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
+## The speech-bubble box for a label (thicker border in the PS1 UI look: Hud.line).
+func _bubble_style(label: Label, color: Color, font_size: int) -> void:
+	var box := label.get_theme_stylebox("normal") as StyleBoxFlat
+	if box == null or not label.has_theme_stylebox_override("normal"):
+		box = StyleBoxFlat.new()
+		label.add_theme_stylebox_override("normal", box)
+	box.bg_color = Color(0.04, 0.03, 0.08, 0.85)
+	box.border_color = color
+	box.set_border_width_all(int(Hud.line(maxf(1.0, font_size / 14.0))))
+	box.set_corner_radius_all(maxi(2, font_size / 4))
+	box.content_margin_left = font_size * 0.5
+	box.content_margin_right = font_size * 0.5
+	box.content_margin_top = font_size * 0.15
+	box.content_margin_bottom = font_size * 0.15
+
+
 func _new_label() -> Label:
 	var label := Label.new()
+	label.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(label)
 	return label
+
