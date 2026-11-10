@@ -100,7 +100,8 @@ func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2) ->
 	# "typed" letters show, but the label keeps the whole line's size, so it doesn't jump about
 	# while it types. No box behind it: just outlined text, like item and NPC names.
 	label.visible_characters = int(tag.get_meta("typed", -1))
-	var fade := clampf((limit - distance) / maxf(fade_distance, 0.01), 0.0, 1.0)
+	var fade_over: float = tag.get_meta("fade_distance", fade_distance)  # (a tag's own fade, metres)
+	var fade := clampf((limit - distance) / maxf(fade_over, 0.01), 0.0, 1.0)
 	label.modulate.a = tag.modulate.a * fade
 
 	# Position: the game picture is game_size pixels; this HUD layer covers it exactly.

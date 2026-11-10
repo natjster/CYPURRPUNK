@@ -332,8 +332,9 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   and clear of lamps), Meow-Mart door ±4.4 m; all on `_rng`. DevCapture prints `DevCapture props:` counts.
 - `OvercleanAnnouncer` (`scripts/overclean_announcer.gd`, node `Announcer` under Main, `instance`, `say(sound, text, everyone, delay, why)`):
   local only (Events fire everywhere), queue sorted by start time, one line at a time, heard only by local cats up top, seal = everyone.
-  NO HUD subtitle: the words type onto every LOUDSPEAKER pole's `Readout` (`_type_on_speakers`, group `Loudspeaker.GROUP`
-  "overclean_speakers", `last_text`). Poles: `scenes/props/loudspeaker.tscn` (`scripts/loudspeaker.gd`, `models/loudspeaker.glb`,
+  NO HUD subtitle: the words type onto the NEAREST loudspeaker pole's `Readout` per local cat (`_type_on_speakers` sets `_showing`,
+  `_follow_nearest_poles` each frame moves it with `FloatingLine.skip_ahead`; `nearest_readout(pos)`; Readout `readable_from` 10 m,
+  `fade_over` 2 m -> HUD meta `fade_distance`; group `Loudspeaker.GROUP` "overclean_speakers", `last_text`). Poles: `scenes/props/loudspeaker.tscn` (`scripts/loudspeaker.gd`, `models/loudspeaker.glb`,
   spec `tools/model_specs/loudspeaker.json`), placed by `CityGenerator._place_loudspeakers` (on `_rng`, `loudspeaker_chance`,
   `_taken_spots` keeps them off lamps/corner props; `city.loudspeakers`). FLOATING TEXT = `FloatingLine` (`scripts/ui/floating_line.gd`,
   Label3D marker: `say(text, color, seconds, voice, pitch, hold)`, wraps at `wrap_at`, per-word 3D blips; HUD metas `typed`,

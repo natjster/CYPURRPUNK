@@ -2998,8 +2998,10 @@ terminal Claude Code to see them).
 
 OVERCLEAN talks over the city's loudspeakers: a two-tone chime, then a calm, polite, slightly
 robotic voice with an echo off the buildings. **Nothing appears at the bottom of the screen:** the
-words **type out as floating cyan text beside the horns of every LOUDSPEAKER POLE** in the city,
-in time with the voice, and vanish a moment after it ends. Run or drive past a pole to read it.
+words **type out as floating cyan text beside the horns of the LOUDSPEAKER POLE NEAREST YOU**, in
+time with the voice, and vanish a moment after it ends. Only that one pole shows them, and only
+when you're within about **10 m** of it (split screen: each player gets their own nearest pole).
+Walk over to another pole halfway through and the words carry on there.
 
 ### The loudspeaker poles
 - A tall steel pole on a concrete base, a junction box with an OVERCLEAN stencil, three flared
@@ -3015,7 +3017,8 @@ in time with the voice, and vanish a moment after it ends. Run or drive past a p
   └── Readout (Label3D, scripts/ui/floating_line.gd, groups "hud_name_tags" + "overclean_speakers")
   ```
   Select **Readout** to change Wrap At (40 letters per line), Text Height (how big the words are),
-  Readable From (55 m), Hold Seconds, Biggest Font Size. Move it to move the words.
+  Readable From (10 m: how close you must be), Fade Over (2 m: it fades out over the last
+  bit), Hold Seconds, Biggest Font Size. Move it to move the words.
   Select the root for the light's Idle / Talking Color and brightness.
 - **Where they stand:** the city puts them on sidewalk corners, horns towards the street, never
   on top of a lamp post or corner prop. **Main > City** > Inspector > **Loudspeakers**:
@@ -3023,7 +3026,7 @@ in time with the voice, and vanish a moment after it ends. Run or drive past a p
   from the very corner). They come from the city number, so every player has the same poles.
 - Test: `--host --near_speaker=6 --speaker_side=1.5 --speaker_turn=-22 --pitch=6 --announce
   --frames=130 --capture=shots/loudspeaker_readout.png` (prints `DevCapture speaker:` lines:
-  how many poles, and how many typed the line; `--announce=seal|level2|ko|...` picks the line).
+  how many poles, and how many typed the line: should be 1; `--announce=seal|level2|ko|...` picks the line).
 
 | Moment | What it says (on the poles) | File in `sounds/sfx/` |
 |---|---|---|

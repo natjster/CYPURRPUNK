@@ -21,6 +21,8 @@ extends Label3D
 @export var wrap_at: int = 28
 ## How far away (metres) the line can still be read. It fades out just before this.
 @export var readable_from: float = 30.0
+## It fades out over this many metres before Readable From.
+@export var fade_over: float = 8.0
 ## How tall the words would stand in the world (metres): they shrink with distance like a sign
 ## (the HUD keeps them between its Min Font Size and Biggest Font Size below).
 @export var text_height: float = 0.28
@@ -46,6 +48,7 @@ func _ready() -> void:
 	add_to_group(HudNameTags.GROUP)
 	billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	set_meta("max_distance", readable_from)
+	set_meta("fade_distance", fade_over)
 	set_meta("max_font_size", biggest_font_size)
 	set_meta("text_height", text_height)
 	text = ""
@@ -72,6 +75,15 @@ func say(line: String, color: Color = Color(-1, -1, -1), seconds: float = -1.0, 
 	_hide_at = INF
 	set_meta("typed", 0)
 	show()
+
+
+## Jump ahead as if the line had already been typing for this many seconds (no blips for the
+## skipped words). Used when the words move to another loudspeaker pole halfway through.
+func skip_ahead(seconds: float) -> void:
+	if _typed < 0.0 or seconds <= 0.0:
+		return
+	_typed = minf(_typed + _speed * seconds, float(text.length()))
+	set_meta("typed", int(_typed))
 
 
 ## Stop talking and hide right away.

@@ -10,8 +10,11 @@ extends Node
 ##   a cat is knocked out up top ..................... "One stray removed from the premises..."
 ##
 ## Each line = a voice file (a two-tone chime, then the voice) + the WORDS, which type out as
-## floating cyan text beside the horns of every LOUDSPEAKER POLE in the city
-## (scenes/props/loudspeaker.tscn, scripts/loudspeaker.gd), in time with the voice. Nothing shows
+## floating cyan text beside the horns of the LOUDSPEAKER POLE NEAREST YOU
+## (scenes/props/loudspeaker.tscn, scripts/loudspeaker.gd), in time with the voice. Only that one
+## pole shows them (each player on this computer gets their own nearest pole), and only when
+## you're close (the Readout's Readable From, 10 m). Walk to another pole mid-line and the words
+## move over to it. Nothing shows
 ## at the bottom of the screen: run past a pole to read what OVERCLEAN is saying. Only players
 ## who are UP TOP hear it (they're the ones near the city's speakers; the sewers are safe from
 ## it), except the seal, which everyone hears.
@@ -98,6 +101,10 @@ var _last_boss_at: float = -1000.0
 var _last_knockout_at: float = -1000.0
 ## Just for tests and DevCapture: the last words typed on the loudspeakers.
 var last_text: String = ""
+## The line on the poles right now: {text, start (clock), seconds (typing time), end (clock)}
+## ({} = none), and the poles' Readouts showing it (one per nearby player).
+var _showing: Dictionary = {}
+var _showing_on: Array[FloatingLine] = []
 
 
 func _enter_tree() -> void:
@@ -189,6 +196,7 @@ func say(sound: String, text: String, everyone: bool = false, delay: float = 0.0
 
 func _process(delta: float) -> void:
 	_clock += delta
+	_follow_nearest_poles()
 	if _queue.is_empty() or _clock < _busy_until:
 		return
 	var line: Dictionary = _queue[0]
@@ -213,14 +221,58 @@ func _process(delta: float) -> void:
 	print("[Announcer] %s: %s (%s, %.1f s, seats %s)" % [line.why, line.sound, line.text.left(40) + "...", seconds, seats])
 
 
-## Type the words out beside every loudspeaker pole's horns (each pole's Readout, a FloatingLine
-## in the "overclean_speakers" group), finishing just before the voice does.
+## Start showing a line on the loudspeakers: the words finish typing just before the voice does.
+## _follow_nearest_poles (every frame) puts them on each player's nearest pole.
 func _type_on_speakers(text: String, seconds: float) -> void:
+	for readout in _showing_on:
+		if is_instance_valid(readout):
+			readout.stop()
+	_showing_on.clear()
+	var typing := maxf(0.5, seconds * 0.9)
+	_showing = {"text": text, "start": _clock, "seconds": typing, "end": _clock + seconds + 1.5}
+	last_text = text
+	_follow_nearest_poles()
+
+
+## Every frame while a line is on: only the pole nearest each player on this computer shows it
+## (the Readout itself hides it beyond Readable From). A player who walks to another pole mid-line
+## sees the words carry on there, as far along as the voice is.
+func _follow_nearest_poles() -> void:
+	if _showing.is_empty():
+		return
+	if _clock > _showing.end:
+		_showing = {}
+		_showing_on.clear()  # (each Readout hides itself after its Hold Seconds)
+		return
+	var wanted: Array[FloatingLine] = []
+	if Game.instance != null and is_instance_valid(Game.instance):
+		for cat in Game.instance.playing_cats():
+			var nearest := nearest_readout(cat.global_position)
+			if nearest != null and not wanted.has(nearest):
+				wanted.append(nearest)
+	for readout in _showing_on:
+		if is_instance_valid(readout) and not wanted.has(readout):
+			readout.stop()
+	for readout in wanted:
+		if not _showing_on.has(readout):
+			readout.say(_showing.text, subtitle_color, _showing.seconds)
+			readout.skip_ahead(_clock - _showing.start)
+	_showing_on = wanted
+
+
+## The loudspeaker Readout nearest a spot (null = the city has none).
+func nearest_readout(at: Vector3) -> FloatingLine:
+	var best: FloatingLine = null
+	var best_distance := INF
 	for node in get_tree().get_nodes_in_group(Loudspeaker.GROUP):
 		var readout := node as FloatingLine
-		if readout != null and readout.is_inside_tree():
-			readout.say(text, subtitle_color, maxf(0.5, seconds * 0.9))
-	last_text = text
+		if readout == null or not readout.is_inside_tree() or readout.get_parent().is_queued_for_deletion():
+			continue
+		var d := readout.global_position.distance_squared_to(at)
+		if d < best_distance:
+			best_distance = d
+			best = readout
+	return best
 
 
 ## Which players on THIS computer hear it (their seat numbers): everyone, or only those up top.
