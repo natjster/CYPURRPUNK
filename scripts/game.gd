@@ -103,8 +103,12 @@ func _ready() -> void:
 	Net.upnp_updated.connect(_on_upnp_updated)
 
 	# Settings that belong to this scene (CRT look, fog) — re-applied whenever they change.
+	# (The "full strength" of each CRT effect = the default written in shaders/psx_post.gdshader.
+	# Headless test runs have no real renderer, which answers null here: fall back to 0 so the
+	# maths below still works — nothing is drawn headless anyway.)
 	for param in CRT_PARAMS:
-		_crt_full[param] = RenderingServer.shader_get_parameter_default(crt_material.shader.get_rid(), param)
+		var full: Variant = RenderingServer.shader_get_parameter_default(crt_material.shader.get_rid(), param)
+		_crt_full[param] = float(full) if full != null else 0.0
 	Settings.changed.connect(_apply_scene_settings)
 	_apply_scene_settings()
 

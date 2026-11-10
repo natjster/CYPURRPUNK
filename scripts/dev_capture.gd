@@ -971,6 +971,13 @@ func _ready() -> void:
 			var fur: Color = ((model.get_node("Body") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
 			print("DevCapture look %s: fur=#%s %s voice=%s" % [cat.name, fur.to_html(false), " ".join(worn), CatLook.voice_of(cat.look)])
 
+	# Headless runs have no picture to save (no real renderer): all the DevCapture lines
+	# above are printed already, so just quit instead of crashing on an empty image.
+	if DisplayServer.get_name() == "headless":
+		print("DevCapture: headless run, no screenshot saved")
+		get_tree().quit()
+		return
+
 	# The whole window: the blown-up game picture plus the sharp HUD on top.
 	# --scale=N saves it as if each game pixel were N screen pixels (N x 240 tall).
 	var image := get_viewport().get_texture().get_image()
