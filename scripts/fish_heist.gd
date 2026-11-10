@@ -506,6 +506,10 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	# is open and the hatch isn't sealed. First it points at the nearest ringing payphone; once
 	# someone in our gang has called the boss, at our exit manhole.
 	var compass := Hud.element("Compass", seat) as HudCompassArrow
+	# THE TUTORIAL (scripts/tutorial.gd) points the arrow itself at every step except 8 (step 8 =
+	# this real payphone -> exit arrow). Then hands off: null = nothing below touches the arrow.
+	if Tutorial.active() and Tutorial.instance.step != 8:
+		compass = null
 	if alarm:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)

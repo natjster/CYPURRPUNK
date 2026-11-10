@@ -9,6 +9,8 @@ extends Node
 ##   --solo / --host / --join   start a game (otherwise you get the start menu)
 ##   --tutorial        start a TUTORIAL run (scripts/tutorial.gd); prints "[Tutorial] Step X/9" lines
 ##   --tutorial_auto   (with --tutorial) play all 9 steps by itself, print what happened, then quit
+##   --tutorial_shots  (with --tutorial_auto, not headless) also save shots/tutorial_step1_arrow.png,
+##                     tutorial_step8_payphone.png and tutorial_step8_exit.png
 ##   --wait=N          wait N frames after our cat appears before doing anything else
 ##   --teams=A,B,..    the gang of seat 0, 1, 2... (0 = Catleone Family, 1 = Burrow Gang: teams.gd).
 ##                     Implies --mode=turf (gangs only exist in TURF WAR).
@@ -1286,6 +1288,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.bag_size,
 		int(Mainframe.instance.charge_of(player.team)), UndergroundHub.is_in_hub(player.global_position),
 		Hud.element("TutorialBox").visible, (Hud.element("TutorialStep") as Label).text, (Hud.element("TutorialHint") as Label).text])
+	await _tutorial_arrow("step1", "tutorial_step1_arrow.png")
 	# Too early for Don: he should refuse.
 	hub.deploy(player)
 	await _seconds(0.3)
@@ -1331,6 +1334,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	# 8. A payphone (E), then the exit.
 	await _seconds(0.5)
 	print("DevCapture tutorial heat=%.1f exit_open=%s" % [HeatMeter.instance.heat, FishHeist.instance.exit_is_open(player.team)])
+	await _tutorial_arrow("step8 phase0", "tutorial_step8_payphone.png")
 	var phone := tutorial._nearest_payphone(player)
 	var phone_npc: Node3D = null
 	for node in FishHeist.instance.get_children():
@@ -1341,6 +1345,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 		await get_tree().physics_frame
 	print("DevCapture tutorial payphone E: %s line=\"%s\" talk box open=%s" % [Interactable.try_use(player), (phone_npc as Payphone).last_line, NpcDialog.is_open_for(player.slot)])
 	await _seconds(0.5)
+	await _tutorial_arrow("step8 phase1", "tutorial_step8_exit.png")
 	print("DevCapture tutorial revealed=%s phase=%d hint=\"%s\"" % [FishHeist.instance.is_revealed(player.team), tutorial.phase, (Hud.element("TutorialHint") as Label).text])
 	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
 	if not await _until_step(9): return
@@ -1362,6 +1367,19 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	print("DevCapture tutorial back at menu: %s tutorial=%s real save touched=%s" % [
 		Game.instance != old_game and Game.instance.main_menu.visible, Game.is_tutorial(), touched])
 	get_tree().quit(0)
+
+
+## Print what the green arrow + beacon show right now ("DevCapture tutorial arrow ..." line) and,
+## with --tutorial_shots, save the whole window to shots/<file>.
+func _tutorial_arrow(when: String, file: String) -> void:
+	await _seconds(0.4)  # (let the arrow turn + the box settle)
+	var compass := Hud.element("Compass") as HudCompassArrow
+	print("DevCapture tutorial arrow %s: visible=%s text=\"%s\" beacon=%s step_line=\"%s\"" % [when,
+		compass.visible, compass._text, Tutorial.instance._beacon.visible, (Hud.element("TutorialStep") as Label).text])
+	if _args.has("tutorial_shots") and DisplayServer.get_name() != "headless":
+		var path := ProjectSettings.globalize_path("res://shots/" + file)
+		get_viewport().get_texture().get_image().save_png(path)
+		print("DevCapture saved: ", path)
 
 
 ## Wait until the tutorial reaches this step (up to 15 s). False (and quits with 1) if it never does.

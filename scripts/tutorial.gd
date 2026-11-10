@@ -5,10 +5,14 @@ extends Node
 ## Start it from the menu: PLAY > TUTORIAL (or launch the game with "--tutorial").
 ##
 ## What the player sees:
-##   - A box at the top of the screen (HUD "TutorialBox") with the current step in yellow, how far
-##     away it is and which way to turn ("[> 11m]"), and a white line saying what to do.
-##   - A glowing cyan beacon (an arrow bobbing over a ring of light) floating above the thing to
-##     go to: an NPC, the stash, the Mainframe, the nearest fish, a VAC-COP, a payphone, the exit.
+##   - A box at the top of the screen (HUD "TutorialBox") with the current step in yellow and a
+##     white line saying what to do.
+##   - The real game's big GREEN ARROW (HUD "Compass", scripts/ui/hud_compass_arrow.gd) just under
+##     the box, pointing at the thing to go to, with its name and distance ("SHOP  12m").
+##     Steps 1-7 and 9: this script points it. Step 8: fish_heist.gd points it, exactly like in a
+##     real raid (nearest ringing PAYPHONE first, then the EXIT once you've called).
+##   - A glowing cyan beacon (an arrow bobbing over a ring of light) floating above the target
+##     (steps 1-7 and 9 only: at step 8 you find the payphone and exit with the green arrow alone).
 ##
 ## The 9 steps (all the text is editable: select Tutorial in main.tscn, Inspector > Step 1..9):
 ##   PART 1 - THE SEWERS     1 take MITTENS' FISH from Lil' Mittens   2 buy a weapon at the shop
@@ -113,9 +117,12 @@ extends Node
 ## Shown if a VAC-COP bonked a fish out of your bag.
 @export_multiline var step7_fish_back: String = "A VAC-COP knocked a fish loose! Grab it back [{E}] ({fish}/{need})."
 @export_group("Step 8 - Payphone + Extract")
-@export var step8_title: String = "STEP 8/9: ANSWER A RINGING PAYPHONE, THEN EXTRACT"
-@export_multiline var step8_hint: String = "HEAT HIT {heat}! The exit manhole is open! Follow the ringing to a PAYPHONE and press [{E}] to call Don for the exit location."
-@export_multiline var step8_exit: String = "Follow the EXIT arrow to the glowing manhole and walk onto it to cash out your Fish and keep your Scrap!"
+## Shown before you've answered a payphone (the green arrow points at the nearest PAYPHONE).
+@export var step8_title: String = "STEP 8/9: FOLLOW THE GREEN ARROW TO A PAYPHONE"
+@export_multiline var step8_hint: String = "HEAT HIT {heat}! Your exit is open! Follow the big GREEN ARROW at the top to the nearest ringing PAYPHONE and press [{E}] so Don sends you the exit location."
+## Shown the moment you've answered (the green arrow flips to the EXIT).
+@export var step8_exit_title: String = "STEP 8/9: FOLLOW THE GREEN ARROW TO THE EXIT"
+@export_multiline var step8_exit: String = "Don's on the line above the phone! The GREEN ARROW now points to the EXIT - follow it to the glowing manhole to cash out your Fish and keep your Scrap!"
 @export_group("Step 9 - Feed")
 @export var step9_title: String = "STEP 9/9: FEED SCRAP TO THE MAINFRAME"
 @export_multiline var step9_hint: String = "You extracted with your cash + $100 quest bonus, and kept your SCRAP! Walk to the Mainframe on the west wall and press [{E}] to charge it (+25%)."
@@ -477,9 +484,8 @@ func _hint_of(cat: CatPlayer) -> String:
 func _show(cat: CatPlayer, target: Vector3) -> void:
 	var seat := cat.slot
 	var title := _title_of(step)
-	var direction := _direction_text(cat, target)
-	if direction != "":
-		title += "  [%s]" % direction
+	if step == 8 and phase == 1:
+		title = step8_exit_title
 	_box_shown = true
 	Hud.show_element("TutorialBox", true, seat)
 	Hud.set_text("TutorialStep", title, seat)
@@ -488,10 +494,14 @@ func _show(cat: CatPlayer, target: Vector3) -> void:
 	Hud.set_color("TutorialHint", hint_color, seat)
 	# The beacon floats over the target (only on the same level as the cat: city or sewers).
 	var same_level := target != Vector3.INF and UndergroundHub.is_in_hub(target) == UndergroundHub.is_in_hub(cat.global_position)
-	_beacon.visible = same_level
-	if same_level:
+	# Step 8 is the real game's way of finding the exit: no beacon, just the green arrow.
+	_beacon.visible = same_level and step != 8
+	if _beacon.visible:
 		_beacon.global_position = target + Vector3(0, beacon_height + sin(_clock * 2.5) * beacon_bob, 0)
 		_beacon_arrow.rotation.y = _clock * beacon_spin
+	# THE GREEN ARROW. At step 8 fish_heist.gd drives it (PAYPHONE, then EXIT), so hands off.
+	if step != 8:
+		_point_compass(cat, target if same_level else Vector3.INF)
 
 
 func _hide() -> void:
@@ -500,25 +510,44 @@ func _hide() -> void:
 	if _box_shown:
 		_box_shown = false
 		Hud.show_element("TutorialBox", false, 0)
+		var compass := Hud.element("Compass", 0) as HudCompassArrow
+		if compass != null:
+			compass.hide_arrow()  # (fish_heist.gd takes the arrow back from here)
 
 
-## "> 11m": which way to turn (from where the camera looks) and how far, like the EXIT arrow.
-func _direction_text(cat: CatPlayer, target: Vector3) -> String:
-	if target == Vector3.INF or UndergroundHub.is_in_hub(target) != UndergroundHub.is_in_hub(cat.global_position):
-		return ""
-	var to_target := target - cat.global_position
-	var arrow := "^"
-	var camera := GameScreen.instance.camera_for_seat(cat.slot) if GameScreen.instance != null else null
-	if camera != null:
-		var look := -camera.global_transform.basis.z
-		var angle := rad_to_deg(Vector2(look.x, look.z).angle_to(Vector2(to_target.x, to_target.z)))
-		if absf(angle) > 135.0:
-			arrow = "v"
-		elif angle > 30.0:
-			arrow = ">"
-		elif angle < -30.0:
-			arrow = "<"
-	return "%s %dm" % [arrow, int(Vector2(to_target.x, to_target.z).length())]
+## Point the big green arrow (HUD "Compass") at the target, with its name and distance under it
+## ("SHOP  12m"). No target (or it's on the other level: city vs sewers) = the arrow hides.
+func _point_compass(cat: CatPlayer, target: Vector3) -> void:
+	var compass := Hud.element("Compass", cat.slot) as HudCompassArrow
+	if compass == null:
+		return
+	if target == Vector3.INF or GameScreen.instance == null:
+		compass.hide_arrow()
+		return
+	var where := cat.global_position
+	var metres := int(Vector2(target.x - where.x, target.z - where.z).length())
+	var yaw := FishHeist.instance._screen_angle(where, target, GameScreen.instance.camera_for_seat(cat.slot))
+	compass.point_at(yaw, "%s  %dm" % [_compass_name(), metres], false)
+
+
+## The word under the green arrow for the current step.
+func _compass_name() -> String:
+	match step:
+		1:
+			return "LIL' MITTENS"
+		2:
+			return "SHOP"
+		3:
+			return "LITTERBOX"
+		4, 9:
+			return "MAINFRAME"
+		5:
+			return "DON CATLEONE"
+		6:
+			return "FISH"
+		7:
+			return ["VAC-COP", "SCRAP", "FISH"][clampi(phase, 0, 2)]
+	return ""
 
 
 ## The beacon: a glowing upside-down cone (an arrow pointing down at the target) spinning over a

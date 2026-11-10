@@ -304,6 +304,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   stash and never reads/writes the save; heat held each physics frame (priority 100; step 8 = `exit_heat`); `Tutorial.health_floor()`
   in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets `bag_size` 4 (inventory grid grows on open:
   `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
+  GREEN ARROW: tutorial `_point_compass` drives HUD `Compass` on steps 1-7/9 (fish_heist nulls its compass then); step 8 = fish_heist's
+  real PAYPHONE -> EXIT arrow, no beacon, `step8_exit_title` at phase 1. `--tutorial_shots` (windowed) saves shots/tutorial_step*.png.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 - ANDROID (SETUP_GUIDE §17): `export_presets.cfg` preset "Android" (arm64, immersive, net + multicast permissions,
