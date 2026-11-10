@@ -11,7 +11,7 @@ extends Enemy
 ##   │   ├── Body, Cap, Bumper      <- MeshInstance3D (Body flashes when shot)
 ##   │   ├── Eye                    <- glows red while chasing
 ##   │   ├── SirenRed, SirenBlue    <- flash while chasing
-##   │   └── Brush (Node3D)         <- the little side brush, spins
+##   │   └── Brush, Brush2          <- the corner whisker brushes, spin (Brush2 optional, the other way)
 ##   ├── SirenLight (OmniLight3D)   <- red/blue light on the street while chasing
 ##   └── MultiplayerSynchronizer    <- shares sync_position, sync_yaw, state, health
 ##
@@ -164,6 +164,7 @@ var _status_tag: Label3D  # every computer: "TIDYING..." / "?" over us (made whe
 @onready var siren_red: MeshInstance3D = $Model/SirenRed
 @onready var siren_blue: MeshInstance3D = $Model/SirenBlue
 @onready var brush: Node3D = get_node_or_null("Model/Brush")  # (optional: the drone has rotors)
+@onready var brush_2: Node3D = get_node_or_null("Model/Brush2")  # (optional: a second corner brush)
 @onready var siren_light: Light3D = $SirenLight
 
 
@@ -526,6 +527,8 @@ func _process(delta: float) -> void:
 	super(delta)
 	if brush != null:
 		brush.rotate_object_local(brush_axis, delta * brush_spin * (3.0 if state == State.TIDYING else 1.0))
+	if brush_2 != null:
+		brush_2.rotate_object_local(brush_axis, -delta * brush_spin * (3.0 if state == State.TIDYING else 1.0))
 	var chasing := state == State.CHASE
 	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
 	if chasing and _last_state != State.CHASE:
@@ -552,7 +555,9 @@ func _process(delta: float) -> void:
 	siren_red.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (siren_color_1 if chasing and blink else off))
 	siren_blue.set_instance_shader_parameter("instance_tint", fizz_color if fizz else (siren_color_2 if chasing and not blink else off))
 	_show_light(chasing, blink)
-	if state == State.STUNNED:
+	if eye_flashing():
+		eye.set_instance_shader_parameter("instance_tint", Color(3, 2.6, 1.6))  # EYE CRIT: white-hot flash
+	elif state == State.STUNNED:
 		eye.set_instance_shader_parameter("instance_tint", fizz_color if fizz else off)
 	elif state == State.TIDYING or state == State.TIDY_GO:
 		eye.set_instance_shader_parameter("instance_tint", Color(0.5, 1, 0.4))  # busy: green

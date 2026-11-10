@@ -1281,10 +1281,27 @@ framework `scripts/enemy.gd`, §16). The **Roombas** node in
 `main.tscn` (script `scripts/roomba_patrol.gd`) puts them out when a game is hosted, and its
 sibling **RoombaSpawner** (a MultiplayerSpawner) copies them to every player.
 
+**The look (Nov 2026):** an armoured black-and-white police-enforcer disc, built in Blockbench
+(`models/blockbench/roomba.bbmodel` -> `models/roomba.glb`, 258 triangles, 128x128 texture with
+"VAC-COP" / "PROTECT & SUCTION" stencils, vents and rivets, a hazard-striped ram bumper, a dust-bin
+dome with twin police lights, and two corner whisker brushes that spin). The MEGA VAC-COP is the
+same model at 2.6x. Its wide **cyclops visor (the Eye)** glows cyan on patrol and red when it
+chases, and it's a **weak spot**: see "Shoot the EYE" below.
+
+**Shoot the EYE = guaranteed CRIT.** On every bot (VAC-COP, MEGA VAC-COP, LINT-TRAPPER, SQUIRT-DRONE)
+a bolt into the glowing eye is ALWAYS a critical hit: double damage (or the gun's own Crit
+Multiplier if that's bigger), the big yellow CRIT number, a white-hot flash of the visor and a
+visor "ping" (`sounds/sfx/eye_crit.wav`). Shots into the back of the body don't count, and
+explosions (the YARN-ZOOKA's blast) never do. Tuning: select the bot's root node > Inspector >
+**Eye Weak Spot**: **Eye Crit Radius** (how close to the eye's middle counts, metres; grows with
+the model's scale, so the MEGA VAC-COP's eye is a bigger target), **Eye Crit Multiplier**, **Eye
+Path** and **Eye Crit Sound**. Test: `--host --eye_test [--roomba=boss|drone|trapper]` prints one
+eye shot and one body shot ("DevCapture eye_test" lines: the eye one says crit=true).
+
 ```
 Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd (extends enemy.gd)
 ├── CollisionShape3D
-├── Model > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush (Bristle1-3)
+├── Model (= models/roomba.glb) > Body, Cap, Bumper, Eye, SirenRed, SirenBlue, Brush, Brush2
 ├── SirenLight (OmniLight3D)       <- red/blue on the street while chasing
 └── MultiplayerSynchronizer        <- sync_position, sync_yaw, state, health
 ```
@@ -1338,6 +1355,14 @@ never bonks and never steals.
 - Puddles last 6 seconds. Touch one on the ground and you have **STICKY PAWS**: half speed until
   3 seconds after you leave it (zoomies 9 -> 4.5 m/s, slow enough for a VAC-COP to catch you).
   Jumping over a puddle keeps you clean.
+
+**The look (Nov 2026):** both are Blockbench models now. The LINT-TRAPPER (`models/lint_trapper.glb`)
+is a heavy purple-and-black street-sweeper tank: a wide sticky glue roller up front that spins,
+a glowing pink glue canister at the back, hazard-striped side skirts, twin sirens and a glowing
+visor. The SQUIRT-DRONE (`models/squirt_drone.glb`) is an angular OVERCLEAN quad-copter: four arms
+with spinning propellers, a glowing cyan water tank slung underneath with a spray nozzle, twin
+sirens and a glowing lens on its nose. Both eyes are **weak spots** (always a crit, see VAC-COPs
+above). What glows, in which colour: root node > Inspector > **Look > Glow Parts**.
 
 **Where they live:** `scenes/squirt_drone.tscn` (`scripts/squirt_drone.gd`),
 `scenes/lint_trapper.tscn` (`scripts/lint_trapper.gd`) and `scripts/sticky_patch.gd` (the puddle,
@@ -2054,9 +2079,6 @@ FUR       <  [colour]  >        main coat
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
 NOSE      <  [colour]  >
-HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / GREEN MOHAWK / MOHAWK / NEON HALO
-FACE      <  SHADES    >        NONE / CIGAR / CYBER VISOR / HEADBAND / SHADES
-NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
 VOICE     <  MALE      >        MALE / FEMALE: how your cat sounds when it taunts (you hear it when you switch)
 [ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
 ```
@@ -2069,7 +2091,31 @@ VOICE     <  MALE      >        MALE / FEMALE: how your cat sounds when it taunt
   game changes your cat right there, and everyone else sees it.
 - **Upgrading from an older version:** your old cat name, look, cash and stash become your first cat.
 
+### The cat model (armless PS1 mascot cat, Nov 2026)
+Every cat in the game (yours, the MY CAT preview and all 14 sewer NPCs) is ONE Blockbench model:
+`models/blockbench/cat.bbmodel` -> `models/cat.glb` (370 triangles, 64x64 texture). It's a chunky,
+**armless** mascot cat: guns and items float in front of it like before.
+- **The texture is grey and cream on purpose.** The game MULTIPLIES it by your colours, so the
+  painted details (tabby "M" on the forehead, stripes, whisker dots, inner ears, slit pupils, toe
+  beans) show on any colour.
+- **The parts** (= node names, = what each colour row paints): FUR = Body, LegL, LegR, Head (with the
+  cheek tufts), EarL, EarR, Tail; MARKINGS = Belly, Muzzle; EYES = EyeL, EyeR (bright eyes glow and
+  keep their pupils); NOSE = Nose. The legs swing from the hip and the tail sways from its root:
+  each part's pivot in Blockbench is its hinge.
+- `scenes/cat_model.tscn` = that model + `scripts/cat/cat_model.gd`, which gives it the PS1 material
+  and its own **Cat Colours** (Inspector). Player cats are repainted with your look straight away;
+  NPCs keep the colours set on their **Model** node.
+- **Hats, shades and collars are switched off for now** (`CatLook.SLOTS` is empty), so every cat is a
+  clean PS1 cat and the HAT / FACE / NECK rows are gone. Everything for them is still there: put
+  `"hat", "face", "neck"` back into **SLOTS** in `cat_look.gd` and the rows come back (the old
+  accessory models were made for the old cat, so they may need nudging with their Offset).
+- **Changing the shape:** open `models/blockbench/cat.bbmodel` in Blockbench, edit, Ctrl+S, then ask
+  Claude to re-export it (§20). The recipe it was first made from is `tools/make_creature_specs.py`
+  (`python tools/make_creature_specs.py cat` rewrites `tools/model_specs/cat.json`; running it again
+  REPLACES the .bbmodel, so only do that if you haven't changed it by hand).
+
 ### Add a new accessory (no code)
+(Accessories are switched off right now, see above. Turn the slots back on first.)
 1. **Make its model.** In the FileSystem dock, right-click `scenes/cat_parts/beanie.tscn` >
    **Duplicate...** and name it (e.g. `cowboy_hat.tscn`). Double-click it and change the meshes:
    select a mesh > Inspector > **Mesh** for the shape, **Surface Material Override** > albedo_color
@@ -2098,7 +2144,8 @@ colour of each list is what a brand-new cat starts with in MY CAT.
 - `scripts/cat/cat_part.gd` (`CatPart`) — the accessory card. `scripts/cat/cat_palette.gd`
   (`CatPalette`) — the colour lists.
 - `cat_parts/` — the cards and the palette. `scenes/cat_parts/` — the accessory models.
-- `scenes/cat_model.tscn` — the cat's body, used by player cats and the MY CAT preview. The colour
+- `scenes/cat_model.tscn` — the cat's body (the Blockbench model `models/cat.glb` + `cat_model.gd`),
+  used by player cats, the MY CAT preview and every NPC (their **Model** node). The colour
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
 - `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
@@ -2595,8 +2642,12 @@ shot), **getting shot** (`receive_hit` above), **getting run over** by the car, 
 says how a VAC-COP drives, chases and bonks.
 
 **Making a new enemy** (e.g. a security drone):
-1. Duplicate `scenes/roomba.tscn` as `drone.tscn` and reshape its **Model** (keep a mesh called
-   **Model/Body**: it flashes when shot, or point **Flash Mesh** at another one).
+1. Duplicate `scenes/roomba.tscn` as `drone.tscn` and give it a new **Model**: build one in
+   Blockbench (§20) and drop the `.glb` in as the Model node, like `roomba.tscn` does. Keep a part
+   called **Body** (it flashes when shot, or point **Flash Mesh** at another one) and one called
+   **Eye** (the crit weak spot: **Eye Weak Spot** in the Inspector). The model gets the PS1 material
+   by itself; list the parts that should glow, and their colour, in **Look > Glow Parts** (white =
+   your script tints it while playing).
 2. Make a new script that starts with `extends Enemy` and put it on the root (replacing
    roomba.gd). Its numbers (Max Health, Display Name, Drop On Destroy, sounds...) are already in
    the Inspector.
@@ -2859,7 +2910,15 @@ Starter templates, also in `models/blockbench/`:
 - `template_roomba.bbmodel`: the VAC-COP, with the groups the enemy code looks for: **Body, Eye,
   SirenRed, SirenBlue, Brush**. Keep those names.
 
-(The templates aren't in the game yet: swapping the real cat / VAC-COP for a model is Phase 1.)
+**The real ones (in the game since 10 Nov 2026):** `cat.bbmodel` (the armless PS1 mascot cat: player
++ every NPC, §11), `roomba.bbmodel` (VAC-COP and MEGA VAC-COP), `lint_trapper.bbmodel` and
+`squirt_drone.bbmodel` (§8). They were first made from recipes in `tools/make_creature_specs.py`
+(rounded heads, eyes and octagonal shells are worked out with a bit of maths there); from now on the
+.bbmodel files are the master copies: edit them in Blockbench and ask Claude to re-export. Group
+names the game needs: the cat's are in §11; the bots need **Body** (flashes when shot), **Eye**
+(glows, crit weak spot), **SirenRed**, **SirenBlue**, plus **Brush/Brush2** (VAC-COP brushes),
+**Brush** + **Tank** (LINT-TRAPPER roller + glue canister), **Rotors > Rotor1..4** + **Tank**
+(SQUIRT-DRONE). A group's pivot is where it turns (brushes, rotors, legs, tail).
 
 **The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**,
 vehicles under **500**; textures **64x64** (props) or **128x128** (characters, vehicles). In Blockbench 16 pixels = 1 metre, Y is

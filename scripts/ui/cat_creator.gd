@@ -22,14 +22,14 @@ extends Control
 ##   FUR       <  [colour]  >        +-----------+
 ##   MARKINGS  <  [colour]  >        |  your cat |   <- live 3D preview, slowly turning
 ##   EYES ...  NOSE ...              |           |
-##   HAT       <  FEDORA    >        +-----------+
-##   FACE ...  NECK ...
+##   VOICE     <  MALE      >        +-----------+
 ##   [ BACK ]     [ RANDOM ]     [ NEXT ]
 ##
 ## The look rows come from the framework (scripts/cat/cat_look.gd): one colour row per
 ## CatLook.COLOR_KEYS (colours from res://cat_parts/palette.tres) and one accessory row per
-## CatLook.SLOTS (every CatPart card in res://cat_parts/). New hats or colours show up here
-## by themselves.
+## CatLook.SLOTS (every CatPart card in res://cat_parts/). New colours show up here by
+## themselves. (HAT / FACE / NECK are switched off for now: CatLook.SLOTS is empty, so the new
+## plain PS1 cat wears nothing. Put the slots back in cat_look.gd and the rows come back.)
 ##
 ## Every change is saved straight away (Settings.cats, in settings.cfg). Each cat also has its
 ## own cash and stash (player_profile.gd); DELETE throws those away too (it asks twice).

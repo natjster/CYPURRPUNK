@@ -35,6 +35,9 @@ uniform vec4 emission_color : source_color = vec4(0.0, 0.0, 0.0, 1.0);
 uniform float emission_energy : hint_range(0.0, 16.0) = 1.0;
 // Makes the BRIGHT pixels of the texture glow (e.g. lit windows at night). 0 = off.
 uniform float texture_glow : hint_range(0.0, 8.0) = 0.0;
+// ON = the glow is painted by the texture too (glow colour x texture), so a glowing robot eye
+// or cat eye keeps its pixel-art pupil / scanlines instead of turning into one flat blob.
+uniform bool emission_textured = false;
 
 // --- Shine (for wet streets) ---
 // 0 = matte, 0.5 = wet sheen. Leave at 0 for most things.
@@ -107,6 +110,9 @@ void fragment() {
 	vec4 tex = texture(albedo_texture, uv);
 	ALBEDO = albedo_color.rgb * tex.rgb * instance_tint.rgb;
 	EMISSION = emission_color.rgb * emission_energy * instance_tint.rgb;
+	if (emission_textured) {
+		EMISSION *= tex.rgb;
+	}
 	float brightness = max(tex.r, max(tex.g, tex.b));
 	EMISSION += tex.rgb * texture_glow * smoothstep(0.5, 0.8, brightness);
 	SPECULAR = specular;

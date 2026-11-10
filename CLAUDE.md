@@ -375,6 +375,16 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `Hud.key_for("interact", seat)` blinking. Reveal + sounds `report_open/row/award` once per computer. Test: `--raid_report[=N] [--raid_report_after=F]`,
   `--report_ready=S,S:pad,S:key,S:stick,spare:D,S:pause [--report_ready_delay=N]`, `DevCapture report` / `report screen` / `after report` lines.
 
+CHARACTER + BOT MODELS (Phase 1, 10 Nov 2026): `scenes/cat_model.tscn` = `models/cat.glb` (armless PS1 mascot cat, 370 tris,
+64x64 GREY texture multiplied by the look colours) + `scripts/cat/cat_model.gd` (exports fur/markings/eyes/nose_color; NPC scenes'
+`Model` node IS an instance of it). Group pivots = hinges: legs at the hip, Tail at its root (cat_player `_swing_leg` / tail sway just
+rotate). `CatLook.prepare` psx_ifies once; eyes use psx_lit `emission_textured`. `CatLook.SLOTS = []` on purpose (accessories off).
+Bots: each scene's `Model` = `models/roomba|lint_trapper|squirt_drone.glb`; `Enemy._set_up_model` psx_ifies + `glow_parts` (part -> colour,
+`glow_energy`). EYE WEAK SPOT: `Enemy.receive_hit` -> `is_eye_hit(pos, dir)` (closest approach of the bolt's path to `eye_centre()`
+<= `eye_crit_radius` * model scale, not from behind, never blasts) forces crit + `eye_crit_multiplier`, `eye_flashing()` (roomba.gd tints
+the eye white-hot), sound `eye_crit`. Recipes: `tools/make_creature_specs.py` -> tools/model_specs/*.json (re-running REPLACES the
+.bbmodel). Test: `--eye_test [--roomba=vac|boss|drone|trapper]`, `--portrait=bot --roomba=X`.
+
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
 Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and

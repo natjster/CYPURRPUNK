@@ -4,6 +4,7 @@
 [ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
 [ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
 [ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
+[ext_resource type="PackedScene" path="res://scenes/cat_model.tscn" id="9_catmodel"]
 
 [sub_resource type="Resource" id="Choice_need"]
 script = ExtResource("4_choice")
@@ -118,104 +119,6 @@ lines = PackedStringArray("Three fish, in your bag, ALL at once, down the exit h
 radius = 0.3
 height = 0.9
 
-[sub_resource type="ShaderMaterial" id="Mat_fur"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.85, 0.7, 0.48, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_white"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_nose"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.9, 0.5, 0.55, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_eye"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.35, 0.75, 1, 1)
-shader_parameter/emission_color = Color(0.35, 0.75, 1, 1)
-shader_parameter/emission_energy = 2.0
-
-[sub_resource type="ShaderMaterial" id="Mat_hat"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.3, 0.17, 0.08, 1)
-
-[sub_resource type="ShaderMaterial" id="Mat_red"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.72, 0.08, 0.1, 1)
-
-[sub_resource type="CylinderMesh" id="Mesh_body"]
-top_radius = 0.13
-bottom_radius = 0.2
-height = 0.42
-radial_segments = 8
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_leg"]
-top_radius = 0.06
-bottom_radius = 0.07
-height = 0.2
-radial_segments = 6
-rings = 1
-
-[sub_resource type="SphereMesh" id="Mesh_head"]
-radius = 0.3
-height = 0.55
-radial_segments = 8
-rings = 5
-
-[sub_resource type="PrismMesh" id="Mesh_ear"]
-size = Vector3(0.2, 0.26, 0.09)
-
-[sub_resource type="SphereMesh" id="Mesh_muzzle"]
-radius = 0.12
-height = 0.16
-radial_segments = 7
-rings = 3
-
-[sub_resource type="BoxMesh" id="Mesh_nose"]
-size = Vector3(0.07, 0.045, 0.04)
-
-[sub_resource type="SphereMesh" id="Mesh_eye"]
-radius = 0.1
-height = 0.14
-radial_segments = 6
-rings = 3
-
-[sub_resource type="CylinderMesh" id="Mesh_tail"]
-top_radius = 0.025
-bottom_radius = 0.045
-height = 0.5
-radial_segments = 6
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_big_brim"]
-top_radius = 0.55
-bottom_radius = 0.55
-height = 0.04
-radial_segments = 8
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_tall_crown"]
-top_radius = 0.2
-bottom_radius = 0.26
-height = 0.36
-radial_segments = 8
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_bandana"]
-top_radius = 0.17
-bottom_radius = 0.24
-height = 0.13
-radial_segments = 8
-rings = 1
-
 [sub_resource type="BoxMesh" id="Mesh_sign"]
 size = Vector3(0.9, 0.55, 0.04)
 
@@ -240,85 +143,13 @@ tail_speed = 4
 position = Vector3(0, 0.45, 0)
 shape = SubResource("Shape_cat")
 
-[node name="Model" type="Node3D" parent="."]
+[node name="Model" parent="." instance=ExtResource("9_catmodel")]
 rotation = Vector3(0, 3.14159, 0)
 scale = Vector3(0.8, 0.8, 0.8)
-
-[node name="Body" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.39, 0)
-mesh = SubResource("Mesh_body")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="LegL" type="MeshInstance3D" parent="Model"]
-position = Vector3(-0.1, 0.1, 0)
-mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="LegR" type="MeshInstance3D" parent="Model"]
-position = Vector3(0.1, 0.1, 0)
-mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Head" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.82, 0)
-mesh = SubResource("Mesh_head")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(-0.21, 0.2, 0.02)
-rotation = Vector3(0, 0, 0.9)
-mesh = SubResource("Mesh_ear")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0.21, 0.2, 0.02)
-rotation = Vector3(0, 0, -0.9)
-mesh = SubResource("Mesh_ear")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0, -0.09, -0.25)
-mesh = SubResource("Mesh_muzzle")
-surface_material_override/0 = SubResource("Mat_white")
-
-[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0, -0.03, -0.36)
-mesh = SubResource("Mesh_nose")
-surface_material_override/0 = SubResource("Mat_nose")
-
-[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(-0.12, 0.06, -0.23)
-mesh = SubResource("Mesh_eye")
-surface_material_override/0 = SubResource("Mat_eye")
-
-[node name="EyeR" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0.12, 0.06, -0.23)
-mesh = SubResource("Mesh_eye")
-surface_material_override/0 = SubResource("Mat_eye")
-
-[node name="Tail" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.42, 0.28)
-rotation = Vector3(0.65, 0, 0)
-scale = Vector3(1, 1, 1)
-mesh = SubResource("Mesh_tail")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="HatBrim" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0, 0.21, 0)
-rotation = Vector3(-0.1, 0, 0.08)
-mesh = SubResource("Mesh_big_brim")
-surface_material_override/0 = SubResource("Mat_hat")
-
-[node name="HatCrown" type="MeshInstance3D" parent="Model/Head"]
-position = Vector3(0, 0.39, 0.01)
-rotation = Vector3(-0.1, 0, 0.08)
-mesh = SubResource("Mesh_tall_crown")
-surface_material_override/0 = SubResource("Mat_hat")
-
-[node name="Bandana" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.6, 0)
-mesh = SubResource("Mesh_bandana")
-surface_material_override/0 = SubResource("Mat_red")
+fur_color = Color(0.85, 0.7, 0.48, 1)
+markings_color = Color(0.95, 0.93, 0.9, 1)
+eyes_color = Color(0.35, 0.75, 1, 1)
+nose_color = Color(0.9, 0.5, 0.55, 1)
 
 [node name="Sign" type="MeshInstance3D" parent="."]
 position = Vector3(0.75, 0.75, 0.3)

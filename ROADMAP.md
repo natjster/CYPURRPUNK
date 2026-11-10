@@ -152,9 +152,11 @@ a world that hates mess.
 - Chunky shapes over fine detail. If it reads at 240 pixels tall, it is right.
 
 ### What to replace first
-1. **The cat.** On screen all the time and in every clip. Claude keeps the colour and accessory
-   system working with the new model.
-2. **The VAC-COP.** The face of the enemy and the co-star of every clip.
+1. **The cat.** DONE (10 Nov 2026): the chunky ARMLESS PS1 mascot cat (`models/blockbench/cat.bbmodel`,
+   370 triangles, 64x64 grey texture tinted by FUR / MARKINGS / EYES / NOSE). Player + all 14 sewer
+   NPCs use it. Accessories (hat / face / neck) are switched off for now (`CatLook.SLOTS`).
+2. **The VAC-COP.** DONE (10 Nov 2026): armoured police-enforcer disc (`roomba.bbmodel`), and the
+   LINT-TRAPPER and SQUIRT-DRONE too. Their glowing Eye is a weak spot: a shot into it always crits.
 3. **Street props.** Bins, cones, vending machines, signs. These are also the things you knock over.
 4. **The car.** DONE (Nov 2026): the WEDGE CYBER-INTERCEPTOR, gang-coloured neon trim, spinning
    and steering wheels (`models/blockbench/getaway_car.bbmodel`).
@@ -211,7 +213,10 @@ a world that hates mess.
 ### Phase 1: to mid January 2027. "A cat worth looking at, a raid worth retelling"
 **Goal:** the game looks like a style and feels like being a cat.
 
-- **You:** model the cat, then the VAC-COP. Expect several tries at the cat.
+- [x] **Claude (first pass):** the cat, then the VAC-COP. (Done 10 Nov 2026: armless PS1 mascot cat for the
+  player + 14 NPCs; VAC-COP / MEGA VAC-COP, LINT-TRAPPER and SQUIRT-DRONE Blockbench models with painted
+  128x128 textures; shooting a bot's glowing EYE = guaranteed CRIT. Recipes in `tools/make_creature_specs.py`,
+  SETUP_GUIDE §11 / §20. **You:** tweak the .bbmodel files in Blockbench if you want a different cat.)
 - **You:** build or buy a set of about 10 street props.
 - **You:** set up the itch.io page and start the weekly clip.
 - [x] **Claude:** mess-making (knock-over props, scratching, bots that stop to clean). (Done 10 Nov 2026: bins,

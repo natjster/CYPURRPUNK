@@ -13,6 +13,10 @@ extends CharacterBody3D
 ##     it instead), plays the sound, emits "destroyed" (the spawner listens), and is removed.
 ##   - NETWORK: the HOST runs the brain (_physics_process). Everyone else's copy glides to
 ##     sync_position / sync_yaw (turning the "Model" child node).
+##   - THE LOOK: "Model" can be a Blockbench model (models/*.glb): it gets the PS1 material
+##     (psx_lit) and the parts named in Glow Parts glow (eye, sirens, tanks).
+##   - THE EYE WEAK SPOT: a bolt that goes into the glowing Eye (Eye Path) is ALWAYS a critical
+##     hit (is_eye_hit). Aim for the visor!
 ##
 ## A new enemy's scene needs (copy scenes/roomba.tscn as a start):
 ##   YourEnemy (CharacterBody3D)       <- your script ("extends Enemy")
@@ -70,6 +74,27 @@ signal destroyed(enemy: Enemy)
 @export_group("Look")
 ## The mesh that flashes when shot.
 @export var flash_mesh: NodePath = ^"Model/Body"
+## Parts of the Model (node names) that GLOW, and in which colour. White = the script tints it
+## while playing (the VAC-COP's eye goes cyan / red, the sirens red / blue). A Blockbench part's
+## painted pixels still show inside the glow.
+@export var glow_parts: Dictionary = {"Eye": Color.WHITE, "SirenRed": Color.WHITE, "SirenBlue": Color.WHITE}
+## How bright the Glow Parts are (0 = no glow, 5 = neon).
+@export var glow_energy: float = 5.0
+
+@export_group("Eye Weak Spot")
+## The glowing eye / visor: a shot into it is always a CRITICAL HIT.
+@export var eye_path: NodePath = ^"Model/Eye"
+## How close (metres) the bolt must pass to the middle of the Eye to count. Grows with the
+## Model's scale, so the 2.6x MEGA VAC-COP's eye is a 2.6x bigger target too.
+@export var eye_crit_radius: float = 0.22
+## Damage multiplier for an eye shot that the gun hadn't already rolled as a crit (a gun with a
+## bigger Crit Multiplier uses its own).
+@export var eye_crit_multiplier: float = 2.0
+## How deep past where the bolt struck the body it may still find the eye (metres, times the
+## Model's scale): the hit box can be bigger than the model (the drone's is a ball).
+@export var eye_ray_depth: float = 0.9
+## Sound file (res://sounds/sfx/, without .wav) for an eye crit, heard by the shooter.
+@export var eye_crit_sound: String = "eye_crit"
 
 @export_group("Network Smoothing")
 ## Other computers: how tightly our copy follows the host's (higher = tighter, jerkier).
@@ -88,6 +113,7 @@ var stomach: Array = []
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
 var _flash_time: float = 0.0
+var _eye_flash_time: float = 0.0  # this computer: the eye just got crit (flashes white-hot)
 ## Host: where each car was last time we looked (car instance id -> position), to work out its speed.
 var _last_car_positions := {}
 
@@ -102,6 +128,7 @@ var killed_by: int = 0
 func _ready() -> void:
 	if health < 0:
 		health = max_health
+	_set_up_model()
 	add_to_group(HudHealthBars.GROUP)  # a floating health bar on everyone's HUD
 	add_to_group(GROUP)
 	sync_position = global_position
@@ -122,17 +149,91 @@ func _process(delta: float) -> void:
 		if model != null:
 			model.rotation.y = lerp_angle(model.rotation.y, sync_yaw, weight)
 	_flash_time = maxf(_flash_time - delta, 0.0)
+	_eye_flash_time = maxf(_eye_flash_time - delta, 0.0)
 	if _flash_mesh != null:
 		_flash_mesh.set_instance_shader_parameter("instance_tint", Color(3, 0.6, 0.6) if _flash_time > 0.0 else Color.WHITE)
+
+
+## The PS1 look for a Blockbench Model (LevelKit.psx_ify keeps its painted texture), then each
+## Glow Part gets its own glowing copy of the material.
+func _set_up_model() -> void:
+	if model == null:
+		return
+	LevelKit.psx_ify(model)
+	for part_name in glow_parts:
+		var part := model.get_node_or_null(NodePath(str(part_name)))
+		if part == null:
+			continue
+		var meshes: Array[Node] = part.find_children("*", "MeshInstance3D", true, false)
+		if part is MeshInstance3D:
+			meshes.append(part)
+		for node in meshes:
+			var mesh := node as MeshInstance3D
+			if mesh.mesh == null or not mesh.get_active_material(0) is ShaderMaterial:
+				continue
+			var glow := (mesh.get_active_material(0) as ShaderMaterial).duplicate() as ShaderMaterial
+			glow.set_shader_parameter("albedo_color", Color(0.2, 0.2, 0.2))
+			glow.set_shader_parameter("emission_color", glow_parts[part_name])
+			glow.set_shader_parameter("emission_energy", glow_energy)
+			glow.set_shader_parameter("emission_textured", true)  # the pixel-art scanlines show in the glow
+			mesh.set_surface_override_material(0, glow)
 
 
 # --- Getting hurt ---
 
 ## The hit framework (hit.gd): a bolt hit us. Runs on the SHOOTER's computer, which sends the
 ## damage to the host (the host keeps score of enemy health). true = show a damage number.
+## A bolt into the glowing EYE is always a crit: hit.crit / hit.damage are changed right here, so
+## the gun's damage number (shown after this) is the big yellow CRIT one and the host gets the
+## crit damage.
 func receive_hit(hit: Hit) -> bool:
+	var blast := hit.weapon != null and hit.weapon.blast_radius > 0.0  # (explosions have no aim)
+	if not blast and is_eye_hit(hit.position, hit.direction):
+		if not hit.crit:
+			var multiplier := maxf(eye_crit_multiplier, hit.weapon.crit_multiplier if hit.weapon != null else 2.0)
+			hit.damage = roundi(hit.damage * multiplier)
+			hit.crit = true
+		_eye_flash_time = 0.25
+		Sound.play_at(eye_crit_sound, hit.position)
 	take_hit.rpc_id(1, hit.shooter_id(), hit.damage, hit.stun_seconds, hit.enemy_push, hit.city_heat)
 	return true
+
+
+## Did a bolt that struck us at "where", flying along "direction", go into the Eye? The eye counts
+## from the front (or the side), not through the back of the body. No direction = just how close
+## "where" is.
+func is_eye_hit(where: Vector3, direction: Vector3 = Vector3.ZERO) -> bool:
+	var eye := get_node_or_null(eye_path) as Node3D
+	if eye == null or not eye.is_visible_in_tree():
+		return false
+	var centre := eye_centre()
+	var size := absf(model.scale.x) if model != null else 1.0
+	var radius := eye_crit_radius * size
+	if direction == Vector3.ZERO:
+		return where.distance_to(centre) <= radius
+	var flying := direction.normalized()
+	var looking := -eye.global_basis.z.normalized()  # (models face -Z)
+	if flying.dot(looking) > 0.2:
+		return false  # flying the same way the eye looks = shot from behind
+	# The point on the bolt's path closest to the eye (from just before it struck to a bit inside).
+	var along := clampf((centre - where).dot(flying), -radius, eye_ray_depth * size)
+	return (where + flying * along).distance_to(centre) <= radius
+
+
+## The middle of the Eye in the world (the middle of its mesh, or the node itself).
+func eye_centre() -> Vector3:
+	var eye := get_node_or_null(eye_path) as Node3D
+	if eye == null:
+		return global_position
+	var mesh := eye as MeshInstance3D
+	if mesh != null and mesh.mesh != null:
+		return mesh.global_transform * mesh.get_aabb().get_center()
+	return eye.global_position
+
+
+## True for a moment after this computer's bolt crit the eye (roomba.gd flashes it white-hot).
+func eye_flashing() -> bool:
+	return _eye_flash_time > 0.0
 
 
 ## Host: take "amount" health off (sent by receive_hit above; the test tool calls it directly).

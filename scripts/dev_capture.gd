@@ -46,11 +46,14 @@ extends Node
 ##   --talk_again_after=N  N frames after --goto_dropoff_after, talk to that NPC again
 ##   --wear=A:B,...    (with or without --look) wear exact parts / colours, e.g.
 ##                     --wear=hat:mohawk,neck:bandolier,fur:#808080
-##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone; "me" = our own cat); tweak with
+##   --portrait[=NAME] close-up of an NPC's face, no HUD (default Don Catleone; "me" = our own cat; "bot" = the
+##                     bot --roomba picks, e.g. --portrait=bot --roomba=boss); tweak with
 ##                     --portrait_dist / --portrait_height / --portrait_side (metres), --portrait_fov
 ##   --bait_roomba=D   (host) put the nearest Roomba D metres in front of our cat
 ##   --zap_roomba=N    hit the nearest Roomba N times (34 each), as if shot (host or client)
-##   --roomba=boss     (with --bait_roomba / --zap_roomba) use the MEGA VAC-COP instead of the nearest
+##   --eye_test        shoot the picked bot once in its glowing EYE and once in its side (real rays, no
+##                     rolled crit): prints "DevCapture eye_test" lines (the eye one must be crit=true)
+##   --roomba=boss     (with --bait_roomba / --zap_roomba / --eye_test) use the MEGA VAC-COP instead of the nearest
 ##                     (--roomba=drone / trapper: the nearest SQUIRT-DRONE / LINT-TRAPPER)
 ##   --stun_roomba=S   (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit
 ##   --quest=ID        take that quest right away, with no NPC (works with --deploy, unlike --talk)
@@ -555,6 +558,39 @@ func _ready() -> void:
 				hit.shooter = player
 				hit.damage = 34
 				roomba.receive_hit(hit)
+		if args.has("eye_test"):
+			# --eye_test: two real physics rays at the picked bot (add --roomba=boss/drone/trapper):
+			# one straight into its glowing Eye from 2.5 m in front, one into its side. Both go through
+			# the hit framework with damage 40 and NO rolled crit (like a gun with Crit Chance 0), so
+			# only the EYE WEAK SPOT can make one a crit. Prints a "DevCapture eye_test" line each.
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			await get_tree().physics_frame
+			var centre := roomba.eye_centre()
+			var looking := -roomba.model.global_basis.z.normalized()
+			var shots := {
+				"eye": [centre + looking * 2.5, centre],
+				"body": [roomba.global_position + roomba.model.global_basis.x.normalized() * 4.0 + Vector3.UP * 0.12 * roomba.model.scale.x,
+					roomba.global_position + Vector3.UP * 0.12 * roomba.model.scale.x],
+			}
+			for kind in shots:
+				var from: Vector3 = shots[kind][0]
+				var to: Vector3 = shots[kind][1]
+				var query := PhysicsRayQueryParameters3D.create(from, from + (to - from).normalized() * 8.0)
+				query.exclude = [player.get_rid()]
+				var ray := player.get_world_3d().direct_space_state.intersect_ray(query)
+				var target := Hit.target_of(ray.get("collider")) if not ray.is_empty() else null
+				if target != roomba:
+					print("DevCapture eye_test %s: MISSED (hit %s)" % [kind, ray.get("collider")])
+					continue
+				var hit := Hit.new()
+				hit.shooter = player
+				hit.damage = 40
+				hit.crit = false
+				hit.direction = (to - from).normalized()
+				hit.position = ray["position"]
+				roomba.receive_hit(hit)
+				print("DevCapture eye_test %s: bot=%s crit=%s damage=%d at=%s eye_flash=%s" % [kind, roomba.display_name,
+					hit.crit, hit.damage, hit.position.snapped(Vector3.ONE * 0.01), roomba.eye_flashing()])
 		if args.has("stun_roomba") and multiplayer.is_server():
 			# --stun_roomba=S: (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit.
 			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
@@ -1202,12 +1238,15 @@ func _pick_roomba(scene: Node, near: Vector3, args: Dictionary) -> Roomba:
 				if roomba is Roomba and (roomba as Roomba).is_boss:
 					return roomba
 			await get_tree().physics_frame
-	if args.get("roomba", "") in ["drone", "trapper"]:
-		# --roomba=drone / trapper: the nearest of that kind (waits for one to appear).
+	if args.get("roomba", "") in ["drone", "trapper", "vac"]:
+		# --roomba=drone / trapper / vac: the nearest of that kind (waits for one to appear;
+		# vac = a plain VAC-COP, not a boss, drone or trapper).
 		while true:
 			var best: Roomba = null
 			for node in scene.get_node("Roombas").get_children():
-				if (node is SquirtDrone if args["roomba"] == "drone" else node is LintTrapper) \
+				var kind_ok: bool = node is SquirtDrone if args["roomba"] == "drone" else (node is LintTrapper if args["roomba"] == "trapper" \
+					else (node is Roomba and not node is SquirtDrone and not node is LintTrapper and not (node as Roomba).is_boss))
+				if kind_ok \
 						and (best == null or near.distance_to(node.global_position) < near.distance_to(best.global_position)):
 					best = node
 			if best != null:
@@ -1372,6 +1411,13 @@ func _portrait(player: CatPlayer, args: Dictionary) -> void:
 		# Our own cat: its model faces -Z (nose first), so the camera goes on that side.
 		target = player.cat_model
 		offset.z = -offset.z
+	elif args["portrait"] == "bot":
+		# --portrait=bot: the bot --roomba picks (vac / boss / drone / trapper). The camera hangs off
+		# its Model (faces -Z), so the MEGA VAC-COP's 2.6x scale moves the camera back to match.
+		var bot: Roomba = await _pick_roomba(Game.instance, player.global_position, args)
+		target = bot.model
+		offset.z = -offset.z
+		player.visible = false
 	else:
 		target = Game.instance.hub.npc
 		for node in get_tree().get_nodes_in_group(Npc.GROUP):
