@@ -355,11 +355,13 @@ def cat_spec() -> dict:
             6, U["markings"], cap_end=rect))
     # --- Nose: a little triangle button on top of the snout. ---
     els.append(prism_poly("Nose", "Nose", [[-1.0, 12.15], [1.0, 12.15], [0.0, 11.0]], -4.1, -5.05, U["nose"]))
-    # --- Eyes: big domed lenses popping out of the face. ---
-    for side, x in (("L", -1.95), ("R", 1.95)):
+    # --- Eyes: domed lenses set close above the nose, only just bulging out of the face. ---
+    # (Radii are 75% of the first version's. The face's front is at about z -3.5 here, so the
+    # lens front at -3.8 sticks out ~2 cm; the first version stuck out ~3.5 cm, from higher up.)
+    eye_y = 12.9
+    for side, x in (("L", -1.65), ("R", 1.65)):
         els.append(lathe("Eye" + side, "Eye" + side, "z", [
-            # (Radii are 75% of the first version's 1.5/1.8, 1.4/1.7, 1.05/1.3: eyes 25% smaller.)
-            (-2.6, 1.125, 1.35, x, 13.3), (-3.7, 1.05, 1.275, x, 13.3), (-4.05, 0.79, 0.975, x, 13.3)],
+            (-2.6, 1.125, 1.35, x, eye_y), (-3.55, 1.05, 1.275, x, eye_y), (-3.8, 0.79, 0.975, x, eye_y)],
             6, U["eye_rim"], cap_end=U["eye"]))
     # --- Tail: segmented, curling up behind. Hinge = its root in the body. ---
     els += tube("Tail", "Tail", [[0, 4.4, 2.6], [0, 6.6, 5.4], [0, 10.0, 6.8], [0, 13.0, 6.2]],
@@ -374,8 +376,8 @@ def cat_spec() -> dict:
         {"name": "EarR", "origin": [2.8, 14.6, 0]},
         {"name": "Muzzle", "origin": [0, 10.5, -3.6]},
         {"name": "Nose", "origin": [0, 11.4, -4.4]},
-        {"name": "EyeL", "origin": [-1.95, 13.3, -3.6]},
-        {"name": "EyeR", "origin": [1.95, 13.3, -3.6]},
+        {"name": "EyeL", "origin": [-1.65, 12.9, -3.4]},
+        {"name": "EyeR", "origin": [1.65, 12.9, -3.4]},
         {"name": "Tail", "origin": [0, 4.4, 2.6]},
     ]
     return {
