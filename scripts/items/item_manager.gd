@@ -125,6 +125,10 @@ func _on_city_generated(city_seed: int) -> void:
 		for line in loot_table.spawns:
 			if line != null:
 				_place_loot_line(line, rng)
+	# MEOW-MART CLEARANCE (scripts/district_twist.gd): a prize right in front of the door.
+	var twist := DistrictTwist.instance
+	if DistrictTwist.is_clearance() and twist.clearance_prize_item != "" and catalog.has(twist.clearance_prize_item):
+		add_spawn_point(twist.clearance_prize_item, city.meow_mart_position + city.meow_mart_outward * 3.0, 0.0)
 	# Anything else that places things per city (the heist's manholes and payphones) goes now,
 	# in a fixed order.
 	get_tree().call_group("item_placers", "place_items", self, city_seed)
@@ -136,12 +140,18 @@ func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
 		push_warning("[Items] Loot table: no item card called '%s' in res://items/" % line.item_id)
 		return
 	var door := city.meow_mart_position
-	for i in line.count:
+	var count := line.count
+	if line.where == LootSpawn.Where.OUTSIDE_MEOW_MART and line.item_id == "fish" and DistrictTwist.is_clearance():
+		count *= DistrictTwist.instance.clearance_fish_multiplier  # CLEARANCE SALE: more fish (district_twist.gd)
+	for i in count:
 		var spot := Vector3.ZERO
 		match line.where:
 			LootSpawn.Where.OUTSIDE_MEOW_MART:
-				# A row along the sidewalk outside the door, 1.3 m apart, centred on it.
-				spot = door + Vector3((i - (line.count - 1) / 2.0) * 1.3, 0, -0.5)
+				# A row along the sidewalk outside the door, 1.3 m apart, centred on it. (More than a
+				# row's worth, in a CLEARANCE: the extra rows line up further out in the street.)
+				var row := i / line.count
+				var in_row := i % line.count
+				spot = door + Vector3((in_row - (line.count - 1) / 2.0) * 1.3, 0, -0.5) + city.meow_mart_outward * 1.3 * row
 			LootSpawn.Where.FIXED_SPOT:
 				spot = line.spot + Vector3(i * 0.8, 0, 0)
 			_:  # SIDEWALK

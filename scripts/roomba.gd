@@ -404,6 +404,7 @@ func _can_chase(cat: CatPlayer, reach: float) -> bool:
 		reach *= HeatMeter.instance.sight_multiplier()
 	if RoombaPatrol.instance.deep_clean_extra > 0:
 		reach *= RoombaPatrol.instance.swarm_sight_multiplier  # the DEEP CLEAN: they hunt you down
+	reach *= DistrictTwist.sight_multiplier()  # a BLACKOUT (scripts/district_twist.gd): they see less far
 	return Motion.flat_distance(cat.global_position, global_position) < reach
 
 

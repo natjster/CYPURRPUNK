@@ -153,7 +153,8 @@ func _physics_process(delta: float) -> void:
 	var cats_up := Game.instance.players_up_top()
 	if cats_up > 0:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)
-		heat = minf(heat + heat_per_second * crowd * _mainframe_multiplier() * delta, MAX_HEAT)
+		# (A MEOW-MART CLEARANCE, scripts/district_twist.gd, makes it climb faster.)
+		heat = minf(heat + heat_per_second * crowd * _mainframe_multiplier() * DistrictTwist.heat_multiplier() * delta, MAX_HEAT)
 	elif heat < MAX_HEAT and FishHeist.instance != null \
 			and (FishHeist.instance.every_exit_is_open() or FishHeist.instance.everyone_has_been_up()):
 		# Everyone's done (extracted / knocked out) after every gang's exit opened, or every cat has used

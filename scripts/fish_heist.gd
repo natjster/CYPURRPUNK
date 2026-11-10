@@ -392,8 +392,14 @@ func _physics_process(delta: float) -> void:
 			# (Passengers of the same gang extract this same frame; a rival riding along stays in.)
 			if their_car.driver_id == 0 and their_car.passenger_ids.is_empty():
 				their_car.park()
-		Wallet.instance.earn(player_id, earned + quest_bonus, "extracted %d loot" % loot.size())
-		_extracted.rpc(player_id, earned, quest_bonus)
+		# BIN DAY (scripts/district_twist.gd): the boss pays for every mess made on this trip.
+		var chaos_bonus := 0
+		if DistrictTwist.is_bin_day() and MessManager.instance != null:
+			chaos_bonus = MessManager.instance.player_messes_this_trip(player_id) * DistrictTwist.instance.bin_day_cash_per_mess
+		if MessManager.instance != null:
+			MessManager.instance.clear_trip_messes(player_id)
+		Wallet.instance.earn(player_id, earned + quest_bonus + chaos_bonus, "extracted %d loot" % loot.size())
+		_extracted.rpc(player_id, earned, quest_bonus, chaos_bonus)
 
 
 ## Host, while sealed: when time's up, whoever is still up top goes down (loot and all), then a
@@ -449,15 +455,19 @@ func _set_state(is_sealed: bool, gangs_revealed: Array, gangs_opened: Array) -> 
 
 # --- What the host tells everyone (runs on every computer) ---
 
-## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now.
+## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now;
+## chaos_bonus = BIN DAY's pay for the messes made on the trip (scripts/district_twist.gd).
 @rpc("authority", "call_local", "reliable")
-func _extracted(player_id: int, earned: int, quest_bonus: int = 0) -> void:
-	Events.player_extracted.emit(player_id, earned, quest_bonus)  # (scripts/events.gd)
+func _extracted(player_id: int, earned: int, quest_bonus: int = 0, chaos_bonus: int = 0) -> void:
+	# (The chaos bonus counts as a bonus for the RAID REPORT.)
+	Events.player_extracted.emit(player_id, earned, quest_bonus + chaos_bonus)  # (scripts/events.gd)
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
 	var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
 	if quest_bonus > 0:
 		popup_text += "\nQUEST DONE +$%d" % quest_bonus
+	if chaos_bonus > 0:
+		popup_text += "\nCHAOS BONUS +$%d" % chaos_bonus
 	Hud.popup(popup_text, 2.5, PlayerId.slot_of(player_id))  # big fading text on THEIR screen (scripts/ui/hud.gd)
 	Sound.play("extract")
 	Seats.rumble(player_id, 0.5, 0.2, 0.3)  # a happy buzz on their controller

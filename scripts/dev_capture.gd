@@ -138,6 +138,11 @@ extends Node
 ##   --face_mess       then stand 4.5 m from the first mess, looking at it (screenshots)
 ##   --bait_mess=D     (host, after the above) put the nearest VAC-COP that tidies D metres from the first mess
 ##   --mess_log=N      every N frames print the props and what the bots are doing (until the snap)
+##   --twist=NAME      DISTRICT TWIST for every district, the first included (scripts/district_twist.gd):
+##                     blackout | bin_day | clearance | high_alert | none. Prints "DevCapture twist" lines
+##                     (lamps, sight, props, Meow-Mart loot, bots, CRT intel), and after --kill_roombas how
+##                     much SCRAP lies on the street. --twist_heat=F measures the heat rise over F physics
+##                     frames (with --deploy). --twist_rolls = what 1000 districts would roll (no --twist needed).
 ##   --meow[=F]        F frames in (default 30), press MEOW (the taunt). With --bait_roomba=18 a bot out of
 ##                     sight should hear it and come (INVESTIGATE)
 ##   --spectate[=S]    (host, with --add_local=1) THE CAT-CAM (scripts/spectator.gd): the couch cat goes up
@@ -218,6 +223,10 @@ func _ready() -> void:
 			Teams.picks[seat] = int(gangs[seat])
 	if args.has("mode"):  # (after --teams, so "--teams=0,1 --mode=coop" = gangs picked, then CO-OP)
 		Teams.turf_war_pick = args["mode"] == "turf"
+	if args.has("twist"):  # --twist=blackout: every district gets that DISTRICT TWIST (district_twist.gd)
+		DistrictTwist.forced_kind = DistrictTwist.kind_from_text(args["twist"])
+		if DistrictTwist.forced_kind < 0:
+			push_warning("DevCapture: unknown --twist=%s" % args["twist"])
 
 	if args.has("saved_cats"):
 		var look_rng := RandomNumberGenerator.new()
@@ -309,6 +318,11 @@ func _ready() -> void:
 		if args.has("tutorial_auto"):
 			await _tutorial_auto(player)
 			return
+		if args.has("twist") or args.has("twist_rolls"):
+			_print_twist(scene, args)
+		Events.player_extracted.connect(func(id: int, loot: int, bonus: int) -> void:
+			print("DevCapture extracted: player %d loot $%d bonus $%d (twist %s) cash now $%d" % [id, loot, bonus,
+				DistrictTwist.name_of(DistrictTwist.current_kind()), Wallet.instance.cash_of(id)]))
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
@@ -642,6 +656,11 @@ func _ready() -> void:
 						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
 						break
 				await get_tree().physics_frame
+			if args.has("twist"):
+				for i in 5:
+					await get_tree().physics_frame
+				print("DevCapture twist scrap: %d regular kills -> %d SCRAP on the street (twist %s)" % [int(args["kill_roombas"]),
+					_count_world_items("scrap"), DistrictTwist.name_of(DistrictTwist.current_kind()) if DistrictTwist.current_kind() != 0 else "NONE"])
 		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost"):
 			await _mess_tests(scene, player, args)
 		if args.has("spectate") or args.has("spectate_ko"):
@@ -1742,10 +1761,90 @@ func _watch_car_camera(car: GetawayCar, every: int) -> void:
 			print("DevCapture car_watch: look_yaw=%.2f look_pitch=%.2f speed=%.1f" % [car.look_yaw, car.look_pitch, -car.global_basis.z.dot(car.linear_velocity)])
 
 
+## DISTRICT TWISTS (scripts/district_twist.gd): what this district's twist did to the city.
+func _print_twist(scene: Node, args: Dictionary) -> void:
+	var twist := DistrictTwist.instance
+	if args.has("twist_rolls"):
+		# What 1000 districts in a row (district 2 onwards) would roll, from seeds 1..1000.
+		var counts := {}
+		var saved := twist.kind
+		var saved_forced := DistrictTwist.forced_kind
+		DistrictTwist.forced_kind = -1
+		var repeats := 0
+		for city_seed in range(1, 1001):
+			var rolled := twist.roll(city_seed, 2)
+			if rolled != DistrictTwist.Kind.NONE and rolled == twist.kind:
+				repeats += 1
+			twist.kind = rolled
+			counts[DistrictTwist.name_of(rolled) if rolled != 0 else "NONE"] = int(counts.get(DistrictTwist.name_of(rolled) if rolled != 0 else "NONE", 0)) + 1
+		twist.kind = saved
+		DistrictTwist.forced_kind = saved_forced
+		print("DevCapture twist rolls (1000 districts): %s back-to-back repeats=%d district1=%s tutorial-safe" % [counts, repeats,
+			DistrictTwist.name_of(twist.roll(42, 1)) if DistrictTwist.forced_kind < 0 else "(forced)"])
+	var bots := 0  # (counted now, before any --kill_roombas)
+	var sight := 0.0
+	for node in scene.get_node("Roombas").get_children():
+		var bot := node as Roomba
+		if bot != null and not bot.is_boss:
+			bots += 1
+			sight = bot.sight_range * DistrictTwist.sight_multiplier()
+	for i in 30:
+		await get_tree().physics_frame
+	var city := scene.get_node("City") as CityGenerator
+	var lamps_lit := 0
+	var lamps := 0
+	for child in city.get_children():
+		var cone := child.get_node_or_null("LightCone") as Light3D
+		if cone != null:
+			lamps += 1
+			lamps_lit += 1 if cone.visible else 0
+	var door := city.meow_mart_position
+	var mart_fish := 0
+	var mart_koi := 0
+	for id in ItemManager.instance.world:
+		var entry: Dictionary = ItemManager.instance.world[id]
+		if (entry.pos as Vector3).distance_to(door) < 7.0:
+			mart_fish += 1 if entry.item == "fish" else 0
+			mart_koi += 1 if entry.item == "golden_koi" else 0
+	var kinds := {}
+	for p in city.mess_props:
+		var key: String = MessProp.Kind.keys()[p.kind]
+		kinds[key] = int(kinds.get(key, 0)) + 1
+	var intel: Array = []
+	for team in 2:
+		var hub := UndergroundHub.for_team(team)
+		if hub != null and hub._crt_intel != null:
+			intel.append(hub._crt_intel.text)
+	print("DevCapture twist: %s district=%d city=#%d lamps lit %d/%d ambient=%.2f moon=%.2f bot sight=%.1f m (x%.2f) mess props=%d %s" % [
+		DistrictTwist.name_of(twist.kind) if twist.kind != 0 else "NONE", twist.district_number, city.city_seed, lamps_lit, lamps,
+		(scene.get_node("WorldEnvironment") as WorldEnvironment).environment.ambient_light_energy,
+		(scene.get_node("Moonlight") as Light3D).light_energy, sight, DistrictTwist.sight_multiplier(), city.mess_props.size(), kinds])
+	print("DevCapture twist: meow-mart fish=%d koi=%d | regular bots=%d (x%.2f) | heat x%.2f | CRT intel %s | boss news \"%s\" | send-off \"%s\"" % [
+		mart_fish, mart_koi, bots, DistrictTwist.bot_multiplier(), DistrictTwist.heat_multiplier(), intel, twist.news_line(),
+		DistrictTwist.send_off_line("(usual)")])
+	if args.has("twist_heat") and multiplayer.is_server():
+		var frames := int(args["twist_heat"])
+		var before := HeatMeter.instance.heat
+		for i in frames:
+			await get_tree().physics_frame
+		var rise := HeatMeter.instance.heat - before
+		print("DevCapture twist heat: +%.2f in %d frames = %.3f/s (base %.3f/s, twist x%.2f, up top %d)" % [rise, frames,
+			rise / (frames / float(Engine.physics_ticks_per_second)), HeatMeter.instance.heat_per_second,
+			DistrictTwist.heat_multiplier(), Game.instance.players_up_top()])
+
+
+## How many of this item lie on the street / sewer floors right now.
+func _count_world_items(item_id: String) -> int:
+	var count := 0
+	for id in ItemManager.instance.world:
+		count += 1 if ItemManager.instance.world[id].item == item_id else 0
+	return count
+
+
 ## Every RAID REPORT that goes up (any computer): one line for the crew, one per card.
 func _print_report(report: Dictionary) -> void:
-	print("DevCapture report: district %d ending=\"%s\" total=$%d turf=%s cards=%d seconds=%.1f reveal=%.1f invite=\"%s\" mess_shown=%s" % [
-		int(report.district), report.ending, int(report.total), report.turf, report.rows.size(),
+	print("DevCapture report: district %d twist=\"%s\" ending=\"%s\" total=$%d turf=%s cards=%d seconds=%.1f reveal=%.1f invite=\"%s\" mess_shown=%s" % [
+		int(report.district), str(report.get("twist", "")), report.ending, int(report.total), report.turf, report.rows.size(),
 		float(report.seconds_left), float(report.reveal_end), report.invite, report.show_mess])
 	for gang in report.gangs:
 		print("DevCapture report gang: %s $%d" % [gang.name, int(gang.total)])

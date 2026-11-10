@@ -199,7 +199,8 @@ func start_district() -> void:
 	deep_clean_extra = 0
 	_kills_toward_boss = 0
 	_bosses_called = 0
-	for i in roomba_count:
+	# (HIGH ALERT, scripts/district_twist.gd: more of them.)
+	for i in roundi(roomba_count * DistrictTwist.bot_multiplier()):
 		_spawn_one()
 	var mainframe := Mainframe.instance
 	# A low MAINFRAME (scripts/mainframe.gd) starts the district hotter: the heat levels it
@@ -299,8 +300,10 @@ func _follow_the_heat() -> void:
 		var roomba := child as Roomba
 		if roomba != null and not roomba.is_boss and not roomba.is_queued_for_deletion():
 			regulars.append(roomba)
-	var wanted := roomba_count + heat.extra_roombas() + deep_clean_extra \
+	# (HIGH ALERT, scripts/district_twist.gd, multiplies the patrol; the DEEP CLEAN swarm stays the same.)
+	var patrol := roomba_count + heat.extra_roombas() \
 		+ floori(extra_roombas_per_player * maxi(Game.instance.player_count() - 2, 0))
+	var wanted := roundi(patrol * DistrictTwist.bot_multiplier()) + deep_clean_extra
 	if regulars.size() + _respawn_at.size() < wanted:
 		for i in (swarm_spawns_per_frame if deep_clean_extra > 0 else 1):
 			_spawn_one(deep_clean_extra > 0)

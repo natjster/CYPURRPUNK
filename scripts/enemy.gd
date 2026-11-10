@@ -304,10 +304,15 @@ func explode() -> void:
 	stomach.clear()
 	if drop_on_destroy != "":
 		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
-	# SCRAP MAGNET (scripts/upgrades.gd): the cat who smashed a regular bot may get a SCRAP out of it.
-	elif not is_boss and killed_by != 0 and randf() < Upgrades.scrap_magnet_chance(killed_by):
-		ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position + Vector3(0.6, 0, 0.6))
-		print("[Enemy] SCRAP MAGNET: %s dropped scrap for player %d" % [name, killed_by])
+	elif not is_boss and killed_by != 0:
+		if DistrictTwist.roll_scrap_drop():
+			# HIGH ALERT (scripts/district_twist.gd): even the little ones carry SCRAP, sometimes.
+			ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position)
+			print("[Enemy] %s dropped SCRAP (HIGH ALERT)" % name)
+		# SCRAP MAGNET (scripts/upgrades.gd): the cat who smashed a regular bot may get a SCRAP out of it.
+		if randf() < Upgrades.scrap_magnet_chance(killed_by):
+			ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position + Vector3(0.6, 0, 0.6))
+			print("[Enemy] SCRAP MAGNET: %s dropped scrap for player %d" % [name, killed_by])
 	# Smashing an enemy makes the city angrier... but smashing a boss cools it right down.
 	var heat := HeatMeter.instance
 	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)

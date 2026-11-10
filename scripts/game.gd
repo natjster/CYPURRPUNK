@@ -236,6 +236,9 @@ func _receive_mode(turf_war: bool) -> void:
 func _begin_game(city_seed: int, showcase: bool = false) -> void:
 	# TURF WAR only if it was picked on a multiplayer landing page (SOLO / TUTORIAL: always CO-OP).
 	_set_mode(Seats.coop and Teams.turf_war_pick and not _tutorial_run)
+	# District 1: never a DISTRICT TWIST (unless a test forces one: scripts/district_twist.gd).
+	var twist := $Twist as DistrictTwist
+	twist.set_twist(twist.roll(city_seed, 1), 1)
 	city.generate(city_seed, showcase)
 	_start_playing()
 	_spawn_cat(PlayerId.make(1, 0))  # the host's own (first) player
@@ -304,24 +307,34 @@ func _on_settings_closed() -> void:
 ## (Everyone should be down in the sewers by now: the DEEP CLEAN knocked out anyone up top.)
 func new_district() -> void:
 	var new_seed := randi_range(1, 99999)
-	print("[Game] New district: city #%d" % new_seed)
-	_receive_city_seed.rpc(new_seed)  # everyone else builds it...
+	# Maybe a DISTRICT TWIST (scripts/district_twist.gd: blackout, bin day...), rolled from the seed.
+	# It's set BEFORE the city is built: the city, the loot and the patrol all depend on it.
+	var twist := $Twist as DistrictTwist
+	var number := twist.district_number + 1
+	var kind := twist.roll(new_seed, number)
+	print("[Game] New district: city #%d (district %d, twist %s)" % [new_seed, number, DistrictTwist.name_of(kind) if kind != DistrictTwist.Kind.NONE else "NONE"])
+	_receive_city_seed.rpc(new_seed, kind, number)  # everyone else builds it...
+	twist.set_twist(kind, number)
 	city.generate(new_seed)  # ...and so do we
 	GameSystems.call_all(get_tree(), "start_district")  # heat to calm, fresh patrol, car parked...
 	_district_news.rpc()
 
 
 ## Host -> everyone: the news about the new district, from each player's own gang boss
-## (Don or Pawnie: Boss Name on their hub, scripts/hub.gd).
+## (Don or Pawnie: Boss Name on their hub, scripts/hub.gd). A DISTRICT TWIST gets its own line
+## (the "What the boss says" lines on the Twist node, scripts/district_twist.gd).
 @rpc("authority", "call_local", "reliable")
 func _district_news() -> void:
+	var line := ($Twist as DistrictTwist).news_line()
 	for cat in playing_cats():
-		Hud.show_message("%s: We're movin' to a new part of town. Hatch is ready when you are." % UndergroundHub.of(cat).boss_name, 5.0, cat.slot)
+		Hud.show_message("%s: %s" % [UndergroundHub.of(cat).boss_name, line], 7.0, cat.slot)
 
 
 ## Host → one player: "build city number X". Every computer builds the identical city.
+## twist / district = this district's DISTRICT TWIST and number (district_twist.gd), set first.
 @rpc("authority", "call_remote", "reliable")
-func _receive_city_seed(city_seed: int) -> void:
+func _receive_city_seed(city_seed: int, twist: int = DistrictTwist.Kind.NONE, district: int = 1) -> void:
+	($Twist as DistrictTwist).set_twist(twist, district)
 	city.generate(city_seed)
 
 
@@ -519,7 +532,8 @@ func _on_peer_connected(peer_id: int) -> void:
 		return
 	if multiplayer.is_server():
 		_receive_mode.rpc_id(peer_id, _turf_war_game)  # CO-OP or TURF WAR first (it shapes the city)...
-		_receive_city_seed.rpc_id(peer_id, city.city_seed)  # ...then build the same city
+		var twist := $Twist as DistrictTwist
+		_receive_city_seed.rpc_id(peer_id, city.city_seed, twist.kind, twist.district_number)  # ...then build the same city
 		# Then every game system catches them up: items, cash, quests, HP, heat, who drives...
 		# (scripts/game_systems.gd)
 		GameSystems.call_all(get_tree(), "send_state_to", [peer_id])

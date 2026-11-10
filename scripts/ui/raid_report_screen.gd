@@ -208,7 +208,9 @@ func _build(report: Dictionary, roomy: bool) -> void:
 	_cell_gap = -line_squeeze if compact else 0
 	_grid.add_theme_constant_override("v_separation", 1 if compact else 2)
 	_title.add_theme_font_size_override("font_size", compact_title_size if compact else title_size)
-	_subtitle.text = "DISTRICT %d — %s" % [int(report.district), report.ending]
+	# "DISTRICT 2 — BLACKOUT — CLEAN GETAWAY" when the district had a DISTRICT TWIST (district_twist.gd).
+	var twist := str(report.get("twist", ""))
+	_subtitle.text = "DISTRICT %d — %s%s" % [int(report.district), (twist + " — ") if twist != "" else "", report.ending]
 	_subtitle.add_theme_color_override("font_color", report.ending_color)
 	# The column names.
 	var dim_color := Color(0.6, 0.55, 0.75)

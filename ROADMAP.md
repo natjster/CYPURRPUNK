@@ -241,7 +241,10 @@ a world that hates mess.
   Workbench**, faster cats, a turbo engine, two new Blockbench rides (**Neon Zoom-Bike**, **Armored Meow-Van**)
   your gang can switch to, more max HP, scrap-dropping bots, better loot prices, bigger snack stacks, harder melee
   and an earlier exit. Crew upgrades (engine, capacitor, insider tunnel) help the whole gang. §25.)
-- **Claude:** three or four district twists.
+- [x] **Claude:** three or four district twists. (Done 10 Nov 2026: four twists, from district 2 on, 60% chance each
+  district: **BLACKOUT** (lamps off, bots see less), **BIN DAY** (2x trash, $10 a mess on extraction), **MEOW-MART
+  CLEARANCE** (2x fish + a koi by the door, faster heat), **HIGH ALERT** (more bots, they drop scrap). Told by the boss
+  and the Mainframe CRT in the sewers, named on the Raid Report. §26.)
 - [x] **Claude:** two or three more music tracks using the existing music tools. (Done 10 Nov 2026: four 90s PS1
   arcade techno / drum & bass loops made by `tools/make_music_tracks.py`: NEON APEX and ANTI-GRAV WHISKERS join
   the old city track in a per-district street rotation, HOT PAWS plays once the exit opens, TOTAL SANITATION during

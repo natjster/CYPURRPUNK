@@ -313,7 +313,8 @@ func build_report() -> Dictionary:
 				"color": Teams.color_of(team) if turf else Color(1, 0.45, 0.85), "total": gang_total})
 	var ending := _crew_ending(rows)
 	var reveal_end := intro_seconds + rows.size() * card_seconds + 0.4 + rows.size() * award_seconds
-	return {"district": _district, "ending": ending[0], "ending_color": ending[1], "total": total,
+	# twist = this district's DISTRICT TWIST name ("" = none: scripts/district_twist.gd).
+	return {"district": _district, "twist": DistrictTwist.name_of(DistrictTwist.current_kind()), "ending": ending[0], "ending_color": ending[1], "total": total,
 		"turf": turf, "rows": rows, "gangs": gangs, "invite": discord_invite, "show_mess": show_mess_stat,
 		"intro": intro_seconds, "card": card_seconds, "award": award_seconds,
 		"reveal_end": reveal_end, "seconds_left": maxf(report_seconds, reveal_end + read_seconds_after_awards + 2.0),

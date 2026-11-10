@@ -115,6 +115,17 @@ const BUILDING_TINTS: Array[Color] = [
 var city_seed: int = 0
 ## Front door of Meow-Mart (fish_heist.gd lines fish up outside it).
 var meow_mart_position: Vector3
+## Which way is "out into the street" from Meow-Mart's door (a flat unit vector, +z or -z).
+var meow_mart_outward: Vector3 = Vector3.BACK
+## DISTRICT TWISTS (scripts/district_twist.gd), read when the city is built: BIN DAY's prop
+## multiplier and whether it's a BLACKOUT. (The twist is set before generate() on every computer.)
+var _props_x: float = 1.0
+var _blackout: bool = false
+## BIN DAY's EXTRA props draw their random numbers from this one (not _rng), so the rest of the
+## city (buildings, lamps, the normal props) comes out exactly as it would on any other day.
+var _bin_rng := RandomNumberGenerator.new()
+## A street lamp's bulb with the power cut (BLACKOUT): dark grey, no glow. Made once, shared.
+var _dead_bulb: ShaderMaterial
 var _meow_mart_lot: Vector3  # centre of the lot Meow-Mart is built on (picked in generate)
 
 var _rng := RandomNumberGenerator.new()
@@ -143,6 +154,10 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 	mess_props.clear()
 	loudspeakers.clear()
 	_taken_spots.clear()
+	# (Showcase cities = the start menu / tutorial: never twisted.)
+	_props_x = 1.0 if showcase else DistrictTwist.prop_multiplier()
+	_bin_rng.seed = new_seed ^ 0xB1DA7
+	_blackout = DistrictTwist.is_blackout() and not showcase
 
 	var pitch := block_size + street_width  # distance from one block to the next
 	var city_half_width := blocks_per_side * pitch * 0.5
@@ -325,6 +340,7 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 
 	_add_glow_light(Vector3(center.x, 4.0, front_z + street_side.y * 1.5), pink)
 	meow_mart_position = Vector3(center.x, 0, front_z + street_side.y * 1.0)
+	meow_mart_outward = Vector3(0, 0, street_side.y)
 
 	# A bin on one side of the door, cones on the other (the loot lines up in the middle, about
 	# 2.6 m either side of the door, so these stand 4.4 m out, by the corners of the shop).
@@ -335,6 +351,13 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 		_add_cone(Vector3(center.x - bin_side * 4.4, 0, by_wall), _rng.randf() * TAU, false)
 		_add_cone(Vector3(center.x - bin_side * 3.7, 0, by_wall), _rng.randf() * TAU, _rng.randf() < 0.3)
 		_add_box(Vector3(center.x + bin_side * 3.6, 0, by_wall), _rng.randf() * TAU)
+		if _props_x > 1.0:
+			# BIN DAY: a second bin, cone and box by each corner, a step further out (still clear
+			# of the fish lined up by the door: they stop 2.6 m out, these are 4.4+ m out).
+			var further := by_wall + street_side.y * 1.3
+			_add_bin(Vector3(center.x - bin_side * 4.6, 0, further), _bin_rng.randf() * TAU)
+			_add_cone(Vector3(center.x + bin_side * 4.6, 0, further), _bin_rng.randf() * TAU, false)
+			_add_box(Vector3(center.x + bin_side * 4.6, 0, further + street_side.y * 1.1), _bin_rng.randf() * TAU)
 
 
 # --- Empty yards ---
@@ -364,20 +387,39 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 		var swap := spots[i]
 		spots[i] = spots[j]
 		spots[j] = swap
-	for i in _rng.randi_range(yard_bins_min, maxi(yard_bins_min, yard_bins_max)):
+	var bins := _rng.randi_range(yard_bins_min, maxi(yard_bins_min, yard_bins_max))
+	for i in bins:
 		if not spots.is_empty():
-			_add_bin(spots.pop_back() + _jiggle(), _rng.randf() * TAU)
-	for i in _rng.randi_range(yard_cones_min, maxi(yard_cones_min, yard_cones_max)):
+			_add_bin(spots.pop_back() + _jiggle(_rng), _rng.randf() * TAU)
+	var cones := _rng.randi_range(yard_cones_min, maxi(yard_cones_min, yard_cones_max))
+	for i in cones:
 		if not spots.is_empty():
-			_add_cone(spots.pop_back() + _jiggle(), _rng.randf() * TAU, _rng.randf() < 0.4)
-	for i in _rng.randi_range(yard_boxes_min, maxi(yard_boxes_min, yard_boxes_max)):
+			_add_cone(spots.pop_back() + _jiggle(_rng), _rng.randf() * TAU, _rng.randf() < 0.4)
+	var boxes := _rng.randi_range(yard_boxes_min, maxi(yard_boxes_min, yard_boxes_max))
+	for i in boxes:
 		if not spots.is_empty():
-			_add_box(spots.pop_back() + _jiggle(), _rng.randf() * TAU)
+			_add_box(spots.pop_back() + _jiggle(_rng), _rng.randf() * TAU)
+	# BIN DAY (scripts/district_twist.gd): the pile grows (2x = as many again), in the spots left over.
+	if _props_x > 1.0:
+		for i in _extra(bins):
+			if not spots.is_empty():
+				_add_bin(spots.pop_back() + _jiggle(_bin_rng), _bin_rng.randf() * TAU)
+		for i in _extra(cones):
+			if not spots.is_empty():
+				_add_cone(spots.pop_back() + _jiggle(_bin_rng), _bin_rng.randf() * TAU, false)
+		for i in _extra(boxes):
+			if not spots.is_empty():
+				_add_box(spots.pop_back() + _jiggle(_bin_rng), _bin_rng.randf() * TAU)
+
+
+## BIN DAY: how many EXTRA props to add to a normal count (2x multiplier: as many again).
+func _extra(count: int) -> int:
+	return roundi(count * _props_x) - count
 
 
 ## A small random nudge (up to 0.2 m) so a pile doesn't look laid out on a grid.
-func _jiggle() -> Vector3:
-	return Vector3(_rng.randf_range(-0.2, 0.2), 0, _rng.randf_range(-0.2, 0.2))
+func _jiggle(rng: RandomNumberGenerator) -> Vector3:
+	return Vector3(rng.randf_range(-0.2, 0.2), 0, rng.randf_range(-0.2, 0.2))
 
 
 # --- Street props: trash bins and traffic cones (real models, made in Blockbench) ---
@@ -387,35 +429,47 @@ func _jiggle() -> Vector3:
 ## each sidewalk where loot and payphones go (ItemManager.random_sidewalk_spot: up to 9 m from
 ## the middle of a side; corners are 11.5 m out).
 func _place_corner_props(pitch: float) -> void:
-	var in_from_edge := block_size * 0.5 - 0.5  # half a metre in from the kerb
+	# BIN DAY (scripts/district_twist.gd): a bare corner may get something after all, so that
+	# (with a 2x multiplier) about twice as many corners have props. Those extra props draw their
+	# random numbers from _bin_rng: the normal corners are exactly the same as on any other day.
+	var extra_chance := 0.0
+	if _props_x > 1.0 and corner_prop_chance < 1.0:
+		extra_chance = clampf((_props_x - 1.0) * corner_prop_chance / (1.0 - corner_prop_chance), 0.0, 1.0)
 	for bx in blocks_per_side:
 		for bz in blocks_per_side:
 			var block_center := Vector3((bx + 0.5 - blocks_per_side / 2.0) * pitch, 0, (bz + 0.5 - blocks_per_side / 2.0) * pitch)
 			for corner in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-				if _rng.randf() >= corner_prop_chance:
-					continue
-				var along := _rng.randf_range(9.6, 10.2)
-				# Which of the corner's two kerbs: the one along the z axis or the one along x.
-				# "back" = the way along that kerb towards the middle of the sidewalk.
-				var spot: Vector3
-				var back: Vector3
-				if _rng.randf() < 0.5:
-					spot = block_center + Vector3(corner.x * in_from_edge, 0, corner.y * along)
-					back = Vector3(0, 0, -corner.y)
-				else:
-					spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
-					back = Vector3(-corner.x, 0, 0)
-				_taken_spots.append(spot)
-				var roll := _rng.randf()
-				if roll < 0.42:
-					_add_bin(spot, _rng.randf() * TAU)
-				elif roll < 0.72:
-					_add_cone(spot, _rng.randf() * TAU, _rng.randf() < 0.25)
-				elif roll < 0.85:
-					_add_box(spot, _rng.randf() * TAU)
-				else:  # a bin with a cone next to it (towards the corner, away from the loot)
-					_add_bin(spot, _rng.randf() * TAU)
-					_add_cone(spot - back * 0.8, _rng.randf() * TAU, false)
+				if _rng.randf() < corner_prop_chance:
+					_corner_prop(block_center, corner, _rng)
+				elif extra_chance > 0.0 and _bin_rng.randf() < extra_chance:
+					_corner_prop(block_center, corner, _bin_rng)
+
+
+## One sidewalk corner's prop(s), drawn from "rng" (_rng normally, _bin_rng for BIN DAY extras).
+func _corner_prop(block_center: Vector3, corner: Vector2, rng: RandomNumberGenerator) -> void:
+	var in_from_edge := block_size * 0.5 - 0.5  # half a metre in from the kerb
+	var along := rng.randf_range(9.6, 10.2)
+	# Which of the corner's two kerbs: the one along the z axis or the one along x.
+	# "back" = the way along that kerb towards the middle of the sidewalk.
+	var spot: Vector3
+	var back: Vector3
+	if rng.randf() < 0.5:
+		spot = block_center + Vector3(corner.x * in_from_edge, 0, corner.y * along)
+		back = Vector3(0, 0, -corner.y)
+	else:
+		spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
+		back = Vector3(-corner.x, 0, 0)
+	_taken_spots.append(spot)
+	var roll := rng.randf()
+	if roll < 0.42:
+		_add_bin(spot, rng.randf() * TAU)
+	elif roll < 0.72:
+		_add_cone(spot, rng.randf() * TAU, rng.randf() < 0.25)
+	elif roll < 0.85:
+		_add_box(spot, rng.randf() * TAU)
+	else:  # a bin with a cone next to it (towards the corner, away from the loot)
+		_add_bin(spot, rng.randf() * TAU)
+		_add_cone(spot - back * 0.8, rng.randf() * TAU, false)
 
 
 ## OVERCLEAN's loudspeaker poles: each block may get one (Loudspeaker Chance), on a random corner,
@@ -568,3 +622,17 @@ func _add_lamp(at: Vector3, facing: float) -> void:
 	lamp.position = at
 	lamp.rotation.y = facing
 	add_child(lamp)
+	if _blackout:
+		# BLACKOUT (scripts/district_twist.gd): the power's cut. No light, a dead grey bulb.
+		(lamp.get_node("LightCone") as Light3D).visible = false
+		(lamp.get_node("Bulb") as MeshInstance3D).set_surface_override_material(0, _dead_bulb_material())
+
+
+## The dark grey, unlit bulb of a lamp with no power (made once, shared by every lamp).
+func _dead_bulb_material() -> ShaderMaterial:
+	if _dead_bulb == null:
+		_dead_bulb = ShaderMaterial.new()
+		_dead_bulb.shader = LevelKit.PSX_SHADER
+		_dead_bulb.set_shader_parameter("albedo_color", Color(0.16, 0.15, 0.17))
+		_dead_bulb.set_shader_parameter("emission_energy", 0.0)
+	return _dead_bulb

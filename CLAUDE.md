@@ -396,6 +396,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `Hud.key_for("interact", seat)` blinking. Reveal + sounds `report_open/row/award` once per computer. Test: `--raid_report[=N] [--raid_report_after=F]`,
   `--report_ready=S,S:pad,S:key,S:stick,spare:D,S:pause [--report_ready_delay=N]`, `DevCapture report` / `report screen` / `after report` lines.
 
+- DISTRICT TWISTS (SETUP_GUIDE §26): `scripts/district_twist.gd` (`DistrictTwist.instance`, node `Twist` under Main ABOVE City/Items).
+  `Kind` NONE/BLACKOUT/BIN_DAY/CLEARANCE/HIGH_ALERT. Host `roll(seed, number)` in `Game.new_district` (rng `seed ^ 0x77157`, `twist_chance`,
+  no repeat of `kind`; district 1 + tutorial = NONE), sent WITH the seed: `_receive_city_seed(seed, twist, district)` -> `set_twist` before
+  `city.generate`. Ask `is_blackout()/...` or `sight/prop/heat/bot_multiplier()`, `roll_scrap_drop()`. BIN DAY extras use city `_bin_rng`
+  (layout unchanged); chaos bonus = `MessManager.player_messes_this_trip` in fish_heist (`_extracted` 4th arg). Boss news `news_line()`,
+  send-off `send_off_line()` (npc.gd), hub CRT `_crt_intel`, report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
+
 CHARACTER + BOT MODELS (Phase 1, 10 Nov 2026): `scenes/cat_model.tscn` = `models/cat.glb` (armless PS1 mascot cat, 370 tris,
 64x64 GREY texture multiplied by the look colours) + `scripts/cat/cat_model.gd` (exports fur/markings/eyes/nose_color; NPC scenes'
 `Model` node IS an instance of it). Group pivots = hinges: legs at the hip, Tail at its root (cat_player `_swing_leg` / tail sway just

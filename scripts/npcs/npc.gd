@@ -280,7 +280,11 @@ func _choose(cat: CatPlayer, choice: NpcChoice) -> void:
 	if choice.go_to.is_empty():
 		NpcDialog.for_cat(cat).close()  # close first, so an action can open something else
 	if not choice.message.is_empty():
-		Hud.show_message("%s: %s" % [npc_name, choice.message], 4.0, cat.slot)
+		var message := choice.message
+		if choice.action == "send_up_top":
+			# A DISTRICT TWIST (scripts/district_twist.gd): the boss's send-off reminds you of it.
+			message = DistrictTwist.send_off_line(message)
+		Hud.show_message("%s: %s" % [npc_name, message], 4.0, cat.slot)
 	if not choice.action.is_empty():
 		_run_action(choice.action, cat)
 	if not choice.go_to.is_empty():

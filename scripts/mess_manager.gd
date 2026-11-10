@@ -76,6 +76,10 @@ var _asked: Dictionary = {}          # this computer: {prop id: time we last ask
 var _pending: Dictionary = {}        # client: knocked props the host told us about before our city existed
 
 
+## Host: props knocked over this trip, player id -> count (player_messes_this_trip).
+var _trip_messes := {}
+
+
 func _enter_tree() -> void:
 	instance = self
 	add_to_group(GameSystems.GROUP)
@@ -187,6 +191,7 @@ func request_knock(player_id: int, id: int, fall_yaw: float) -> void:
 	if cat == null or UndergroundHub.is_in_hub(cat.global_position):
 		return
 	_set_knocked.rpc(id, true, fall_yaw)
+	_trip_messes[player_id] = int(_trip_messes.get(player_id, 0)) + 1  # (BIN DAY's chaos bonus)
 	if HeatMeter.instance != null:
 		HeatMeter.instance.add_heat(heat_per_mess)
 	Events.mess_made.emit(player_id, 1)  # (the RAID REPORT counts it: MESS, AGENT OF CHAOS)
@@ -307,6 +312,18 @@ func send_state_to(peer: int) -> void:
 		_set_all_knocked.rpc_id(peer, ids, yaws)
 
 
+## Host: how many props this player has knocked over on this trip up top (BIN DAY pays for
+## them when they extract: fish_heist.gd, scripts/district_twist.gd).
+func player_messes_this_trip(player_id: int) -> int:
+	return int(_trip_messes.get(player_id, 0))
+
+
+## Host: their trip is over (extracted): start counting from 0 again.
+func clear_trip_messes(player_id: int) -> void:
+	_trip_messes.erase(player_id)
+
+
 ## Host: a new district (the city was rebuilt just before this, so the props are fresh).
 func start_district() -> void:
+	_trip_messes.clear()
 	_asked.clear()
