@@ -140,6 +140,15 @@ extends Node
 ##   --mess_log=N      every N frames print the props and what the bots are doing (until the snap)
 ##   --meow[=F]        F frames in (default 30), press MEOW (the taunt). With --bait_roomba=18 a bot out of
 ##                     sight should hear it and come (INVESTIGATE)
+##   --spectate[=S]    (host, with --add_local=1) THE CAT-CAM (scripts/spectator.gd): the couch cat goes up
+##                     top, cat S (default 0) walks to the sewer's CAT-CAM TV and presses E (real input),
+##                     then prints "DevCapture spectate" lines (camera, who, HUD line). A VAC-COP is parked
+##                     10 m from the watched cat. --spectate_ko instead sends BOTH up and knocks cat S out:
+##                     it should start watching by itself once it's back in the sewer.
+##   --heckle          (with --spectate) press MEOW while watching: "<NAME> (RADIO): ..." over the watched
+##                     cat, and the bot should hear it. --spectate_switch presses RIGHT (switch cat).
+##   --spectate_car    (with --spectate) the watched cat gets in the car: prints where the camera is.
+##   --spectate_exit=F (with --spectate) F frames after that, press E: back to our own cat in the sewer.
 ##   --raid_report[=N] (host) end the district NOW with made-up numbers: the RAID REPORT goes up
 ##                     (N = that many cards; made-up quitters fill the gap). --raid_report_after=F waits
 ##                     F frames first (default 30). Every report prints "DevCapture report" lines
@@ -616,6 +625,8 @@ func _ready() -> void:
 				await get_tree().physics_frame
 		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost"):
 			await _mess_tests(scene, player, args)
+		if args.has("spectate") or args.has("spectate_ko"):
+			await _spectate_tests(scene, args)
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
 			await _down_and_revive(scene, player, args)
 		if args.has("shoot_rival"):
@@ -1789,6 +1800,125 @@ func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		for f in 30:
 			await get_tree().physics_frame
 		_print_mess("after --meow")
+
+
+## --spectate / --spectate_ko / --heckle / --spectate_switch / --spectate_exit: THE CAT-CAM (scripts/spectator.gd).
+func _spectate_tests(scene: Node, args: Dictionary) -> void:
+	var seat := int(args.get("spectate", "0")) if args.get("spectate", "true") != "true" else 0
+	var me: CatPlayer = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
+	var spectator := Spectator.instance
+	var others: Array = scene.local_cats().filter(func(c): return c != me)
+	if others.is_empty():
+		# Online: wait for another computer's cat to come up top (e.g. a client with --deploy).
+		for i in 900:
+			if not Spectator.instance.watchable_for(me).is_empty():
+				break
+			await get_tree().physics_frame
+		others = Spectator.instance.watchable_for(me)
+		for other in others:
+			print("DevCapture spectate remote: %s yaw=%.2f (sent %.2f) pitch=%.2f (sent %.2f)" % [other.display_name(),
+				other.camera_pivot.rotation.y, other.sync_camera_yaw, other.spring_arm.rotation.x, other.sync_camera_pitch])
+	if me == null or others.is_empty():
+		print("DevCapture spectate: needs --add_local=1 or a client up top (no other cat)")
+		return
+	var friend: CatPlayer = others[0]
+	for other in others:  # (every other couch cat goes up: --spectate_switch needs two)
+		other.unseen_by_bots = true  # (so the parked bot LISTENS instead of chasing straight away)
+		if other.is_multiplayer_authority():
+			UndergroundHub.of(other).deploy(other)
+	if args.has("spectate_ko"):
+		UndergroundHub.of(me).deploy(me)
+	for i in 30:
+		await get_tree().physics_frame
+	# A VAC-COP 10 m from the friend (out of sight behind them), for the heckle.
+	if multiplayer.is_server():
+		var bot: Roomba = null
+		for node in scene.get_node("Roombas").get_children():
+			if node is Roomba and not (node as Roomba).is_boss:
+				bot = node
+				break
+		if bot != null:
+			bot.global_position = friend.global_position + Vector3(10, 0.1, 0)
+	if args.has("spectate_ko"):
+		CatHealth.instance.damage(me.player_id, 99999, "A VAC-COP", true)
+		var waited := 0
+		while not Spectator.is_watching(seat) and waited < 900:
+			await get_tree().physics_frame
+			waited += 1
+		print("DevCapture spectate ko: watching=%s after %d frames in_hub=%s" % [Spectator.is_watching(seat), waited,
+			UndergroundHub.is_in_hub(me.global_position)])
+	else:
+		me.teleport_to(UndergroundHub.of(me).to_global(UndergroundHub.of(me).catcam_spot) + Vector3(-0.8, 0.2, 0), -PI / 2)
+		for i in 15:
+			await get_tree().physics_frame
+		print("DevCapture spectate prompt: \"%s\"" % Interactable.prompt_for(me))
+		await _tap_action(seat, "interact")
+	await get_tree().create_timer(spectator.button_grace_seconds + 0.2).timeout  # (headless frames are quick)
+	_print_spectate("watching", seat)
+	if args.has("spectate_car"):
+		# --spectate_car: the watched cat climbs into the getaway car: the view should be the car's chase cam.
+		var watched := spectator.watched_cat(seat)
+		var car: GetawayCar = scene.cars()[0]
+		watched.teleport_to(car.global_position + Vector3(2, 0.2, 0), 0.0)
+		for i in 10:
+			await get_tree().physics_frame
+		car.request_enter.rpc_id(1, watched.player_id)
+		for i in 30:
+			await get_tree().physics_frame
+		var camera := GameScreen.instance.camera_for_seat(seat)
+		print("DevCapture spectate car: in_car=%s watching=%s cam_to_car=%.1f cam_y_above_car=%.1f" % [scene.car_of(watched.player_id) != null,
+			Spectator.is_watching(seat), camera.global_position.distance_to(car.global_position), camera.global_position.y - car.global_position.y])
+	if args.has("spectate_switch"):
+		await _tap_action(seat, "move_right")
+		await get_tree().create_timer(spectator.button_grace_seconds + 0.2).timeout
+		_print_spectate("after switch", seat)
+	if args.has("heckle"):
+		await _tap_action(seat, "meow")
+		for i in 40:
+			await get_tree().process_frame
+		print("DevCapture heckle: seen=%d text=\"%s\" bots_heard=%d" % [spectator.heckles_seen, spectator.last_heckle_text, spectator.last_heckle_heard])
+		await _tap_action(seat, "meow")  # (cooldown: must not heckle again yet)
+		print("DevCapture heckle again (cooldown): seen=%d" % spectator.heckles_seen)
+	if args.has("spectate_exit"):
+		for i in int(args["spectate_exit"]):
+			await get_tree().process_frame
+		await _tap_action(seat, "interact")
+		for i in 10:
+			await get_tree().process_frame
+		_print_spectate("after exit", seat)
+
+
+## Press and let go of a seat's button with real input (Seats' per-seat action), a few frames each.
+## Seat 0: its first bound KEY, through the game screen like a real player's. Others: the action.
+func _tap_action(seat: int, action_name: String) -> void:
+	var key: InputEvent = Controls.event_for(Controls.bindings[action_name][0]) if seat == 0 else null
+	for pressed in [true, false]:
+		if key != null:
+			var event := key.duplicate() as InputEvent
+			event.set("pressed", pressed)
+			Input.parse_input_event(event)
+		elif pressed:
+			Input.action_press(Seats.action(seat, action_name))
+		else:
+			Input.action_release(Seats.action(seat, action_name))
+		for i in 3:
+			await get_tree().process_frame
+
+
+func _print_spectate(when: String, seat: int) -> void:
+	var spectator := Spectator.instance
+	var me := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
+	var watched := spectator.watched_cat(seat)
+	var camera := GameScreen.instance.camera_for_seat(seat)
+	print("DevCapture spectate %s: watching=%s who=%s camera=%s cam_pos=%s cam_to_watched=%.1f me_pos=%s me_in_hub=%s hud=\"%s\"" % [when,
+		Spectator.is_watching(seat), watched.display_name() if watched != null else "-", camera.name if camera != null else "-",
+		camera.global_position.snapped(Vector3.ONE * 0.1) if camera != null else Vector3.ZERO,
+		camera.global_position.distance_to(watched.global_position) if camera != null and watched != null else -1.0,
+		me.global_position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(me.global_position),
+		Hud.element("DropOff", seat).get("text") if Hud.element("DropOff", seat) != null else "?"])
+	if watched != null:
+		print("DevCapture spectate look: %s yaw=%.2f (sent %.2f) pitch=%.2f (sent %.2f)" % [watched.display_name(),
+			watched.camera_pivot.rotation.y, watched.sync_camera_yaw, watched.spring_arm.rotation.x, watched.sync_camera_pitch])
 
 
 ## The nearest standing mess prop of a kind ("" = any; "bin", "cone", "box", "poster").

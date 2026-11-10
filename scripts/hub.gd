@@ -18,6 +18,8 @@ extends Node3D
 ##     screen shows THIS gang's charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
 ##     CRITICAL). Bring SCRAP home in your loot bag and press E there to feed it (+25%), or at
 ##     100% to hack the rival gang's (-25%).
+##   - THE CAT-CAM TV on the east wall, across the water from the Mainframe (_build_catcam): press E
+##     to watch your crew up top over their shoulder (scripts/spectator.gd).
 ##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
 ##     cashed in and you're brought back down here (return_cat()).
 ##
@@ -123,6 +125,18 @@ const CITY_MOOD: int = -1
 @export var mainframe_spot: Vector3 = Vector3(-11.0, 0, 0)
 ## How close (metres) you must be to the mainframe spot.
 @export var mainframe_radius: float = 2.5
+
+@export_group("CAT-CAM TV")
+## Where you stand to watch the CAT-CAM (a chunky TV on a crate on the east wall, across the water
+## from the Mainframe), relative to the Hub node. The TV is built just east of this spot.
+## Press E there to watch your crew up top (scripts/spectator.gd).
+@export var catcam_spot: Vector3 = Vector3(11.5, 0, 0)
+## How close (metres) you must be to the TV.
+@export var catcam_radius: float = 2.5
+## The HUD line after "[E] " at the TV.
+@export var catcam_prompt: String = "WATCH CREW UP TOP"
+## The TV screen's glow colour.
+@export var catcam_glow: Color = Color(0.35, 0.75, 1.0)
 
 @export_group("Breach Tunnel")
 ## East-west middle of the tunnel mouth (metres; -8 = the west walkway).
@@ -667,6 +681,8 @@ func _build_props() -> void:
 	terminal.priority = 10
 	add_child(terminal)
 
+	_build_catcam()
+
 	# Cardboard-box shanties along the east wall (the "homes" of sewer cats).
 	for z in [4.0, 9.0, 14.0]:
 		LevelKit.add_box(self, Vector3(w - 1.4, 0.6, z), Vector3(2.0, 1.2, 2.6), _cardboard, true)
@@ -674,6 +690,29 @@ func _build_props() -> void:
 	# Crates, trash and junk.
 	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -4), Vector3(-4, 0.5, -17)]:
 		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
+
+
+## THE CAT-CAM: a chunky old TV on a crate against the east wall. Press E in front of it to watch a
+## teammate up top (scripts/spectator.gd). Built around catcam_spot (Hub > CAT-CAM TV in the Inspector).
+func _build_catcam() -> void:
+	var at := catcam_spot
+	var wall_x := half_width  # inside face of the east wall
+	var tv_x := wall_x - 0.75
+	LevelKit.add_box(self, Vector3(tv_x, 0.45, at.z), Vector3(1.1, 0.9, 1.4), _crate, true)  # the crate it sits on
+	LevelKit.add_box(self, Vector3(tv_x + 0.1, 1.45, at.z), Vector3(0.9, 1.1, 1.3), _metal, true)  # the TV's big back
+	var screen := LevelKit.add_box(self, Vector3(tv_x - 0.37, 1.45, at.z), Vector3(0.06, 0.8, 1.0), _neon, false)
+	screen.set_instance_shader_parameter("instance_tint", catcam_glow * 0.8)
+	# Rabbit-ear antennas, leaning out to each side.
+	for side in [-1.0, 1.0]:
+		var ear := LevelKit.add_box(self, Vector3(tv_x + 0.1, 2.25, at.z + side * 0.25), Vector3(0.03, 0.6, 0.03), _metal, false)
+		ear.rotation.x = side * 0.5
+	LevelKit.add_sign(self, "CAT-CAM", Vector3(tv_x - 0.42, 2.15, at.z), catcam_glow * 0.5, 26, -PI / 2)
+	LevelKit.add_light(self, Vector3(tv_x - 1.2, 1.5, at.z), catcam_glow, 1.8, 5.0)
+	var tv := Interactable.make(self, at, catcam_prompt, catcam_radius, 10)
+	tv.name = "CatCamTV"
+	tv.used.connect(func(cat: CatPlayer):
+		if Spectator.instance != null:
+			Spectator.instance.start(cat.slot))
 
 
 ## THE BLACK MARKITTEN: Comrade Whiskers' rebel shop on the west wall. Everything is placed

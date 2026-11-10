@@ -57,6 +57,9 @@ extends Control
 ##
 ## LIVE FEED: during a rival gang's SEWER BREACH (scripts/mainframe.gd feed_camera_for) every player
 ## of the safe gang looks through the doomed sewer's security camera instead of their own.
+## CAT-CAM: a player watching a teammate up top (scripts/spectator.gd camera_for) looks through that
+## player's spectator camera instead (the breach feed comes first). The fog, rain, moon and music
+## follow whichever camera a screen is using, so it's the night city while you watch.
 ##
 ## The size settings (SETTINGS > DISPLAY): see pixel_perfect and widescreen in scripts/settings.gd.
 ## This script also passes your mouse and keyboard on to the menus, then the game inside GameViewport.
@@ -486,6 +489,17 @@ func _copy_crt_settings() -> void:
 			target.set_shader_parameter(param, source.get_shader_parameter(param))
 
 
+## The camera this player looks through INSTEAD of their cat's, or null: a rival's SEWER BREACH
+## live feed first (scripts/mainframe.gd), then the CAT-CAM (watching a teammate: scripts/spectator.gd).
+func view_override_for(cat: CatPlayer) -> Camera3D:
+	if cat == null:
+		return null
+	var feed: Camera3D = Mainframe.instance.feed_camera_for(cat) if Mainframe.instance != null else null
+	if feed == null and Spectator.instance != null:
+		feed = Spectator.instance.camera_for(cat)
+	return feed
+
+
 ## LIVE FEED for player 1: their screen's camera is switched for real (and back). Players 2-4's
 ## screens just copy the feed camera instead of their cat's (_follow_cameras).
 func _show_live_feed() -> void:
@@ -493,7 +507,7 @@ func _show_live_feed() -> void:
 	if game == null or not is_instance_valid(game) or Mainframe.instance == null:
 		return
 	var cat := game.my_cat()
-	var feed := Mainframe.instance.feed_camera_for(cat)
+	var feed := view_override_for(cat)
 	if feed == _live_feed:
 		return
 	_live_feed = feed
@@ -516,7 +530,7 @@ func _follow_cameras() -> void:
 		var cat := game.cat_for(PlayerId.make(multiplayer.get_unique_id(), pane.seat))
 		if cat == null:
 			continue
-		var feed := Mainframe.instance.feed_camera_for(cat)
+		var feed := view_override_for(cat)
 		var source: Camera3D = feed if feed != null else cat.camera
 		var camera: Camera3D = pane.camera
 		camera.global_transform = source.global_transform

@@ -129,6 +129,11 @@ var team: int = Teams.CATLEONE:
 var sync_position: Vector3
 ## How the owner's cat model is turned/leaning. Sent over the network.
 var sync_model_rotation: Vector3
+## Where the owner's CAMERA looks: left/right (CameraPivot) and up/down (SpringArm3D), in radians.
+## Sent over the network so a SPECTATOR (scripts/spectator.gd) on another computer sees exactly
+## what this player sees. Other computers ease their copy's camera toward these in _process.
+var sync_camera_yaw: float = 0.0
+var sync_camera_pitch: float = -0.3
 
 @export_group("Sounds")
 ## Seconds between footsteps at walking speed (faster running = quicker steps).
@@ -362,9 +367,15 @@ func _process(delta: float) -> void:
 			_taunt_label.hide()
 	if is_multiplayer_authority():
 		_stick_look(delta)
+		# Share where our camera looks (for anyone spectating us: scripts/spectator.gd).
+		sync_camera_yaw = camera_pivot.rotation.y
+		sync_camera_pitch = spring_arm.rotation.x
 		return
 	var weight := Motion.glide_weight(network_smoothing, delta)
 	position = Motion.glide(position, sync_position, weight, teleport_distance)
+	# Point our copy's camera where its player is looking, so a spectator's view matches theirs.
+	camera_pivot.rotation.y = lerp_angle(camera_pivot.rotation.y, sync_camera_yaw, weight)
+	spring_arm.rotation.x = lerpf(spring_arm.rotation.x, sync_camera_pitch, weight)
 	cat_model.rotation.x = lerp_angle(cat_model.rotation.x, sync_model_rotation.x, weight)
 	cat_model.rotation.y = lerp_angle(cat_model.rotation.y, sync_model_rotation.y, weight)
 	cat_model.rotation.z = lerp_angle(cat_model.rotation.z, sync_model_rotation.z, weight)  # knocked-out flop
@@ -723,10 +734,12 @@ func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
 
 ## True while a menu or the hub talk box is up: the cat ignores the keyboard then.
 ## (Split screen: only THIS player's talk box / pause menu counts; the big pause menu stops everyone.)
-## Watching a rival's SEWER BREACH on the live feed counts too: the cat waits at home.
+## Watching a rival's SEWER BREACH on the live feed counts too: the cat waits at home. So does
+## watching a teammate up top on the CAT-CAM (scripts/spectator.gd).
 func _menu_open() -> bool:
 	return PauseMenu.is_open or NpcDialog.is_open_for(slot) or PlayerPause.is_open_for(slot) \
-		or Mainframe.instance.is_spectating(self) or RaidReportScreen.is_up()  # (the RAID REPORT: buttons are for READY)
+		or Mainframe.instance.is_spectating(self) or RaidReportScreen.is_up() \
+		or (is_multiplayer_authority() and Spectator.is_watching(slot))  # (CAT-CAM: our buttons switch / heckle / leave)
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.

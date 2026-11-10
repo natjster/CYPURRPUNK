@@ -515,9 +515,19 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)
 		_hide_compass(compass)
 		return
+	if Spectator.is_watching(seat):
+		# THE CAT-CAM (scripts/spectator.gd): who you're watching and which buttons do what.
+		Hud.show_element("DropOff", true, seat)
+		Hud.set_text("DropOff", Spectator.instance.hud_text(seat), seat)
+		_hide_compass(compass)
+		return
 	if in_sewers:
 		Hud.show_element("DropOff", true, seat)
-		Hud.set_text("DropOff", "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE", seat)
+		var line := "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE"
+		var spectator := Spectator.instance
+		if has_been_up(me) and spectator != null and spectator.jump_to_watch_after_trip and spectator.can_spectate(my_cat):
+			line += "   [%s] WATCH CREW" % Hud.key_for("jump", seat)  # (scripts/spectator.gd)
+		Hud.set_text("DropOff", line, seat)
 		_hide_compass(compass)
 		return
 	Hud.show_element("DropOff", false, seat)

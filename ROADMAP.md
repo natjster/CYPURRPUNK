@@ -230,7 +230,11 @@ a world that hates mess.
   poles** (Blockbench model) on sidewalk corners: the announcements type out beside their horns instead of a
   subtitle. §8, §21.)
 - **Claude:** buyable cosmetics and boss-only rare drops.
-- **Claude:** spectating after a knockout.
+- [x] **Claude:** spectating after a knockout. (Done 10 Nov 2026: THE CAT-CAM. Knocked out up top = you watch a
+  teammate once you wake in the sewer; the CAT-CAM TV in each sewer (E) or JUMP after your trip watches the crew any
+  time; over-the-shoulder view that follows where they really look (synced camera) or the car's chase cam; A / D
+  switches cat, E / JUMP goes back to your own cat. The "ping" became the **walkie-talkie HECKLE** (MEOW while
+  watching): "<NAME> (RADIO): BEHIND YOU!" types out over their head in your voice, and nearby VAC-COPs hear it. §24.)
 - **Claude:** hideout upgrades, first three.
 - **Claude:** three or four district twists.
 - **Claude:** two or three more music tracks using the existing music tools.
