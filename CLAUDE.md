@@ -334,10 +334,26 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   = full line count) and blips every `blip_gap_seconds` on letters (cap `max_blips_per_line`); accept/interact while typing = show all.
   Payphone uses `boss.leader.voice`. Test: `--talk=DonCatleone --sound_log`.
 
+- MESS-MAKING (SETUP_GUIDE §23): `scripts/mess_manager.gd` (`MessManager.instance`, node `Mess` under Main, GameSystems) +
+  `scripts/mess_prop.gd` (`MessProp` Kind BIN/CONE/BOX/POSTER: model, `Hitbox` StaticBody (bins `SOLID_LAYER` 8 = cats only, cat
+  mask adds it; others `HIT_ONLY_LAYER` 16 = bullets only), `receive_hit`, Interactable prio -5, `show_knocked/show_standing`,
+  bin `Lid` flips, poster `Poster`/`Torn` groups, debris seeded by id). City builds them in order: `CityGenerator.mess_props`
+  (index = id, same everywhere; `_add_mess_prop`; pre-knocked cones stay scenery). Anyone noticing -> `MessManager.knock(player_id,
+  id, dir)` (deduped 1 s) -> host `request_knock` (sender_owns, up top) -> `_set_knocked` RPC + `add_heat(heat_per_mess)` +
+  `Events.mess_made`. Noticers: `cat_bump` (owner, cat_player after move_and_slide, pre-slide velocity; bins need `bin_knock_speed`),
+  `car_bump` (driver authority), Hit, E. Late join `_set_all_knocked` (+ `_pending` until the city exists; reset on `city.generated`).
+  Remarks: every computer counts knocks -> `OvercleanAnnouncer.say(overclean_mess_N)`. Bots (`roomba.gd`): states appended
+  `TIDY_GO/TIDYING/INVESTIGATE` (keep new states at the END: synced int), `_look_for_mess` -> `claim_nearest` (claim valid while
+  `tidying_prop()`), `distracted_sight`, `MessManager.tidy(id)`; `tidies_messes` false for drone/trapper (their `_ready`), never
+  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (taunt sound at `voice_pitch()` from look, `TauntBubble` name-tag marker
+  under CatModel) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
+  Test: `--mess=N`, `--ram_prop=bin|cone|box [--ram_trace]`, `--scratch`, `--shoot_prop`, `--ghost`, `--face_mess`,
+  `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`
+  kind / `generate_cat_taunt`, presets `cardboard_thump`, `vacuum`).
 - RAID REPORT (SETUP_GUIDE §22): `scripts/raid_report.gd` (`RaidReport.instance`, node `RaidReport` under Main, in `GameSystems.GROUP`).
   Host counts per PLAYER id from Events (went_up, extracted, downed, revived, robbed, knocked_out, enemy_destroyed+`killed_by`,
-  sewer_breach_ended, NEW `player_hurt` (CatHealth.damage), `loot_vacuumed` (ItemManager.take_one_loot), `mess_made` (nobody emits yet:
-  Phase 1; card line behind export `show_mess_stat`)). District endings call `RaidReport.end_district()` (fish_heist `_run_deep_clean`,
+  sewer_breach_ended, NEW `player_hurt` (CatHealth.damage), `loot_vacuumed` (ItemManager.take_one_loot), `mess_made` (MessManager;
+  MESS on rows, export `show_mess_stat` now true)). District endings call `RaidReport.end_district()` (fish_heist `_run_deep_clean`,
   mainframe `_after_banner`) instead of `Game.new_district()`; ignored while `showing`; skipped (straight to new_district) in tutorial / 0 players /
   `enabled` false. Host `build_report()` (rows, endings, awards, gangs, timing) -> one `_show_report` RPC (late joiner: `send_state_to`,
   skip_reveal) -> `Events.raid_report_shown`; READY = `request_report_ready(player_id)` -> `_set_ready(ready, waiting_for)`; host `_process`
@@ -463,11 +479,10 @@ Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hide
 the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
 DEEP CLEAN, then a new district (new seed). Scrap + per-gang MAINFRAMES + the SEWER BREACH (0%) are in.
 
-## Patch notes (Discord)
-`PATCH_NOTES.md` holds Discord-ready update posts for the user's players. After each finished, committed change that
-players would notice (features, balance, fixes; not test tools, refactors or guide edits), add a bullet to the
-"NEXT UPDATE" draft box under New / Changes / Fixes, in plain player language (no code names, no file names), and show
-the user the new bullet(s) at the end of the turn. When the user asks for "the patch notes": turn the draft into a dated
-post under "Posted updates" (`# 😼 CYPURRPUNK — Update <date>`, a bold one-line tagline, `##` sections with emoji,
-`-` bullets, under 2000 characters; split into "part 1/2" posts if longer), paste it in chat inside a code block, and
-reset the draft to `(nothing yet)`.
+## Patch notes (Discord) — in chat, NO file
+There is no PATCH_NOTES.md any more (user's call, 10 Nov 2026: it was deleted; old drafts are in git history before
+that date). At the END OF EVERY TURN that changed something players would notice (features, balance, fixes; not test
+tools, refactors or guide edits), finish the reply with a ready-to-paste Discord post inside a ```text code block:
+`## 🐾 New` / `## 🔧 Changes` / `## 🐛 Fixes` sections (only the ones used), `-` bullets with a **bold** lead, plain player
+language (no code names, no file names), under 2000 characters (split into "part 1/2" blocks if longer). The user
+posts it to Discord by hand. Don't keep a running draft anywhere.

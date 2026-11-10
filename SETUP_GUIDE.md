@@ -25,7 +25,7 @@ Meow-City/
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
-├── models/                    <- REAL 3D MODELS (.glb) the game loads: trash_bin, traffic_cone (§20)
+├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster (§20, §23)
 │   └── blockbench/            <- their Blockbench projects (.bbmodel): double-click to edit (§20)
 ├── tools/                     <- Claude's helpers: the Model Shop + Sound Lab (Python, §20)
 ├── .mcp.json                  <- tells Claude Code to start those helpers in this project (§20)
@@ -38,6 +38,8 @@ Meow-City/
 │   ├── sound.gd               <- autoload "Sound": plays every sound and the music (§12)
 │   ├── events.gd              <- autoload "Events": the big moments (sealed, extracted, knocked out...) (§16)
 │   ├── overclean_announcer.gd <- OVERCLEAN's voice over the city speakers + subtitles (§21)
+│   ├── mess_manager.gd        <- MESS-MAKING rules: knocking props over, heat, the bots tidying (§23)
+│   ├── mess_prop.gd           <- one knock-over-able bin / cone / box / poster (§23)
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -2108,7 +2110,8 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 |---|---|---|
 | `footstep` (`_1`, `_2`, `_3`) | every cat's steps, quicker when running | everyone nearby |
 | `jump` | jumping (and catdip double jumps) | everyone nearby |
-| `meow` (`_1`, `_2`) | pressing **M** (MEOW, rebindable in SETTINGS > KEYS) | everyone nearby |
+| `cat_taunt` | pressing **M** / pad **B** (MEOW): a meow, then a squeaky "Go lick yourself!" in your cat's own voice pitch (§23) | everyone nearby |
+| `meow` (`_1`, `_2`) | a downed cat's sad meow, NPCs; also MEOW's fallback if `cat_taunt` is missing | everyone nearby |
 | `shoot` | each gun shot (per gun: **Shot Sound** on the gun scene's root) | everyone nearby |
 | `pickup` | grabbing an item / fish | everyone nearby |
 | `roomba_hum` (loops) | every VAC-COP, revs up while chasing (higher-pitched on a SQUIRT-DRONE) | everyone nearby |
@@ -2129,7 +2132,12 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `heat_up` | the HEAT goes up a level | everyone (2D) |
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
 | `overclean_*` | OVERCLEAN's announcements (chime + robot voice, §21) | players up top (the seal: everyone) |
-| `pa_chime`, `bin_clatter`, `cone_bounce`, `scratch` | made by the Sound Lab (§20) for the mess-making to come; not used yet | |
+| `bin_clatter` / `cone_bounce` / `box_thump` / `poster_scratch` | a bin / cone / box knocked over, a poster scratched (§23) | everyone nearby |
+| `prop_standup` | a VAC-COP finishes tidying a mess (it stands back up) | everyone nearby |
+| `roomba_tidy` | a VAC-COP vacuuming up a mess (repeats while TIDYING) | everyone nearby |
+| `roomba_curious` | a VAC-COP heard a meow and comes to look | everyone nearby |
+| `overclean_mess_1..3` | OVERCLEAN's remark when the city gets trashed (§23) | players up top |
+| `pa_chime`, `scratch` | made by the Sound Lab (§20); not used yet | |
 | `meow_blip_<name>` (`_1`..`_4`) | an NPC's talking voice while their line types out (each NPC's **Voice**, §8) | just you |
 | `buy` / `error` | the Black Markitten sells you something / says no | just you |
 | `click` | any menu button | just you |
@@ -2961,7 +2969,7 @@ The numbers and timing: open `scenes/main.tscn`, click **Main > RaidReport**. In
   row).
 - **Extras > Discord Invite**: type e.g. `MORE CATS: discord.gg/yourcode` and that line appears at
   the bottom of every report (the host's text is used). Empty = no line.
-- **Extras > Show Mess Stat**: the hidden **MESS MADE** line (see below).
+- **Extras > Show Mess Stat**: the **MESS** number on every row (on; untick to hide it).
 - **Colours**: the EXTRACTED / VACUUMED / STAYED HOME colours and the good / bad ending colours.
 
 The look of the screen: in `scenes/main.tscn` click **Main > PS1Overlay > RaidReportScreen** (it
@@ -3019,16 +3027,16 @@ it out once and sends it to everyone, so every screen agrees.
 name, then change its **Id** (unique, no spaces), Title, Line, Stat and Order in the Inspector. No
 code. Keep at least 8 safety-net cards (empty Stat) so 8 players always get different awards.
 
-### MESS MADE (for Phase 1)
-Mess-making isn't built yet, but the report is ready for it: when it is, the code that knocks a bin
-over calls `Events.mess_made.emit(player_id, 1)` on the host. Then tick **RaidReport > Show Mess
-Stat** and every card shows MESS MADE; the AGENT OF CHAOS award already looks at it.
+### MESS
+Every bin, cone and box a cat knocks over and every poster it scratches (§23) counts as one mess
+(`Events.mess_made`, sent by `mess_manager.gd` on the host). Each row shows **MESS N**, and the
+**AGENT OF CHAOS** award ("MADE N MESSES") goes to the biggest slob.
 
 ### How it works (for Claude / the curious)
 `scripts/raid_report.gd` (node **Main > RaidReport**, a game system: §16) counts everything on the
 host from game Events (`player_went_up`, `player_extracted`, `player_downed`, `player_revived`,
 `player_robbed`, `player_knocked_out`, `enemy_destroyed`, `sewer_breach_ended`, and `player_hurt`
-(cat_health.gd), `loot_vacuumed` (item_manager.gd), `mess_made` (nobody yet)). The two places a
+(cat_health.gd), `loot_vacuumed` (item_manager.gd), `mess_made` (mess_manager.gd, §23)). The two places a
 district ends (`fish_heist.gd` after the DEEP CLEAN, `mainframe.gd` after a breach banner) call
 `RaidReport.end_district()`; the host builds the report once and sends it to every computer, where
 `RaidReportScreen` (one per computer) shows it; then the host calls `Game.new_district()` itself.
@@ -3051,3 +3059,85 @@ player's presses to it with their seat.
 - Solo, the real thing: `--solo --deploy --heat=80 --heat_hold=120 --goto_dropoff_after=90
   --grab=sardine --frames=3400 --capture=shots/x.png`.
 - Looks: add `--setting=modern_ui:false` (PS1), `--window=1720x720` (wide), `--raid_report=8` (8 rows).
+
+## 23. MESS-MAKING ("Chaos versus Clean") and the MEOW taunt
+
+You're a cat. OVERCLEAN is a neat freak. So: **make a mess.** Trash bins, traffic cones, cardboard
+boxes and OVERCLEAN's "SHEDDING IS A CRIME" posters all over the city can be knocked over or
+scratched. Every mess:
+- tips the prop over with a clatter (bin lid flaps open, litter spills on the pavement),
+- adds a little **HEAT** (0.4 each: ten messes = about 4 heat),
+- counts on the **RAID REPORT** (the MESS number, and the AGENT OF CHAOS award, §22),
+- and **distracts the VAC-COPs**: a patrolling bot within 14 m drives over, shows **TIDYING...**
+  over its head, and vacuums for 3.5 seconds before the prop stands back up. While it's heading to
+  a mess or tidying it, it only spots cats a third as far away as usual. So one cat trashes a
+  corner while the other sneaks the Golden Koi past!
+- When four messes happen within 20 seconds, OVERCLEAN complains over the speakers ("Shedding is
+  a crime. Knocking things over is also a crime."), at most once every 75 seconds.
+
+**How to make a mess:**
+| Prop | Run into it | Drive into it | Shoot / bat it | E |
+|---|---|---|---|---|
+| Traffic cone | any walk | yes | yes | KNOCK OVER |
+| Cardboard box | any walk | yes | yes | SHOVE |
+| Trash bin (solid) | only with ZOOMIES (Shift) | yes | yes | TIP OVER |
+| OVERCLEAN poster (on shop walls) | — | — | yes | SCRATCH |
+
+Cones lying down when the district starts are old mess (scenery): only standing ones count.
+Not counted: bosses, SEWER BREACH bots, SQUIRT-DRONES and LINT-TRAPPERS never stop to tidy.
+
+### MEOW = the taunt
+Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). Your cat
+meows and squeaks **"GO LICK YOURSELF!"** (a yellow speech bubble over your head on everyone's
+screen). Every cat's voice has its own pitch, worked out from its fur, eye and marking colours, so
+your friends can tell who's taunting. VAC-COPs within **22 m hear it**: they turn amber, a **?**
+pops up over them and they drive over to look. Lure them away from a teammate, or into a trap.
+(1.2 seconds between meows.)
+
+### Tuning (Inspector)
+- **Main > Mess** (`scripts/mess_manager.gd`): Heat Per Mess, Bin Knock Speed (6 m/s: zoomies only),
+  Light Knock Speed, Bump Reach, Car Knock Speed / Reach, Interact Reach, the four [E] prompts, and
+  the OVERCLEAN remark rules + their sounds and subtitles (keep the subtitles matching
+  `tools/sound_specs/mess.json`).
+- **Main > City** (`city_generator.gd`) > Street props: the two new models, Yard Boxes Min/Max,
+  Poster Chance (0.35 per building), Corner Prop Chance, Bins Are Solid.
+- **Every VAC-COP scene** (`scenes/roomba.tscn`, root) > Mess + Meows: Tidies Messes, Mess Notice
+  Range, Tidy Seconds, Distracted Sight, Hears Meows, Investigate Seconds.
+- **scenes/player.tscn** (root) > Meow Taunt: Taunt Sound, Taunt Lines (add more and one is picked at
+  random), Taunt Seconds / Color, Voice Pitch Low / High, Meow Heard From. Sounds > Meow Cooldown.
+
+### The new models and sounds
+- `models/blockbench/cardboard_box.bbmodel` (36 triangles, the Flaps group = the two top flaps) and
+  `models/blockbench/overclean_poster.bbmodel` (24 triangles: the **Poster** group is the clean sheet,
+  **Torn** is the shredded strips shown once scratched — keep those two group names if you repaint
+  it). Recipes: `tools/model_specs/cardboard_box.json`, `overclean_poster.json`.
+- Sounds: `python tools/cypurr_sound.py batch tools/sound_specs/mess.json` remakes them all (the
+  three OVERCLEAN lines, box thump, poster scratch, vacuum tidy, stand-up tap, curious chirp and
+  `cat_taunt`). New Sound Lab tool: **generate_cat_taunt** (a meow + any line in a squeaky cat voice),
+  and the presets `cardboard_thump` and `vacuum`.
+
+### How it works (for Claude / the curious)
+The city builds every mess prop in a fixed order (`CityGenerator.mess_props`, `_add_mess_prop`), so
+prop #17 is the same bin on every computer; only that number goes over the network. Whoever noticed
+the knock (the cat's owner, the driver, the shooter, the presser) calls `MessManager.knock(player_id,
+id, direction)` -> host `request_knock` (checks the player is theirs and up top) -> `_set_knocked`
+RPC to everyone (`MessProp.show_knocked`) + heat + `Events.mess_made`. Bots: `roomba.gd` states
+`TIDY_GO` / `TIDYING` (`MessManager.claim_nearest` so two bots don't take the same mess,
+`MessManager.tidy`) and `INVESTIGATE` (`RoombaPatrol.hear_noise` from the cat's `_meow` RPC on the
+host). Late joiners get the knocked list (`send_state_to`). A new district builds a new city, so
+every mess is gone. Bins are on collision layer 4 (cats bump into them; cars and bots don't),
+other props on layer 5 (only bullets).
+
+### Testing
+Every mess test prints `DevCapture mess (...)` lines: props by kind, which are knocked, made /
+tidied counts, heat, and what every bot is doing.
+- Knock the 3 nearest props + see them on the report:
+  `--host --deploy --mess=3 --raid_report --raid_report_after=250 --frames=400 --capture=shots/x.png`
+- Zoomies into a bin with real input: `--host --deploy --ram_prop=bin --frames=200 --capture=shots/x.png`
+  (`=cone` / `=box` walk into one; `--ram_trace` prints speed and gap every few frames).
+- Scratch a poster with E: `--scratch`. Shoot one: `--shoot_prop`.
+- Watch a bot tidy (bots can't see you): `--host --deploy --ram_prop=bin --ghost --face_mess --bait_mess=4
+  --mess_log=50 --frames=300 --capture=shots/x.png --scale=2`
+- A bot hears a meow from out of sight: `--host --deploy --bait_roomba=18 --meow --frames=160 --capture=shots/x.png`
+- Host + late-joining client (both print the same knocked list): host `--host --deploy --mess=2
+  --frames=1100`, ~9 s later client `--join --wait=60 --deploy --mess=2 --frames=400`.

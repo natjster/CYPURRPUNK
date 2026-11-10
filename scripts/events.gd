@@ -76,11 +76,9 @@ signal player_hurt(player_id: int, amount: int, cause: String)
 ## take_one_loot, called by roomba.gd's bonk). The RAID REPORT's "BUTTERPAWS".
 signal loot_vacuumed(player_id: int, item_id: String)
 
-## HOST only. NOTHING SENDS THIS YET: it's waiting for MESS-MAKING (Phase 1: knocking bins over,
-## scratching posters). When that's built, emit it on the host each time a cat makes a mess:
-##     Events.mess_made.emit(player_id, 1)
-## and the RAID REPORT counts it (its MESS MADE line: tick RaidReport > Show Mess Stat; the
-## AGENT OF CHAOS award card already looks at it).
+## HOST only: a cat made a mess: knocked over a bin, cone or box, or scratched a poster
+## (scripts/mess_manager.gd request_knock). The RAID REPORT counts it (its MESS line and the
+## AGENT OF CHAOS award).
 signal mess_made(player_id: int, amount: int)
 
 ## EVERY computer: the RAID REPORT for the district that just ended has gone up on every screen

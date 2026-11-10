@@ -43,19 +43,33 @@ signal generated(city_seed: int)
 @export_file("*.glb") var trash_bin_model: String = "res://models/trash_bin.glb"
 ## The traffic cone model (models/blockbench/traffic_cone.bbmodel).
 @export_file("*.glb") var traffic_cone_model: String = "res://models/traffic_cone.glb"
+## The cardboard box model (models/blockbench/cardboard_box.bbmodel).
+@export_file("*.glb") var cardboard_box_model: String = "res://models/cardboard_box.glb"
+## The OVERCLEAN poster model (models/blockbench/overclean_poster.bbmodel), pasted on shop walls.
+@export_file("*.glb") var poster_model: String = "res://models/overclean_poster.glb"
 ## Empty yards: how many trash bins in the junk pile (a random number between these two).
 @export_range(0, 6) var yard_bins_min: int = 1
 @export_range(0, 6) var yard_bins_max: int = 3
 ## Empty yards: how many traffic cones in the junk pile (some lie knocked over).
 @export_range(0, 6) var yard_cones_min: int = 0
 @export_range(0, 6) var yard_cones_max: int = 3
+## Empty yards: how many cardboard boxes in the junk pile.
+@export_range(0, 6) var yard_boxes_min: int = 1
+@export_range(0, 6) var yard_boxes_max: int = 2
+## Chance (0-1) that a building gets an OVERCLEAN poster on its street-facing wall (cats scratch them).
+@export_range(0.0, 1.0) var poster_chance: float = 0.35
 ## Chance (0-1) that a sidewalk corner gets a bin, a cone, or both. There are 4 corners per block
 ## (144 in a 6x6 city), so 0.3 = roughly 40 corners with something on them.
 @export_range(0.0, 1.0) var corner_prop_chance: float = 0.3
 ## A bin and a couple of cones by Meow-Mart's front door (either side, out of the loot's way).
 @export var props_at_meow_mart: bool = true
-## Trash bins are solid (cats bump into them). Cones never are, so cars don't stop dead on them.
+## Trash bins are solid for cats (they bump into them; zoomies knock them over). Cars and VAC-COPs
+## never crash into props (MessProp.SOLID_LAYER), and cones, boxes and posters are never solid.
 @export var bins_are_solid: bool = true
+
+## Every MESS prop (bins, standing cones, boxes, posters) in the order they were built: a prop's
+## place in this list is its id, the same on every computer (scripts/mess_manager.gd).
+var mess_props: Array[MessProp] = []
 
 @export_group("Materials")
 @export var street_material: Material
@@ -112,6 +126,7 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 	_rng.seed = new_seed
 	for child in get_children():
 		child.queue_free()
+	mess_props.clear()
 
 	var pitch := block_size + street_width  # distance from one block to the next
 	var city_half_width := blocks_per_side * pitch * 0.5
@@ -216,6 +231,11 @@ func _build_building(lot_center: Vector3, lot_size: float, street_side: Vector2)
 
 	if _rng.randf() < neon_chance:
 		_add_neon_sign(center, size, street_side)
+	if _rng.randf() < poster_chance:
+		# An OVERCLEAN poster at cat height on one of the two street-facing walls.
+		var on_x_face := _rng.randf() < 0.5
+		var slide := _rng.randf_range(-1, 1)
+		_add_poster(center, size, street_side, on_x_face, slide)
 
 
 ## Building centre so its street-facing walls sit 1 m back from the sidewalk edge,
@@ -297,6 +317,7 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 		_add_bin(Vector3(center.x + bin_side * 4.4, 0, by_wall), _rng.randf() * TAU)
 		_add_cone(Vector3(center.x - bin_side * 4.4, 0, by_wall), _rng.randf() * TAU, false)
 		_add_cone(Vector3(center.x - bin_side * 3.7, 0, by_wall), _rng.randf() * TAU, _rng.randf() < 0.3)
+		_add_box(Vector3(center.x + bin_side * 3.6, 0, by_wall), _rng.randf() * TAU)
 
 
 # --- Empty yards ---
@@ -332,6 +353,9 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 	for i in _rng.randi_range(yard_cones_min, maxi(yard_cones_min, yard_cones_max)):
 		if not spots.is_empty():
 			_add_cone(spots.pop_back() + _jiggle(), _rng.randf() * TAU, _rng.randf() < 0.4)
+	for i in _rng.randi_range(yard_boxes_min, maxi(yard_boxes_min, yard_boxes_max)):
+		if not spots.is_empty():
+			_add_box(spots.pop_back() + _jiggle(), _rng.randf() * TAU)
 
 
 ## A small random nudge (up to 0.2 m) so a pile doesn't look laid out on a grid.
@@ -365,43 +389,78 @@ func _place_corner_props(pitch: float) -> void:
 					spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
 					back = Vector3(-corner.x, 0, 0)
 				var roll := _rng.randf()
-				if roll < 0.5:
+				if roll < 0.42:
 					_add_bin(spot, _rng.randf() * TAU)
-				elif roll < 0.85:
+				elif roll < 0.72:
 					_add_cone(spot, _rng.randf() * TAU, _rng.randf() < 0.25)
+				elif roll < 0.85:
+					_add_box(spot, _rng.randf() * TAU)
 				else:  # a bin with a cone next to it (towards the corner, away from the loot)
 					_add_bin(spot, _rng.randf() * TAU)
 					_add_cone(spot - back * 0.8, _rng.randf() * TAU, false)
 
 
-## A trash bin standing at "at" (feet on the ground), turned "yaw" radians. Solid (a box the
-## size of the can) unless bins_are_solid is off. Falls back to an old trash-bag blob if the model
-## file is missing.
+## A trash bin standing at "at" (feet on the ground), turned "yaw" radians: a MESS prop (cats
+## knock it over: scripts/mess_prop.gd). Solid for cats unless bins_are_solid is off. Falls back to
+## an old trash-bag blob if the model file is missing.
 func _add_bin(at: Vector3, yaw: float) -> void:
-	var holder: Node3D = self
-	if bins_are_solid:
-		var body := StaticBody3D.new()
-		body.position = at
-		add_child(body)
-		LevelKit.add_collision(body, Vector3(0, 0.55, 0), Vector3(0.66, 1.1, 0.66))
-		holder = body
-		at = Vector3.ZERO
-	if LevelKit.instantiate_model(trash_bin_model, holder, at, yaw) == null:
-		_add_trash_bag(holder, at + Vector3(0, 0.22, 0), yaw)
+	if not ResourceLoader.exists(trash_bin_model):
+		_add_trash_bag(self, at + Vector3(0, 0.22, 0), yaw)
+		return
+	_add_mess_prop(MessProp.Kind.BIN, trash_bin_model, at, yaw, bins_are_solid)
 
 
-## A traffic cone at "at", turned "yaw". knocked_over = lying on its side (a little mess).
+## A traffic cone at "at", turned "yaw". A standing cone is a MESS prop; knocked_over = one that's
+## already lying on its side (just scenery: OVERCLEAN's bots don't count it as a fresh mess).
 func _add_cone(at: Vector3, yaw: float, knocked_over: bool) -> void:
+	if not knocked_over and ResourceLoader.exists(traffic_cone_model):
+		_add_mess_prop(MessProp.Kind.CONE, traffic_cone_model, at, yaw, false)
+		return
 	var cone := LevelKit.instantiate_model(traffic_cone_model, self, at, yaw)
 	if cone == null:
 		_add_trash_bag(self, at + Vector3(0, 0.22, 0), yaw)
 		return
-	if knocked_over:
-		# Tip it over a bit past flat (104 degrees around its own sideways axis) and lift it
-		# 0.22 m: then the rim of the cone and its tip both rest on the pavement, like a real
-		# fallen cone (the far edge of the square foot dips out of sight under the ground).
-		cone.rotate_object_local(Vector3.RIGHT, deg_to_rad(104.0))
-		cone.position.y += 0.22
+	# Tip it over a bit past flat (104 degrees around its own sideways axis) and lift it
+	# 0.22 m: then the rim of the cone and its tip both rest on the pavement, like a real
+	# fallen cone (the far edge of the square foot dips out of sight under the ground).
+	cone.rotate_object_local(Vector3.RIGHT, deg_to_rad(104.0))
+	cone.position.y += 0.22
+
+
+## A cardboard box (a MESS prop: a walk knocks it over).
+func _add_box(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(cardboard_box_model):
+		_add_mess_prop(MessProp.Kind.BOX, cardboard_box_model, at, yaw, false)
+
+
+## An OVERCLEAN poster on a building's street-facing wall, its bottom 0.55 m up (cat height).
+## on_x_face = the wall facing along x (else along z); slide -1..1 = where along that wall.
+func _add_poster(building_center: Vector3, building_size: Vector3, street_side: Vector2, on_x_face: bool, slide: float) -> void:
+	if not ResourceLoader.exists(poster_model):
+		return
+	var outward: Vector3
+	var spot: Vector3
+	if on_x_face:
+		outward = Vector3(street_side.x, 0, 0)
+		spot = Vector3(building_center.x + street_side.x * building_size.x * 0.5, 0.55,
+			building_center.z + slide * (building_size.z * 0.5 - 1.5))
+	else:
+		outward = Vector3(0, 0, street_side.y)
+		spot = Vector3(building_center.x + slide * (building_size.x * 0.5 - 1.5), 0.55,
+			building_center.z + street_side.y * building_size.z * 0.5)
+	# 3 cm off the wall (its front is 4 cm thick), facing the street (the model faces -Z).
+	_add_mess_prop(MessProp.Kind.POSTER, poster_model, spot + outward * 0.03, atan2(-outward.x, -outward.z), false)
+
+
+## One MESS prop (scripts/mess_prop.gd), numbered in build order (CityGenerator.mess_props).
+func _add_mess_prop(kind: MessProp.Kind, model_path: String, at: Vector3, yaw: float, solid: bool) -> MessProp:
+	var mess := MessProp.new()
+	mess.position = at
+	mess.rotation.y = yaw
+	add_child(mess)
+	mess.setup(mess_props.size(), kind, model_path, solid)
+	mess_props.append(mess)
+	return mess
 
 
 ## The old placeholder: a squashed sphere of trash (used only when a model file is missing).

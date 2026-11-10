@@ -61,10 +61,10 @@ const AWARDS_FOLDER := "res://raid_awards/"
 ## A line at the bottom of the report, e.g. "JOIN THE CREW: discord.gg/abc123". Empty = no line.
 ## (ROADMAP section 6: every stranger who plays sees the invite.) The host's text is the one shown.
 @export var discord_invite: String = ""
-## MESS MADE: the number of messes each cat made. Hidden until mess-making exists (Phase 1).
-## Tick this when it does: the line appears on every row. (The number comes from
-## Events.mess_made: see scripts/events.gd.)
-@export var show_mess_stat: bool = false
+## MESS MADE: the number of messes each cat made (bins, cones, boxes knocked over, posters
+## scratched: scripts/mess_manager.gd). Untick to hide the MESS line on every row. (The number
+## comes from Events.mess_made: see scripts/events.gd.)
+@export var show_mess_stat: bool = true
 
 @export_group("Colours")
 @export var extracted_color: Color = Color(0.5, 1, 0.55)

@@ -1,0 +1,43 @@
+{
+  "name": "cardboard_box",
+  "kind": "prop",
+  "about": "A soggy Meow-Mart delivery box with packing tape and two half-open top flaps. A MESS prop: cats knock it over (scripts/mess_prop.gd). 16 px = 1 m.",
+  "texture_size": 64,
+  "seed": 21,
+  "background": "#a8794a",
+  "paint": [
+    {"op": "comment", "note": "[0,0,32,24] the four sides: cardboard, a tape stripe, MEOW MART stamp, a wet patch at the bottom"},
+    {"op": "fill", "rect": [0, 0, 32, 24], "color": "#b0824f"},
+    {"op": "stripes", "rect": [0, 0, 32, 24], "colors": ["#ffffff10", "#00000000", "#00000012"], "width": 1, "direction": "horizontal"},
+    {"op": "noise", "rect": [0, 0, 32, 24], "amount": 0.3, "spread": 0.1},
+    {"op": "fill", "rect": [13, 0, 19, 24], "color": "#d9c08a"},
+    {"op": "noise", "rect": [13, 0, 19, 24], "amount": 0.25, "spread": 0.08},
+    {"op": "text", "pos": [1, 8], "text": "MEOW", "color": "#3a2412d0", "worn": 0.1},
+    {"op": "text", "pos": [20, 14], "text": "UP", "color": "#3a2412d0", "worn": 0.1},
+    {"op": "line", "from": [22, 9], "to": [24, 7], "color": "#3a2412d0"},
+    {"op": "line", "from": [24, 7], "to": [26, 9], "color": "#3a2412d0"},
+    {"op": "gradient", "rect": [0, 16, 32, 24], "top": "#4a301800", "bottom": "#4a3018c0"},
+    {"op": "spots", "rect": [0, 0, 32, 24], "color": "#6a4826a0", "count": 6, "size": 1.5},
+    {"op": "comment", "note": "[32,0,64,32] top (tape cross)   [0,24,32,32] flap   [32,32,48,48] bottom"},
+    {"op": "fill", "rect": [32, 0, 64, 32], "color": "#a87a48"},
+    {"op": "noise", "rect": [32, 0, 64, 32], "amount": 0.3, "spread": 0.1},
+    {"op": "fill", "rect": [45, 0, 51, 32], "color": "#d9c08a"},
+    {"op": "edge", "rect": [32, 0, 64, 32], "color": "#7a5430"},
+    {"op": "fill", "rect": [0, 24, 32, 32], "color": "#b88a55"},
+    {"op": "noise", "rect": [0, 24, 32, 32], "amount": 0.3, "spread": 0.1},
+    {"op": "edge", "rect": [0, 24, 32, 32], "color": "#7a5430"},
+    {"op": "fill", "rect": [32, 32, 48, 48], "color": "#5a3c20"}
+  ],
+  "groups": [
+    {"name": "Box", "origin": [0, 0, 0]},
+    {"name": "Flaps", "origin": [0, 10, 0], "parent": "Box"}
+  ],
+  "elements": [
+    {"type": "cube", "name": "box", "group": "Box", "from": [-5.5, 0, -5.5], "to": [5.5, 10, 5.5],
+     "sides": [0, 0, 32, 24], "top": [32, 0, 64, 32], "bottom": [32, 32, 48, 48]},
+    {"type": "cube", "name": "flap_north", "group": "Flaps", "from": [-5.5, 10, -5.6], "to": [5.5, 10.4, -0.3],
+     "origin": [0, 10, -5.5], "rotation": [-35, 0, 0], "all": [0, 24, 32, 32]},
+    {"type": "cube", "name": "flap_south", "group": "Flaps", "from": [-5.5, 10, 0.3], "to": [5.5, 10.4, 5.6],
+     "origin": [0, 10, 5.5], "rotation": [20, 0, 0], "all": [0, 24, 32, 32]}
+  ]
+}

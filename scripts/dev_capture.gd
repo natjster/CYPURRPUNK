@@ -117,6 +117,20 @@ extends Node
 ##   --breach_wipe=N   (host) N frames in, every cat in a breached sewer takes a killing blow (WIPEOUT)
 ##   --breach_log=N    (either) every N frames print the breach's state ("DevCapture breach" lines)
 ##   --breach_knock=N  (host) N frames in, drop a bot beside every breach NPC (they get knocked flat)
+##   MESS-MAKING (scripts/mess_manager.gd; every one prints "DevCapture mess" lines):
+##   --mess=N          our cat knocks over the N nearest standing props (bins/cones/boxes/posters), through the
+##                     real request to the host (host or client)
+##   --ram_prop=KIND   (KIND = bin, cone or box) stand 4 m from the nearest standing one, facing it, and RUN at
+##                     it (zoomies for a bin) with real input: tests the bump check
+##                     (--ram_trace prints the gap and speed every 3 frames while running at it)
+##   --scratch         stand in front of the nearest poster and press E (Interactable.try_use)
+##   --shoot_prop      hit the nearest standing prop through the Hit framework, like a bolt
+##   --ghost           VAC-COPs can't see our cat (it's hidden: for watching them tidy up)
+##   --face_mess       then stand 4.5 m from the first mess, looking at it (screenshots)
+##   --bait_mess=D     (host, after the above) put the nearest VAC-COP that tidies D metres from the first mess
+##   --mess_log=N      every N frames print the props and what the bots are doing (until the snap)
+##   --meow[=F]        F frames in (default 30), press MEOW (the taunt). With --bait_roomba=18 a bot out of
+##                     sight should hear it and come (INVESTIGATE)
 ##   --raid_report[=N] (host) end the district NOW with made-up numbers: the RAID REPORT goes up
 ##                     (N = that many cards; made-up quitters fill the gap). --raid_report_after=F waits
 ##                     F frames first (default 30). Every report prints "DevCapture report" lines
@@ -546,6 +560,8 @@ func _ready() -> void:
 						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
 						break
 				await get_tree().physics_frame
+		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost"):
+			await _mess_tests(scene, player, args)
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
 			await _down_and_revive(scene, player, args)
 		if args.has("shoot_rival"):
@@ -833,6 +849,7 @@ func _ready() -> void:
 				props[file].append((node as Node3D).global_position.snapped(Vector3.ONE * 0.1))
 		for file in props:
 			print("DevCapture props: %d x %s, e.g. %s" % [props[file].size(), file, props[file].slice(0, 4)])
+		_print_mess("snap")
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
 		# --mode: which mode this computer is playing, every cat's gang, and the layout it made.
@@ -1484,9 +1501,9 @@ func _print_report(report: Dictionary) -> void:
 	for gang in report.gangs:
 		print("DevCapture report gang: %s $%d" % [gang.name, int(gang.total)])
 	for row in report.rows:
-		print("DevCapture report row: %s id=%d team=%d went_up=%d %s cash=$%d (loot %d + quest %d) bots=%d bosses=%d downs=%d revives=%d damage=%d vacuumed=%d robbed=%d left=%d award=%s \"%s\" / \"%s\"" % [
+		print("DevCapture report row: %s id=%d team=%d went_up=%d %s cash=$%d (loot %d + quest %d) bots=%d bosses=%d downs=%d revives=%d damage=%d vacuumed=%d robbed=%d mess=%d left=%d award=%s \"%s\" / \"%s\"" % [
 			row.name, int(row.id), int(row.team), int(row.went_up), row.ending, int(row.cash), int(row.loot), int(row.bonus), int(row.bots),
-			int(row.bosses), int(row.downs), int(row.revives), int(row.damage), int(row.vacuumed), int(row.robbed),
+			int(row.bosses), int(row.downs), int(row.revives), int(row.damage), int(row.vacuumed), int(row.robbed), int(row.get("mess", 0)),
 			int(row.left), row.award_id, row.award_title, row.award_line])
 	var ids: Array = report.rows.map(func(row): return row.award_id)
 	var unique := {}
@@ -1513,6 +1530,165 @@ func _print_report(report: Dictionary) -> void:
 	print("DevCapture after report: up=%s shown_seats=%s hud_frames=%s cats=%s" % [RaidReportScreen.is_up(),
 		GameScreen.instance.shown_seats(), hud_frames,
 		Game.instance.local_cats().map(func(c): return "slot %d can_move=%s" % [c.slot, not c._input_blocked()])])
+
+
+# --- MESS-MAKING tests (scripts/mess_manager.gd) ---
+
+## --mess / --ram_prop / --scratch / --shoot_prop / --ghost / --bait_mess / --meow / --mess_log.
+func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	var mess := MessManager.instance
+	for i in 20:
+		await get_tree().physics_frame
+	if args.has("ghost"):
+		player.unseen_by_bots = true  # (roomba.gd _can_chase skips us)
+		if not multiplayer.is_server():
+			print("DevCapture mess: --ghost only hides us from the HOST's bots on the host")
+	if args.has("mess_log"):
+		_mess_log(int(args["mess_log"]))
+	_print_mess("start")
+	var first: MessProp = null
+	if args.has("mess"):
+		for i in int(args["mess"]):
+			var p := _nearest_prop(player.global_position, "")
+			if p == null:
+				break
+			first = p if first == null else first
+			mess.knock(player.player_id, p.id, Motion.flat(p.global_position - player.global_position).normalized())
+			for f in 15:
+				await get_tree().physics_frame
+		_print_mess("after --mess")
+	if args.has("ram_prop"):
+		var p := _nearest_prop(player.global_position, str(args["ram_prop"]))
+		if p != null:
+			first = p if first == null else first
+			# Stand 4 m away along the pavement-facing side, and run straight at it.
+			var away := Motion.flat(player.global_position - p.global_position).normalized()
+			if away == Vector3.ZERO:
+				away = Vector3.BACK
+			var dir := -away
+			player.teleport_to(p.global_position + away * 4.0 + Vector3.UP * 0.2, atan2(-dir.x, -dir.z))
+			for f in 10:
+				await get_tree().physics_frame
+			var keys: Array[String] = ["move_forward"]
+			if p.kind == MessProp.Kind.BIN:
+				keys.append("sprint")
+			for key in keys:
+				Input.action_press(Seats.action(player.slot, key))
+			for f in 70:
+				await get_tree().physics_frame
+				if args.has("ram_trace") and f % 3 == 0:
+					print("DevCapture ram trace: f=%d gap=%.2f speed=%.2f pos=%s" % [f, Motion.flat_distance(player.global_position, p.global_position),
+						Vector3(player.velocity.x, 0, player.velocity.z).length(), player.global_position.snapped(Vector3.ONE * 0.1)])
+				if p.knocked:
+					break
+			for key in keys:
+				Input.action_release(Seats.action(player.slot, key))
+			for f in 15:
+				await get_tree().physics_frame
+			print("DevCapture mess ram: %s %s knocked=%s cat now %.1f m from it" % [p.name, MessProp.Kind.keys()[p.kind], p.knocked,
+				Motion.flat_distance(player.global_position, p.global_position)])
+	if args.has("scratch"):
+		var p := _nearest_prop(player.global_position, "poster")
+		if p != null:
+			first = p if first == null else first
+			var front := -p.global_basis.z
+			player.teleport_to(p.tidy_spot() + Vector3.UP * 0.2, atan2(front.x, front.z))
+			for f in 12:
+				await get_tree().physics_frame
+			var prompt := Interactable.prompt_for(player)
+			var used := Interactable.try_use(player)
+			for f in 15:
+				await get_tree().physics_frame
+			print("DevCapture mess scratch: %s prompt=\"%s\" used=%s knocked=%s" % [p.name, prompt, used, p.knocked])
+	if args.has("shoot_prop"):
+		var p := _nearest_prop(player.global_position, "")
+		if p != null:
+			first = p if first == null else first
+			var hit := Hit.new()
+			hit.shooter = player
+			hit.damage = 10
+			hit.direction = Motion.flat(p.global_position - player.global_position).normalized()
+			(p.get_node("Hitbox").get_parent() as MessProp).receive_hit(hit)
+			for f in 15:
+				await get_tree().physics_frame
+			print("DevCapture mess shoot: %s knocked=%s" % [p.name, p.knocked])
+	if args.has("bait_mess") and multiplayer.is_server() and first != null:
+		var bot: Roomba = null
+		var best := INF
+		for node in scene.get_node("Roombas").get_children():
+			var r := node as Roomba
+			if r != null and r.tidies_messes and not r.is_boss and r.breach_hub == null and not r.is_queued_for_deletion():
+				var d := Motion.flat_distance(r.global_position, first.global_position)
+				if d < best:
+					best = d
+					bot = r
+		if bot != null:
+			var side := Motion.flat(first.tidy_spot() - player.global_position).normalized()
+			if side == Vector3.ZERO:
+				side = Vector3.RIGHT
+			bot.global_position = first.tidy_spot() + side.cross(Vector3.UP) * float(args["bait_mess"]) + Vector3.UP * 0.1
+			bot.state = Roomba.State.PATROL
+			bot._mess_check_left = 0.0
+			print("DevCapture mess bait: %s placed %.1f m from %s" % [bot.name, float(args["bait_mess"]), first.name])
+	if args.has("face_mess") and first != null:
+		# Stand 4.5 m from the first mess and look at it (for screenshots).
+		var away := Motion.flat(player.global_position - first.tidy_spot()).normalized()
+		if away.length() < 0.5:
+			away = -first.global_basis.z
+		player.teleport_to(first.tidy_spot() + away * 4.5 + Vector3.UP * 0.2, atan2(away.x, away.z))
+	if args.has("meow"):
+		for f in (30 if args["meow"] == "true" else int(args["meow"])):
+			await get_tree().physics_frame
+		player._next_meow_at = 0.0
+		player.meow()
+		for f in 30:
+			await get_tree().physics_frame
+		_print_mess("after --meow")
+
+
+## The nearest standing mess prop of a kind ("" = any; "bin", "cone", "box", "poster").
+func _nearest_prop(from: Vector3, kind: String) -> MessProp:
+	var best: MessProp = null
+	var best_distance := INF
+	for p in MessManager.instance.props():
+		if p.knocked or (kind != "" and MessProp.Kind.keys()[p.kind] != kind.to_upper()):
+			continue
+		var d := Motion.flat_distance(p.global_position, from)
+		if d < best_distance:
+			best = p
+			best_distance = d
+	return best
+
+
+## One "DevCapture mess" line: the props, the counters and what every bot is up to.
+func _print_mess(when: String) -> void:
+	var mess := MessManager.instance
+	if mess == null or Game.instance == null:
+		return
+	var kinds := {}
+	var knocked: Array = []
+	for p in mess.props():
+		var k: String = MessProp.Kind.keys()[p.kind]
+		kinds[k] = int(kinds.get(k, 0)) + 1
+		if p.knocked:
+			knocked.append(p.id)
+	var states := {}
+	var roombas := Game.instance.get_node_or_null("Roombas")
+	if roombas != null:
+		for node in roombas.get_children():
+			if node is Roomba:
+				var st: String = Roomba.State.keys()[(node as Roomba).state]
+				states[st] = int(states.get(st, 0)) + 1
+	print("DevCapture mess (%s): props=%d %s knocked=%s made=%d tidied=%d heat=%.2f bots=%s (%s)" % [when, mess.props().size(), kinds, knocked,
+		mess.messes_made, mess.messes_tidied, HeatMeter.instance.heat if HeatMeter.instance != null else 0.0, states,
+		"host" if multiplayer.is_server() else "client"])
+
+
+func _mess_log(every: int) -> void:
+	while is_inside_tree():
+		for f in every:
+			await get_tree().physics_frame
+		_print_mess("log")
 
 
 ## --raid_report[=N]: (host) made-up numbers, then the report (scripts/raid_report.gd test_report).

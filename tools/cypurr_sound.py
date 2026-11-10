@@ -356,10 +356,21 @@ def _preset(name: str, p: dict, rng: np.random.Generator) -> dict:
                                              for s in (0.0, 0.22, 0.45)][:int(p.get("strokes", 3))]}
     if name == "pa_chime":
         return {"duration": 1.8, "raw": "chime"}
+    if name == "cardboard_thump":
+        base = 95 * pitch  # a dull, papery "bwomp": low thud, short, lots of soft noise
+        return {"duration": 0.6, "hits": [
+            {"time": 0, "gain": 1, "seconds": 0.35, "modes": [[base, 0.06, 1], [base * 1.9, 0.035, 0.5], [base * 3.1, 0.02, 0.25]],
+             "noise": {"gain": 0.7, "decay": 0.05, "low": 150, "high": 1800}},
+            {"time": 0.16, "gain": 0.35, "seconds": 0.25, "modes": [[base * 1.2, 0.04, 1]],
+             "noise": {"gain": 0.5, "decay": 0.03, "low": 200, "high": 1500}}]}
+    if name == "vacuum":
+        # A little robot vacuum tidying up: a motor hum that revs up and down + suction hiss.
+        seconds = p.get("seconds", 1.6)
+        return {"duration": seconds, "raw": "vacuum", "seconds": seconds, "pitch": pitch}
     raise ValueError("unknown preset '%s' (try: %s)" % (name, ", ".join(PRESETS)))
 
 
-PRESETS = ["metal_bin_clatter", "metal_clang", "cone_bounce", "plastic_tap", "scratch", "pa_chime"]
+PRESETS = ["metal_bin_clatter", "metal_clang", "cone_bounce", "plastic_tap", "scratch", "pa_chime", "cardboard_thump", "vacuum"]
 
 
 def ps1_sfx(sound_id: str, preset_or_params, folder: str = "sfx") -> dict:
@@ -378,6 +389,16 @@ def ps1_sfx(sound_id: str, preset_or_params, folder: str = "sfx") -> dict:
         c = pa_speaker(chime(), 0.4, drive=1.2)
         out = np.zeros(max(n, len(c)))
         out[:len(c)] += c
+    if recipe.get("raw") == "vacuum":
+        t = _t(recipe["seconds"])
+        rev = 1 + 0.25 * np.sin(2 * np.pi * 1.3 * t) + 0.15 * np.minimum(1, t / 0.3)
+        f0 = 140 * recipe["pitch"] * rev
+        phase = 2 * np.pi * np.cumsum(f0) / RATE
+        hum = np.sign(np.sin(phase)) * 0.25 + np.sin(phase * 2) * 0.3 + np.sin(phase * 3.02) * 0.15
+        hiss = band(rng.standard_normal(len(t)), 900, 5000) * (0.5 + 0.3 * np.sin(2 * np.pi * 7 * t))
+        env = np.minimum(1, t / 0.08) * np.minimum(1, (recipe["seconds"] - t) / 0.25)
+        out = np.zeros(max(n, len(t)))
+        out[:len(t)] += (hum * 0.6 + hiss * 0.5) * env
     for hit in recipe.get("hits", []):
         h = _hit(hit["modes"], hit.get("noise"), hit.get("seconds", 1.0), rng) * hit.get("gain", 1.0)
         start = int(hit.get("time", 0) * RATE)
@@ -405,11 +426,37 @@ def ps1_sfx(sound_id: str, preset_or_params, folder: str = "sfx") -> dict:
 
 
 # =====================================================================================
+# Player cat taunts (the MEOW button: a meow, then a squeaky little cat voice talking back)
+# =====================================================================================
+
+def cat_taunt(sound_id: str, text: str = "Go lick yourself!", voice: str = "en-US-AnaNeural", pitch_shift: float = 5.0,
+              rate: str = "+8%", meow_pitch: float = 520.0, mood: str = "sly", seed: int = 3, folder: str = "sfx") -> dict:
+    """A cat's MEOW-button taunt -> sounds/<folder>/<sound_id>.wav: a synthesised meow syllable, then
+    "text" in a squeaky TTS cat voice (pitched up pitch_shift semitones), crunched to PS1 quality.
+    The game changes the pitch per cat (scripts/cat_player.gd voice_pitch), so one file serves every cat."""
+    rng = np.random.default_rng(seed)
+    meow = _syllable(meow_pitch, mood, rng)
+    meow = np.concatenate([meow, _syllable(meow_pitch * 1.15, mood, rng)[: int(0.12 * RATE)]])
+    speech = speak(text, voice, rate, 2 ** (pitch_shift / 12.0))
+    loud = np.nonzero(np.abs(speech) > 0.01)[0]
+    if loud.size:
+        speech = speech[max(0, loud[0] - 300):loud[-1] + 800]
+    speech = speech / (np.max(np.abs(speech)) or 1.0)
+    # A little nasal "cat mouth" colour: thin out the lows, add a fast wobble.
+    speech = band(speech, 280, 6000) * (1 + 0.08 * np.sin(2 * np.pi * 9 * _t(len(speech) / RATE)))
+    meow = meow / (np.max(np.abs(meow)) or 1.0) * 0.8
+    out = np.concatenate([meow, silence(0.06), speech])
+    out = crush(out, hold=2, bits=11)
+    path = write_wav(out_path(sound_id, folder), out, peak_db=-2.0)
+    return {"file": os.path.relpath(path, PROJECT_ROOT), "seconds": round(len(out) / RATE, 2), "text": text}
+
+
+# =====================================================================================
 # Batches (a JSON list of jobs, so a whole set of lines can be remade with one command)
 # =====================================================================================
 
 def run_batch(path: str) -> list:
-    """A JSON file: {"jobs": [{"kind": "voice"|"blips"|"sfx", ...the function's arguments}]}"""
+    """A JSON file: {"jobs": [{"kind": "voice"|"blips"|"taunt"|"sfx", ...the function's arguments}]}"""
     with open(path, "r", encoding="utf-8") as f:
         jobs = json.load(f)["jobs"]
     results = []
@@ -421,6 +468,8 @@ def run_batch(path: str) -> list:
             results.append(overclean_voice(**job))
         elif kind == "blips":
             results.append(cat_blips(**job))
+        elif kind == "taunt":
+            results.append(cat_taunt(**job))
         elif kind == "sfx":
             results.append(ps1_sfx(job["sound_id"], job["params"], job.get("folder", "sfx")))
         print(json.dumps(results[-1]))

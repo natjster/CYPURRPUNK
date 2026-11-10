@@ -57,6 +57,7 @@ var _light_home: Vector3
 
 
 func _ready() -> void:
+	tidies_messes = false  # (a drone doesn't stop to tidy messes: roomba.gd TIDY_GO)
 	super()
 	_light_home = siren_light.rotation
 

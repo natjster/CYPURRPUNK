@@ -137,11 +137,29 @@ var sync_model_rotation: Vector3
 ## Footstep loudness in decibels (0 = the file's own volume, -6 = about half).
 @export var footstep_volume_db: float = -8.0
 ## Shortest time between two meows (seconds), so holding M doesn't spam everyone.
-@export var meow_cooldown: float = 0.5
+@export var meow_cooldown: float = 1.2
+
+@export_group("Meow Taunt")
+## MEOW (M / pad B) plays this sound (sounds/sfx/cat_taunt.wav: a meow, then a squeaky "Go lick
+## yourself!", made by tools/sound_specs/mess.json) in this cat's own voice pitch...
+@export var taunt_sound: String = "cat_taunt"
+## ...and shows one of these over the cat's head for Taunt Seconds (picked at random).
+@export var taunt_lines: Array[String] = ["GO LICK YOURSELF!"]
+@export var taunt_seconds: float = 1.8
+@export var taunt_color: Color = Color(1, 0.9, 0.35)
+## Every cat's voice is pitched from its look (fur + eye colour): between these two (1 = as recorded).
+@export var voice_pitch_low: float = 0.8
+@export var voice_pitch_high: float = 1.35
+## VAC-COPs within this many metres HEAR a meow and come to look (roomba.gd INVESTIGATE).
+@export var meow_heard_from: float = 22.0
 
 var _step_timer: float = 0.0
 var _step_last_position: Vector3
 var _next_meow_at: float = 0.0
+## TESTS ONLY (DevCapture --ghost): VAC-COPs never notice this cat (roomba.gd _can_chase).
+var unseen_by_bots: bool = false
+var _taunt_label: Label3D  # the "GO LICK YOURSELF!" bubble (made the first time we meow)
+var _taunt_hide_at: float = 0.0
 
 @export_group("Running Animation")
 ## How far the legs swing forward/back at full running speed (radians, 0.6 = about 35 degrees).
@@ -284,6 +302,7 @@ func _ready() -> void:
 		_tail_base = _tail.position + _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
 	add_to_group(Interactable.GROUP)  # teammates can revive us with E while we're downed
+	collision_mask |= MessProp.SOLID_LAYER  # trash bins are solid for cats (not for cars or bots)
 
 	if is_multiplayer_authority():
 		# One of OUR cats: its name and look come from the player sitting at this slot
@@ -327,6 +346,8 @@ func _ready() -> void:
 ## Our own cat: turn the camera with the controller's right stick.
 ## Other players' cats: ease toward the latest position from the network.
 func _process(delta: float) -> void:
+	if _taunt_label != null and _taunt_label.visible and Time.get_ticks_msec() / 1000.0 > _taunt_hide_at:
+		_taunt_label.hide()
 	if is_multiplayer_authority():
 		_stick_look(delta)
 		return
@@ -423,10 +444,58 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif Seats.event_is(slot, event, "drop") and not is_downed():  # (downed: hold on to your loot!)
 		ItemManager.instance.drop_from(self)
-	elif Seats.event_is(slot, event, "meow") and Time.get_ticks_msec() / 1000.0 >= _next_meow_at:
-		# Everyone nearby hears it (sounds/sfx/meow_1.wav, meow_2.wav... a random one each time).
-		_next_meow_at = Time.get_ticks_msec() / 1000.0 + meow_cooldown
-		Sound.play_everywhere("meow", global_position)
+	elif Seats.event_is(slot, event, "meow"):
+		meow()
+
+
+## Owner: MEOW! (the M key / pad B). A taunt every computer hears and sees, and a noise the
+## VAC-COPs nearby hear (they come and look: roomba.gd INVESTIGATE). Cooldown: Meow Cooldown.
+func meow() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now < _next_meow_at or not visible:
+		return
+	_next_meow_at = now + meow_cooldown
+	_meow.rpc(randi() % maxi(1, taunt_lines.size()))
+
+
+## Every computer: play this cat's taunt and pop its speech bubble. The host also lets the
+## VAC-COPs hear it.
+@rpc("authority", "call_local", "reliable")
+func _meow(line: int) -> void:
+	var player := Sound.play_at(taunt_sound, global_position + Vector3.UP * 0.6)
+	if player == null:
+		player = Sound.play_at("meow", global_position + Vector3.UP * 0.6)  # (no taunt file: a plain meow)
+	if player != null:
+		player.pitch_scale = voice_pitch()
+	if not taunt_lines.is_empty():
+		_show_taunt(taunt_lines[line % taunt_lines.size()])
+	if multiplayer.is_server() and RoombaPatrol.instance != null and not UndergroundHub.is_in_hub(global_position):
+		var heard := RoombaPatrol.instance.hear_noise(global_position, meow_heard_from)
+		print("[Cat] %s meowed: %d VAC-COP(s) heard it" % [name, heard])
+
+
+## This cat's voice pitch, worked out from its look (the same on every computer).
+func voice_pitch() -> float:
+	var key := str(look.get("fur", "")) + str(look.get("eyes", "")) + str(look.get("markings", ""))
+	var amount := float(absi(key.hash()) % 1000) / 999.0
+	return lerpf(voice_pitch_low, voice_pitch_high, amount)
+
+
+## The speech bubble over our head. It's a HUD name-tag marker (hud_name_tags.gd draws it sharp on
+## every player's HUD, ours too: it hangs off the CatModel, not the cat itself).
+func _show_taunt(text: String) -> void:
+	if _taunt_label == null:
+		_taunt_label = Label3D.new()
+		_taunt_label.name = "TauntBubble"
+		_taunt_label.position = Vector3.UP * 1.35
+		_taunt_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_taunt_label.add_to_group(HudNameTags.GROUP)
+		_taunt_label.set_meta("max_distance", 35.0)
+		cat_model.add_child(_taunt_label)
+	_taunt_label.text = text
+	_taunt_label.modulate = taunt_color
+	_taunt_label.show()
+	_taunt_hide_at = Time.get_ticks_msec() / 1000.0 + taunt_seconds
 
 
 ## Controller camera: the right stick (LOOK UP / DOWN / LEFT / RIGHT in SETTINGS > KEYS) turns
@@ -509,7 +578,11 @@ func _physics_process(delta: float) -> void:
 	velocity.x = lerp(velocity.x, target_velocity.x, weight)
 	velocity.z = lerp(velocity.z, target_velocity.z, weight)
 
+	var push := velocity  # (before a bin stops us: how hard we ran into it)
 	move_and_slide()
+	# MESS: ran into a cone, a box, or (with zoomies) a bin? Knock it over (scripts/mess_manager.gd).
+	if MessManager.instance != null:
+		MessManager.instance.cat_bump(self, push)
 
 	# Smoothly turn the cat model to face where it's going. (Godot's "forward" is -Z.)
 	# While firing a weapon, face where the camera looks instead, so the gun points at the target.

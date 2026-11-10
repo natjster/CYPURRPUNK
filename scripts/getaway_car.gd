@@ -192,6 +192,9 @@ func _physics_process(delta: float) -> void:
 		# We simulate the car: publish where it is.
 		sync_position = global_position
 		sync_rotation = global_rotation
+		# MESS: ploughing through bins and cones knocks them flying (scripts/mess_manager.gd).
+		if MessManager.instance != null:
+			MessManager.instance.car_bump(self)
 		return
 
 	# Someone else simulates it: glide our frozen copy toward their latest position.

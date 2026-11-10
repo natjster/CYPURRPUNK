@@ -1,0 +1,16 @@
+{
+  "about": "Phase 1 MESS-MAKING sounds: OVERCLEAN's passive-aggressive mess remarks (subtitles live on the Mess node in main.tscn: keep them matching), the knock-over / tidy-up effects and the player cats' MEOW-button taunt. Remake with: python tools/cypurr_sound.py batch tools/sound_specs/mess.json (needs internet for the voices).",
+  "jobs": [
+    {"kind": "voice", "sound_id": "overclean_mess_1", "text": "A mess has been detected. Please remain where you are."},
+    {"kind": "voice", "sound_id": "overclean_mess_2", "text": "Shedding is a crime. Knocking things over is also a crime."},
+    {"kind": "voice", "sound_id": "overclean_mess_3", "text": "Unscheduled mess detected. Sanitation units will tidy up after you. As always."},
+    {"kind": "sfx", "sound_id": "box_thump", "params": {"preset": "cardboard_thump", "seed": 4}},
+    {"kind": "sfx", "sound_id": "poster_scratch", "params": {"preset": "scratch", "strokes": 3, "seed": 5}},
+    {"kind": "sfx", "sound_id": "roomba_tidy", "params": {"preset": "vacuum", "seconds": 1.6, "seed": 6}},
+    {"kind": "sfx", "sound_id": "prop_standup", "params": {"preset": "plastic_tap", "pitch": 0.8, "seed": 7}},
+    {"kind": "sfx", "sound_id": "roomba_curious", "params": {"duration": 0.5, "hits": [
+      {"time": 0.0, "gain": 0.8, "seconds": 0.12, "modes": [[880, 0.08, 1.0], [1760, 0.04, 0.3]]},
+      {"time": 0.14, "gain": 0.9, "seconds": 0.2, "modes": [[1320, 0.12, 1.0], [2640, 0.05, 0.3]]}]}},
+    {"kind": "taunt", "sound_id": "cat_taunt", "text": "Go lick yourself!"}
+  ]
+}

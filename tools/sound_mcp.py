@@ -55,10 +55,20 @@ def generate_cat_voice_blips(id: str, base_pitch: float = 420.0, mood: str = "ha
 
 
 @server.tool()
+def generate_cat_taunt(id: str, text: str = "Go lick yourself!", voice: str = "en-US-AnaNeural",
+                       pitch_shift: float = 5.0, meow_pitch: float = 520.0, mood: str = "sly", seed: int = 3,
+                       folder: str = "sfx") -> str:
+    """Make a player cat's MEOW-button taunt -> sounds/<folder>/<id>.wav: a synthesised meow, then
+    "text" said by a squeaky text-to-speech cat voice (pitch_shift semitones up), PS1-crunched.
+    The game plays "cat_taunt" with each cat's own pitch (from its look)."""
+    return json.dumps(lab.cat_taunt(id, text, voice, pitch_shift, meow_pitch=meow_pitch, mood=mood, seed=seed, folder=folder))
+
+
+@server.tool()
 def generate_ps1_sfx(id: str, preset_or_params: str, folder: str = "sfx") -> str:
     """Make a crunchy PS1 sound effect -> sounds/<folder>/<id>.wav.
     preset_or_params = a preset name: metal_bin_clatter, metal_clang, cone_bounce, plastic_tap,
-    scratch, pa_chime -- or JSON: {"preset": "cone_bounce", "pitch": 1.3, "bounces": 5, "seed": 2,
+    scratch, pa_chime, cardboard_thump, vacuum -- or JSON: {"preset": "cone_bounce", "pitch": 1.3, "bounces": 5, "seed": 2,
     "bits": 8, "hold": 2} (pitch = higher/lower, bits = crunch 8..16, hold = 1..4 lower sample
     rate; preset knobs: rattles, bounces, strokes) or a custom recipe:
     {"duration": 1.0, "hits": [{"time": 0, "gain": 1, "seconds": 0.5,

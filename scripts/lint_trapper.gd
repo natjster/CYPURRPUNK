@@ -45,6 +45,11 @@ var _last_patch_at := Vector3.INF
 
 
 ## Host: stay keep_distance back from the cat; further away, drive like a VAC-COP.
+
+func _ready() -> void:
+	tidies_messes = false  # (a Lint-Trapper is too busy gluing pavements to tidy messes: roomba.gd TIDY_GO)
+	super()
+
 func _chase_point(cat: CatPlayer) -> Vector3:
 	if Motion.flat_distance(cat.global_position, global_position) < keep_distance:
 		return global_position

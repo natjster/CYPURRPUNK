@@ -1,0 +1,51 @@
+{
+  "name": "overclean_poster",
+  "kind": "prop",
+  "about": "An OVERCLEAN propaganda poster pasted on a wall ('SHEDDING IS A CRIME'). Faces NORTH (-Z): its back goes against the wall. Two groups: Poster (the whole sheet) and Torn (claw-shredded strips + the bare paste patch), shown when a cat scratches it (scripts/mess_prop.gd). 16 px = 1 m.",
+  "texture_size": 64,
+  "seed": 33,
+  "background": "#202428",
+  "paint": [
+    {"op": "comment", "note": "[0,0,40,56] the poster front: cream paper, a VAC-COP face, SHEDDING IS A CRIME"},
+    {"op": "fill", "rect": [0, 0, 40, 56], "color": "#e9e2c8"},
+    {"op": "noise", "rect": [0, 0, 40, 56], "amount": 0.25, "spread": 0.08},
+    {"op": "fill", "rect": [0, 0, 40, 9], "color": "#1f5fb8"},
+    {"op": "text", "pos": [2, 2], "text": "OVERCLEAN", "color": "#ffffff", "spacing": 0},
+    {"op": "comment", "note": "a VAC-COP face (grey disc, red eye)"},
+    {"op": "fill", "rect": [9, 13, 31, 27], "color": "#9aa2ac"},
+    {"op": "fill", "rect": [11, 11, 29, 13], "color": "#9aa2ac"},
+    {"op": "fill", "rect": [11, 27, 29, 29], "color": "#7a828c"},
+    {"op": "fill", "rect": [14, 18, 26, 21], "color": "#ff2a2a"},
+    {"op": "fill", "rect": [16, 14, 19, 16], "color": "#ff2020"},
+    {"op": "fill", "rect": [21, 14, 24, 16], "color": "#2060ff"},
+    {"op": "text", "pos": [4, 33], "text": "SHEDDING", "color": "#b8201c", "spacing": 1},
+    {"op": "text", "pos": [12, 40], "text": "IS A", "color": "#202020", "spacing": 1},
+    {"op": "text", "pos": [8, 47], "text": "CRIME", "color": "#b8201c", "spacing": 1},
+    {"op": "gradient", "rect": [0, 40, 40, 56], "top": "#4a3a2000", "bottom": "#4a3a2060"},
+    {"op": "spots", "rect": [0, 0, 40, 56], "color": "#8a7a5060", "count": 7, "size": 1.6},
+    {"op": "edge", "rect": [0, 0, 40, 56], "color": "#c8c0a0"},
+    {"op": "comment", "note": "[40,0,64,32] the bare paste patch left on the wall, with claw marks"},
+    {"op": "fill", "rect": [40, 0, 64, 32], "color": "#6a6656"},
+    {"op": "noise", "rect": [40, 0, 64, 32], "amount": 0.4, "spread": 0.15},
+    {"op": "line", "from": [44, 4], "to": [50, 26], "color": "#2a2820"},
+    {"op": "line", "from": [48, 3], "to": [54, 27], "color": "#2a2820"},
+    {"op": "line", "from": [52, 4], "to": [58, 26], "color": "#2a2820"},
+    {"op": "spots", "rect": [40, 0, 64, 32], "color": "#e9e2c8b0", "count": 6, "size": 1.4},
+    {"op": "comment", "note": "[40,32,48,40] paper edge"},
+    {"op": "fill", "rect": [40, 32, 48, 40], "color": "#d8d0b4"}
+  ],
+  "groups": [
+    {"name": "Poster", "origin": [0, 0, 0]},
+    {"name": "Torn", "origin": [0, 0, 0]}
+  ],
+  "elements": [
+    {"type": "cube", "name": "sheet", "group": "Poster", "from": [-8, 0, -0.6], "to": [8, 22.4, 0],
+     "faces": {"north": [0, 0, 40, 56], "south": [40, 32, 48, 40], "east": [40, 32, 48, 40], "west": [40, 32, 48, 40], "up": [40, 32, 48, 40], "down": [40, 32, 48, 40]}},
+    {"type": "cube", "name": "paste", "group": "Torn", "from": [-7.5, 0.5, -0.3], "to": [7.5, 21.9, 0], "faces": {"north": [40, 0, 64, 32]}},
+    {"type": "cube", "name": "strip_top", "group": "Torn", "from": [-8, 17, -0.6], "to": [8, 22.4, -0.3], "faces": {"north": [0, 0, 40, 13.5]}},
+    {"type": "cube", "name": "strip_left", "group": "Torn", "from": [-8, 4, -0.6], "to": [-4.5, 17, -0.3], "faces": {"north": [0, 13.5, 8.75, 46]}},
+    {"type": "cube", "name": "strip_hang", "group": "Torn", "from": [2, 6, -1.0], "to": [5, 17, -0.6],
+     "origin": [3.5, 17, -0.8], "rotation": [0, 0, 18], "faces": {"north": [25, 13.5, 32.5, 41], "south": [40, 32, 48, 40]}},
+    {"type": "cube", "name": "strip_bottom", "group": "Torn", "from": [-1, 0, -0.6], "to": [8, 3, -0.3], "faces": {"north": [17.5, 48.5, 40, 56]}}
+  ]
+}

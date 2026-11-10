@@ -22,6 +22,13 @@ extends Enemy
 ##   BONK    — touching a cat knocks it flying, VACUUMS UP one piece of loot from its bag and
 ##             takes bonk_damage HP. A cat at 0 HP is knocked out and drops everything
 ##             (cat_health.gd). Then the Roomba backs off for a moment (STUNNED).
+##   TIDY    — MESS-MAKING (scripts/mess_manager.gd): a patrolling bot that spots a knocked-over
+##             bin / cone / box or a scratched poster within Mess Notice Range drives over
+##             (TIDY_GO) and tidies it up for Tidy Seconds (TIDYING: "TIDYING..." over it, vacuum
+##             noise, brush whirring). While it's busy it's half-blind (Distracted Sight), so a
+##             mess is a distraction. Bosses, SEWER BREACH bots, drones and Lint-Trappers don't tidy.
+##   INVESTIGATE — a cat MEOWED within earshot (cat_player.gd): it drives to where it heard it
+##             ("?" over it) and looks around, then goes back to patrolling.
 ##   Shoot it (each bolt takes the gun's Damage off its Max Health) or ram it with the car
 ##   (faster than Car Smash Speed) and it explodes, spitting out everything it vacuumed.
 ##   Shooting it also makes it chase the shooter.
@@ -54,7 +61,8 @@ extends Enemy
 ## only replace these four small functions: _fall (how it stays up), _chase_point (where it drives),
 ## _attack (what it does while chasing) and _show_light (its light).
 
-enum State { PATROL, CHASE, STUNNED }
+## (New states go at the END: "state" is synced as a number.)
+enum State { PATROL, CHASE, STUNNED, TIDY_GO, TIDYING, INVESTIGATE }
 
 @export_group("Driving")
 @export var patrol_speed: float = 2.2
@@ -84,6 +92,21 @@ enum State { PATROL, CHASE, STUNNED }
 @export var channel_hop: float = 6.0
 ## Does the HEAT level (scripts/heat_meter.gd) make it faster and sharper-eyed?
 @export var heat_scaling: bool = true
+
+@export_group("Mess + Meows")
+## Does it stop to tidy up messes (MESS-MAKING)? Bosses, drones and Lint-Trappers never do.
+@export var tidies_messes: bool = true
+## It notices a mess this close (metres) while patrolling.
+@export var mess_notice_range: float = 14.0
+## Seconds it spends tidying one mess.
+@export var tidy_seconds: float = 3.5
+## While on its way to a mess or tidying it, it only spots cats this much closer (0.35 = a third
+## of its usual Sight Range). The distraction!
+@export var distracted_sight: float = 0.35
+## Does it come to look when a cat meows nearby? (How far a meow carries: the cat's Meow Heard From.)
+@export var hears_meows: bool = true
+## Gives up looking for the meowing cat after this many seconds.
+@export var investigate_seconds: float = 7.0
 
 @export_group("Performance")
 ## Further than this (metres) from every cat, a patrolling Roomba only thinks every
@@ -123,12 +146,19 @@ var _clock: float = 0.0
 ## start the moment a chase begins).
 var _hum: AudioStreamPlayer3D
 var _last_state: State = State.PATROL
+var _last_status: State = State.PATROL  # (for the status tag: what we showed last frame)
 var _skipped_time: float = 0.0  # host: time saved up while thinking less often (far away)
 var _frame: int = 0  # host: counts physics frames, for thinking less often
 var _route_point: Vector3  # host: where the chase is headed (re-planned replans_per_second)
 var _replan_left: float = 0.0
 var _hum_check_left: float = 0.0  # every computer: time until we check if anyone can hear us
 var _rng := RandomNumberGenerator.new()  # patrol choices only — NOT the city's RNG
+var _mess: MessProp = null  # host: the mess we're tidying (TIDY_GO / TIDYING)
+var _busy_left: float = 0.0  # host: seconds of tidying / investigating left
+var _mess_check_left: float = 0.0  # host: time until we look around for messes again
+var _noise_spot: Vector3  # host: where we heard the meow
+var _tidy_sound_left: float = 0.0  # every computer: time until the next vacuum noise
+var _status_tag: Label3D  # every computer: "TIDYING..." / "?" over us (made when first needed)
 
 @onready var eye: MeshInstance3D = $Model/Eye
 @onready var siren_red: MeshInstance3D = $Model/SirenRed
@@ -185,11 +215,57 @@ func _physics_process(delta: float) -> void:
 			if cat != null:
 				_chase_id = cat.player_id
 				state = State.CHASE
+			elif _look_for_mess(delta):
+				pass  # (off to tidy it: TIDY_GO from the next frame)
 			else:
 				move = Motion.flat(_target - global_position)
 				speed = patrol_speed
 				if move.length() < 1.5 or is_on_wall() or _is_stuck(delta):
 					_pick_patrol_target()
+		State.TIDY_GO, State.TIDYING:
+			var cat := _find_cat_to_chase(distracted_sight)
+			if cat != null:
+				_drop_mess()
+				_chase_id = cat.player_id
+				state = State.CHASE
+			elif _mess == null or not is_instance_valid(_mess) or not _mess.knocked:
+				_back_to_patrol()  # (someone else tidied it, or a new district)
+			elif state == State.TIDY_GO:
+				var to_mess := Motion.flat(_mess.tidy_spot() - global_position)
+				if to_mess.length() < 1.0 + _mess.radius() or (is_on_wall() and to_mess.length() < 2.5):
+					state = State.TIDYING
+					_busy_left = tidy_seconds
+				elif _is_stuck(delta):
+					_drop_mess()
+					_back_to_patrol()
+				else:
+					move = to_mess
+					speed = patrol_speed * 1.3
+			else:
+				_busy_left -= delta
+				# Turn to face it while tidying (it looks like it's sucking the mess up).
+				var face := Motion.flat(_mess.global_position - global_position)
+				if face.length() > 0.1:
+					model.rotation.y = lerp_angle(model.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-turn_speed * delta))
+				if _busy_left <= 0.0:
+					MessManager.instance.tidy(_mess.id)
+					_mess = null
+					_back_to_patrol()
+		State.INVESTIGATE:
+			var cat := _find_cat_to_chase()
+			_busy_left -= delta
+			if cat != null:
+				_chase_id = cat.player_id
+				state = State.CHASE
+			elif _busy_left <= 0.0:
+				_back_to_patrol()
+			else:
+				var to_noise := Motion.flat(_noise_spot - global_position)
+				if to_noise.length() > 1.5 and not _is_stuck(delta):
+					move = to_noise
+					speed = patrol_speed * 1.6
+				else:
+					model.rotation.y += delta * 2.5  # there: spin round looking for the cat
 		State.CHASE:
 			var cat := Game.instance.cat_for(_chase_id)
 			if not _can_chase(cat, lose_range):
@@ -251,12 +327,12 @@ func _far_from_cats() -> bool:
 	return true
 
 
-## The nearest cat worth chasing, or null.
-func _find_cat_to_chase() -> CatPlayer:
+## The nearest cat worth chasing, or null. sight = a share of Sight Range (distracted bots see less).
+func _find_cat_to_chase(sight: float = 1.0) -> CatPlayer:
 	var best: CatPlayer = null
 	for node in Game.instance.players.get_children():
 		var cat := node as CatPlayer
-		if _can_chase(cat, sight_range) and (best == null or Motion.flat_distance(cat.global_position, global_position) < Motion.flat_distance(best.global_position, global_position)):
+		if _can_chase(cat, sight_range * sight) and (best == null or Motion.flat_distance(cat.global_position, global_position) < Motion.flat_distance(best.global_position, global_position)):
 			best = cat
 	return best
 
@@ -316,7 +392,7 @@ func _clear_line_to(cat: CatPlayer) -> bool:
 ## Noisy loot (the jingling golden koi) and a hot city make "reach" longer.
 ## A bot of the SEWER BREACH instead hunts any cat in its own sewer, however far away.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
-	if cat == null or not cat.visible or CatHealth.instance.is_down(cat.player_id):
+	if cat == null or not cat.visible or cat.unseen_by_bots or CatHealth.instance.is_down(cat.player_id):
 		return false
 	if breach_hub != null:
 		return UndergroundHub.hub_at(cat.global_position) == breach_hub
@@ -349,6 +425,58 @@ func _bonk(cat: CatPlayer) -> void:
 	velocity.y = 0.0
 
 
+# --- Mess + meows (host) ---
+
+## Host, while patrolling: every half second, look for a mess nearby. True = found one (TIDY_GO).
+func _look_for_mess(delta: float) -> bool:
+	_mess_check_left -= delta
+	if _mess_check_left > 0.0:
+		return false
+	_mess_check_left = _rng.randf_range(0.4, 0.7)
+	if not tidies_messes or is_boss or breach_hub != null or MessManager.instance == null:
+		return false
+	_mess = MessManager.instance.claim_nearest(global_position, mess_notice_range, self)
+	if _mess == null:
+		return false
+	state = State.TIDY_GO
+	_stuck_time = 0.0
+	_stuck_check_at = global_position
+	return true
+
+
+## The mess this bot is busy with right now, or null (MessManager asks, to share messes out).
+func tidying_prop() -> MessProp:
+	return _mess if state == State.TIDY_GO or state == State.TIDYING else null
+
+
+## Host: let go of our mess (another bot may take it).
+func _drop_mess() -> void:
+	if _mess != null and is_instance_valid(_mess) and _mess.claimed_by == self:
+		_mess.claimed_by = null
+	_mess = null
+
+
+func _back_to_patrol() -> void:
+	_drop_mess()
+	state = State.PATROL
+	_mess_check_left = 1.5  # (catch its breath before looking for the next mess)
+	_pick_patrol_target()
+
+
+## Host (RoombaPatrol.hear_noise): a cat meowed at "spot". A patrolling (or tidying-bound) bot
+## comes to look. Returns true if it's coming.
+func hear(spot: Vector3) -> bool:
+	if not hears_meows or breach_hub != null or not (state == State.PATROL or state == State.TIDY_GO or state == State.INVESTIGATE):
+		return false
+	_drop_mess()
+	_noise_spot = spot
+	_busy_left = investigate_seconds
+	state = State.INVESTIGATE
+	_stuck_time = 0.0
+	_stuck_check_at = global_position
+	return true
+
+
 func _pick_patrol_target() -> void:
 	if breach_hub != null:
 		_target = breach_hub.random_walkway_spot(_rng)
@@ -378,6 +506,7 @@ func _on_hurt(shooter: CatPlayer) -> void:
 	if state == State.STUNNED:
 		return  # stunned means stunned: shooting it doesn't wake it up
 	if _can_chase(shooter, lose_range):
+		_drop_mess()
 		_chase_id = shooter.player_id
 		state = State.CHASE
 		_replan_left = 0.0
@@ -386,6 +515,7 @@ func _on_hurt(shooter: CatPlayer) -> void:
 ## Host (enemy.gd): a stun gun zapped us. Stop dead for that long (a longer stun already running
 ## is kept). The brain's STUNNED state counts it down.
 func _on_stunned(seconds: float) -> void:
+	_drop_mess()
 	state = State.STUNNED
 	_stun_left = maxf(_stun_left, seconds)
 
@@ -395,14 +525,16 @@ func _on_stunned(seconds: float) -> void:
 func _process(delta: float) -> void:
 	super(delta)
 	if brush != null:
-		brush.rotate_object_local(brush_axis, delta * brush_spin)
+		brush.rotate_object_local(brush_axis, delta * brush_spin * (3.0 if state == State.TIDYING else 1.0))
 	var chasing := state == State.CHASE
 	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
 	if chasing and _last_state != State.CHASE:
 		Sound.play_at("alert", global_position, -2.0)
 	_last_state = state
+	var tidying := state == State.TIDYING
+	_show_status(delta)
 	if _hum != null:
-		_hum.pitch_scale = (1.4 if chasing else 1.0) * hum_pitch
+		_hum.pitch_scale = (1.4 if chasing else (1.7 if tidying else 1.0)) * hum_pitch
 		# Only hum when a player on this computer is near (dozens of far-away hums cost CPU
 		# and you couldn't hear them through the rain anyway). Checked 4 times a second.
 		_hum_check_left -= delta
@@ -422,8 +554,44 @@ func _process(delta: float) -> void:
 	_show_light(chasing, blink)
 	if state == State.STUNNED:
 		eye.set_instance_shader_parameter("instance_tint", fizz_color if fizz else off)
+	elif state == State.TIDYING or state == State.TIDY_GO:
+		eye.set_instance_shader_parameter("instance_tint", Color(0.5, 1, 0.4))  # busy: green
+	elif state == State.INVESTIGATE:
+		eye.set_instance_shader_parameter("instance_tint", Color(1, 0.7, 0.1))  # curious: amber
 	else:
 		eye.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1) if chasing else Color(0.2, 0.9, 1))
+
+
+## Every computer: "TIDYING..." / "?" over the bot, the vacuum noise while tidying, and a little
+## chirp when it hears a meow. The tag is a HUD name-tag marker (sharp at 240p, hud_name_tags.gd).
+func _show_status(delta: float) -> void:
+	var text := ""
+	match state:
+		State.TIDYING: text = "TIDYING..."
+		State.INVESTIGATE: text = "?"
+	if state == State.INVESTIGATE and _last_status != State.INVESTIGATE:
+		Sound.play_at("roomba_curious", global_position, -4.0)  # sounds/sfx/roomba_curious.wav
+	if state == State.TIDYING:
+		_tidy_sound_left -= delta
+		if _tidy_sound_left <= 0.0:
+			_tidy_sound_left = 1.5
+			Sound.play_at("roomba_tidy", global_position, -6.0)  # sounds/sfx/roomba_tidy.wav
+	else:
+		_tidy_sound_left = 0.0
+	_last_status = state
+	if text == "" and _status_tag == null:
+		return
+	if _status_tag == null:
+		_status_tag = Label3D.new()
+		_status_tag.name = "StatusTag"
+		_status_tag.position = Vector3.UP * 0.9
+		_status_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_status_tag.add_to_group(HudNameTags.GROUP)
+		_status_tag.set_meta("max_distance", 28.0)
+		add_child(_status_tag)
+	_status_tag.text = text
+	_status_tag.modulate = Color(0.5, 1, 0.6) if state == State.TIDYING else Color(1, 0.75, 0.2)
+	_status_tag.visible = text != ""
 
 
 ## Every computer: the glow on the street. (The drone's spotlight replaces this.)

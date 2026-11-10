@@ -237,6 +237,17 @@ func roomba_destroyed(roomba: Enemy) -> void:
 		_kills_toward_boss += 1
 
 
+## Host: a cat MEOWED at "spot" (cat_player.gd _meow). Every bot within "reach" metres that's free
+## to listen comes to look (roomba.gd hear / INVESTIGATE). Returns how many are coming.
+func hear_noise(spot: Vector3, reach: float) -> int:
+	var coming := 0
+	for node in get_children():
+		var bot := node as Roomba
+		if bot != null and not bot.is_queued_for_deletion() and Motion.flat_distance(bot.global_position, spot) < reach and bot.hear(spot):
+			coming += 1
+	return coming
+
+
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or not _patrolling:
 		return

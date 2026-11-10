@@ -43,6 +43,7 @@
 [ext_resource type="Script" path="res://scripts/overclean_announcer.gd" id="34_announcer"]
 [ext_resource type="Script" path="res://scripts/raid_report.gd" id="35_report"]
 [ext_resource type="Script" path="res://scripts/ui/raid_report_screen.gd" id="36_report_screen"]
+[ext_resource type="Script" path="res://scripts/mess_manager.gd" id="37_mess"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -193,6 +194,9 @@ script = ExtResource("34_announcer")
 
 [node name="RaidReport" type="Node" parent="."]
 script = ExtResource("35_report")
+
+[node name="Mess" type="Node" parent="."]
+script = ExtResource("37_mess")
 
 [node name="Hub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(0, -200, 0)

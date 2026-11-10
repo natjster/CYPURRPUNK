@@ -188,7 +188,8 @@ a world that hates mess.
 - **You:** install Blockbench and follow a beginner tutorial. Make one bin and one traffic cone.
   (Head start: Claude built a first bin and cone in Blockbench format. Open
   `models/blockbench/trash_bin.bbmodel` and repaint or remodel it as your tutorial piece.)
-- **You:** post the waiting patch notes to Discord.
+- **You:** post the waiting patch notes to Discord. (Since 10 Nov 2026 there's no PATCH_NOTES.md file: Claude ends
+  every turn with player-facing notes in chat for you to paste.)
 - [x] **Claude:** Raid Report screen. (Done 9 Nov 2026: one full-window report per computer, a row per cat with cash, bots smashed, downs,
   revives and how their raid ended, plus one silly award each, stamped in last; READY-up to skip the
   wait; Discord invite line; TURF WAR grouped by gang; MESS MADE ready for Phase 1. SETUP_GUIDE §22.)
@@ -212,7 +213,10 @@ a world that hates mess.
 - **You:** model the cat, then the VAC-COP. Expect several tries at the cat.
 - **You:** build or buy a set of about 10 street props.
 - **You:** set up the itch.io page and start the weekly clip.
-- **Claude:** mess-making (knock-over props, scratching, bots that stop to clean).
+- [x] **Claude:** mess-making (knock-over props, scratching, bots that stop to clean). (Done 10 Nov 2026: bins,
+  cones, cardboard boxes and OVERCLEAN posters knock over / shred by running, driving, shooting or E; heat +
+  RAID REPORT MESS + AGENT OF CHAOS; VAC-COPs stop to tidy, half-blind while busy; OVERCLEAN complains.
+  Also the MEOW taunt ("GO LICK YOURSELF!", own voice pitch per cat) that bots hear and come to check. §23.)
 - **Claude:** buyable cosmetics and boss-only rare drops.
 - **Claude:** spectating after a knockout.
 - **Claude:** hideout upgrades, first three.
