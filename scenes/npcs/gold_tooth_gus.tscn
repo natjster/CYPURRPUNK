@@ -120,6 +120,8 @@ height = 0.9
 
 [node name="GoldToothGus" type="StaticBody3D"]
 script = ExtResource("1_script")
+upgrade_page = "gourmet"
+upgrade_button = "GUS'S FENCE"
 npc_name = "\"GOLD-TOOTH\" GUS"
 voice = "meow_blip_gus"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

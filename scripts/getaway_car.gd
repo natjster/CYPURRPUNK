@@ -119,6 +119,26 @@ extends RigidBody3D
 ## Wheel size in metres (radius), for how fast the wheels spin at a given speed.
 @export var wheel_radius: float = 0.31
 
+@export_group("Alternate vehicles (SEWER UPGRADES)")
+## Frankie Espresso / Jittery Jax sell two more rides (scripts/upgrades.gd); whoever unlocked one
+## can switch their GANG's car to it. The numbers above are the INTERCEPTOR's (the normal car);
+## these are the other two. Models: models/cyber_bike.glb and models/fish_van.glb (Blockbench files in
+## models/blockbench/, recipes in tools/make_upgrade_specs.py).
+## NEON ZOOM-BIKE: top speed (m/s), pickup, turning, weight (kg) and seats besides the rider.
+@export var bike_max_speed: float = 31.0
+@export var bike_engine_accel: float = 16.0
+@export var bike_turn_speed: float = 3.1
+@export var bike_mass: float = 350.0
+@export var bike_passengers: int = 1
+## ARMORED MEOW-VAN: the same numbers...
+@export var van_max_speed: float = 24.0
+@export var van_engine_accel: float = 12.0
+@export var van_turn_speed: float = 2.0
+@export var van_mass: float = 1600.0
+@export var van_passengers: int = 3
+## ...and how fast it must go to smash a bot, compared to the others (0.5 = half the speed).
+@export var van_smash_speed_factor: float = 0.5
+
 @export_group("Network Smoothing")
 ## How quickly other players' copies of the car catch up. Higher = snappier.
 @export var network_smoothing: float = 12.0
@@ -139,6 +159,12 @@ var driver_id: int = 0
 var passenger_ids: Array[int] = []
 ## True while sliding sideways with the handbrake (handy later for tyre smoke / sounds).
 var is_drifting: bool = false
+## Which ride this is right now: "interceptor", "cyber_bike" or "fish_van" (set_vehicle).
+var vehicle: String = "interceptor"
+## Bots get smashed above (their car_smash_speed x this): the MEOW-VAN smashes them slower (enemy.gd).
+var smash_speed_factor: float = 1.0
+## The INTERCEPTOR's numbers from the Inspector (so switching back restores them).
+var _base := {}
 
 # --- Drive input: what the "driver" wants right now. The physics below only reads these. ---
 # The player's keyboard fills them in (_read_driver_keys). Later an AI driver (Dog Patrol)
@@ -207,6 +233,9 @@ func _ready() -> void:
 	_engine = Sound.attach_loop("engine_loop", self, -80.0)
 	_sound_last_position = global_position
 	_wheel_last_position = global_position
+	var shape := get_node("CollisionShape3D") as CollisionShape3D
+	_base = {"max_speed": max_speed, "engine_accel": engine_accel, "turn_speed": turn_speed, "mass": mass,
+		"passengers": passenger_seats, "box": (shape.shape as BoxShape3D).size, "beam_z": $Model/HeadlightBeam.position.z}
 	_set_up_model()
 	# Our network ID changes when we join a game, so re-check who simulates the car.
 	multiplayer.connected_to_server.connect(_update_freeze)
@@ -228,8 +257,10 @@ func _set_up_model() -> void:
 		shiny.set_shader_parameter("specular", body_shine)
 		shiny.set_shader_parameter("roughness", 0.45)
 		body.set_surface_override_material(0, shiny)
-	_glow(model, "Trim", gang_colour, trim_glow, true)
-	for part in ["HeadlightL", "HeadlightR", "TaillightL", "TaillightR", "Thrusters"]:
+	# Every part named Trim... glows in the gang colour (the bike's wheel rims are TrimRimF / TrimRimB).
+	for trim in model.find_children("Trim*", "MeshInstance3D", true, false):
+		_glow(model, trim.name, gang_colour, trim_glow, true)
+	for part in ["HeadlightL", "HeadlightR", "TaillightL", "TaillightR", "Thrusters", "Sign"]:
 		_glow(model, part, Color.WHITE, light_glow, false)
 	for wheel_name in ["WheelFL", "WheelFR", "WheelBL", "WheelBR"]:
 		var wheel := model.find_child(wheel_name, true, false) as Node3D
@@ -237,6 +268,46 @@ func _set_up_model() -> void:
 			_wheels.append(wheel)
 			if wheel_name.begins_with("WheelF"):
 				_front_wheels.append(wheel)
+
+
+## SEWER UPGRADES (scripts/upgrades.gd): become another ride, on every computer. Swaps the 3D model
+## (Model/CarModel), the collision box and the driving numbers. The gang's car only changes while
+## it's empty (the host checks that before asking).
+func set_vehicle(id: String) -> void:
+	if id == vehicle or not id in ["interceptor", "cyber_bike", "fish_van"]:
+		return
+	vehicle = id
+	var stats: Dictionary = {
+		"interceptor": {"model": "getaway_car", "max_speed": _base.max_speed, "engine_accel": _base.engine_accel,
+			"turn_speed": _base.turn_speed, "mass": _base.mass, "passengers": _base.passengers, "box": _base.box, "box_y": 0.0, "smash": 1.0},
+		"cyber_bike": {"model": "cyber_bike", "max_speed": bike_max_speed, "engine_accel": bike_engine_accel,
+			"turn_speed": bike_turn_speed, "mass": bike_mass, "passengers": bike_passengers, "box": Vector3(0.9, 0.8, 2.6), "box_y": 0.0, "smash": 1.0},
+		"fish_van": {"model": "fish_van", "max_speed": van_max_speed, "engine_accel": van_engine_accel,
+			"turn_speed": van_turn_speed, "mass": van_mass, "passengers": van_passengers, "box": Vector3(2.0, 1.5, 4.4), "box_y": 0.35, "smash": van_smash_speed_factor},
+	}[id]
+	max_speed = stats.max_speed
+	engine_accel = stats.engine_accel
+	turn_speed = stats.turn_speed
+	mass = stats.mass
+	passenger_seats = stats.passengers
+	smash_speed_factor = stats.smash
+	var shape := get_node("CollisionShape3D") as CollisionShape3D
+	var box := BoxShape3D.new()  # (a new one: the scene's box is shared by every car)
+	box.size = stats.box
+	shape.shape = box
+	shape.position.y = stats.box_y
+	$Model/HeadlightBeam.position.z = _base.beam_z + (_base.box.z - (stats.box as Vector3).z) * 0.5
+	# The new model, where the old one was.
+	var old := get_node_or_null("Model/CarModel")
+	if old != null:
+		$Model.remove_child(old)
+		old.queue_free()
+	var model := LevelKit.instantiate_model(stats.model, $Model)
+	model.name = "CarModel"
+	_wheels.clear()
+	_front_wheels.clear()
+	_set_up_model()
+	print("[Car] %s is now the %s (top speed %.0f, %d passenger seats)" % [name, id, max_speed, passenger_seats])
 
 
 ## Make one part of the model glow: tint = albedo colour (white = keep the painted colours);
@@ -625,8 +696,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	if ground_ray.is_colliding():
 		# --- Gas / brake / reverse ---
 		if throttle > 0.0:
-			if forward_speed < max_speed:
-				velocity += forward * engine_accel * throttle * dt
+			# TWIN-TURBO ENGINE (scripts/upgrades.gd, a CREW upgrade): +15% / +30% top speed and pickup.
+			var turbo := Upgrades.engine_multiplier(maxi(0, team))
+			if forward_speed < max_speed * turbo:
+				velocity += forward * engine_accel * turbo * throttle * dt
 		elif throttle < 0.0:
 			if forward_speed > 0.5:
 				velocity -= forward * brake_decel * dt          # still rolling forward: brake

@@ -27,6 +27,7 @@
 [ext_resource type="Script" path="res://scripts/ui/ps1_overlay.gd" id="27_overlay"]
 [ext_resource type="Script" path="res://scripts/heat_meter.gd" id="28_heat"]
 [ext_resource type="Script" path="res://scripts/wallet.gd" id="29_wallet"]
+[ext_resource type="Script" path="res://scripts/upgrades.gd" id="90_upgrades"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/pawnie.tscn" id="30_pawnie"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/clawd.tscn" id="31_clawd"]
 [ext_resource type="Script" path="res://scripts/mainframe.gd" id="32_mainframe"]
@@ -167,6 +168,9 @@ script = ExtResource("10_heist")
 
 [node name="Wallet" type="Node" parent="."]
 script = ExtResource("29_wallet")
+
+[node name="Upgrades" type="Node" parent="."]
+script = ExtResource("90_upgrades")
 
 [node name="Health" type="Node" parent="."]
 script = ExtResource("24_health")

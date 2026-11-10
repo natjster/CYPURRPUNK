@@ -235,7 +235,12 @@ a world that hates mess.
   time; over-the-shoulder view that follows where they really look (synced camera) or the car's chase cam; A / D
   switches cat, E / JUMP goes back to your own cat. The "ping" became the **walkie-talkie HECKLE** (MEOW while
   watching): "<NAME> (RADIO): BEHIND YOU!" types out over their head in your voice, and nearby VAC-COPs hear it. §24.)
-- **Claude:** hideout upgrades, first three.
+- [x] **Claude:** hideout upgrades, first three. (Done 10 Nov 2026, and then some: every sewer NPC sells an
+  upgrade tree paid with **cash + SCRAP** (scrap counts from the loot bag AND the litterbox), saved per cat:
+  weapon crates that unlock the better guns, bigger loot bag / backpack / litterbox, a new Blockbench **Tinker
+  Workbench**, faster cats, a turbo engine, two new Blockbench rides (**Neon Zoom-Bike**, **Armored Meow-Van**)
+  your gang can switch to, more max HP, scrap-dropping bots, better loot prices, bigger snack stacks, harder melee
+  and an earlier exit. Crew upgrades (engine, capacitor, insider tunnel) help the whole gang. §25.)
 - **Claude:** three or four district twists.
 - [x] **Claude:** two or three more music tracks using the existing music tools. (Done 10 Nov 2026: four 90s PS1
   arcade techno / drum & bass loops made by `tools/make_music_tracks.py`: NEON APEX and ANTI-GRAV WHISKERS join

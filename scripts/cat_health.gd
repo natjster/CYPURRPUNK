@@ -114,8 +114,14 @@ func _ready() -> void:
 
 # --- Questions anyone can ask (every computer has the answers) ---
 
+## This cat's max HP: max_health (100) + THICK FUR (scripts/upgrades.gd: +25 per tier).
+## Always use this, not max_health: down in the sewers cats heal up to it.
+func max_health_for(player_id: int) -> int:
+	return max_health + Upgrades.extra_hp(player_id)
+
+
 func get_health(player_id: int) -> int:
-	return health.get(player_id, max_health)
+	return health.get(player_id, max_health_for(player_id))
 
 
 ## True while a cat is at 0 HP: DOWNED (waiting for a revive) or KNOCKED OUT (on its way to the
@@ -231,9 +237,9 @@ func _physics_process(delta: float) -> void:
 	# (That's also how a knocked-out cat gets its HP back once it wakes up down there.)
 	for node in Game.instance.players.get_children():
 		var player_id := (node as CatPlayer).player_id
-		if get_health(player_id) < max_health and not is_downed(player_id) \
+		if get_health(player_id) < max_health_for(player_id) and not is_downed(player_id) \
 				and UndergroundHub.is_safe((node as Node3D).global_position):
-			_set_health.rpc(player_id, max_health)
+			_set_health.rpc(player_id, max_health_for(player_id))
 
 
 ## The SEWER BREACH is over (every computer hears it): the host picks everyone up and heals them,
@@ -247,8 +253,8 @@ func _on_sewer_breach_ended(_survived: bool) -> void:
 		_set_downed.rpc(player_id, -1.0, "")
 	_down_cause.clear()
 	for player_id in Game.instance.player_ids():
-		if get_health(player_id) < max_health:
-			_set_health.rpc(player_id, max_health)
+		if get_health(player_id) < max_health_for(player_id):
+			_set_health.rpc(player_id, max_health_for(player_id))
 
 
 ## Host: count down every downed cat, and finish (or cancel) revives and robberies.
@@ -553,7 +559,7 @@ func _process(delta: float) -> void:
 			bar.downed = is_downed(cat.player_id)
 			bar.revive_progress = revive_progress(cat.player_id)  # a revive (or robbery) fills our own bar
 			bar.being_robbed = is_being_robbed(cat.player_id)
-			bar.set_health(get_health(cat.player_id), max_health)
+			bar.set_health(get_health(cat.player_id), max_health_for(cat.player_id))
 		_watch_hold_button(cat)
 		if is_downed(cat.player_id):
 			_downed_hud(cat, delta)

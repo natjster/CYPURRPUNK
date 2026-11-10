@@ -70,6 +70,10 @@ var _stash_buttons: Array[Button] = []
 var _pack_title: Label
 var _bag_title: Label
 var _bag_grid: GridContainer
+var _pack_grid: GridContainer
+var _scroll: ScrollContainer
+var _slots_box: VBoxContainer
+var _box: VBoxContainer
 var _stash_title: Label
 var _stash_grid: GridContainer
 var _info: Label
@@ -124,6 +128,7 @@ func _build() -> void:
 	centre.add_child(panel)
 	var box := VBoxContainer.new()
 	box.name = "VBox"
+	_box = box
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
 
@@ -178,19 +183,29 @@ func _build() -> void:
 		_quick_buttons.append(button)
 		quick.add_child(column)
 
+	# The slot grids scroll when they don't fit on screen (SEWER UPGRADES make the backpack,
+	# loot bag and litterbox bigger: 10 + 5 + 21 slots). _fit_scroll sizes it every frame.
+	_scroll = ScrollContainer.new()
+	_scroll.name = "Slots"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	box.add_child(_scroll)
+	_slots_box = VBoxContainer.new()
+	_slots_box.add_theme_constant_override("separation", 8)
+	_scroll.add_child(_slots_box)
 	_pack_title = _label("BACKPACK", title_font_size, Color(0.6, 0.85, 1))
-	box.add_child(_pack_title)
-	box.add_child(_grid(_pack_buttons, "pack", items.pack_size))
+	_slots_box.add_child(_pack_title)
+	_pack_grid = _grid(_pack_buttons, "pack", items.pack_size)
+	_slots_box.add_child(_pack_grid)
 
 	# The loot bag is always shown; the stash only at the lockers, under it.
 	_bag_title = _label("LOOT BAG", title_font_size, Color(0.45, 1, 0.55))
-	box.add_child(_bag_title)
+	_slots_box.add_child(_bag_title)
 	_bag_grid = _grid(_bag_buttons, "bag", items.bag_size)
-	box.add_child(_bag_grid)
+	_slots_box.add_child(_bag_grid)
 	_stash_title = _label("LITTERBOX", title_font_size, Color(0.4, 0.9, 1))
-	box.add_child(_stash_title)
+	_slots_box.add_child(_stash_title)
 	_stash_grid = _grid(_stash_buttons, "stash", items.stash_size)
-	box.add_child(_stash_grid)
+	_slots_box.add_child(_stash_grid)
 
 	_info = _label("", title_font_size - 2, Color(1, 1, 1, 0.85))
 	_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -199,6 +214,9 @@ func _build() -> void:
 	box.add_child(_info)
 	_focus.press_on_accept = false
 	_focus.highlighted.connect(_on_slot_hover)  # show what the highlighted item is
+	_focus.highlighted.connect(func(button: Button):  # d-pad onto a slot below the fold: scroll to it
+		if _scroll.is_ancestor_of(button):
+			_scroll.ensure_control_visible(button))
 	Controls.changed.connect(func():  # switched keyboard <-> controller: redo the "Click: ..." line
 		if visible:
 			_show_stash_section(_at_stash))
@@ -261,6 +279,7 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 func _process(_delta: float) -> void:
 	if not visible:
 		return
+	_fit_scroll()
 	var items := ItemManager.instance
 	var cat := owner_cat
 	if cat == null or not is_instance_valid(cat):
@@ -269,6 +288,8 @@ func _process(_delta: float) -> void:
 	var at_stash := UndergroundHub.of(cat).near_stash(cat)
 	var inventory := items.get_inventory(cat.player_id)
 	var quests := QuestManager.instance
+	if _match_bag_size():
+		_focus.set_buttons([_abandon_button] + _paw_buttons + _quick_buttons + _pack_buttons + _bag_buttons + _stash_buttons, _paw_buttons[0])
 	var key := str(inventory) + str(at_stash) + quests.current_quest(cat.player_id) 			+ quests.progress_text(cat.player_id) + str(_abandon_armed)
 	if key == _last_key:
 		return
@@ -296,9 +317,20 @@ func _process(_delta: float) -> void:
 	var stash := items.get_stash(cat.player_id)
 	for i in _stash_buttons.size():
 		_fill(_stash_buttons[i], stash[i] if i < stash.size() else "")
-	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size]
-	_bag_title.text = "LOOT BAG  %d/%d  (cash loot pays out at the exit; SCRAP stays)" % [items.bag_used(cat.player_id), items.bag_size]
-	_stash_title.text = "LITTERBOX  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size]
+	_pack_title.text = "BACKPACK  %d/%d" % [inventory.pack.size(), items.pack_size_for(cat.player_id)]
+	_bag_title.text = "LOOT BAG  %d/%d  (cash loot pays out at the exit; SCRAP stays)" % [items.bag_used(cat.player_id), items.bag_size_for(cat.player_id)]
+	_stash_title.text = "LITTERBOX  %d/%d  (safe, kept between games)" % [stash.size(), items.stash_size_for(cat.player_id)]
+
+
+## Make the slot area as tall as its slots, but never taller than the screen has room for
+## (then it scrolls: mouse wheel, or the d-pad highlight pulls it along).
+func _fit_scroll() -> void:
+	var content := _slots_box.get_combined_minimum_size()
+	var others := _box.get_combined_minimum_size().y - _scroll.custom_minimum_size.y
+	var room := maxf(size.y - others - 70.0, 120.0)
+	var want := Vector2(content.x + 14.0, minf(content.y, room))
+	if not want.is_equal_approx(_scroll.custom_minimum_size):
+		_scroll.custom_minimum_size = want
 
 
 ## The JOB box: "JOB: MITTENS' FISH  (for LIL' MITTENS)" / "FISH in your loot bag: 1/3   +$100".
@@ -350,13 +382,34 @@ func _fill(button: Button, item_id: String) -> void:
 
 
 ## A grid of "count" slots, "columns" per row (the buttons are also added to "list").
-## The loot bag can change size after the screen was built (the TUTORIAL has a bigger one:
-## scripts/tutorial.gd): add slots until the grid matches ItemManager's bag_size.
-func _match_bag_size() -> void:
-	while _bag_buttons.size() < ItemManager.instance.bag_size:
-		var button := _slot("bag", _bag_buttons.size())
-		_bag_grid.add_child(button)
-		_bag_buttons.append(button)
+## The grids can change size after the screen was built: the TUTORIAL has a bigger loot bag
+## (scripts/tutorial.gd), and SEWER UPGRADES (scripts/upgrades.gd) grow the loot bag, backpack and
+## litterbox per cat. Add (or remove) slots until every grid matches this cat's sizes.
+## True = something changed (the d-pad highlight list must be rebuilt).
+func _match_bag_size() -> bool:
+	var cat := owner_cat
+	if cat == null or not is_instance_valid(cat):
+		return false
+	var items := ItemManager.instance
+	var changed := _resize(_bag_buttons, _bag_grid, "bag", items.bag_size_for(cat.player_id))
+	changed = _resize(_pack_buttons, _pack_grid, "pack", items.pack_size_for(cat.player_id)) or changed
+	changed = _resize(_stash_buttons, _stash_grid, "stash", items.stash_size_for(cat.player_id)) or changed
+	return changed
+
+
+func _resize(list: Array[Button], grid: GridContainer, where: String, count: int) -> bool:
+	if list.size() == count:
+		return false
+	while list.size() < count:
+		var button := _slot(where, list.size())
+		grid.add_child(button)
+		list.append(button)
+	while list.size() > count:
+		var old: Button = list.pop_back()
+		grid.remove_child(old)
+		old.queue_free()
+	_last_key = ""  # redraw the slots
+	return true
 
 
 func _grid(list: Array[Button], where: String, count: int) -> GridContainer:
@@ -442,17 +495,17 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		if where == "stash":
 			var data: ItemData = items.catalog.get(button.get_meta("item"))
 			if data != null and data.kind == ItemData.Kind.LOOT:
-				if items.bag_used(cat.player_id) + data.bag_space > items.bag_size:
+				if items.bag_used(cat.player_id) + data.bag_space > items.bag_size_for(cat.player_id):
 					_info.text = "Loot bag is full."
 				else:
 					items.request_from_stash.rpc_id(1, cat.player_id, index)  # scrap: back into the loot bag
-			elif inventory.pack.size() >= items.pack_size:
+			elif inventory.pack.size() >= items.pack_size_for(cat.player_id):
 				_info.text = "Backpack is full."
 			else:
 				items.request_from_stash.rpc_id(1, cat.player_id, index)
 		elif where == "bag" and not items.is_stashable(button.get_meta("item")):
 			_info.text = "Money loot can't go in the litterbox: cash it in at the exit manhole. (SCRAP can go in.)"
-		elif items.get_stash(cat.player_id).size() >= items.stash_size:
+		elif items.get_stash(cat.player_id).size() >= items.stash_size_for(cat.player_id):
 			_info.text = "Litterbox is full."
 		else:
 			items.request_to_stash.rpc_id(1, cat.player_id, where, index)
@@ -460,12 +513,12 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		if where == "pack":
 			items.request_equip.rpc_id(1, cat.player_id, index)  # (catnip etc. go to a QUICK USE slot)
 		elif where == "quick":
-			if inventory.pack.size() >= items.pack_size:
+			if inventory.pack.size() >= items.pack_size_for(cat.player_id):
 				_info.text = "Backpack is full."
 			else:
 				items.request_quick_to_pack.rpc_id(1, cat.player_id, index)
 		elif where == "hand":
-			if inventory.pack.size() >= items.pack_size:
+			if inventory.pack.size() >= items.pack_size_for(cat.player_id):
 				_info.text = "Backpack is full."
 			else:
 				items.request_put_away.rpc_id(1, cat.player_id, index)

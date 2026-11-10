@@ -76,6 +76,10 @@ func _fire() -> void:
 			continue  # our own gang: the bat goes right past them (no hit sound either)
 		already[target] = true
 		var info := _make_hit(forward, (target as Node3D).global_position + Vector3.UP * 0.5 if target is Node3D else centre)
+		# HEAVY PAWS (scripts/upgrades.gd): +25% / +50% damage and knockback for this cat.
+		var paws := Upgrades.melee_multiplier(holder.player_id)
+		info.damage = roundi(info.damage * paws)
+		info.enemy_push *= paws
 		hit_anything = true
 		if target.receive_hit(info):
 			Hud.damage_number(info.position, info.damage, info.crit, holder.slot)  # on OUR HUD

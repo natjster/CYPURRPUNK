@@ -25,7 +25,7 @@ Meow-City/
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
-├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster, loudspeaker (§20, §21, §23)
+├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster, loudspeaker, workbench, cyber_bike, fish_van (§20, §21, §23, §25)
 │   └── blockbench/            <- their Blockbench projects (.bbmodel): double-click to edit (§20)
 ├── tools/                     <- Claude's helpers: the Model Shop + Sound Lab (Python, §20)
 ├── .mcp.json                  <- tells Claude Code to start those helpers in this project (§20)
@@ -3401,3 +3401,65 @@ finish the raid. You can **watch them**, over their shoulder, live.
   `--join --deploy --yaw=90 --pitch=-10 --frames=400` (host prints "spectate look ... yaw=1.57 (sent 1.57)").
 - Screenshot: windowed `--host --name=WHISKERS --add_local=1 --spectate --heckle --frames=150 --scale=3
   --capture=shots/spectate_cam.png`.
+
+## 25. SEWER UPGRADES (spend cash + SCRAP, keep it forever)
+
+Every cat down in the sewers now sells something that makes **your** cat better for good. You pay with
+**cash AND SCRAP** (the $0 loot the MEGA VAC-COPs drop). Scrap is counted from your **loot bag and your
+litterbox together** (the loot bag is used up first), so you don't have to dig it out first.
+Upgrades are saved in your cat's save file (with your cash and litterbox), so they're there next game.
+The TUTORIAL always starts with none, so it's the same for everyone.
+
+### Who sells what
+
+| Who (Catleone / Burrow sewer) | Button | Upgrades (tiers) |
+|---|---|---|
+| Comrade Whiskers / Clawd | UNLOCK NEW WEAPON CRATES (also on the shop page) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher. Without crates the shop sells only the Neon Bat, Paw-Pistol, Catnip and Catdip (locked guns show as LOCKED). |
+| Don Catleone / Pawnie | UPGRADE MY RANK | **DEEP POCKETS** (2): loot bag 3 -> 4 -> 5. **BIGGER BACKPACK** (2): 6 -> 8 -> 10. |
+| The TINKER WORKBENCH (new, east wall, between the litterbox and the cardboard shanties) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
+| Frankie "Espresso" / Jittery Jax | GARAGE & ZOOMIES UPGRADES | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), then SELECT VEHICLE buttons. |
+| Paulie "No-Brooms" / Bumper-Car Benny | COMBAT TRAINING | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): bots you smash have a 15% / 30% chance to drop a SCRAP (not bosses). |
+| Nonna Catleone / "Gold-Tooth" Gus | NONNA'S KITCHEN / GUS'S FENCE | **GOURMET FENCE** (2): fish, sardines and koi pay +20% / +40% at the exit. **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. |
+| Sal / Calamity Clara / Lil' Mittens / Billy | STREET TRICKS | **HEAVY PAWS** (2): melee +25% / +50% damage and knockback. **INSIDER TUNNEL** (2, crew): your exit opens 5 / 10 heat earlier. |
+
+**Crew** upgrades help your whole gang: the gang gets the BEST tier anyone in it owns. So in co-op, one cat
+with a Twin-Turbo upgrades everyone's car.
+
+### The rides
+- **INTERCEPTOR** (the normal car): 26 m/s, 3 passengers.
+- **NEON ZOOM-BIKE** (`models/cyber_bike.glb`): 31 m/s, turns sharper, light, 1 passenger. Its wheel rims glow in your gang colour.
+- **ARMORED MEOW-VAN** (`models/fish_van.glb`): 24 m/s, heavy, smashes bots at half the speed, 3 passengers, fish sign on the roof.
+- Once you own one, Frankie / Jax show **SELECT VEHICLE** buttons. That changes your **gang's** car for everyone
+  (only while it's parked and empty). Your pick is saved and comes back next game.
+
+### Changing prices and numbers (Godot editor)
+- **Prices:** open `scenes/main.tscn`, click the **Upgrades** node (right under Wallet) > Inspector > **Costs**.
+  Each upgrade is a list of `[cash, scrap]` pairs, one per tier. Add a pair = one more tier.
+- **What a tier gives:** same node > **What Each Tier Gives** (backpack slots per tier, HP per tier, +% per tier...).
+- **Which guns are in which crate:** same node > **Weapon Crates** (Starter Stock, Crate 1/2/3 Items).
+- **Bike / van stats:** open `scenes/getaway_car.tscn`, click the root > Inspector > **Alternate Vehicles**.
+- **Which page an NPC sells:** click the NPC (e.g. `scenes/npcs/pawnie.tscn` root) > Inspector > **Sewer Upgrades** >
+  **Upgrade Page** (shop / boss / workbench / vehicles / combat / gourmet / street) and **Upgrade Button** (its text).
+  Leave Upgrade Page empty = they sell nothing. The button appears on their greeting, above the last answer.
+- **The workbench's spot:** `scenes/main.tscn` > **Hub** (or **GangHub**) > Inspector > **Tinker Workbench** > Workbench Spot.
+
+### The new models (Blockbench)
+`models/blockbench/workbench.bbmodel`, `cyber_bike.bbmodel`, `fish_van.bbmodel`: double-click to open in Blockbench,
+repaint, Ctrl+S, then ask Claude to re-export (or `python tools/cypurr_models.py export models/blockbench/fish_van.bbmodel`).
+Their recipes are in `tools/make_upgrade_specs.py` (re-running it REPLACES the .bbmodel files, so don't after hand edits).
+Parts the game looks for: car-like rides need `WheelFL/WheelBL` (+ `WheelFR/WheelBR`), anything named `Trim...` glows in the
+gang colour, `Headlight*`, `Taillight*`, `Thrusters`, `Sign` glow white. The workbench's `Lamp` and `Glow` parts glow.
+
+### How it works (for the curious)
+`scripts/upgrades.gd` (the **Upgrades** node) keeps every player's tiers; the host checks cash + scrap and takes them
+(`request_buy`), then tells everyone. Other scripts just ask it: the loot bag size (`ItemManager.bag_size_for`), max HP
+(`CatHealth.max_health_for`), the car (`GetawayCar.set_vehicle`), and so on. The inventory screen grows to match (and
+scrolls when the litterbox gets big).
+
+### Testing it (Claude's tools)
+- Buy things: `-- --host --cash=3000 --give=scrap,scrap,scrap --buy_upgrade=deep_pockets,thick_fur` (prints a
+  `DevCapture upgrades` line after each buy). `--upgrade_log` just prints what you have.
+- Pick a ride: `--select_vehicle=fish_van` (prints `DevCapture vehicle`).
+- Screenshots: `--workbench` (walks to the bench and opens its page), `--teams=0 --vehicles_lineup --no_hud --cam_follow
+  --cam_from=0,2,-0.5 --look_from=0,0.3,-5.5` (bike + van side by side).
+- Test saves live in `user://test_profiles/` (add `--fresh_profile` to start over).

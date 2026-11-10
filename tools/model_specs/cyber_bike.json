@@ -1,0 +1,1322 @@
+{
+ "name": "cyber_bike",
+ "kind": "vehicle",
+ "texture_size": 64,
+ "seed": 88,
+ "background": "#202228",
+ "about": "SEWER UPGRADES: the NEON ZOOM-BIKE (getaway_car.gd VEHICLES 'cyber_bike'). Forward = -Z, wheel bottoms at y = -7 px like the car. Groups: Body, Trim (gang colour), TrimRimF/B (inside the wheels: glowing rims), HeadlightL, TaillightL, Thrusters, WheelFL, WheelBL.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "one 64x64 texture layout of 16x16 swatches:\n  row 0:  wood | dark metal | light metal | rust\n  row 1:  TRIM (near white: the game tints it the gang colour) | glass | headlight | taillight\n  row 2:  tyre | rim | lamp glow | fish sign\n  row 3:  body paint | seat cloth | copper | black"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": "#7a5530",
+   "bottom": "#4e3420"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "amount": 0.35,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "color": "#2a1a10"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    5
+   ],
+   "to": [
+    15,
+    5
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    10
+   ],
+   "to": [
+    15,
+    10
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": "#4a505a",
+   "bottom": "#2c3038"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": "#a8b0bc",
+   "bottom": "#6c7480"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#3a404a"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": "#8a5530",
+   "bottom": "#5a3018"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "amount": 0.4,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#2a1408"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#a86a38",
+   "count": 6,
+   "size": 1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "color": "#f4f4f4"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "colors": [
+    "#ffffff",
+    "#d8d8d8"
+   ],
+   "width": 2,
+   "direction": "horizontal"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "top": "#3a6a78",
+   "bottom": "#0e1e26"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "amount": 0.05,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "color": "#0a1014"
+  },
+  {
+   "op": "line",
+   "from": [
+    18,
+    18
+   ],
+   "to": [
+    22,
+    22
+   ],
+   "color": "#8ad8e8"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "color": "#fff6c8"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "color": "#c8b878"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#ff3a3a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#a01818"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "colors": [
+    "#1a1a1e",
+    "#2a2a30"
+   ],
+   "width": 2
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "top": "#3a3f48",
+   "bottom": "#22252c"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "amount": 0.1,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "color": "#101216"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    20,
+    36,
+    28,
+    44
+   ],
+   "color": "#8a93a3"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "color": "#ffd27a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    36,
+    44,
+    44
+   ],
+   "color": "#fff2c0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "color": "#1ad8ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    51,
+    37,
+    59,
+    43
+   ],
+   "color": "#fff8e0"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     59,
+     38,
+     "#fff8e0"
+    ],
+    [
+     60,
+     37,
+     "#fff8e0"
+    ],
+    [
+     60,
+     39,
+     "#fff8e0"
+    ],
+    [
+     60,
+     40,
+     "#fff8e0"
+    ],
+    [
+     59,
+     41,
+     "#fff8e0"
+    ],
+    [
+     60,
+     42,
+     "#fff8e0"
+    ],
+    [
+     61,
+     36,
+     "#fff8e0"
+    ],
+    [
+     61,
+     43,
+     "#fff8e0"
+    ],
+    [
+     53,
+     39,
+     "#101014"
+    ]
+   ]
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "color": "#0a4a60"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "top": "#6a58a0",
+   "bottom": "#382a60"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "line",
+   "from": [
+    1,
+    56
+   ],
+   "to": [
+    14,
+    56
+   ],
+   "color": "#20232a"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "top": "#2e2e3a",
+   "bottom": "#18181f"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "amount": 0.3,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "color": "#0c0c10"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "top": "#d08848",
+   "bottom": "#8a4a20"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "color": "#4a2410"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    48,
+    64,
+    64
+   ],
+   "color": "#101014"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body"
+  },
+  {
+   "name": "Trim"
+  },
+  {
+   "name": "HeadlightL",
+   "origin": [
+    0,
+    3,
+    -19
+   ]
+  },
+  {
+   "name": "TaillightL",
+   "origin": [
+    0,
+    6,
+    18
+   ]
+  },
+  {
+   "name": "Thrusters",
+   "origin": [
+    3,
+    2,
+    16
+   ]
+  },
+  {
+   "name": "WheelFL",
+   "origin": [
+    0,
+    -1,
+    -14
+   ]
+  },
+  {
+   "name": "WheelBL",
+   "origin": [
+    0,
+    -1,
+    13
+   ]
+  },
+  {
+   "name": "TrimRimF",
+   "origin": [
+    0,
+    -1,
+    -14
+   ],
+   "parent": "WheelFL"
+  },
+  {
+   "name": "TrimRimB",
+   "origin": [
+    0,
+    -1,
+    13
+   ],
+   "parent": "WheelBL"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "frame",
+   "group": "Body",
+   "from": [
+    -1.4,
+    -0.5,
+    -12
+   ],
+   "to": [
+    1.4,
+    3,
+    9
+   ],
+   "all": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "fairing",
+   "group": "Body",
+   "uv": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "vertices": {
+    "fbl": [
+     -3.5,
+     1,
+     -19
+    ],
+    "fbr": [
+     3.5,
+     1,
+     -19
+    ],
+    "ftl": [
+     -2.5,
+     6,
+     -15
+    ],
+    "ftr": [
+     2.5,
+     6,
+     -15
+    ],
+    "btl": [
+     -3,
+     8,
+     -9
+    ],
+    "btr": [
+     3,
+     8,
+     -9
+    ],
+    "bbl": [
+     -3.5,
+     1,
+     -9
+    ],
+    "bbr": [
+     3.5,
+     1,
+     -9
+    ]
+   },
+   "faces": [
+    {
+     "v": [
+      "fbl",
+      "fbr",
+      "bbr",
+      "bbl"
+     ]
+    },
+    {
+     "v": [
+      "bbl",
+      "bbr",
+      "btr",
+      "btl"
+     ]
+    },
+    {
+     "v": [
+      "ftl",
+      "ftr",
+      "btr",
+      "btl"
+     ]
+    },
+    {
+     "v": [
+      "fbl",
+      "fbr",
+      "ftr",
+      "ftl"
+     ]
+    },
+    {
+     "v": [
+      "fbl",
+      "ftl",
+      "btl",
+      "bbl"
+     ]
+    },
+    {
+     "v": [
+      "fbr",
+      "ftr",
+      "btr",
+      "bbr"
+     ]
+    }
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "tank",
+   "group": "Body",
+   "from": [
+    -3,
+    3,
+    -9
+   ],
+   "to": [
+    3,
+    7,
+    -1
+   ],
+   "all": [
+    0,
+    48,
+    16,
+    64
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "seat",
+   "group": "Body",
+   "from": [
+    -2.5,
+    5,
+    -1
+   ],
+   "to": [
+    2.5,
+    7,
+    8
+   ],
+   "all": [
+    16,
+    48,
+    32,
+    64
+   ]
+  },
+  {
+   "type": "poly",
+   "name": "tail",
+   "group": "Body",
+   "uv": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "vertices": {
+    "fbl": [
+     -3,
+     3,
+     8
+    ],
+    "fbr": [
+     3,
+     3,
+     8
+    ],
+    "ftl": [
+     -3,
+     7,
+     8
+    ],
+    "ftr": [
+     3,
+     7,
+     8
+    ],
+    "btl": [
+     -1.8,
+     7.5,
+     18
+    ],
+    "btr": [
+     1.8,
+     7.5,
+     18
+    ],
+    "bbl": [
+     -1.8,
+     5,
+     18
+    ],
+    "bbr": [
+     1.8,
+     5,
+     18
+    ]
+   },
+   "faces": [
+    {
+     "v": [
+      "fbl",
+      "fbr",
+      "bbr",
+      "bbl"
+     ]
+    },
+    {
+     "v": [
+      "bbl",
+      "bbr",
+      "btr",
+      "btl"
+     ]
+    },
+    {
+     "v": [
+      "ftl",
+      "ftr",
+      "btr",
+      "btl"
+     ]
+    },
+    {
+     "v": [
+      "fbl",
+      "fbr",
+      "ftr",
+      "ftl"
+     ]
+    },
+    {
+     "v": [
+      "fbl",
+      "ftl",
+      "btl",
+      "bbl"
+     ]
+    },
+    {
+     "v": [
+      "fbr",
+      "ftr",
+      "btr",
+      "bbr"
+     ]
+    }
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "windscreen",
+   "group": "Body",
+   "from": [
+    -2.2,
+    8,
+    -10.5
+   ],
+   "to": [
+    2.2,
+    11,
+    -9.5
+   ],
+   "all": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "rotation": [
+    -20,
+    0,
+    0
+   ],
+   "origin": [
+    0,
+    8,
+    -10
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "bars",
+   "group": "Body",
+   "from": [
+    -6,
+    8.5,
+    -11.5
+   ],
+   "to": [
+    6,
+    9.3,
+    -10.7
+   ],
+   "all": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "forkL",
+   "group": "Body",
+   "from": [
+    -3.2,
+    -1,
+    -14.5
+   ],
+   "to": [
+    -2.6,
+    6,
+    -13.5
+   ],
+   "all": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "forkR",
+   "group": "Body",
+   "from": [
+    2.6,
+    -1,
+    -14.5
+   ],
+   "to": [
+    3.2,
+    6,
+    -13.5
+   ],
+   "all": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "stripeL",
+   "group": "Trim",
+   "from": [
+    -3.5,
+    4,
+    -8.5
+   ],
+   "to": [
+    -3,
+    5,
+    7.5
+   ],
+   "all": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "stripeR",
+   "group": "Trim",
+   "from": [
+    3,
+    4,
+    -8.5
+   ],
+   "to": [
+    3.5,
+    5,
+    7.5
+   ],
+   "all": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "nose_lip",
+   "group": "Trim",
+   "from": [
+    -3.6,
+    0.6,
+    -19.6
+   ],
+   "to": [
+    3.6,
+    1.2,
+    -18.8
+   ],
+   "all": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "headlight",
+   "group": "HeadlightL",
+   "from": [
+    -1.6,
+    2,
+    -19.8
+   ],
+   "to": [
+    1.6,
+    4,
+    -18.9
+   ],
+   "all": [
+    32,
+    16,
+    48,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "taillight",
+   "group": "TaillightL",
+   "from": [
+    -1.6,
+    5.4,
+    17.9
+   ],
+   "to": [
+    1.6,
+    7,
+    18.5
+   ],
+   "all": [
+    48,
+    16,
+    64,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "exhaust",
+   "group": "Thrusters",
+   "from": [
+    3,
+    1,
+    11
+   ],
+   "to": [
+    4.4,
+    2.6,
+    17
+   ],
+   "all": [
+    32,
+    48,
+    48,
+    64
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "tyre_f",
+   "group": "WheelFL",
+   "sides": 8,
+   "center": [
+    0,
+    -2.5,
+    -14
+   ],
+   "height": 3,
+   "radius": 6,
+   "origin": [
+    0,
+    -1.0,
+    -14
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    32,
+    16,
+    36
+   ],
+   "top_uv": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "bottom_uv": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "tyre_b",
+   "group": "WheelBL",
+   "sides": 8,
+   "center": [
+    0,
+    -2.7,
+    13
+   ],
+   "height": 3.4,
+   "radius": 6,
+   "origin": [
+    0,
+    -1.0,
+    13
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    32,
+    16,
+    36
+   ],
+   "top_uv": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "bottom_uv": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "rim_f",
+   "group": "TrimRimF",
+   "sides": 8,
+   "center": [
+    0,
+    -3.2,
+    -14
+   ],
+   "height": 4.4,
+   "radius": 3.6,
+   "origin": [
+    0,
+    -1.0,
+    -14
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    32,
+    16,
+    36
+   ],
+   "top_uv": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "bottom_uv": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "rim_b",
+   "group": "TrimRimB",
+   "sides": 8,
+   "center": [
+    0,
+    -3.4,
+    13
+   ],
+   "height": 4.8,
+   "radius": 3.6,
+   "origin": [
+    0,
+    -1.0,
+    13
+   ],
+   "rotation": [
+    0,
+    0,
+    90
+   ],
+   "side_uv": [
+    0,
+    32,
+    16,
+    36
+   ],
+   "top_uv": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "bottom_uv": [
+    0,
+    16,
+    16,
+    32
+   ]
+  }
+ ]
+}

@@ -3,8 +3,9 @@ extends Node
 ## CYPURRPUNK — SAVED PROGRESS: your cash and your stash, kept between games.
 ## Attach to the "Profile" node in main.tscn. Reach it with PlayerProfile.instance.
 ##
-## What's saved: your CASH and what's in your STASH (the lockers in the sewers: gear, and spare
-## SCRAP for THE MAINFRAME). That's all:
+## What's saved: your CASH, what's in your STASH (the lockers in the sewers: gear, and spare
+## SCRAP for THE MAINFRAME), your SEWER UPGRADES (scripts/upgrades.gd: id -> tier) and the
+## ride you last picked for your gang ("vehicle"). That's all:
 ## what you carry (paws, backpack, loot bag) is NOT saved, so put gear in the stash before you
 ## quit — a player who quits drops what they carry on the spot, like before.
 ##
@@ -63,7 +64,7 @@ func restore(player_id: int, cat_id: String, player_name: String) -> void:
 		# TUTORIAL (scripts/tutorial.gd): a training save every time - starting_cash, an empty
 		# stash - and the real save file is never read or written (we don't watch it: no _local).
 		print("[Profile] Tutorial: training save ($%d, empty stash), real save untouched" % starting_cash)
-		_request_restore.rpc_id(1, player_id, starting_cash, [])
+		_request_restore.rpc_id(1, player_id, starting_cash, [], {}, "interceptor")  # no upgrades either
 		return
 	var path := _profile_path(player_id, cat_id, player_name)
 	_local[player_id] = {"path": path, "restored": false, "saved_key": ""}
@@ -71,20 +72,26 @@ func restore(player_id: int, cat_id: String, player_name: String) -> void:
 	var cash := 0
 	var stash: Array = []
 	var got_starter := false  # has this cat had its starting money yet? (saved as "starter")
+	var upgrades := {}
+	var vehicle := "interceptor"
 	if config.load(path) == OK:
 		cash = int(config.get_value("progress", "cash", 0))
 		got_starter = bool(config.get_value("progress", "starter", false))
 		var saved: Variant = config.get_value("progress", "stash", [])
 		if saved is Array:
 			stash = saved
-		print("[Profile] Loaded %s: $%d, stash %s" % [path, cash, stash])
+		var saved_upgrades: Variant = config.get_value("progress", "upgrades", {})
+		if saved_upgrades is Dictionary:
+			upgrades = saved_upgrades
+		vehicle = str(config.get_value("progress", "vehicle", "interceptor"))
+		print("[Profile] Loaded %s: $%d, stash %s, upgrades %s, ride %s" % [path, cash, stash, upgrades, vehicle])
 	else:
 		print("[Profile] No save yet at %s: starting fresh" % path)
 	if not got_starter and cash < starting_cash:
 		cash = starting_cash  # (once: _save marks it as given)
 		print("[Profile] Starting money: $%d" % cash)
 	_local[player_id]["save_now"] = not got_starter  # write "starter" as soon as the host has it
-	_request_restore.rpc_id(1, player_id, cash, stash)
+	_request_restore.rpc_id(1, player_id, cash, stash, upgrades, vehicle)
 
 
 ## A player on this computer left the game (split screen: one couch player drops out).
@@ -126,16 +133,18 @@ func _profile_path(player_id: int, cat_id: String, player_name: String) -> Strin
 # --- The host checks and applies a player's save ---
 
 @rpc("any_peer", "call_local", "reliable")
-func _request_restore(player_id: int, cash: int, stash: Array) -> void:
+func _request_restore(player_id: int, cash: int, stash: Array, upgrades: Dictionary = {}, vehicle: String = "interceptor") -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	if PlayerId.slot_of(player_id) > 0 and Game.instance.cat_for(player_id) == null:
 		return  # a couch player the host didn't let in (the game was full)
+	# Upgrades first: a DELUXE LITTERBOX decides how much of the stash fits (scripts/upgrades.gd).
+	Upgrades.instance.restore(player_id, upgrades, vehicle)
 	var items := ItemManager.instance
 	var clean: Array = []
 	for item_id in stash:
 		# Only real gear or SCRAP (no money loot, no unknown items), and no more than fits.
-		if item_id is String and items.is_stashable(item_id) and clean.size() < items.stash_size:
+		if item_id is String and items.is_stashable(item_id) and clean.size() < items.stash_size_for(player_id):
 			clean.append(item_id)
 	Wallet.instance.set_cash(player_id, clampi(cash, 0, MAX_CASH))
 	items.set_stash(player_id, clean)
@@ -169,7 +178,15 @@ func _process(_delta: float) -> void:
 
 ## A player's cash and stash as text, to spot changes cheaply.
 func _current_key(player_id: int) -> String:
-	return str([_cash_of(player_id), ItemManager.instance.get_stash(player_id)])
+	return str([_cash_of(player_id), ItemManager.instance.get_stash(player_id), _upgrades_of(player_id), _vehicle_of(player_id)])
+
+
+func _upgrades_of(player_id: int) -> Dictionary:
+	return Upgrades.instance.player_upgrades.get(player_id, {})
+
+
+func _vehicle_of(player_id: int) -> String:
+	return Upgrades.instance.chosen_vehicle.get(player_id, "interceptor")
 
 
 func _cash_of(player_id: int) -> int:
@@ -180,5 +197,7 @@ func _save(player_id: int, path: String) -> void:
 	var config := ConfigFile.new()
 	config.set_value("progress", "cash", _cash_of(player_id))
 	config.set_value("progress", "stash", ItemManager.instance.get_stash(player_id))
+	config.set_value("progress", "upgrades", _upgrades_of(player_id))
+	config.set_value("progress", "vehicle", _vehicle_of(player_id))
 	config.set_value("progress", "starter", true)  # this cat has had its starting money
 	config.save(path)

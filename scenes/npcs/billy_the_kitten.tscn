@@ -132,6 +132,8 @@ shader_parameter/albedo_color = Color(0.6, 0.45, 0.28, 1)
 
 [node name="BillyTheKitten" type="StaticBody3D"]
 script = ExtResource("1_script")
+upgrade_page = "street"
+upgrade_button = "STREET TRICKS"
 npc_name = "BILLY THE KITTEN"
 voice = "meow_blip_billy"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

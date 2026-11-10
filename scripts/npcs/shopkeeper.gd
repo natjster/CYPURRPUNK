@@ -22,6 +22,8 @@ extends Npc
 @export_multiline var shop_lines: PackedStringArray = ["Take your pick. You've got $%d."]
 ## Button that leaves the shop page (goes back to the greeting).
 @export var back_text: String = "BACK"
+## Button on the shop page that opens the WEAPON CRATES upgrade page (scripts/upgrades.gd).
+@export var crates_text: String = "UNLOCK NEW WEAPON CRATES"
 
 
 ## The "shop" action opens the shop page. Anything else goes to the normal NPC handling.
@@ -39,11 +41,19 @@ func open_shop(cat: CatPlayer) -> void:
 	if line.contains("%d"):
 		line = line % my_cash
 	var buttons := []
+	var locked := []
 	for item_id in stock:
 		var data: ItemData = ItemManager.instance.catalog.get(item_id)
 		if data == null or data.price <= 0:
 			continue  # unknown item, or it has no price on its card
+		# WEAPON CRATES (scripts/upgrades.gd): guns from a crate you haven't unlocked are listed
+		# at the bottom as LOCKED; clicking one opens the crate page.
+		if not Upgrades.shop_allows(cat.player_id, item_id):
+			locked.append(["LOCKED: %s (CRATE %d)" % [data.display_name, Upgrades.crate_for(item_id)], open_upgrades.bind(cat, "shop")])
+			continue
 		buttons.append(["BUY %s - $%d" % [data.display_name, data.price], _buy.bind(cat, item_id)])
+	buttons.append([crates_text, open_upgrades.bind(cat, "shop")])
+	buttons.append_array(locked)
 	buttons.append([back_text, talk.bind(cat)])
 	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)
 

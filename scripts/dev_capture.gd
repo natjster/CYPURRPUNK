@@ -396,6 +396,25 @@ func _ready() -> void:
 				ItemManager.instance.request_from_stash.rpc_id(1, player.player_id, int(args["from_stash"]))
 				for i in 10:
 					await get_tree().process_frame
+		# SEWER UPGRADES (scripts/upgrades.gd): print what this cat has, then buy / pick a ride.
+		#   --buy_upgrade=deep_pockets,deep_pockets,thick_fur   (one buy each, like clicking the button)
+		#   --select_vehicle=cyber_bike   (our gang's ride; needs the unlock)
+		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its page opens)
+		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
+		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
+			await _upgrades_test(player, args)
+		if args.has("workbench"):
+			var hub := UndergroundHub.of(player)
+			player.teleport_to(hub.to_global(hub.workbench_spot + Vector3(-1.6, 0, 0)), 0.0)
+			player.camera_pivot.rotation.y = -PI / 2  # face east, at the bench
+			for i in 20:
+				await get_tree().physics_frame
+			print("DevCapture workbench: prompt=\"%s\" used=%s" % [Interactable.prompt_for(player), Interactable.try_use(player)])
+			for i in 5:
+				await get_tree().process_frame
+			print("DevCapture workbench page: open=%s line=\"%s\"" % [NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.replace("\n", " / ").left(220)])
+		if args.has("vehicles_lineup"):
+			await _vehicles_lineup(player)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			UndergroundHub.of(player).deploy(player)
@@ -1105,6 +1124,80 @@ func _car_for(player: CatPlayer) -> GetawayCar:
 		if best == null or car.global_position.distance_to(player.global_position) < best.global_position.distance_to(player.global_position):
 			best = car
 	return best
+
+
+## SEWER UPGRADES test (--buy_upgrade / --select_vehicle / --upgrade_log): one "DevCapture upgrades"
+## line before, after each buy, and after the ride is picked.
+func _upgrades_test(player: CatPlayer, args: Dictionary) -> void:
+	for i in 30:
+		await get_tree().physics_frame  # the save (cash, stash, upgrades) arrives first
+	_print_upgrades(player, "start")
+	if args.has("buy_upgrade"):
+		for upgrade_id in args["buy_upgrade"].split(","):
+			Upgrades.instance.request_buy.rpc_id(1, player.player_id, upgrade_id)
+			for i in 15:
+				await get_tree().physics_frame
+			_print_upgrades(player, "bought " + upgrade_id)
+	if args.has("select_vehicle"):
+		Upgrades.instance.request_select_vehicle.rpc_id(1, player.player_id, args["select_vehicle"])
+		for i in 15:
+			await get_tree().physics_frame
+		var car := _car_for(player)
+		print("DevCapture vehicle: %s is %s max_speed=%.1f (x%.2f turbo) accel=%.1f turn=%.1f mass=%.0f seats=%d smash x%.1f box=%s model=%s wheels=%d" % [
+			car.name, car.vehicle, car.max_speed, Upgrades.engine_multiplier(maxi(0, car.team)), car.engine_accel,
+			car.turn_speed, car.mass, car.passenger_seats, car.smash_speed_factor,
+			(car.get_node("CollisionShape3D").shape as BoxShape3D).size, car.get_node("Model/CarModel").scene_file_path.get_file(), car._wheels.size()])
+
+
+func _print_upgrades(player: CatPlayer, when: String) -> void:
+	var me := player.player_id
+	var items := ItemManager.instance
+	var inv := items.get_inventory(me)
+	var shop := PackedStringArray()
+	var whiskers := UndergroundHub.of(player).shopkeeper as Shopkeeper
+	if whiskers != null:
+		for item_id in whiskers.stock:
+			if Upgrades.shop_allows(me, item_id):
+				shop.append(item_id)
+	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (bag %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
+		when, Upgrades.instance.player_upgrades.get(me, {}), Wallet.instance.cash_of(me), items.scrap_count_of(me),
+		inv.bag.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
+		items.stash_size_for(me), items.quick_stack_size_for(me), CatHealth.instance.max_health_for(me), CatHealth.instance.get_health(me),
+		Upgrades.zoomies_multiplier(me), Upgrades.gourmet_multiplier(me), Upgrades.melee_multiplier(me), Upgrades.scrap_magnet_chance(me),
+		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_scrap_for(player.team),
+		Upgrades.instance.vehicle_of(player.team), ",".join(shop)])
+
+
+## --vehicles_lineup (host, TURF WAR so both cars exist, e.g. --teams=0): the Catleone car becomes the
+## ZOOM-BIKE and the Burrow car the MEOW-VAN (straight onto every computer, no unlock needed: test only),
+## parked side by side in front of us, three-quarter on. Then a "DevCapture lineup" line.
+func _vehicles_lineup(player: CatPlayer) -> void:
+	if UndergroundHub.is_in_hub(player.global_position):
+		UndergroundHub.of(player).deploy(player)  # (up to the street first)
+		for i in 30:
+			await get_tree().physics_frame
+	# Face north, so a film camera can find them: they park 5.5 m north of the cat, 4.6 m apart, e.g.
+	#   --vehicles_lineup --no_hud --cam_follow --cam_from=0,1.8,-1 --look_from=0,0.4,-5.5
+	player.camera_pivot.rotation.y = 0.0
+	var cars := Game.instance.cars()
+	var rides := ["cyber_bike", "fish_van", "interceptor"]
+	var forward := -player.camera_pivot.global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	var right := forward.cross(Vector3.UP)
+	var ground := player.global_position
+	for i in cars.size():
+		var car := cars[i]
+		Upgrades.instance._set_team_vehicle.rpc(maxi(0, car.team), rides[mini(i, rides.size() - 1)])
+		var spot := ground + forward * 5.5 + right * (i * 4.6 - 2.3) + Vector3(0, 0.5, 0)
+		car._teleport(Transform3D(Basis(Vector3.UP, player.camera_pivot.global_rotation.y + PI * 0.7), spot))
+	# A work light over the pair (test only), so the photo shows the models and not just their neon.
+	LevelKit.add_light(Game.instance, ground + forward * 4.0 + Vector3(0, 4.0, 0), Color(1, 0.92, 0.8), 6.0, 14.0)
+	for i in 30:
+		await get_tree().physics_frame
+	for car in cars:
+		print("DevCapture lineup: %s = %s at %s max_speed=%.1f seats=%d wheels=%d trim=%s" % [car.name, car.vehicle,
+			car.global_position.snapped(Vector3.ONE * 0.1), car.max_speed, car.passenger_seats, car._wheels.size(), car.trim_color()])
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.

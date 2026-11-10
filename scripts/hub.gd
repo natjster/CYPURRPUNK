@@ -120,6 +120,18 @@ const CITY_MOOD: int = -1
 ## The sand.
 @export var sand_color: Color = Color(0.62, 0.55, 0.4)
 
+@export_group("Tinker Workbench")
+## Where you stand to use the TINKER WORKBENCH (SEWER UPGRADES: DELUXE LITTERBOX + MAINFRAME
+## CAPACITOR, scripts/upgrades.gd), relative to the Hub node. The bench (models/workbench.glb)
+## is built just east of this spot, against the east wall, facing you.
+@export var workbench_spot: Vector3 = Vector3(11.0, 0, 0)
+## How close (metres) you must be to use it.
+@export var workbench_radius: float = 2.5
+## The HUD line after "[E] " at the bench.
+@export var workbench_prompt: String = "TINKER WORKBENCH"
+## The colour of its lamp's light.
+@export var workbench_light: Color = Color(1.0, 0.8, 0.45)
+
 @export_group("Mainframe")
 ## Where you stand to feed THE MAINFRAME scrap (the big CRT on the west wall), relative to the Hub node.
 @export var mainframe_spot: Vector3 = Vector3(-11.0, 0, 0)
@@ -263,7 +275,7 @@ class MainframeTerminal extends Interactable:
 		var mainframe := Mainframe.instance
 		match mainframe.use_for(cat.team):
 			Mainframe.ScrapUse.FEED:
-				return "FEED SCRAP (+%d%%)" % int(mainframe.charge_per_scrap)
+				return "FEED SCRAP (+%d%%)" % int(mainframe.charge_per_scrap_for(cat.team))
 			Mainframe.ScrapUse.HACK:
 				return "HACK RIVAL MAINFRAME (-%d%%)" % int(mainframe.hack_per_scrap)
 		return "MAINFRAME FULL"
@@ -712,6 +724,7 @@ func _build_props() -> void:
 
 	_build_shop()
 	_build_stash()
+	_build_workbench()
 
 	# THE MAINFRAME: a giant CRT computer on the west wall (scripts/mainframe.gd). Its sign, screen
 	# and light show this gang's tier, live (_update_mainframe_crt); walk up with SCRAP in your
@@ -789,6 +802,41 @@ func _build_shop() -> void:
 	# A coloured light over the shop, and a warm one so you can see his face.
 	LevelKit.add_light(self, Vector3(at.x + 1.0, 3.2, at.z), shop_light_color, 3.0, 8.0)
 	LevelKit.add_light(self, Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
+
+
+## THE TINKER WORKBENCH (SEWER UPGRADES): a greasy bench of vacuum parts against the east wall.
+## E opens its upgrade page (scripts/upgrades.gd "workbench": DELUXE LITTERBOX, MAINFRAME CAPACITOR).
+## Model: models/workbench.glb (made from tools/model_specs/workbench.json; open
+## models/blockbench/workbench.bbmodel in Blockbench to repaint it). Moves with Workbench Spot.
+func _build_workbench() -> void:
+	var at := workbench_spot
+	var spot := Interactable.make(self, at, workbench_prompt, workbench_radius, 10)
+	spot.used.connect(func(cat: CatPlayer): Upgrades.instance.open_page(cat, "workbench", workbench_prompt))
+	# The bench's front (-Z in the model) faces west, out into the room: a quarter turn.
+	var bench := LevelKit.instantiate_model("workbench", self, Vector3(half_width - 0.55, 0, at.z), PI / 2)
+	bench.name = "Workbench"
+	LevelKit.psx_ify(bench)
+	for part in ["Lamp", "Glow"]:
+		var mesh := bench.find_child(part, true, false) as MeshInstance3D
+		if mesh == null or mesh.mesh == null:
+			continue
+		for surface in mesh.mesh.get_surface_count():
+			var material := mesh.get_active_material(surface) as ShaderMaterial
+			if material != null:
+				var lit := material.duplicate() as ShaderMaterial
+				lit.set_shader_parameter("texture_glow", 3.0)
+				mesh.set_surface_override_material(surface, lit)
+	# Solid, so cats bump into it instead of walking through.
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(1.0, 0.95, 2.0)
+	shape.shape = box
+	body.add_child(shape)
+	body.position = Vector3(half_width - 0.55, 0.47, at.z)
+	add_child(body)
+	LevelKit.add_sign(self, "TINKER\nWORKBENCH", Vector3(half_width - 0.05, 2.5, at.z), workbench_light * 0.4, 28, -PI / 2)
+	LevelKit.add_light(self, Vector3(half_width - 1.4, 1.9, at.z - 0.4), workbench_light, 2.5, 5.0)
 
 
 ## THE LITTERBOX (the stash): one giant glowing litterbox on the east wall where cats bury their

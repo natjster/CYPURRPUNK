@@ -259,8 +259,8 @@ func health_bar_info() -> Dictionary:
 			info["progress_color"] = Color(1, 0.25, 0.2)  # a rival's robbery fills it red
 		return info
 	var hp := health.get_health(player_id)
-	return {"hp": hp, "max": health.max_health, "position": global_position + Vector3.UP * 1.3,
-		"show": hp < health.max_health, "name": ""}
+	return {"hp": hp, "max": health.max_health_for(player_id), "position": global_position + Vector3.UP * 1.3,
+		"show": hp < health.max_health_for(player_id), "name": ""}
 
 
 ## True while this cat is DOWNED (0 HP, waiting for a teammate: scripts/cat_health.gd).
@@ -620,6 +620,7 @@ func _physics_process(delta: float) -> void:
 	# Zoomies = holding Shift while actually moving (or being boosted).
 	var is_zooming := (Seats.is_pressed(slot, "sprint") or speed_boost > 1.0) and direction != Vector3.ZERO and not downed
 	var target_speed := zoomies_speed if is_zooming else walk_speed
+	target_speed *= Upgrades.zoomies_multiplier(player_id)  # ESPRESSO BLOODSTREAM (scripts/upgrades.gd)
 	if downed:
 		target_speed = walk_speed * CatHealth.instance.crawl_speed
 	# HEAVY loot (the golden koi) slows you down: see ItemData.carry_speed.

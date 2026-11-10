@@ -285,7 +285,7 @@ func run_over_by_car(delta: float) -> bool:
 		var last: Vector3 = _last_car_positions.get(id, car.global_position)
 		var car_speed := car.global_position.distance_to(last) / maxf(delta, 0.001)
 		_last_car_positions[id] = car.global_position
-		if car.driver_id != 0 and car_speed > car_smash_speed and car_speed < 60.0 \
+		if car.driver_id != 0 and car_speed > car_smash_speed * car.smash_speed_factor and car_speed < 60.0 \
 				and Motion.flat_distance(car.global_position, global_position) < car_smash_radius:
 			hit = true
 			killed_by = car.driver_id
@@ -304,6 +304,10 @@ func explode() -> void:
 	stomach.clear()
 	if drop_on_destroy != "":
 		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
+	# SCRAP MAGNET (scripts/upgrades.gd): the cat who smashed a regular bot may get a SCRAP out of it.
+	elif not is_boss and killed_by != 0 and randf() < Upgrades.scrap_magnet_chance(killed_by):
+		ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position + Vector3(0.6, 0, 0.6))
+		print("[Enemy] SCRAP MAGNET: %s dropped scrap for player %d" % [name, killed_by])
 	# Smashing an enemy makes the city angrier... but smashing a boss cools it right down.
 	var heat := HeatMeter.instance
 	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)

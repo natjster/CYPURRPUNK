@@ -57,6 +57,8 @@ height = 1.0
 
 [node name="ComradeWhiskers" type="StaticBody3D"]
 script = ExtResource("1_script")
+upgrade_page = "shop"
+upgrade_button = "UNLOCK NEW WEAPON CRATES"
 shop_lines = PackedStringArray("Take your pick. You've got $%d. Spend it on freedom.", "All genuine. Mostly. You've got $%d.", "Prices set by the people. The people is me. You've got $%d.")
 npc_name = "COMRADE WHISKERS"
 voice = "meow_blip_whiskers"

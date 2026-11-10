@@ -207,7 +207,17 @@ func tier_color(team: int) -> Color:
 
 
 ## The heat at which this gang's EXIT opens (fish_heist.gd, and the tick on the HUD heat bar).
+## INSIDER TUNNEL (scripts/upgrades.gd, a CREW upgrade) opens it 5 / 10 heat earlier.
 func exit_heat(team: int) -> float:
+	return maxf(_tier_exit_heat(team) - Upgrades.exit_heat_discount(team), 0.0)
+
+
+## Charge 1 scrap gives this gang: charge_per_scrap (25%), or more with a MAINFRAME CAPACITOR.
+func charge_per_scrap_for(team: int) -> float:
+	return Upgrades.charge_per_scrap_for(team, charge_per_scrap)
+
+
+func _tier_exit_heat(team: int) -> float:
 	match tier(team):
 		Tier.OVERCLOCK:
 			return exit_at_100
@@ -584,7 +594,7 @@ func request_feed(player_id: int) -> void:
 	var changed := charges.duplicate()
 	var target := team if use == ScrapUse.FEED else hack_target(team)
 	if use == ScrapUse.FEED:
-		changed[team] = minf(charge_of(team) + charge_per_scrap, MAX_CHARGE)
+		changed[team] = minf(charge_of(team) + charge_per_scrap_for(team), MAX_CHARGE)
 	else:
 		changed[target] = maxf(charge_of(target) - hack_per_scrap, 0.0)
 	_set_charges.rpc(changed, overclock_active)
@@ -595,7 +605,7 @@ func request_feed(player_id: int) -> void:
 		_hacked.rpc(team, target)
 		text = "HACKED! %s MAINFRAME -%d%%  ->  %d%%" % [Teams.SHORT_NAMES[target], int(hack_per_scrap), int(charge_of(target))]
 	else:
-		text = "MAINFRAME +%d%%  ->  %d%%  %s\nYour exit opens at %d heat." % [int(charge_per_scrap), int(charge_of(team)), tier_name(team), int(exit_heat(team))]
+		text = "MAINFRAME +%d%%  ->  %d%%  %s\nYour exit opens at %d heat." % [int(charge_per_scrap_for(team)), int(charge_of(team)), tier_name(team), int(exit_heat(team))]
 	if FishHeist.instance != null and FishHeist.instance.went_up.is_empty():
 		text += "\nThis district starts with %d heat%s." % [int(starting_heat()), " - OVERCLOCKED" if overclock_active else ""]
 	_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, text)

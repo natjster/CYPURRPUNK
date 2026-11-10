@@ -1,0 +1,1006 @@
+{
+ "name": "workbench",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 77,
+ "background": "#2a2d33",
+ "about": "SEWER UPGRADES: the TINKER WORKBENCH (scripts/upgrades.gd page 'workbench', built by hub.gd _build_workbench). Front = -Z. Groups: Body, Lamp (the bulb: glows), Glow (soldering tip).",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "one 64x64 texture layout of 16x16 swatches:\n  row 0:  wood | dark metal | light metal | rust\n  row 1:  TRIM (near white: the game tints it the gang colour) | glass | headlight | taillight\n  row 2:  tyre | rim | lamp glow | fish sign\n  row 3:  body paint | seat cloth | copper | black"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": "#7a5530",
+   "bottom": "#4e3420"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "amount": 0.35,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "color": "#2a1a10"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    5
+   ],
+   "to": [
+    15,
+    5
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    10
+   ],
+   "to": [
+    15,
+    10
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": "#4a505a",
+   "bottom": "#2c3038"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": "#a8b0bc",
+   "bottom": "#6c7480"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#3a404a"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": "#8a5530",
+   "bottom": "#5a3018"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "amount": 0.4,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#2a1408"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#a86a38",
+   "count": 6,
+   "size": 1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "color": "#f4f4f4"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "colors": [
+    "#ffffff",
+    "#d8d8d8"
+   ],
+   "width": 2,
+   "direction": "horizontal"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "top": "#3a6a78",
+   "bottom": "#0e1e26"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "amount": 0.05,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "color": "#0a1014"
+  },
+  {
+   "op": "line",
+   "from": [
+    18,
+    18
+   ],
+   "to": [
+    22,
+    22
+   ],
+   "color": "#8ad8e8"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "color": "#fff6c8"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "color": "#c8b878"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#ff3a3a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#a01818"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "colors": [
+    "#1a1a1e",
+    "#2a2a30"
+   ],
+   "width": 2
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "top": "#3a3f48",
+   "bottom": "#22252c"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "amount": 0.1,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "color": "#101216"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    20,
+    36,
+    28,
+    44
+   ],
+   "color": "#8a93a3"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "color": "#ffd27a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    36,
+    44,
+    44
+   ],
+   "color": "#fff2c0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "color": "#1ad8ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    51,
+    37,
+    59,
+    43
+   ],
+   "color": "#fff8e0"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     59,
+     38,
+     "#fff8e0"
+    ],
+    [
+     60,
+     37,
+     "#fff8e0"
+    ],
+    [
+     60,
+     39,
+     "#fff8e0"
+    ],
+    [
+     60,
+     40,
+     "#fff8e0"
+    ],
+    [
+     59,
+     41,
+     "#fff8e0"
+    ],
+    [
+     60,
+     42,
+     "#fff8e0"
+    ],
+    [
+     61,
+     36,
+     "#fff8e0"
+    ],
+    [
+     61,
+     43,
+     "#fff8e0"
+    ],
+    [
+     53,
+     39,
+     "#101014"
+    ]
+   ]
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "color": "#0a4a60"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "top": "#4a5a3a",
+   "bottom": "#2a3420"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "line",
+   "from": [
+    1,
+    56
+   ],
+   "to": [
+    14,
+    56
+   ],
+   "color": "#20232a"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "top": "#2e2e3a",
+   "bottom": "#18181f"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "amount": 0.3,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "color": "#0c0c10"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "top": "#d08848",
+   "bottom": "#8a4a20"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "color": "#4a2410"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    48,
+    64,
+    64
+   ],
+   "color": "#101014"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body"
+  },
+  {
+   "name": "Lamp",
+   "origin": [
+    -6,
+    22,
+    -5.5
+   ]
+  },
+  {
+   "name": "Glow"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "top",
+   "group": "Body",
+   "from": [
+    -16,
+    13,
+    -8
+   ],
+   "to": [
+    16,
+    15,
+    8
+   ],
+   "sides": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": [
+    0,
+    0,
+    16,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "legL",
+   "group": "Body",
+   "from": [
+    -15,
+    0,
+    -7
+   ],
+   "to": [
+    -13,
+    13,
+    7
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "legR",
+   "group": "Body",
+   "from": [
+    13,
+    0,
+    -7
+   ],
+   "to": [
+    15,
+    13,
+    7
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "shelf",
+   "group": "Body",
+   "from": [
+    -13,
+    3,
+    -6
+   ],
+   "to": [
+    13,
+    4,
+    6
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "parts_crate",
+   "group": "Body",
+   "from": [
+    -11,
+    4,
+    -4
+   ],
+   "to": [
+    -3,
+    9,
+    4
+   ],
+   "sides": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": [
+    48,
+    0,
+    64,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "vice",
+   "group": "Body",
+   "from": [
+    8,
+    15,
+    -6
+   ],
+   "to": [
+    13,
+    18.5,
+    -1
+   ],
+   "sides": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "wrench",
+   "group": "Body",
+   "from": [
+    -7,
+    15,
+    -4
+   ],
+   "to": [
+    1,
+    15.6,
+    -3
+   ],
+   "sides": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "iron",
+   "group": "Body",
+   "from": [
+    -12,
+    15,
+    1
+   ],
+   "to": [
+    -4,
+    16,
+    2
+   ],
+   "sides": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "top": [
+    32,
+    48,
+    48,
+    64
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "iron_tip",
+   "group": "Glow",
+   "from": [
+    -13.5,
+    15.2,
+    1.2
+   ],
+   "to": [
+    -12,
+    15.8,
+    1.8
+   ],
+   "sides": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top": [
+    32,
+    32,
+    48,
+    48
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "vac_brush",
+   "group": "Body",
+   "sides": 6,
+   "center": [
+    3,
+    15,
+    3
+   ],
+   "height": 2,
+   "radius_bottom": 3,
+   "radius_top": 2.4,
+   "side_uv": [
+    0,
+    48,
+    16,
+    52
+   ],
+   "top_uv": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "pegboard",
+   "group": "Body",
+   "from": [
+    -16,
+    15,
+    7
+   ],
+   "to": [
+    16,
+    28,
+    8
+   ],
+   "faces": {
+    "north": [
+     16,
+     48,
+     32,
+     64
+    ],
+    "up": [
+     16,
+     0,
+     32,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "lamp_pole",
+   "group": "Body",
+   "from": [
+    -14,
+    15,
+    4
+   ],
+   "to": [
+    -13,
+    26,
+    5
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "lamp_arm",
+   "group": "Body",
+   "from": [
+    -14,
+    25,
+    -6
+   ],
+   "to": [
+    -13,
+    26,
+    4
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "lamp_shade",
+   "group": "Body",
+   "sides": 6,
+   "center": [
+    -13.5,
+    22,
+    -6.5
+   ],
+   "height": 3,
+   "radius_bottom": 2.6,
+   "radius_top": 0.8,
+   "side_uv": [
+    16,
+    0,
+    32,
+    4
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "bulb",
+   "group": "Lamp",
+   "from": [
+    -14.5,
+    21.2,
+    -7.5
+   ],
+   "to": [
+    -12.5,
+    22.2,
+    -5.5
+   ],
+   "sides": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "bottom": [
+    32,
+    32,
+    48,
+    48
+   ]
+  }
+ ]
+}

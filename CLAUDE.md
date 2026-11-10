@@ -422,6 +422,19 @@ ONLINE NEXT = PlayScreen host/join, its BACK -> landing). Leaving the landing pa
 Cat creator NEXT/BACK route by `main_menu._cat_from` (`cat_done` / `cat_closed`). Pause > MY CAT = `open(true)`.
 Test: `--solo`, `--name=`, `--look=N`, `--menu=cat|mode|coop|local|online|play`; prints `DevCapture look`.
 
+SEWER UPGRADES (SETUP_GUIDE §25): `scripts/upgrades.gd` (`Upgrades.instance`, node `Upgrades` under Main right below Wallet, GameSystems).
+`player_upgrades` {player_id: {id: tier}} synced (`_set_tier`/`_set_all`), `costs` export (id -> [[cash, scrap] per tier]), `INFO`/`PAGES`.
+Host `request_buy(player_id, id)` = Wallet.spend + `ItemManager.spend_scrap` (bag first, then stash; `scrap_count_of`). Read with static
+`Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel). Hooks: `ItemManager.bag/pack/stash/
+quick_stack_size_for(pid)` (NEVER read bag_size etc. directly), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
+request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_scrap_for`.
+Pages open in NpcDialog via `Upgrades.open_page(cat, page, speaker, voice, back)`; NPC export `upgrade_page`/`upgrade_button` adds the button
+to the greeting (or action `upgrades:<page>`). TINKER WORKBENCH = hub `_build_workbench` (`models/workbench.glb`). RIDES: `team_vehicle[team]`,
+`request_select_vehicle` (car must be empty) -> `GetawayCar.set_vehicle(id)` swaps Model/CarModel (`cyber_bike.glb`/`fish_van.glb`), box, stats
+(`bike_*`/`van_*` exports, `smash_speed_factor`); any `Trim*` part glows gang colour. Profile saves "upgrades" + "vehicle"; tutorial sends {}.
+Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_bag_size`) inside a ScrollContainer (`_fit_scroll`).
+Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --workbench --vehicles_lineup` ("DevCapture upgrades/vehicle/lineup/workbench").
+
 ## Items framework
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour

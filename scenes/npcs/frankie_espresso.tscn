@@ -107,6 +107,8 @@ height = 0.9
 
 [node name="FrankieEspresso" type="StaticBody3D"]
 script = ExtResource("1_script")
+upgrade_page = "vehicles"
+upgrade_button = "GARAGE & ZOOMIES UPGRADES"
 npc_name = "FRANKIE \"ESPRESSO\""
 voice = "meow_blip_frankie"
 pages = Array[ExtResource("3_page")]([SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

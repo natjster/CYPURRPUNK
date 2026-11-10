@@ -384,6 +384,8 @@ func _physics_process(delta: float) -> void:
 		var earned := 0
 		for item_id in loot:
 			earned += (items.catalog[item_id] as ItemData).cash_value
+		# GOURMET FENCE (scripts/upgrades.gd): this cat's fence pays +20% / +40% for the loot.
+		earned = roundi(earned * Upgrades.gourmet_multiplier(player_id))
 		if their_car != null:
 			their_car.remove_occupant(player_id)  # out of the car first...
 			# ...and once the last cat is out it waits at its parking spot for the next trip up.

@@ -32,7 +32,7 @@ const FIRST_DROPPED_ID: int = 100000
 ## Mixed into the city seed so item placement has its own random numbers.
 const LOOT_SEED_SALT: int = 4242
 ## Where loot sits on a cat: first in its mouth, then stacked on its head.
-const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0), Vector3(0, 1.23, 0), Vector3(0, 1.34, 0)]
+const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0), Vector3(0, 1.23, 0), Vector3(0, 1.34, 0), Vector3(0, 1.45, 0)]
 ## A cat can't grab an item more than this many metres above or below it (see _reach_distance).
 const MAX_REACH_HEIGHT: float = 3.0
 
@@ -311,7 +311,7 @@ func _can_use_items(cat: CatPlayer) -> bool:
 
 func _can_take(player_id: int, data: ItemData) -> bool:
 	if data.kind == ItemData.Kind.LOOT:
-		return bag_used(player_id) + data.bag_space <= bag_size
+		return bag_used(player_id) + data.bag_space <= bag_size_for(player_id)
 	return true  # held items always fit: whatever is in the way gets dropped
 
 
@@ -345,7 +345,7 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 
 	if data.kind == ItemData.Kind.LOOT:
 		inventory.bag.append(item_id)
-	elif data.quick_use and _add_to_quick(inventory, item_id):
+	elif data.quick_use and _add_to_quick(inventory, item_id, quick_stack_size_for(player_id)):
 		pass                                                # catnip etc.: into a QUICK USE slot
 	else:
 		var hands: Array = inventory.hands
@@ -354,7 +354,7 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 			hands = [item_id, item_id]                      # free paws: hold it
 		elif data.hands == 1 and not _is_two_handed(hands) and "" in hands:
 			hands[hands.find("")] = item_id                 # a free paw: hold it
-		elif pack.size() < pack_size:
+		elif pack.size() < pack_size_for(player_id):
 			pack.append(item_id)                            # paws busy: into the backpack
 		elif data.hands == 2:
 			for old in _held_ids(hands):                    # everything full: swap
@@ -374,10 +374,12 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 
 ## Put one quick-use item into a QUICK USE slot of this inventory (changes it): on top of a
 ## stack of the same item with room, else into an empty slot. False = both slots are taken.
-func _add_to_quick(inventory: Dictionary, item_id: String) -> bool:
+func _add_to_quick(inventory: Dictionary, item_id: String, stack_size: int = -1) -> bool:
+	if stack_size < 0:
+		stack_size = quick_stack_size
 	var quick := quick_slots_of(inventory)
 	for slot in quick:
-		if not slot.is_empty() and slot[0] == item_id and slot.size() < quick_stack_size:
+		if not slot.is_empty() and slot[0] == item_id and slot.size() < stack_size:
 			slot.append(item_id)
 			inventory.quick = quick
 			return true
@@ -423,7 +425,10 @@ func request_buy(player_id: int, item_id: String) -> void:
 		return
 	if not UndergroundHub.is_in_hub(cat.global_position):
 		return  # the shop is down in the sewers: no buying from up top
-	if not _can_take(player_id, data):
+	if not Upgrades.shop_allows(player_id, item_id):
+		# WEAPON CRATES (scripts/upgrades.gd): this gun isn't unlocked for this cat yet.
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "%s comes in crate %d. Unlock it first." % [data.display_name, Upgrades.crate_for(item_id)])
+	elif not _can_take(player_id, data):
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No room for that, comrade.")
 	elif not Wallet.instance.spend(player_id, data.price):
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "%s costs $%d. Come back with more fish money." % [data.display_name, data.price])
@@ -491,7 +496,7 @@ func request_quick_to_pack(player_id: int, slot: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var inventory := get_inventory(player_id).duplicate(true)
-	if inventory.pack.size() >= pack_size:
+	if inventory.pack.size() >= pack_size_for(player_id):
 		return
 	var item_id := _pop_quick(inventory, slot)
 	if item_id == "":
@@ -513,7 +518,7 @@ func request_equip(player_id: int, pack_index: int) -> void:
 		return
 	var item_id: String = pack.pop_at(pack_index)
 	var data: ItemData = catalog[item_id]
-	if data.quick_use and _add_to_quick(inventory, item_id):
+	if data.quick_use and _add_to_quick(inventory, item_id, quick_stack_size_for(player_id)):
 		inventory.pack = pack
 		_set_inventory.rpc(player_id, inventory)  # catnip etc. go to a QUICK USE slot, not the paws
 		return
@@ -530,7 +535,7 @@ func request_equip(player_id: int, pack_index: int) -> void:
 		put_away.append(hands[0])  # both paws full: the right-paw item goes in the backpack
 		hands[0] = item_id
 	for old in put_away:
-		if pack.size() < pack_size:
+		if pack.size() < pack_size_for(player_id):
 			pack.insert(mini(pack_index, pack.size()), old)
 		else:
 			_spawn_dropped(old, cat.global_position)
@@ -547,7 +552,7 @@ func request_put_away(player_id: int, hand: int) -> void:
 	var inventory := get_inventory(player_id).duplicate(true)
 	var hands: Array = inventory.hands
 	var item_id: String = hands[clampi(hand, 0, 1)]
-	if item_id == "" or inventory.pack.size() >= pack_size:
+	if item_id == "" or inventory.pack.size() >= pack_size_for(player_id):
 		return
 	if _is_two_handed(hands):
 		hands = ["", ""]
@@ -615,6 +620,63 @@ func take_cash_loot(player_id: int) -> Array:
 	inventory.bag = kept
 	_set_inventory.rpc(player_id, inventory)
 	return cash
+
+
+## --- Per-player sizes (SEWER UPGRADES, scripts/upgrades.gd) ---
+## The numbers in the Inspector above (Bag Size, Pack Size...) are the BASE sizes; a cat's
+## upgrades add to them. Always ask these instead of reading bag_size etc. directly.
+
+## Loot bag slots for this player: 3, +1 per DEEP POCKETS tier (Don Catleone / Pawnie).
+func bag_size_for(player_id: int) -> int:
+	return bag_size + Upgrades.level(player_id, "deep_pockets")
+
+
+## Backpack slots: 6, +2 per BIGGER BACKPACK tier.
+func pack_size_for(player_id: int) -> int:
+	var per_tier: int = Upgrades.instance.pack_slots_per_tier if Upgrades.instance != null else 2
+	return pack_size + per_tier * Upgrades.level(player_id, "bigger_pack")
+
+
+## Litterbox (stash) slots: 9, +6 per DELUXE LITTERBOX tier (the Tinker Workbench).
+func stash_size_for(player_id: int) -> int:
+	var per_tier: int = Upgrades.instance.stash_slots_per_tier if Upgrades.instance != null else 6
+	return stash_size + per_tier * Upgrades.level(player_id, "deluxe_litterbox")
+
+
+## How many snacks stack in one QUICK USE slot: 3, +1 per STUFFED CHEEKS tier.
+func quick_stack_size_for(player_id: int) -> int:
+	return quick_stack_size + Upgrades.level(player_id, "stuffed_cheeks")
+
+
+## --- SCRAP as money for upgrades ---
+
+## All the SCRAP a player owns right now: in their loot bag AND in their litterbox (stash).
+func scrap_count_of(player_id: int) -> int:
+	var inventory := get_inventory(player_id)
+	return inventory.bag.count(Mainframe.SCRAP_ID) + (inventory.get("stash", []) as Array).count(Mainframe.SCRAP_ID)
+
+
+## Host: take "count" SCRAP from a player, from the loot bag first, then the litterbox.
+## False (and nothing taken) if they don't have that much in total.
+func spend_scrap(player_id: int, count: int) -> bool:
+	if not multiplayer.is_server() or scrap_count_of(player_id) < count:
+		return false
+	if count <= 0:
+		return true
+	var inventory := get_inventory(player_id).duplicate(true)
+	var bag: Array = inventory.bag
+	var stash: Array = inventory.get("stash", [])
+	var left := count
+	while left > 0 and bag.has(Mainframe.SCRAP_ID):
+		bag.remove_at(bag.rfind(Mainframe.SCRAP_ID))
+		left -= 1
+	while left > 0 and stash.has(Mainframe.SCRAP_ID):
+		stash.remove_at(stash.rfind(Mainframe.SCRAP_ID))
+		left -= 1
+	inventory.bag = bag
+	inventory.stash = stash
+	_set_inventory.rpc(player_id, inventory)
+	return true
 
 
 ## How many of this item are in a player's loot bag (e.g. scrap for THE MAINFRAME).
@@ -703,7 +765,7 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 	var cat := _cat(player_id)
 	var inventory := get_inventory(player_id).duplicate(true)
 	var stash: Array = inventory.get("stash", [])
-	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or stash.size() >= stash_size:
+	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or stash.size() >= stash_size_for(player_id):
 		return
 	var item_id := ""
 	if where == "hand":
@@ -741,7 +803,7 @@ func request_from_stash(player_id: int, index: int) -> void:
 		if not _can_take(player_id, data):
 			return  # loot bag full (the screen tells the player)
 		inventory.bag.append(stash.pop_at(index))
-	elif inventory.pack.size() >= pack_size:
+	elif inventory.pack.size() >= pack_size_for(player_id):
 		return  # backpack full (the screen tells the player)
 	else:
 		inventory.pack.append(stash.pop_at(index))
