@@ -531,7 +531,11 @@ func _show_sewer_title(seat: int, line: String) -> void:
 		_sewer_title[seat] = shown
 	Hud.set_text("DropOff", line, seat)
 	var alpha := 1.0
-	if sewer_title_seconds > 0.0:
+	var tutorial_box := Hud.element("TutorialBox", seat)
+	if tutorial_box != null and tutorial_box.visible:
+		shown["since"] = now  # (the tutorial box IS the title while it's up; show ours once it's gone)
+		alpha = 0.0
+	elif sewer_title_seconds > 0.0:
 		var left := sewer_title_seconds - (now - float(shown["since"]))
 		alpha = clampf(left / maxf(sewer_title_fade, 0.01), 0.0, 1.0)
 	Hud.show_element("DropOff", alpha > 0.0, seat)

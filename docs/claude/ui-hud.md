@@ -15,7 +15,10 @@
   `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
   phases 2-4 (Inventory, Shop, Workbench). `ui/hud_theme.tres` (talk box + pause buttons/panels) uses the same ocean-blue
   values by hand (+ `HudStyle.draw_corners` on NpcDialog's Panel); the Compass arrow reads HudStyle (`use_hud_style`).
-  Heat bar = one bar, number inside (ticks / exit notch exports default off). Feed lines: `feed_seconds` 4 + `feed_fade_seconds`.
+  Heat bar = health-bar mirror (number box + thin bar); ticks / EXIT tick / MAINFRAME tag exports default OFF.
+  CARDS (`hud_cards.gd`, first child of Middle) draw HudStyle panels behind Banner / Popup / Message sized to their text
+  (`draw_panel(..., alpha)` fades with them). Popup = right-side reward card (anchor 0.36); `Hud.banner` clears the popup.
+  No crosshair in `UndergroundHub.is_safe` (item_manager); empty quick slots aren't drawn; sewer title hidden while TutorialBox shows. Feed lines: `feed_seconds` 4 + `feed_fade_seconds`.
   Sewer title (DropOff in the hub) fades after `FishHeist.sewer_title_seconds` (`_show_sewer_title`, per seat; hidden after = bars get the row).
   TALK CAMERA: `NpcDialog.talking_to` (set by npc.gd before open) -> `CatPlayer._update_talk_camera` (yaw + asin(side/dist) centres the NPC,
   pitch puts its face at `talk_face_height`; shares `_pitch_before_inventory` with the inventory view). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;

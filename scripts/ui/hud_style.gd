@@ -93,27 +93,30 @@ func heat_color(heat: float) -> Color:
 
 
 ## A translucent ocean-blue box with a bright edge and corner brackets. faint = an empty slot.
-static func draw_panel(canvas: CanvasItem, rect: Rect2, faint: bool = false, edge: Color = Color(0, 0, 0, 0)) -> void:
+## alpha = fade the whole box (1 = normal, 0 = gone), e.g. while the words in it fade out.
+static func draw_panel(canvas: CanvasItem, rect: Rect2, faint: bool = false, edge: Color = Color(0, 0, 0, 0), alpha: float = 1.0) -> void:
 	var style := current()
 	var fill := style.panel_color
 	if faint:
 		fill.a *= 0.5
+	fill.a *= alpha
 	canvas.draw_rect(rect, fill)
 	var border := edge if edge.a > 0.0 else (style.faint_border_color if faint else style.border_color)
+	border.a *= alpha
 	var width := Hud.line(style.border_width)
 	canvas.draw_rect(rect.grow(-width / 2.0), border, false, width)
 	if not faint:
-		draw_corners(canvas, rect, border)
+		draw_corners(canvas, rect, border, alpha)
 
 
 ## Just the brighter corner brackets of a panel (the talk box's PanelContainer draws its own box
 ## from ui/hud_theme.tres, then adds these on top so it matches the rest of the HUD).
-static func draw_corners(canvas: CanvasItem, rect: Rect2, edge: Color = Color(0, 0, 0, 0)) -> void:
+static func draw_corners(canvas: CanvasItem, rect: Rect2, edge: Color = Color(0, 0, 0, 0), alpha: float = 1.0) -> void:
 	var style := current()
 	if style.corner_length <= 0.0:
 		return
 	var bright := (edge if edge.a > 0.0 else style.border_color).lightened(0.35)
-	bright.a = 1.0
+	bright.a = alpha
 	var c := minf(style.corner_length, minf(rect.size.x, rect.size.y) / 3.0)
 	var w := Hud.line(style.border_width * 1.5)
 	var p := rect.position

@@ -22,7 +22,7 @@ extends CanvasLayer
 ##       │                   Hud.feed), Heat (the red/blue heat bar, top-right,
 ##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
 ##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
-##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt,
+##       ├── Middle       <- hidden while a window is open: Cards (the ocean-blue boxes behind Banner / Popup / Message, hud_cards.gd), Popup, Banner, Crosshair, Message, Prompt,
 ##       │                   Held (bottom-left: the guns in your paws + quick-use slots, in the ocean-blue
 ##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd),
 ##       │                   Boost (bottom-left, above Held, only while driving: the AFTERBURNER
@@ -192,6 +192,8 @@ static func banner(text: String, seconds: float = 6.0, color: Color = Color.WHIT
 	for hud in _targets(seat_number):
 		set_text("Banner", text, hud.seat)
 		set_color("Banner", color, hud.seat)
+		hud._popup_time = 0.0  # (bigger news: the banner takes the popup's place, never stacked)
+		show_element("Popup", false, hud.seat)
 		show_element("Banner", true, hud.seat)
 		hud._banner_time = seconds
 

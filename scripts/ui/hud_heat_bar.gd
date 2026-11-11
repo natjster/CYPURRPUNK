@@ -6,18 +6,19 @@ extends Control
 ## Lives at scenes/ui/hud.tscn > HUD > Frame > Top > Heat. Drawn in code (_draw), so it is sharp
 ## at any resolution. scripts/heat_meter.gd feeds it every frame with set_heat().
 ##
-## What you see (kept clean on purpose: just one bar with the number in it):
-##   [░░░░░░████████ 42]   <- heat 0..100; the fill grows from the RIGHT edge, the number sits inside
+## What you see:
+##   ░░░░██████████  [ 42 ]   <- the bar, then the number box (heat 0..100)
 ##   - The fill FLASHES back and forth between RED and BLUE like police lights.
 ##   - The hotter it gets, the faster it flashes (flash_speed + flash_speed_per_level).
 ##   - When the heat goes up a LEVEL (every 25), the frame flashes white for a moment.
-##   - Optional (off by default, Inspector > Shape): tick marks at 25 / 50 / 75 (Show Level Ticks)
-##     and a white notch where YOUR gang's exit opens (Show Exit Mark; scripts/mainframe.gd exit_heat).
+##   - Kept as plain as the health bar on purpose. Optional extras (Inspector > Shape, OFF by default):
+##     Show Level Ticks (25 / 50 / 75 marks) and Show Exit Mark (a white tick tagged EXIT where YOUR
+##     gang's exit opens: scripts/mainframe.gd exit_heat).
 ##
 ## DOWN IN THE SEWERS the same bar shows YOUR GANG'S MAINFRAME instead (scripts/mainframe.gd; heat_meter.gd
 ## calls set_mainframe() while you're in the hub): its charge 0..100% in the terminal colour of
 ## its tier (cyan OVERCLOCK, green ONLINE, yellow POWER LOW, orange WARNING, flashing red
-## CRITICAL), with "MAINFRAME" written inside the bar's left end, and a white flash when it's fed.
+## CRITICAL) and a white flash when it's fed. (Show Mainframe Tag = a small "MAINFRAME" word over it.)
 ##
 ## Move / resize it in hud.tscn like any Control (select Heat, drag it, or change Layout >
 ## Transform). Colours and timings are below (Inspector, with Heat selected).
@@ -29,16 +30,17 @@ extends Control
 @export var back_color: Color = Color(0.03, 0.03, 0.12, 0.8)
 
 @export_group("Shape")
-## How thick the bar is (HUD units; the screen is 720 tall). The number is written inside it.
-@export var bar_thickness: float = 26.0
-## Size of the number inside the bar (it shrinks itself if the bar is too thin).
-@export var number_font_size: int = 22
-## Gap between the number and the bar's right end.
-@export var number_padding: float = 8.0
+## How thick the bar is (HUD units; the screen is 720 tall).
+@export var bar_thickness: float = 9.0
+## Width of the number box on the right.
+@export var number_box_width: float = 64.0
+@export var number_font_size: int = 26
 ## Draw small tick marks on the bar at every heat level (25, 50, 75).
 @export var show_level_ticks: bool = false
-## Draw a white notch where YOUR gang's exit opens.
+## Draw the EXIT tick where your gang's exit opens.
 @export var show_exit_mark: bool = false
+## Size of the little "EXIT" tag over your gang's exit tick.
+@export var exit_tag_size: int = 12
 
 @export_group("Feel")
 ## Red/blue flips per second at heat level 1.
@@ -51,7 +53,9 @@ extends Control
 @export var level_up_flash: float = 0.6
 
 @export_group("Mainframe mode (in the sewers)")
-## Size of the "MAINFRAME" word inside the bar's left end.
+## Write a small "MAINFRAME" over the bar in the sewers.
+@export var show_mainframe_tag: bool = false
+## Size of the little "MAINFRAME" tag above the bar.
 @export var mainframe_tag_size: int = 14
 ## Flashes per second of the bar when the Mainframe is CRITICAL (0%).
 @export var critical_flash_speed: float = 2.0
@@ -126,40 +130,55 @@ func current_color() -> Color:
 
 func _draw() -> void:
 	var font := get_theme_font("font", "Label")
+	var h := size.y
 	var colour := current_color()
 	var frame_colour := Color.WHITE if _level_flash > 0.0 else colour * Color(1, 1, 1, 0.9)
-	var bar_h := minf(bar_thickness, size.y)
-	var bar := Rect2(0, (size.y - bar_h) * 0.5, size.x, bar_h)
+	var box_left := size.x - number_box_width
+	var bar_w := box_left - 8.0
+	var bar_top := (h - bar_thickness) * 0.5
 	var fraction := clampf(_heat / _max, 0.0, 1.0)
-	var outline := Color(0.01, 0.04, 0.08)
 
-	# --- The bar: dark back, flashing fill growing from the RIGHT edge ---
-	draw_rect(bar, back_color)
-	draw_rect(Rect2(bar.end.x - bar.size.x * fraction, bar.position.y, bar.size.x * fraction, bar_h), colour * Color(1, 1, 1, 0.85))
+	# --- The number box (right side): [ 42 ] (Mainframe mode: [ 75% ]) ---
+	var box := Rect2(box_left, 0, number_box_width, h)
+	draw_rect(box, back_color)
+	draw_rect(box, frame_colour, false, Hud.line(2.0))
+	var number := str(floori(_heat))
+	var font_size := number_font_size
+	if _mainframe_mode:
+		number += "%"
+		# Shrink the text until "100%" fits in the box.
+		while font_size > 10 and font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > number_box_width - 10.0:
+			font_size -= 2
+	var number_colour := Color.WHITE if _level_flash > 0.0 else colour.lerp(Color.WHITE, 0.25)
+	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var text_pos := Vector2(box_left + (number_box_width - text_size.x) * 0.5, (h + text_size.y) * 0.5 - font.get_descent(font_size))
+	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(6), Color(0.04, 0.01, 0.08))
+	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, number_colour)
+
+	# Mainframe mode: a small "MAINFRAME" tag just above the bar's right end (optional).
+	if _mainframe_mode and show_mainframe_tag:
+		var tag := "MAINFRAME"
+		var tag_font := Hud.text_size(mainframe_tag_size)  # (PS1 look: bigger, so it's readable)
+		var tag_size := font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font)
+		var tag_pos := Vector2(bar_w - tag_size.x, bar_top - 4.0)
+		draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
+		draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, colour.lerp(Color.WHITE, 0.3))
+
+	# --- The bar: dark back, flashing fill growing from the RIGHT edge (next to the number) ---
+	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), back_color)
+	draw_rect(Rect2(bar_w * (1.0 - fraction), bar_top, bar_w * fraction, bar_thickness), colour)
 	if show_level_ticks:
 		for step: float in [0.25, 0.5, 0.75]:
-			var x := bar.size.x * (1.0 - step)
-			draw_line(Vector2(x, bar.position.y), Vector2(x, bar.end.y), Color(1, 1, 1, 0.35), Hud.line(1.0))
+			var x := bar_w * (1.0 - step)
+			draw_line(Vector2(x, bar_top - 2.0), Vector2(x, bar_top + bar_thickness + 2.0), Color(1, 1, 1, 0.5), Hud.line(1.0))
+	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), frame_colour, false, Hud.line(1.0))
+
+	# --- Up top: where YOUR gang's exit opens (a taller white tick, tagged EXIT) ---
 	if show_exit_mark and not _mainframe_mode and _exit_heat >= 0.0:
-		var exit_x := bar.size.x * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
-		draw_line(Vector2(exit_x, bar.position.y), Vector2(exit_x, bar.end.y), Color.WHITE, Hud.line(2.0))
-	draw_rect(bar.grow(-Hud.line(1.0) * 0.5), frame_colour, false, Hud.line(2.0))
-
-	# --- The number, inside the bar at its right end: 42 (Mainframe mode: 75%) ---
-	var number := str(floori(_heat)) + ("%" if _mainframe_mode else "")
-	var font_size := mini(number_font_size, int(bar_h * 0.85))
-	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var baseline := bar.position.y + (bar_h + font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
-	var text_pos := Vector2(bar.end.x - number_padding - text_size.x, baseline)
-	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(5), outline)
-	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
-
-	# Mainframe mode: "MAINFRAME" inside the bar's left end.
-	if _mainframe_mode:
-		var tag := "MAINFRAME"
-		var tag_font := mini(Hud.text_size(mainframe_tag_size), int(bar_h * 0.8))
-		var tag_base := bar.position.y + (bar_h + font.get_ascent(tag_font) - font.get_descent(tag_font)) * 0.5
-		var tag_pos := Vector2(number_padding, tag_base)
-		if tag_pos.x + font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font).x < text_pos.x - 6.0:
-			draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, Hud.outline(4), outline)
-			draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, colour.lerp(Color.WHITE, 0.5))
+		var exit_x := bar_w * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
+		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, Hud.line(2.0))
+		var exit_font := Hud.text_size(exit_tag_size)  # (PS1 look: bigger, so it's readable)
+		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font).x
+		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
+		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
+		draw_string(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Color.WHITE)

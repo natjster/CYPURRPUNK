@@ -1276,6 +1276,9 @@ func _update_hud_for(cat: CatPlayer) -> void:
 	var display := Hud.element("Held", cat.slot) as HudWeaponDisplay
 	if display != null:
 		display.show_loadout(paws, quick)
+	# (No crosshair in the sewer's SAFE ZONE: guns don't fire there, so it's just clutter.)
+	if UndergroundHub.is_safe(cat.global_position):
+		wants_crosshair = false
 	Hud.show_element("Crosshair", wants_crosshair, cat.slot)
 
 

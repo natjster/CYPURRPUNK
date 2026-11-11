@@ -10,7 +10,7 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --tutorial        start a TUTORIAL run (scripts/tutorial.gd); prints "[Tutorial] Step X/9" lines
 ##   --tutorial_auto   (with --tutorial) play all 9 steps by itself, print what happened, then quit
 ##   --tutorial_shots  (with --tutorial_auto, not headless) also save shots/tutorial_step1_arrow.png,
-##                     tutorial_step8_payphone.png and tutorial_step8_exit.png
+##                     tutorial_step8_payphone.png, tutorial_step8_exit.png, tutorial_step9_sewer.png, tutorial_done.png
 ##   --wait=N          wait N frames after our cat appears before doing anything else
 ##   --teams=A,B,..    the gang of seat 0, 1, 2... (0 = Catleone Family, 1 = Burrow Gang: teams.gd).
 ##                     Implies --mode=turf (gangs only exist in TURF WAR).

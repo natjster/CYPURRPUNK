@@ -82,11 +82,13 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).pack, UndergroundHub.is_in_hub(player.global_position)])
 	# 9. Feed the scrap.
 	await _seconds(1.0)
+	await _tutorial_arrow("step9 back in sewer", "tutorial_step9_sewer.png")
 	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)
 	for i in 15:
 		await get_tree().physics_frame
 	print("DevCapture tutorial mainframe E: %s" % Interactable.try_use(player))
 	if not await _until_step(Tutorial.DONE): return
+	await _tutorial_arrow("done", "tutorial_done.png")
 	print("DevCapture tutorial done: mainframe=%d%% banner=\"%s\"" % [int(Mainframe.instance.charge_of(player.team)), (Hud.element("Banner") as Label).text.replace("\n", " ")])
 	var old_game := Game.instance
 	var give_up := Time.get_ticks_msec() + 10000

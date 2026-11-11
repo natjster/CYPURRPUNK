@@ -9,7 +9,7 @@ extends Control
 ##   │ PAW-PISTOL            │ │[1]│  <- QUICK USE 1 (catnip x2)
 ##   │   [side view of gun] │ └───┘
 ##   │                  LMB │ ┌───┐
-##   └──────────────────────┘ │[2]│  <- QUICK USE 2 (faint frame when empty)
+##   └──────────────────────┘ │[2]│  <- QUICK USE 2 (an EMPTY slot isn't drawn: less clutter)
 ##                            └───┘
 ##  - The gun picture is translucent OCEAN BLUE when cool. As it heats up (weapon.heat 0 -> 1) it
 ##    slides through orange to RED. Overheated = it flashes and "OVERHEAT" shows above the box.
@@ -93,6 +93,8 @@ func _draw() -> void:
 		x = box.end.x + gap
 	# The two QUICK USE squares, stacked, right of the gun box.
 	for slot in mini(_quick.size(), 2):
+		if str(_quick[slot].get("id", "")) == "":
+			continue  # empty: nothing to show
 		var y := bottom - weapon_box_size.y + slot * (weapon_box_size.y - quick_slot_size)
 		if weapon_box_size.y < quick_slot_size * 2.0:
 			y = bottom - (2 - slot) * quick_slot_size - (1 - slot) * gap

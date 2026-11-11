@@ -82,11 +82,14 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Heat             <- top-right: flashing red/blue heat bar (script ui/hud_heat_bar.gd)
     │   └── Scoreboard       <- top-right, under Heat: everyone's cash (sewers only)
     ├── Middle (Control)     <- hidden while the talk box or inventory is open
-    │   ├── Popup            <- big "EXTRACTED +$150" that fades out
-    │   ├── Banner           <- big wrapped text for long news (Sewer Breach results)
-    │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
+    │   ├── Cards            <- draws the ocean-blue boxes behind Banner / Popup / Message (ui/hud_cards.gd)
+    │   ├── Banner           <- big news in a box near the top (Tutorial complete, Sewer Breach results);
+    │   │                       showing it clears the Popup so the two never stack
+    │   ├── Popup            <- reward card on the RIGHT ("EXTRACTED / 4 LOOT HOME"), fades out
+    │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun, never in the
+    │   │                       sewer's safe zone
     │   ├── Hitmarker        <- "X" flash when your shot/swing lands; RED = you smashed it (ui/hud_hitmarker.gd)
-    │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
+    │   ├── Message          <- (in a box, lower middle) what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
     │   ├── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
     │   └── Boost            <- bottom-left above Held, only while driving: the AFTERBURNER bar, split per charge (ui/hud_boost_bar.gd)
@@ -106,7 +109,9 @@ HUD (CanvasLayer)            script: ui/hud.gd
   `.ttf`/`.otf` into the project and set the theme's **Default Font** to it.
 - **Crosshair look:** select **Frame > Middle > Crosshair**: Color, Line Length, Gap, Thickness,
   Dot Size, Outline.
-- **Popup fade:** select **HUD**: **Popup Fade Seconds**.
+- **Popup fade:** select **HUD**: **Popup Fade Seconds**. Popup / Banner / Message boxes: select
+  **Frame > Middle > Cards**: **Labels** (which ones get a box) and **Padding**; their colours are
+  `ui/hud_style.tres`. Move a card by moving its label (e.g. Popup > Layout > Anchors / Offsets).
 - The whole HUD **hides itself while a full-screen menu is open** (pause, settings, MY CAT),
   because those menus live inside the game picture, underneath it.
 - **HUD windows (talk box, inventory):** while one is open, your mouse and keys go to it instead
@@ -139,7 +144,7 @@ translucent deep-ocean-blue box with a bright cyan-blue edge and brighter corner
 | RMB                  | |1  |  <- QUICK USE 1: the item's picture, key, "x2" stack count
 |  [left paw gun]      | +---+
 |     [right paw gun]  | +---+
-|                  LMB | |2  |  <- QUICK USE 2 (a faint empty frame when there's nothing in it)
+|                  LMB | |2  |  <- QUICK USE 2 (an empty slot isn't drawn at all)
 +----------------------+ +---+
 ```
 - One gun: its side-view picture, its name top-left and its fire button bottom-right.
