@@ -749,19 +749,24 @@ func _build_mainframe() -> void:
 		_mainframe_model.name = "MainframeModel"
 		LevelKit.make_neon_paint_glow(_mainframe_model, {"Glow": 3.0})  # little screens, LEDs, the chute's slot
 		_mainframe_fan = _mainframe_model.find_child("Fan", true, false) as Node3D
-	# The big screen (in front of the CRT's black bezel), its light, its words.
-	_crt_screen = LevelKit.add_box(self, Vector3(wall_x + 1.04, 1.94, z), Vector3(0.04, 2.45, 3.3), _neon, false)
+	# The glowing parts sit right on the model's front, so the PS1 wobble made them fight it (torn,
+	# flickering edges). Their own neon is drawn a little nearer the camera (depth_pull) to stay on top.
+	var neon_on_top := _neon.duplicate() as ShaderMaterial
+	neon_on_top.set_shader_parameter("depth_pull", 0.03)
+	neon_on_top.set_shader_parameter("depth_pull_max", 0.15)  # (the % words float 0.22 m out: always in front)
+	# The big screen (in front of the CRT's black bezel and the duct tape), its light, its words.
+	_crt_screen = LevelKit.add_box(self, Vector3(wall_x + 1.07, 1.94, z), Vector3(0.02, 2.45, 3.3), neon_on_top, false)
 	_crt_screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
 	_crt_light = LevelKit.add_light(self, Vector3(wall_x + 2.5, 2.3, z), Color(0.2, 1, 0.45), 2.5, 8.0)
 	# Just the charge % on the screen, big (Mainframe Percent Size in the Inspector).
-	_crt_sign = LevelKit.add_sign(self, "75%", Vector3(wall_x + 1.09, 1.94, z), Color(0.0, 0.06, 0.02), mainframe_percent_size, PI / 2)
+	_crt_sign = LevelKit.add_sign(self, "75%", Vector3(wall_x + 1.3, 1.94, z), Color(0.0, 0.06, 0.02), mainframe_percent_size, PI / 2)
 	# THE CHARGE GAUGE: 4 battery cells stacked in the rack (the model's rack is 2.06..2.94 m along Z).
 	var cell_gap := 0.08
 	_gauge_cell_height = (3.1 - 0.9 - cell_gap * 3.0) / 4.0
 	for i in 4:
 		var bottom := 0.9 + i * (_gauge_cell_height + cell_gap)
-		LevelKit.add_box(self, Vector3(wall_x + 0.55, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height, 0.66), _pitch_black, false)
-		var cell := LevelKit.add_box(self, Vector3(wall_x + 0.57, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height - 0.04, 0.58), _neon, false)
+		LevelKit.add_box(self, Vector3(wall_x + 0.52, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height, 0.66), _pitch_black, false)
+		var cell := LevelKit.add_box(self, Vector3(wall_x + 0.6, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height - 0.04, 0.58), neon_on_top, false)
 		cell.set_meta("bottom", bottom)
 		_gauge_cells.append(cell)
 	# Solid, so cats bump into it: the whole pile, plus the chute sticking out at the bottom.

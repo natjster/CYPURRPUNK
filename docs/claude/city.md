@@ -39,3 +39,4 @@
   new district `_reset`. Loot: LootSpawn `MEOW_MART_SHELF`/`MEOW_MART_COUNTER` (ItemManager `_free_mart_spots`), sidewalk koi line skipped via
   `MeowMartInterior.koi_in_tank`. Lambdas capture locals by value: `_best_action`'s `offer` fills the dict in place. Test: `--test_meow_mart[=D]`,
   `--inside_meow_mart[=W]`, `--shatter_tank[=F]`, `--mart_swat/topple/plate/drag/tank_hits/log`.
+- DEPTH PULL (`psx_lit` `depth_pull` share of distance, `depth_pull_max` metres): thin layers on other surfaces z-fight because the vertex snap breaks depth interpolation. Used by StickyPatch (0.08) and the Mainframe screen + gauge cells (0.03, max 0.15; the % Label3D floats 0.22 m out). `--goop=D` drops a puddle to look at.

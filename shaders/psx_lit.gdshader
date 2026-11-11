@@ -62,6 +62,16 @@ uniform bool flat_shading = true;
 // It's a "global" uniform, defined in Project Settings > Shader Globals, so one setting
 // changes every PS1 material at once.
 global uniform float psx_wobble;
+// DEPTH PULL: draw this surface as if it were a bit closer to the camera (0.05 = 5% of its distance).
+// For thin things lying ON other things (a goop puddle on the street, a glowing screen on a CRT): the
+// wobble above moves every corner a little, which makes the depth of two nearly touching surfaces
+// swap back and forth (flicker / the top one sinking in). A small pull keeps the top one on top.
+// It's a share of the distance because the wobble's depth error grows the further away it is.
+// 0 = off (almost everything). Too big and it shows through things standing in front of it.
+uniform float depth_pull : hint_range(0.0, 0.5) = 0.0;
+// ...but never more than this many metres (so something floating just in front, like a screen's
+// words, never ends up behind it). Leave high for no cap.
+uniform float depth_pull_max = 100.0;
 
 // Carries (uv * w, w) from vertex to fragment so we can undo perspective correction.
 varying vec3 affine_uv;
@@ -84,7 +94,13 @@ void vertex() {
 	}
 
 	// Work out where this vertex lands on screen (clip space).
-	vec4 clip = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	vec4 view = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	// Depth pull: slide the corner straight toward the camera (it stays on the same pixel).
+	float view_dist = length(view.xyz);
+	if (depth_pull > 0.0 && view_dist > 0.001) {
+		view.xyz *= 1.0 - min(depth_pull * view_dist, depth_pull_max) / view_dist;
+	}
+	vec4 clip = PROJECTION_MATRIX * view;
 
 	// Snap its on-screen x/y to the low-res grid -> vertex jitter.
 	vec2 grid = snap_resolution * 0.5;

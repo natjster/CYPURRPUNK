@@ -14,6 +14,9 @@ const TOUCH_HEIGHT := 0.6
 const LIFT := 0.04
 const LIFT_STEP := 0.012
 const LAYERS := 8
+## How much nearer the camera the puddle is DRAWN (0.08 = 8% of its distance; see depth_pull in
+## psx_lit.gdshader). Raise it if the street still swallows puddles; too big and they show through paws.
+const DEPTH_PULL := 0.08
 
 static var _active: Array[StickyPatch] = []
 static var _next_layer: int = 0
@@ -34,7 +37,10 @@ static func make(parent: Node, at: Vector3, radius: float, seconds: float) -> vo
 		_mesh.radial_segments = 10
 		_mesh.rings = 1
 		_material = LevelKit.psx_material({"albedo_color": Color(0.3, 0.02, 0.2),
-			"emission_color": Color(1, 0.12, 0.65), "emission_energy": 0.9})
+			"emission_color": Color(1, 0.12, 0.65), "emission_energy": 0.9,
+			# Drawn a little nearer the camera (DEPTH_PULL), so the PS1 wobble can't sink it
+			# into the street (it used to vanish, only pink slivers poking out at its edges).
+			"depth_pull": DEPTH_PULL})
 	var patch := StickyPatch.new()
 	patch._radius = radius
 	var look := MeshInstance3D.new()

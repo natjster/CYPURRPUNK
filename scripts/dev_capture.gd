@@ -138,6 +138,7 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
 ##   --hud_heat=R[,L]  keep the guns in our right (and left) paw at this HEAT (0..1; 1 = OVERHEATED) so the
 ##                     bottom-left gun box shows it, e.g. --give=pistol,red_dot --hud_heat=0.3,0.9
+##   --goop=D          drop a LINT-TRAPPER glue puddle D metres in front of the cat (to look at it; with --pos/--yaw)
 ##   --hud_buffs=LIST  switch on buff / debuff badges (top-left): sticky (held at 60%), catnip, catdip
 ##                     -> prints a "DevCapture hud loadout" line (what the gun box and badges show)
 ##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
@@ -556,6 +557,16 @@ func _ready() -> void:
 			print("DevCapture near_exit: exit manhole at %s" % exit_at)
 		if args.has("near_speaker"):
 			_near_speaker(player, args)
+		if args.has("goop"):
+			# --goop=D: a sticky puddle D metres ahead of the camera, on the ground (to judge how it looks).
+			for i in 10:
+				await get_tree().physics_frame
+			var ahead := -player.camera_pivot.global_basis.z
+			ahead.y = 0.0
+			var spot := player.global_position + ahead.normalized() * float(args["goop"])
+			spot.y = 0.0
+			StickyPatch.make(scene, spot, 1.6, 999.0)
+			print("DevCapture goop: puddle at %s" % spot)
 		if args.has("test_meow_mart") or args.has("inside_meow_mart") or args.has("shatter_tank") or args.has("mart_log") \
 				or args.has("mart_swat") or args.has("mart_topple") or args.has("mart_plate") or args.has("mart_drag") or args.has("mart_tank_hits"):
 			await _meow_mart._meow_mart_test(player, args)

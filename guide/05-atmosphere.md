@@ -16,6 +16,7 @@ the dark, flat-shaded low-poly, dithering and a CRT finish.
 | Glowing objects | any material using `psx_lit` > **Emission Color / Emission Energy** | 0 = off, 3-6 = neon |
 | Wet street shine | Street material > **Specular / Roughness** | Specular 0 = dry. Roughness lower = sharper reflections |
 | Flat shading | any `psx_lit` material > **Flat Shading** | Off = smooth shading |
+| Flickering / sinking flat things | any `psx_lit` material > **Depth Pull** (+ **Depth Pull Max**) | For something thin lying ON something else (glue puddle on the street, a glowing screen on a model) that flickers or sinks in: 0.03-0.08 draws it a few % nearer the camera so the PS1 wobble can't bury it. Max caps it in metres. 0 = off. The glue puddle's is `DEPTH_PULL` in `scripts/sticky_patch.gd`, the Mainframe screen's is in `hub.gd` `_build_mainframe`. |
 | Street lamps | `scenes/props/street_lamp.tscn` > **LightCone** | Energy, Spot Range, Spot Angle, color |
 | Headlights | `getaway_car.tscn` > Model > **HeadlightBeam** | Energy, Spot Range |
 | Rain | `scenes/props/rain.tscn` | **Amount** (drop count), drop size on the mesh, speed in Process Material > Initial Velocity. Hide the Rain node in `main.tscn` to stop it. |
