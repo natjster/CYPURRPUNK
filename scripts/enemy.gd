@@ -15,8 +15,8 @@ extends CharacterBody3D
 ##     sync_position / sync_yaw (turning the "Model" child node).
 ##   - THE LOOK: "Model" can be a Blockbench model (models/*.glb): it gets the PS1 material
 ##     (psx_lit) and the parts named in Glow Parts glow (eye, sirens, tanks).
-##   - THE EYE WEAK SPOT: a bolt that goes into the glowing Eye (Eye Path) is ALWAYS a critical
-##     hit (is_eye_hit). Aim for the visor!
+##   - THE EYE WEAK SPOT (off by default: Eye Is Weak Spot): when ticked, a bolt that goes into
+##     the glowing Eye (Eye Path) is ALWAYS a critical hit (is_eye_hit).
 ##
 ## A new enemy's scene needs (copy scenes/roomba.tscn as a start):
 ##   YourEnemy (CharacterBody3D)       <- your script ("extends Enemy")
@@ -88,7 +88,10 @@ signal destroyed(enemy: Enemy)
 @export var glow_energy: float = 5.0
 
 @export_group("Eye Weak Spot")
-## The glowing eye / visor: a shot into it is always a CRITICAL HIT.
+## OFF (the default, user's call 11 Nov 2026): the eye is just a glowing eye, a shot into it does
+## normal damage. ON: a shot into the eye is always a CRITICAL HIT (+ a white-hot flash).
+@export var eye_is_weak_spot: bool = false
+## The glowing eye / visor (it always glows; it's only a weak spot with Eye Is Weak Spot ticked).
 @export var eye_path: NodePath = ^"Model/Eye"
 ## How close (metres) the bolt must pass to the middle of the Eye to count. Grows with the
 ## Model's scale, so the 2.6x MEGA VAC-COP's eye is a 2.6x bigger target too.
@@ -174,12 +177,12 @@ func _set_up_model() -> void:
 
 ## The hit framework (hit.gd): a bolt hit us. Runs on the SHOOTER's computer, which sends the
 ## damage to the host (the host keeps score of enemy health). true = show a damage number.
-## A bolt into the glowing EYE is always a crit: hit.crit / hit.damage are changed right here, so
+## With Eye Is Weak Spot ticked, a bolt into the glowing EYE is always a crit: hit.crit / hit.damage are changed right here, so
 ## the gun's damage number (shown after this) is the big yellow CRIT one and the host gets the
 ## crit damage.
 func receive_hit(hit: Hit) -> bool:
 	var blast := hit.weapon != null and hit.weapon.blast_radius > 0.0  # (explosions have no aim)
-	if not blast and is_eye_hit(hit.position, hit.direction):
+	if eye_is_weak_spot and not blast and is_eye_hit(hit.position, hit.direction):
 		if not hit.crit:
 			var multiplier := maxf(eye_crit_multiplier, hit.weapon.crit_multiplier if hit.weapon != null else 2.0)
 			hit.damage = roundi(hit.damage * multiplier)

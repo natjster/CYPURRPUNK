@@ -27,9 +27,12 @@ sibling **RoombaSpawner** (a MultiplayerSpawner) copies them to every player.
 "VAC-COP" / "PROTECT & SUCTION" stencils, vents and rivets, a hazard-striped ram bumper, a dust-bin
 dome with twin police lights, and two corner whisker brushes that spin). The MEGA VAC-COP is the
 same model at 2.6x. Its wide **cyclops visor (the Eye)** glows cyan on patrol and red when it
-chases, and it's a **weak spot**: see "Shoot the EYE" below.
+chases (it can be made a **weak spot**: see "The EYE weak spot" below).
 
-**Shoot the EYE = guaranteed CRIT.** On every bot (VAC-COP, MEGA VAC-COP, LINT-TRAPPER, SQUIRT-DRONE)
+**The EYE weak spot is switched OFF** (since 11 Nov 2026): the eye still glows, but a shot into it
+does normal damage. To bring it back, open a bot's scene (e.g. `scenes/roomba.tscn`),
+select the root node > Inspector > **Eye Weak Spot** > tick **Eye Is Weak Spot**. When ticked, on
+every bot (VAC-COP, MEGA VAC-COP, LINT-TRAPPER, SQUIRT-DRONE)
 a bolt into the glowing eye is ALWAYS a critical hit: double damage (or the gun's own Crit
 Multiplier if that's bigger), the big yellow CRIT number and a white-hot flash of the visor (no
 extra sound: **Eye Crit Sound** is empty; type a `sfx/` file name there to give it one). Shots into the back of the body don't count, and
@@ -37,7 +40,7 @@ explosions (the YARN-ZOOKA's blast) never do. Tuning: select the bot's root node
 **Eye Weak Spot**: **Eye Crit Radius** (how close to the eye's middle counts, metres; grows with
 the model's scale, so the MEGA VAC-COP's eye is a bigger target), **Eye Crit Multiplier**, **Eye
 Path** and **Eye Crit Sound**. Test: `--host --eye_test [--roomba=boss|drone|trapper]` prints one
-eye shot and one body shot ("DevCapture eye_test" lines: the eye one says crit=true).
+eye shot and one body shot ("DevCapture eye_test" lines: with the weak spot off both say crit=false).
 
 ```
 Roomba (CharacterBody3D, collision Layer 2)   script: roomba.gd (extends enemy.gd)
@@ -104,7 +107,7 @@ is a heavy purple-and-black street-sweeper tank: a wide sticky glue roller up fr
 a glowing pink glue canister at the back, hazard-striped side skirts, twin sirens and a glowing
 visor. The SQUIRT-DRONE (`models/squirt_drone.glb`) is an angular OVERCLEAN quad-copter: four arms
 with spinning propellers, a glowing cyan water tank slung underneath with a spray nozzle, twin
-sirens and a glowing lens on its nose. Both eyes are **weak spots** (always a crit, see VAC-COPs
+sirens and a glowing lens on its nose. Both eyes can be **weak spots** (off by default, see VAC-COPs
 above). What glows, in which colour: root node > Inspector > **Look > Glow Parts**.
 
 **Where they live:** `scenes/squirt_drone.tscn` (`scripts/squirt_drone.gd`),

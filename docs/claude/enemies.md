@@ -19,7 +19,7 @@
   SirenLight; Brush optional). `RoombaPatrol._pick_scene` = `lint_trapper_chance`/`squirt_drone_chance`. Drone heat stacks per drone. Puddles = `StickyPatch` (`scripts/sticky_patch.gd`,
   local nodes on Main made by RPC on every computer; `StickyPatch.touches(pos)`, owner checks in `CatPlayer._sticky_paws`). Test: `--roomba=drone|trapper --bait_roomba=8 [--stun_roomba=6]`, `DevCapture sticky` line.
 Bots: each scene's `Model` = `models/roomba|lint_trapper|squirt_drone.glb`; `Enemy._set_up_model` psx_ifies + `glow_parts` (part -> colour,
-`glow_energy`). EYE WEAK SPOT: `Enemy.receive_hit` -> `is_eye_hit(pos, dir)` (closest approach of the bolt's path to `eye_centre()`
+`glow_energy`). EYE WEAK SPOT (OFF by default since 11 Nov 2026, user's call: `eye_is_weak_spot` false; the eye still glows): `Enemy.receive_hit` -> `is_eye_hit(pos, dir)` (closest approach of the bolt's path to `eye_centre()`
 <= `eye_crit_radius` * model scale, not from behind, never blasts) forces crit + `eye_crit_multiplier`, `eye_flashing()` (roomba.gd tints
 the eye white-hot); `eye_crit_sound` "" = silent (the eye_crit sound was removed on request). Recipes: `tools/make_creature_specs.py` -> tools/model_specs/*.json (re-running REPLACES the
 .bbmodel). Test: `--eye_test [--roomba=vac|boss|drone|trapper]`, `--portrait=bot --roomba=X`.
