@@ -72,11 +72,16 @@ colour of each list is what a brand-new cat starts with in MY CAT.
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
   Extra pieces get a colour by their NAME too: anything called `Fur_...`, `Markings_...`, `Eyes_...` or
-  `Nose_...` (anywhere in the cat, e.g. `LegL > Fur_PawL`, `EarL > Nose_InnerEarL`, `Head > Fur_CheekL`,
-  `Tail > Fur_TailTip`). Put a detail UNDER the part it belongs to so it moves with it (paws swing with
-  the legs). Pieces with other names (the white eye `Shine`s) keep their own colour. To add one: open
+  `Nose_...` (anywhere in the cat, e.g. `EarL > Nose_InnerEarL`, `Head > Fur_CheekL`, `Tail > Fur_TailTip`).
+  Put a detail UNDER the part it belongs to so it moves with it (the tail tip sways with the tail). Pieces with other names (the white eye `Shine`s) keep their own colour. To add one: open
   `scenes/cat_model.tscn`, right-click a part > **Add Child Node** > MeshInstance3D, name it
   `Fur_Something`, pick a Mesh, and set Surface Material Override to `Mat_fur` (or the matching one).
+  TABBY STRIPES: the fur materials carry a grey stripe picture that the FUR colour tints:
+  `Mat_fur` (body, head, ears, cheeks) = `textures/cat_tabby.png` (wavy stripes, thinning towards the
+  tummy / chin), `Mat_fur_rings` (legs, tail) = `textures/cat_tabby_rings.png` (rings). Repaint those PNGs
+  in any paint program (keep them grey: white = plain fur colour, grey = darker stripe). Stripe density:
+  `scenes/cat_model.tscn` > select Body > Inspector > Surface Material Override > `Mat_fur` >
+  Shader Parameters > **Uv Scale** (x = stripes around, y = along).
   Keep the leg meshes 0.2 m tall and the tail 0.45 m long: the walk animation hinges them at those sizes.
   Test: `--solo --cat_lineup` shows the cat big under a work light (`--cat_lineup=res://other.tscn`
   puts another cat scene beside it for a before / after).

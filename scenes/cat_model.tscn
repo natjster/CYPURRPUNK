@@ -1,11 +1,22 @@
 [gd_scene format=3]
 
 [ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
+[ext_resource type="Texture2D" path="res://textures/cat_tabby.png" id="3_tabby"]
+[ext_resource type="Texture2D" path="res://textures/cat_tabby_rings.png" id="4_rings"]
 
 [sub_resource type="ShaderMaterial" id="Mat_fur"]
 render_priority = 0
 shader = ExtResource("2_psx")
 shader_parameter/albedo_color = Color(0.95, 0.55, 0.2, 1)
+shader_parameter/albedo_texture = ExtResource("3_tabby")
+shader_parameter/uv_scale = Vector2(2, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_fur_rings"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.55, 0.2, 1)
+shader_parameter/albedo_texture = ExtResource("4_rings")
+shader_parameter/uv_scale = Vector2(1, 1.5)
 
 [sub_resource type="ShaderMaterial" id="Mat_cream"]
 render_priority = 0
@@ -50,12 +61,6 @@ bottom_radius = 0.08
 height = 0.2
 radial_segments = 8
 rings = 1
-
-[sub_resource type="SphereMesh" id="Mesh_paw"]
-radius = 0.085
-height = 0.09
-radial_segments = 8
-rings = 3
 
 [sub_resource type="PrismMesh" id="Mesh_ear"]
 size = Vector3(0.17, 0.2, 0.09)
@@ -119,24 +124,12 @@ surface_material_override/0 = SubResource("Mat_cream")
 [node name="LegL" type="MeshInstance3D" parent="."]
 position = Vector3(-0.1, 0.1, 0)
 mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Fur_PawL" type="MeshInstance3D" parent="LegL"]
-position = Vector3(0, -0.058, -0.02)
-scale = Vector3(1, 1, 1.2)
-mesh = SubResource("Mesh_paw")
-surface_material_override/0 = SubResource("Mat_fur")
+surface_material_override/0 = SubResource("Mat_fur_rings")
 
 [node name="LegR" type="MeshInstance3D" parent="."]
 position = Vector3(0.1, 0.1, 0)
 mesh = SubResource("Mesh_leg")
-surface_material_override/0 = SubResource("Mat_fur")
-
-[node name="Fur_PawR" type="MeshInstance3D" parent="LegR"]
-position = Vector3(0, -0.058, -0.02)
-scale = Vector3(1, 1, 1.2)
-mesh = SubResource("Mesh_paw")
-surface_material_override/0 = SubResource("Mat_fur")
+surface_material_override/0 = SubResource("Mat_fur_rings")
 
 [node name="Head" type="MeshInstance3D" parent="."]
 position = Vector3(0, 0.78, 0)
@@ -212,9 +205,9 @@ surface_material_override/0 = SubResource("Mat_shine")
 position = Vector3(0, 0.42, 0.28)
 rotation = Vector3(0.65, 0, 0)
 mesh = SubResource("Mesh_tail")
-surface_material_override/0 = SubResource("Mat_fur")
+surface_material_override/0 = SubResource("Mat_fur_rings")
 
 [node name="Fur_TailTip" type="MeshInstance3D" parent="Tail"]
 position = Vector3(0, 0.225, 0)
 mesh = SubResource("Mesh_tail_tip")
-surface_material_override/0 = SubResource("Mat_fur")
+surface_material_override/0 = SubResource("Mat_fur_rings")

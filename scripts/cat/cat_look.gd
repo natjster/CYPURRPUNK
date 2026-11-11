@@ -151,13 +151,15 @@ static func apply(model: Node3D, look: Dictionary) -> void:
 		_wear(model, slot, look.get(slot, ""))
 
 
-## Recolour every mesh of one colour key. The first time, the model gets its OWN copy of the
-## material (otherwise every cat would change colour together).
+## Recolour every mesh of one colour key. The first time, the model gets its OWN copy of each
+## material involved (otherwise every cat would change colour together). A colour key can cover
+## SEVERAL materials (the fur: Mat_fur with tabby stripes on the body and head, Mat_fur_rings with
+## ringed stripes on the legs and tail): each keeps its own pattern and gets the same colour.
 static func _paint(model: Node3D, key: String, color: Color) -> void:
-	var meta := "look_material_" + key
-	var material: ShaderMaterial = model.get_meta(meta) if model.has_meta(meta) else null
+	var meta := "look_materials_" + key
+	var copies: Dictionary = model.get_meta(meta) if model.has_meta(meta) else {}  # scene material -> our copy
 	# The named parts, plus any extra piece called "<Key>_something" anywhere in the model
-	# (e.g. "Fur_PawL" or "Nose_InnerEarL" in scenes/cat_model.tscn): those get this colour too.
+	# (e.g. "Fur_TailTip" or "Nose_InnerEarL" in scenes/cat_model.tscn): those get this colour too.
 	var meshes: Array[MeshInstance3D] = []
 	for part_name in COLOR_PARTS[key]:
 		var named := model.get_node_or_null(part_name) as MeshInstance3D
@@ -166,17 +168,22 @@ static func _paint(model: Node3D, key: String, color: Color) -> void:
 	for extra in model.find_children(key.capitalize() + "_*", "MeshInstance3D", true, false):
 		meshes.append(extra as MeshInstance3D)
 	for mesh in meshes:
-		if material == null:
-			material = (mesh.get_surface_override_material(0) as ShaderMaterial).duplicate()
-			model.set_meta(meta, material)
-		mesh.set_surface_override_material(0, material)
-	if material == null:
-		return
-	material.set_shader_parameter("albedo_color", color)
-	if key == "eyes":
-		# Cat eyes catch the light: a soft glow in the eye colour (none for black eyes).
-		material.set_shader_parameter("emission_color", color)
-		material.set_shader_parameter("emission_energy", 0.0 if color.get_luminance() < 0.1 else 1.2)
+		# Remember the scene's own material the first time (later the mesh wears our copy).
+		if not mesh.has_meta("look_source"):
+			mesh.set_meta("look_source", mesh.get_surface_override_material(0))
+		var source: ShaderMaterial = mesh.get_meta("look_source")
+		if source == null:
+			continue
+		if not copies.has(source):
+			copies[source] = source.duplicate()
+		mesh.set_surface_override_material(0, copies[source])
+	model.set_meta(meta, copies)
+	for material: ShaderMaterial in copies.values():
+		material.set_shader_parameter("albedo_color", color)
+		if key == "eyes":
+			# Cat eyes catch the light: a soft glow in the eye colour (none for black eyes).
+			material.set_shader_parameter("emission_color", color)
+			material.set_shader_parameter("emission_energy", 0.0 if color.get_luminance() < 0.1 else 1.2)
 
 
 ## Swap the accessory in one slot (removes the old one; "" = nothing).
