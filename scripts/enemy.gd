@@ -72,7 +72,7 @@ signal destroyed(enemy: Enemy)
 ## from a MEGA VAC-COP instead of fighting over 1. (Ticked on roomba_boss.tscn.)
 @export var drop_once_per_cat: bool = false
 ## A second item dropped next to drop_on_destroy, as many times (once per cat up top with
-## drop_once_per_cat): the MEGA VAC-COP drops "scrap" too, for SEWER UPGRADES. "" = nothing.
+## drop_once_per_cat). Empty on the MEGA VAC-COP (bosses drop no scrap). "" = nothing.
 @export var drop_also: String = ""
 ## Chance (0.05 = 5%) that a regular bot smashed by a player drops a SCRAP. The SCRAP MAGNET
 ## upgrade adds its chance on top. More kills = more scrap, but also more heat.

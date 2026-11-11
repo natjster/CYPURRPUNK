@@ -8,7 +8,7 @@
   SLOW DRAIN `_slow_drain` (host): `drain_per_minute` (1) while `players_up_top()>0` (`drain_only_while_raiding`), broadcasts only when a whole
   % changes; a cell running dry -> `_cell_ran_dry` RPC (HUD feed line). `_refresh_district` compares TIERS (not exact charges).
   -25 on `Events.district_sealed` for `active_gangs()` (>=1 player). FOOD = ELECTRONICS (`FUEL_ID` "electronics", `items/electronics.tres`, only the
-  boss drops it: roomba_boss.tscn `drop_on_destroy=electronics` + Enemy `drop_also=scrap`, both once per cat). SCRAP (`SCRAP_ID`) = upgrade money ONLY.
+  boss drops it: roomba_boss.tscn `drop_on_destroy=electronics`, once per cat; `drop_also` is empty since 11 Nov 2026: bosses drop no scrap). SCRAP (`SCRAP_ID`) = upgrade money ONLY.
   E at the hub `MainframeTerminal` (always shown, prompt has %) opens `MainframeScreen` (`scripts/ui/mainframe_screen.gd`, HUD `Frame/Mainframe`,
   `for_seat/is_open_for`, in `Hud.wants_input` + `cat._menu_open`; gauge, numbers, about text export, tier table, FEED/LEAVE + SeatFocus);
   FEED -> `request_feed(player_id)` (`near_mainframe`) does `use_for(team)` (`FeedUse`): FEED +25 under `full_at` (90) / HACK `hack_target(team)` -25

@@ -25,7 +25,6 @@ car_smash_speed = 999.0
 knockback_taken = 0.2
 is_boss = true
 drop_on_destroy = "electronics"
-drop_also = "scrap"
 drop_once_per_cat = true
 heat_scaling = false
 draw_distance = 250.0

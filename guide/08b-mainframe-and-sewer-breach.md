@@ -4,7 +4,7 @@
 
 ### The Mainframe & electronics
 **ELECTRONICS** only come from a destroyed **MEGA VAC-COP** (a fried circuit board that glows
-purple on the street; grab it with E). A MEGA VAC-COP drops **one per cat up top** (and one SCRAP per cat too).
+purple on the street; grab it with E). A MEGA VAC-COP drops **one per cat up top** (no SCRAP: that comes from regular bots and dumpsters).
 Electronics take 1 backpack slot and the shop won't buy them: they come home in your backpack like
 all loot. A knockout loses them, like any loot. Spares can go in your litterbox.
 
@@ -69,7 +69,7 @@ gangs' charges).
 hub too), **Full At** (90), Charge Per Electronics, Hack Per Electronics), **Exit Opens At Heat**,
 **Starting Heat Per Tier**, **Overclock** (Overclock Heat Multiplier). The item card is
 `items/electronics.tres` (model `scenes/items/electronics.tscn`); the MEGA VAC-COP's drops are on
-`scenes/roomba_boss.tscn` (Drop On Destroy = electronics, Drop Also = scrap). The spot you stand on:
+`scenes/roomba_boss.tscn` (Drop On Destroy = electronics, Drop Also empty). The spot you stand on:
 **Hub** and **GangHub** > **Mainframe** > Mainframe Spot (the model follows its Z, always on the west wall).
 The window's words and sizes: `hud.tscn` > **Frame** > **Mainframe** (About Text, Default Info...).
 The model: `models/mainframe.glb`, made by `python tools/make_mainframe_spec.py` then
@@ -82,7 +82,7 @@ per gang (Catleone, Burrow), and the district restarts on it.
 `--give=electronics,electronics --mainframe_window=2` walks to it, opens the window and presses FEED twice.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --give=electronics --mainframe_window=1` hacks.
 `--deploy --mainframe_drain=600` drains 10% a second (watch the cells run dry).
-`--mainframe=0 --deploy --kill_roombas=40 --kill_bosses` counts the electronics + scrap the bosses drop.
+`--mainframe=0 --deploy --kill_roombas=40 --kill_bosses` counts the electronics the bosses drop (scrap should be 0).
 `--teams=0,1 --add_local=1 --mainframe=100,75 --deploy --heat=70` shows one exit open and one shut.
 `--to_stash=pack:0` stashes electronics. On a client, add `--wait=120` first.
 

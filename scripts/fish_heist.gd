@@ -27,8 +27,8 @@ extends Node3D
 ##       Meow-Mart's back room (scripts/interiors/meow_mart_interior.gd), glowing gold. It's HEAVY
 ##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
-##       SCRAP isn't on the street: only a destroyed MEGA VAC-COP drops it. It's worth $0 here
-##       (the shop won't buy it) - it's fuel for THE MAINFRAME (scripts/mainframe.gd).
+##       SCRAP isn't lying on the street: smashed bots and dumpsters drop it. It's worth $0 here
+##       (the shop won't buy it) - it only pays for SEWER UPGRADES (scripts/upgrades.gd).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
 ##   - At the heat its own MAINFRAME says (scripts/mainframe.gd exit_heat: 60 / 75 / 82 / 90 / 95)
 ##     a gang's crew breaks through: its EXIT manhole opens, somewhere random, and every PAYPHONE

@@ -15,7 +15,7 @@ extends Node3D
 ## we set deep_clean_extra to Deep Clean Roombas, and a swarm that many strong pours in close to the cats still up top,
 ## hunting them from much further away (roomba.gd _can_chase).
 ## THE MAINFRAME (scripts/mainframe.gd) at 0% (CRITICAL) puts one MEGA VAC-COP out as soon as a
-## district starts. Every MEGA VAC-COP drops SCRAP when destroyed (roomba_boss.tscn drop_on_destroy).
+## district starts. Every MEGA VAC-COP drops ELECTRONICS when destroyed (roomba_boss.tscn drop_on_destroy), no SCRAP.
 ## A SEWER BREACH (scripts/mainframe.gd, Events.sewer_breached) pours a horde into each breached
 ## sewer's north tunnel. Those bots (breach_hub set) stay down there and aren't part of the patrol:
 ## nothing replaces them, and the city's patrol waits until the breach is over.
@@ -147,7 +147,7 @@ func _on_sewer_breached(teams: Array) -> void:
 
 ## The breach is over. THE 1% MIRACLE: every bot freezes, then they blow up one after another (one
 ## big bang of 37 explosions in a frame hurts the sound and the graphics). A wipeout: they just go.
-## (Only bosses SHOT in the breach drop scrap: self_destruct doesn't pay out.)
+## (Only bosses SHOT in the breach drop electronics: self_destruct doesn't pay out.)
 func _on_sewer_breach_ended(survived: bool) -> void:
 	if not multiplayer.is_server():
 		return
@@ -208,7 +208,7 @@ func start_district() -> void:
 	_boss_level_done = HeatMeter.level_of(mainframe.starting_heat()) if mainframe != null else 0
 	if _boss_level_done <= 1:
 		_boss_level_done = 0
-	# ...but at 0% (CRITICAL) one MEGA VAC-COP is already up there: hunt it for SCRAP.
+	# ...but at 0% (CRITICAL) one MEGA VAC-COP is already up there: hunt it for ELECTRONICS.
 	if mainframe != null and mainframe.boss_at_start():
 		_spawn_boss("MAINFRAME CRITICAL")
 

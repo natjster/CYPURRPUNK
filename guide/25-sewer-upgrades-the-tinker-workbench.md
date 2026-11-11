@@ -3,8 +3,8 @@
 [Back to the contents page](../SETUP_GUIDE.md)
 
 
-Upgrades make **your** cat better for good. You pay with **cash AND SCRAP** (MEGA VAC-COPs drop one per cat,
-regular bots sometimes, dumpsters too). Scrap is ONLY for upgrades: THE MAINFRAME eats ELECTRONICS (§8). Scrap is counted from your **backpack and your litterbox together** (the backpack is used up first).
+Upgrades make **your** cat better for good. You pay with **cash AND SCRAP** (smashed regular bots drop it
+sometimes, dumpsters too; MEGA VAC-COPs don't). Scrap is ONLY for upgrades: THE MAINFRAME eats ELECTRONICS (§8). Scrap is counted from your **backpack and your litterbox together** (the backpack is used up first).
 Upgrades are saved in your cat's save file (with your cash and litterbox), so they're there next game.
 The TUTORIAL always starts with none, so it's the same for everyone (but it has every NPC: see below).
 
@@ -77,8 +77,8 @@ with a Twin-Turbo upgrades everyone's car.
 ### Balance targets (Nov 2026 balance pass)
 - A careful raid brings home about **$100-200** of loot (6-slot backpack, shared with spare gear), a greedy koi raid **$450-500**, quests $100-250.
 - Every upgrade together costs about **$4,700 + 46 scrap** per cat: the first one after 1-2 raids, the
-  middle tiers around raid 5, everything around raids 15-20. Scrap is the real gate (bosses drop one per cat
-  up top, regular bots 5%); cash mostly buys guns and snacks.
+  middle tiers around raid 5, everything around raids 15-20. Scrap is the real gate (regular bots drop it
+  5% of the time, bosses never); cash mostly buys guns and snacks.
 - BIGGER BACKPACK tier 3 costs **3 scrap**: 12 slots is a lot of fish per trip.
 
 ### Changing prices and numbers (Godot editor)
