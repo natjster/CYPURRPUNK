@@ -162,11 +162,12 @@ func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color) 
 	if text == "":
 		return
 	var outline := Color(0.0, 0.03, 0.06, color.a * 0.9)
+	font_size = Hud.text_size(font_size)  # (PS1 look: small text stays readable)
 	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(4), outline)
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 ## Text whose bottom-right corner (baseline) is at "at".
 func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, Hud.text_size(font_size)).x
 	_text(font, at - Vector2(width, 0), text, font_size, color)

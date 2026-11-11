@@ -70,5 +70,5 @@ func _draw() -> void:
 		var alpha := clampf((1.0 - t) / 0.4, 0.0, 1.0)
 		var text_w := font.get_string_size(n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
 		var pos: Vector2 = (n.pos - Vector2(text_w * 0.5, 0)).round()
-		draw_string_outline(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, 7, Color(0.04, 0.01, 0.08, alpha))
+		draw_string_outline(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, Hud.outline(7), Color(0.04, 0.01, 0.08, alpha))
 		draw_string(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, Color(crit_color if n.crit else color, alpha))

@@ -154,10 +154,11 @@ func _draw() -> void:
 	# Mainframe mode: a small "MAINFRAME" tag just above the bar's right end.
 	if _mainframe_mode:
 		var tag := "MAINFRAME"
-		var tag_size := font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size)
+		var tag_font := Hud.text_size(mainframe_tag_size)  # (PS1 look: bigger, so it's readable)
+		var tag_size := font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font)
 		var tag_pos := Vector2(bar_w - tag_size.x, bar_top - 4.0)
-		draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size, 4, Color(0.04, 0.01, 0.08))
-		draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, mainframe_tag_size, colour.lerp(Color.WHITE, 0.3))
+		draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
+		draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, colour.lerp(Color.WHITE, 0.3))
 
 	# --- The bar: dark back, flashing fill growing from the RIGHT edge (next to the number) ---
 	draw_rect(Rect2(0, bar_top, bar_w, bar_thickness), back_color)
@@ -172,7 +173,8 @@ func _draw() -> void:
 	if not _mainframe_mode and _exit_heat >= 0.0:
 		var exit_x := bar_w * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
 		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, Hud.line(2.0))
-		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size).x
+		var exit_font := Hud.text_size(exit_tag_size)  # (PS1 look: bigger, so it's readable)
+		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font).x
 		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
-		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size, 4, Color(0.04, 0.01, 0.08))
-		draw_string(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_tag_size, Color.WHITE)
+		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
+		draw_string(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Color.WHITE)

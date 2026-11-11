@@ -78,6 +78,18 @@ var seat: int = 0
 @export var feed_seconds: float = 7.0
 @export var feed_lines: int = 5
 
+@export_group("Top row (fits any screen shape)")
+## The top row = health bar (left) + DropOff line (middle) + heat / Mainframe bar (right). On a
+## narrow screen (PS1 look on 4:3, split screen) there isn't room for all three at full size, so
+## _layout_top_row shares the width out every frame. Widest the two bars ever get (HUD units).
+@export var top_bar_width: float = 360.0
+## The bars never get shorter than this. If the middle line still doesn't fit between them, it
+## moves down a row (under the bars) and the feed + sewer scoreboard move down to make room.
+@export var top_bar_min_width: float = 210.0
+## Gap from the screen edges, and the gap kept between the middle line and each bar.
+@export var top_margin: float = 24.0
+@export var top_gap: float = 16.0
+
 ## The feed's lines on this HUD: [{"text", "color", "left"}], oldest first.
 var _feed: Array = []
 
@@ -222,6 +234,16 @@ static func outline(width: int) -> int:
 	return width if Settings.modern_ui else mini(width, 2)
 
 
+## How big to draw SMALL text in _draw (HUD units). In the PS1 UI look a HUD unit is under half a
+## screen pixel, so tags like "EXIT" or a gun's name (12-15) came out 5 pixels tall: mush. They're
+## drawn at least PS1_MIN_TEXT there. Use it for any little label drawn in code.
+const PS1_MIN_TEXT := 18
+
+
+static func text_size(font_size: int) -> int:
+	return font_size if Settings.modern_ui else maxi(font_size, PS1_MIN_TEXT)
+
+
 ## The HUDs a message goes to: one player's, or everyone's (-1).
 static func _targets(seat_number: int) -> Array:
 	if seat_number >= 0:
@@ -329,6 +351,7 @@ func _process(delta: float) -> void:
 		if piece != null:
 			piece.modulate.a = 0.0 if in_inventory else 1.0
 	_update_prompt()
+	_layout_top_row()
 	_update_status()
 
 
@@ -355,6 +378,78 @@ func _update_prompt() -> void:
 	show_element("Prompt", text != "", seat)
 	if text != "":
 		set_text("Prompt", "[%s] %s" % [key_for("interact", seat), text], seat)
+
+
+## How far the second row (the FEED, top-left, and the sewer SCOREBOARD, top-right) is pushed down
+## because the DropOff line had to drop under the bars (0 = it fits between them). _layout_top_row.
+var _second_row_shift: float = 0.0
+## Where the DropOff line's words start (HUD units from the left) while it sits IN the top row, so
+## the buff badges beside the health bar stop short of it. INF = it isn't in the row.
+var _drop_off_text_left: float = INF
+
+
+## THE TOP ROW: [HP bar]  THE SEWERS - SAFE ZONE  [heat bar]. Shares the screen's width so the
+## three never overlap, whatever the screen shape (PS1 look on 4:3 makes the HUD only ~720 units
+## wide; a split-screen pane is narrower still):
+##   1. Wide enough: both bars full size (top_bar_width), the line between them.
+##   2. Bit narrower: the bars shrink (down to top_bar_min_width) to make room for the line.
+##   3. Still too narrow (or a long line): the line drops UNDER the bars, wrapped to the screen,
+##      and the feed + scoreboard move down by its height.
+## Runs every frame (the line's words change), before _update_status (the buff badges read the bars).
+func _layout_top_row() -> void:
+	var health := element("Health", seat)
+	var heat := element("Heat", seat)
+	var drop_off := element("DropOff", seat) as Label
+	if health == null or heat == null or drop_off == null:
+		return
+	var width := frame.size.x
+	# The widest the bars can be with just a small gap between them.
+	var bar := minf(top_bar_width, (width - top_margin * 2.0 - top_gap) / 2.0)
+	var under := false
+	_drop_off_text_left = INF
+	if drop_off.visible and drop_off.text != "":
+		var font := drop_off.get_theme_font("font")
+		var font_size := drop_off.get_theme_font_size("font_size")
+		var text_width := font.get_multiline_string_size(drop_off.text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size).x
+		# Bars as long as possible while still leaving the line its room in the middle.
+		var room_bar := (width - top_margin * 2.0 - text_width - top_gap * 2.0) / 2.0
+		if room_bar >= top_bar_min_width:
+			bar = minf(bar, room_bar)
+			_drop_off_text_left = (width - text_width) / 2.0
+		else:
+			under = true
+	bar = maxf(bar, 120.0)  # (a really tiny screen: at least the number box + a stub of bar)
+	health.offset_left = top_margin
+	health.offset_right = top_margin + bar
+	heat.offset_left = -top_margin - bar
+	heat.offset_right = -top_margin
+	drop_off.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if under else TextServer.AUTOWRAP_OFF
+	if under:
+		# Under the bars, as wide as the screen allows (wraps onto more lines if it must).
+		var half := width / 2.0 - top_margin
+		drop_off.offset_left = -half
+		drop_off.offset_right = half
+		drop_off.offset_top = health.offset_bottom + 8.0
+		drop_off.offset_bottom = drop_off.offset_top + 28.0
+		_second_row_shift = drop_off.get_minimum_size().y + 8.0
+	else:
+		# Between the bars, in the same row.
+		var half := width / 2.0 - top_margin - bar - top_gap
+		drop_off.offset_left = -half
+		drop_off.offset_right = half
+		drop_off.offset_top = 16.0
+		drop_off.offset_bottom = 44.0
+		_second_row_shift = 0.0
+	var scoreboard := element("Scoreboard", seat)
+	if scoreboard != null:
+		if not scoreboard.has_meta("design_top"):
+			scoreboard.set_meta("design_top", scoreboard.offset_top)
+			scoreboard.set_meta("design_left", scoreboard.offset_left)
+		var top: float = scoreboard.get_meta("design_top") + _second_row_shift
+		scoreboard.offset_bottom += top - scoreboard.offset_top
+		scoreboard.offset_top = top
+		# Never wider than the heat bar's half of the screen (it's right-aligned text).
+		scoreboard.offset_left = maxf(scoreboard.get_meta("design_left"), -width / 2.0 + top_gap)
 
 
 ## The BUFF / DEBUFF badges next to the health bar (Frame/Top/StatusIcons), from OUR player's cat.
@@ -388,17 +483,22 @@ func _place_status_icons(icons: HudStatusIcons, count: int) -> void:
 		return
 	var width := count * (icons.badge_size + icons.gap)
 	var beside := Vector2(health.position.x + health.size.x + 12.0, health.position.y + (health.size.y - icons.badge_size) / 2.0)
-	var room := heat == null or not heat.visible or beside.x + width + 12.0 <= heat.position.x
+	# The badges need to end before the heat bar AND before the DropOff line's words (_layout_top_row).
+	var limit := minf(heat.position.x if heat != null and heat.visible else INF, _drop_off_text_left)
+	var room := beside.x + width + 12.0 <= limit
 	var under_bar := count > 0 and not room
 	if under_bar:
 		var bar_left: float = (health as HudHealthBar).number_box_width + 8.0 if health is HudHealthBar else 0.0
-		icons.position = Vector2(health.position.x + bar_left, health.position.y + health.size.y + 6.0)
+		# (under the DropOff line too, if that had to drop down a row: _layout_top_row)
+		icons.position = Vector2(health.position.x + bar_left, health.position.y + health.size.y + 6.0 + _second_row_shift)
 	else:
 		icons.position = beside
 	if feed != null:
 		if not feed.has_meta("design_y"):
 			feed.set_meta("design_y", feed.position.y)
-		feed.position.y = feed.get_meta("design_y") + (icons.badge_size + 6.0 if under_bar else 0.0)
+		feed.position.y = feed.get_meta("design_y") + _second_row_shift + (icons.badge_size + 6.0 if under_bar else 0.0)
+		# Never wider than the left half of the screen (so it can't run under the scoreboard).
+		feed.size.x = minf(496.0, frame.size.x / 2.0 - top_margin)
 
 
 ## The button name to show THIS player for an action: their controller button if they play

@@ -137,5 +137,5 @@ func _draw() -> void:
 		var ko_size := 18
 		var ko_w := font.get_string_size(ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size).x
 		var ko_pos := Vector2(bar_left + (bar_w - ko_w) * 0.5, bar_top - 4.0)
-		draw_string_outline(font, ko_pos, ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size, 6, Color(0.04, 0.01, 0.08))
+		draw_string_outline(font, ko_pos, ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size, Hud.outline(6), Color(0.04, 0.01, 0.08))
 		draw_string(font, ko_pos, ko, HORIZONTAL_ALIGNMENT_LEFT, -1, ko_size, Color.WHITE)

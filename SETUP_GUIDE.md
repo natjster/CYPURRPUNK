@@ -2437,10 +2437,20 @@ you're holding, messages and the big EXTRACTED popup.
 
 The layout is the same in both, still 720 HUD units tall. PS1 style with one player draws the
 whole HUD a third bigger so its text stays readable: select **GameScreen** in `game_screen.tscn` >
-**Ps1 Hud Scale** (1.33; above that the inventory stops fitting on a 4:3 screen). Very small text
-(the EXIT tag on the heat bar) still can't really be read: to fix a piece, make it bigger in
-`hud.tscn`. If you draw HUD pieces in code, wrap thin lines in `Hud.line(width)` and text outlines
-in `Hud.outline(width)` so they survive the low resolution. Box borders need to be at least 3
+**Ps1 Hud Scale** (1.33; above that the inventory stops fitting on a 4:3 screen). Small text drawn
+in code (the EXIT / MAINFRAME tags on the heat bar, the gun's name, names over enemies' health
+bars) is drawn at least 18 units tall in the PS1 look so it stays readable. If you draw HUD pieces
+in code, wrap font sizes in `Hud.text_size(size)`, thin lines in `Hud.line(width)` and text outlines
+in `Hud.outline(width)` so they survive the low resolution.
+
+**The top row never overlaps.** Health bar (left), the line in the middle ("THE SEWERS - SAFE
+ZONE", the breach clock...) and the heat / Mainframe bar (right) share the screen's width every
+frame (`hud.gd` `_layout_top_row`). On a narrow screen (PS1 look on 4:3, every split-screen pane)
+the bars shrink to make room for the middle line; if it still doesn't fit, the line drops under the
+bars (wrapping if it must) and the FEED + sewer scoreboard move down by its height. The buff badges
+also stop short of the middle line. Tuning: select **HUD** in `hud.tscn` > Inspector > **Top Row**:
+Top Bar Width (360, the most the bars get), Top Bar Min Width (210, the least before the line drops
+down), Top Margin, Top Gap. (The bars' widths set in `hud.tscn` are overwritten by this.) Box borders need to be at least 3
 units thick (`ui/hud_theme.tres`), or some edges vanish between the pixel rows.
 
 ### How the screen is put together (`scenes/game_screen.tscn`, the scene F5 runs)
@@ -2572,7 +2582,7 @@ Small square badges right of your health bar, one per effect on your cat right n
 
 A lighter fill inside each badge drains downwards as the effect runs out; the badge pulses in its
 last second. On a narrow screen (4:3 in the PS1 UI look, split screen) there's no room between the
-health bar and the heat bar, so the badges sit just under the health bar and the FEED moves down.
+health bar and the heat bar (or the middle line), so the badges sit just under the health bar and the FEED moves down.
 Tuning (select **StatusIcons**): Badge Size, Gap, Padding, Pulse Per Second. hud.gd `_update_status`
 feeds it from the cat (`sticky_fraction()`, `boost_fraction()`, `air_jump_fraction()`); a new effect
 = a line there + a picture from the icon tool (section 20).

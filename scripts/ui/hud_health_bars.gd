@@ -178,9 +178,9 @@ func _draw() -> void:
 		# Name above the bar (left-aligned, like Cyberpunk). The boss's is bigger and gold.
 		var label: String = bar.name
 		if label != "":
-			var font_size := name_font_size + (3 if bar.boss else 0)
+			var font_size := Hud.text_size(name_font_size + (3 if bar.boss else 0))  # (bigger in the PS1 look)
 			var pos := Vector2(rect.position.x, rect.position.y - 5)
-			draw_string_outline(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 5, Color(0.04, 0.01, 0.08, a))
+			draw_string_outline(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(5), Color(0.04, 0.01, 0.08, a))
 			draw_string(font, pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(Color(1, 0.85, 0.3) if bar.boss else name_color, a))
 
 
