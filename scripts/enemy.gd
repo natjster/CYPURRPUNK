@@ -100,7 +100,8 @@ signal destroyed(enemy: Enemy)
 ## Model's scale): the hit box can be bigger than the model (the drone's is a ball).
 @export var eye_ray_depth: float = 0.9
 ## Sound file (res://sounds/sfx/, without .wav) for an eye crit, heard by the shooter.
-@export var eye_crit_sound: String = "eye_crit"
+## "" = no extra sound (the default: the normal hit sound is enough).
+@export var eye_crit_sound: String = ""
 
 @export_group("Network Smoothing")
 ## Other computers: how tightly our copy follows the host's (higher = tighter, jerkier).
@@ -200,7 +201,8 @@ func receive_hit(hit: Hit) -> bool:
 			hit.damage = roundi(hit.damage * multiplier)
 			hit.crit = true
 		_eye_flash_time = 0.25
-		Sound.play_at(eye_crit_sound, hit.position)
+		if eye_crit_sound != "":
+			Sound.play_at(eye_crit_sound, hit.position)
 	take_hit.rpc_id(1, hit.shooter_id(), hit.damage, hit.stun_seconds, hit.enemy_push, hit.city_heat)
 	return true
 

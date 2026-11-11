@@ -1303,8 +1303,8 @@ chases, and it's a **weak spot**: see "Shoot the EYE" below.
 
 **Shoot the EYE = guaranteed CRIT.** On every bot (VAC-COP, MEGA VAC-COP, LINT-TRAPPER, SQUIRT-DRONE)
 a bolt into the glowing eye is ALWAYS a critical hit: double damage (or the gun's own Crit
-Multiplier if that's bigger), the big yellow CRIT number, a white-hot flash of the visor and a
-visor "ping" (`sounds/sfx/eye_crit.wav`). Shots into the back of the body don't count, and
+Multiplier if that's bigger), the big yellow CRIT number and a white-hot flash of the visor (no
+extra sound: **Eye Crit Sound** is empty; type a `sfx/` file name there to give it one). Shots into the back of the body don't count, and
 explosions (the YARN-ZOOKA's blast) never do. Tuning: select the bot's root node > Inspector >
 **Eye Weak Spot**: **Eye Crit Radius** (how close to the eye's middle counts, metres; grows with
 the model's scale, so the MEGA VAC-COP's eye is a bigger target), **Eye Crit Multiplier**, **Eye
@@ -2100,6 +2100,9 @@ FUR       <  [colour]  >        main coat
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
 NOSE      <  [colour]  >
+HAT       <  FEDORA    >        NONE / BEANIE / FEDORA / GREEN MOHAWK / MOHAWK / NEON HALO
+FACE      <  SHADES    >        NONE / CIGAR / CYBER VISOR / HEADBAND / SHADES
+NECK      <  NONE      >        NONE / BANDANA / BANDOLIER / BELL COLLAR
 VOICE     <  MALE      >        MALE / FEMALE: how your cat sounds when it taunts (you hear it when you switch)
 [ BACK ]     [ RANDOM ]     [ NEXT ]        (in a game: [ RANDOM ] [ DONE ])
 ```
@@ -2112,31 +2115,16 @@ VOICE     <  MALE      >        MALE / FEMALE: how your cat sounds when it taunt
   game changes your cat right there, and everyone else sees it.
 - **Upgrading from an older version:** your old cat name, look, cash and stash become your first cat.
 
-### The cat model (armless PS1 mascot cat, Nov 2026)
-Every cat in the game (yours, the MY CAT preview and all 14 sewer NPCs) is ONE Blockbench model:
-`models/blockbench/cat.bbmodel` -> `models/cat.glb` (370 triangles, 64x64 texture). It's a chunky,
-**armless** mascot cat: guns and items float in front of it like before.
-- **The texture is grey and cream on purpose.** The game MULTIPLIES it by your colours, so the
-  painted details (tabby "M" on the forehead, stripes, whisker dots, inner ears, slit pupils, toe
-  beans) show on any colour.
-- **The parts** (= node names, = what each colour row paints): FUR = Body, LegL, LegR, Head (with the
-  cheek tufts), EarL, EarR, Tail; MARKINGS = Belly, Muzzle; EYES = EyeL, EyeR (bright eyes glow and
-  keep their pupils); NOSE = Nose. The legs swing from the hip and the tail sways from its root:
-  each part's pivot in Blockbench is its hinge.
-- `scenes/cat_model.tscn` = that model + `scripts/cat/cat_model.gd`, which gives it the PS1 material
-  and its own **Cat Colours** (Inspector). Player cats are repainted with your look straight away;
-  NPCs keep the colours set on their **Model** node.
-- **Hats, shades and collars are switched off for now** (`CatLook.SLOTS` is empty), so every cat is a
-  clean PS1 cat and the HAT / FACE / NECK rows are gone. Everything for them is still there: put
-  `"hat", "face", "neck"` back into **SLOTS** in `cat_look.gd` and the rows come back (the old
-  accessory models were made for the old cat, so they may need nudging with their Offset).
-- **Changing the shape:** open `models/blockbench/cat.bbmodel` in Blockbench, edit, Ctrl+S, then ask
-  Claude to re-export it (§20). The recipe it was first made from is `tools/make_creature_specs.py`
-  (`python tools/make_creature_specs.py cat` rewrites `tools/model_specs/cat.json`; running it again
-  REPLACES the .bbmodel, so only do that if you haven't changed it by hand).
+### The cat model (the original, code-built cat)
+Every cat in the game (yours, the MY CAT preview and all 14 sewer NPCs) is the ORIGINAL simple cat
+made of Godot shapes (spheres, cylinders and prisms) with the PS1 material: `scenes/cat_model.tscn`
+for players and the MY CAT preview; each NPC scene builds its own copy (with its own hat, cigar,
+glasses...) under its **Model** node. It wears HAT / FACE / NECK accessories.
+- (10 Nov 2026: a Blockbench "armless mascot" cat replaced it for a few hours and was reverted: the
+  original was the better look. Its Blockbench file is kept in `models/blockbench/cat.bbmodel` and
+  in git history, but nothing in the game uses it.)
 
 ### Add a new accessory (no code)
-(Accessories are switched off right now, see above. Turn the slots back on first.)
 1. **Make its model.** In the FileSystem dock, right-click `scenes/cat_parts/beanie.tscn` >
    **Duplicate...** and name it (e.g. `cowboy_hat.tscn`). Double-click it and change the meshes:
    select a mesh > Inspector > **Mesh** for the shape, **Surface Material Override** > albedo_color
@@ -2165,8 +2153,7 @@ colour of each list is what a brand-new cat starts with in MY CAT.
 - `scripts/cat/cat_part.gd` (`CatPart`) — the accessory card. `scripts/cat/cat_palette.gd`
   (`CatPalette`) — the colour lists.
 - `cat_parts/` — the cards and the palette. `scenes/cat_parts/` — the accessory models.
-- `scenes/cat_model.tscn` — the cat's body (the Blockbench model `models/cat.glb` + `cat_model.gd`),
-  used by player cats, the MY CAT preview and every NPC (their **Model** node). The colour
+- `scenes/cat_model.tscn` — the cat's body, used by player cats and the MY CAT preview. The colour
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
 - `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
@@ -2204,7 +2191,7 @@ are just files in the `sounds/` folder — **adding or replacing a sound needs n
 sounds/
 ├── sfx/          <- one-off effects        (SOUND FX slider)
 ├── ambience/     <- background loops        (SOUND FX slider)
-└── music/        <- music loops (MUSIC slider): hub, city, city_ridge, city_wipeout, escape, breach
+└── music/        <- music loops, one per area (MUSIC slider)
 ```
 
 The files there now are **placeholder bleeps** made by Claude. Replace them with real ones.
@@ -2259,43 +2246,12 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `click` | any menu button | just you |
 | `report_open` / `report_row` / `report_award` | the RAID REPORT appears / each cat's row slides in / each award stamps down (§22) | just you |
 
-### The music: 4 stages that climb as a raid heats up
-The music follows what your screens are looking at and gets more frantic as the district heats
-up. Each change fades smoothly into the next (2 seconds).
-
-| Stage | When | Track (file in `music/`) |
-|---|---|---|
-| 1. SAFE SEWERS | everyone on this computer is down in the sewers | `hub` |
-| 2. STREET RAID | someone on this computer is up top, the exit isn't open yet | one of `city`, `city_ridge` ("NEON APEX", 138 BPM arcade techno), `city_wipeout` ("ANTI-GRAV WHISKERS", 160 BPM liquid drum & bass) |
-| 3. EXIT OPEN | up top, and your gang's exit is open: run for the payphone and the exit! | `escape` ("HOT PAWS", 168 BPM jungle) |
-| 4. BREACH | THE DEEP CLEAN (the hatch is sealed at 100 heat) for anyone watching the city, or a SEWER BREACH and its warning siren, wherever you are | `breach` ("TOTAL SANITATION", 176 BPM hardcore) |
-
-- **Which street track?** Each district plays ONE of the three, picked from the district's city
-  number, so everyone in the game hears the same one and the next district usually has another.
-  The start menu's showcase city always picks the same one.
-- **Watching someone (CAT-CAM, the breach live feed) counts as being where the camera is:** from
-  the sewer you hear the city's music and rain while you watch a teammate up top.
-- Background loops: `ambience/sewer` in the sewers, `ambience/rain` up top (and on the start menu).
-- **Change which files play:** select **Hub** in `main.tscn` > Inspector > **Music** group:
-  Hub Music, **City Tracks** (the street rotation: add or remove names with the list's + / bin
-  buttons), Escape Music, Breach Music, Hub Ambience, City Ambience (file names without `.wav`;
-  empty = silence).
-
-### Making or changing the music tracks (Python)
-`city_ridge`, `city_wipeout`, `escape` and `breach` are made from maths (no samples, no licence
-worries) by `tools/make_music_tracks.py`. They loop seamlessly (32-42 seconds each).
-```
-python tools/make_music_tracks.py                 <- makes all four (about a minute)
-python tools/make_music_tracks.py escape breach   <- only these two
-python tools/make_music_tracks.py --levels        <- also prints how loud each instrument is
-```
-To tweak one, open the file and find its function (`track_neon_apex`, `track_anti_grav`,
-`track_hot_paws`, `track_total_sanitation`). At its top are the plain settings: `bpm` and `bars`
-(the loop's length), the `CHORDS`, the drum patterns (16 letters per bar: `X` loud, `x` normal,
-`o` soft, `.` nothing), the tunes (lists of step, note, length; note 60 = middle C, +12 = an octave
-up) and which bars each instrument plays in. The numbers at the end (`song.save({...})`) are each
-instrument's volume. Run it again and press Play: Godot picks the new file up by itself. A track
-of your own works too: drop `escape.wav` (or `.ogg`) into `sounds/music/` instead.
+Music and background loops change by area (they fade into each other): in the sewers
+`music/hub` + `ambience/sewer`, up top (and on the start menu) `music/city` + `ambience/rain`.
+Watching someone (CAT-CAM, the breach live feed) counts as being where the camera is.
+To use other files, select **Hub** in `main.tscn` > Inspector > **Music** group (Hub Music,
+City Music, Hub Ambience, City Ambience: file names without `.wav`; empty = silence).
+(10 Nov 2026: a 4-stage synth soundtrack was tried and reverted; it's in git history.)
 
 "Everyone nearby" sounds come from a spot in the 3D world: louder when your camera is close,
 left/right speaker by direction, silent beyond 45 m.
@@ -2337,15 +2293,10 @@ ears" when it does it.)
 - `Sound.attach_loop("engine_loop", self)` — a looping sound that rides along on a node; keep the
   returned player to change its `pitch_scale` / `volume_db`.
 - `Sound.play_music("city")` / `Sound.play_ambience("rain")` — fade over to another track.
-  (Every music file is its own name: `Sound.play_music("city_ridge")` plays exactly that one. The
-  game's music choice is made in one place, `hub.gd` `_pick_music`.)
 
 ### Testing shortcut
 Add `--sound_log` to a test run: every sound that plays is printed (`[Sound] footstep at (...)`).
-Music checks: `--solo` (hub), `--solo --deploy --seed=1` / `=2` / `=3` (city_ridge / city_wipeout /
-city), `--solo --deploy --heat=80` (escape), `--solo --deploy --heat=100 --heat_hold=30` (breach),
-`--solo --mainframe=0 --heat=100 --heat_hold=30 --breach_warning=2 --breach_seconds=6 --frames=1500`
-(breach, then hub after the Miracle). Look for `[Sound] music now playing: ...`.
+Music checks: `--solo` (hub), `--solo --deploy` (city). Look for `[Sound] music now playing: ...`.
 
 ---
 
@@ -2988,15 +2939,15 @@ Starter templates, also in `models/blockbench/`:
 - `template_roomba.bbmodel`: the VAC-COP, with the groups the enemy code looks for: **Body, Eye,
   SirenRed, SirenBlue, Brush**. Keep those names.
 
-**The real ones (in the game since 10 Nov 2026):** `cat.bbmodel` (the armless PS1 mascot cat: player
-+ every NPC, §11), `roomba.bbmodel` (VAC-COP and MEGA VAC-COP), `lint_trapper.bbmodel` and
+**The real ones (in the game since 10 Nov 2026):** `roomba.bbmodel` (VAC-COP and MEGA VAC-COP), `lint_trapper.bbmodel` and
 `squirt_drone.bbmodel` (§8). They were first made from recipes in `tools/make_creature_specs.py`
 (rounded heads, eyes and octagonal shells are worked out with a bit of maths there); from now on the
 .bbmodel files are the master copies: edit them in Blockbench and ask Claude to re-export. Group
-names the game needs: the cat's are in §11; the bots need **Body** (flashes when shot), **Eye**
+names the game needs: the bots need **Body** (flashes when shot), **Eye**
 (glows, crit weak spot), **SirenRed**, **SirenBlue**, plus **Brush/Brush2** (VAC-COP brushes),
 **Brush** + **Tank** (LINT-TRAPPER roller + glue canister), **Rotors > Rotor1..4** + **Tank**
-(SQUIRT-DRONE). A group's pivot is where it turns (brushes, rotors, legs, tail).
+(SQUIRT-DRONE). A group's pivot is where it turns (brushes, rotors). (`cat.bbmodel` is a mascot cat
+that was tried for player cats and reverted on 10 Nov 2026: the game uses the original cat, §11.)
 
 **The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**,
 vehicles under **500**; textures **64x64** (props) or **128x128** (characters, vehicles). In Blockbench 16 pixels = 1 metre, Y is

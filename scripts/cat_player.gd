@@ -192,9 +192,11 @@ const VOICE_PITCH_HIGH: float = 1.15
 var _leg_l: Node3D
 var _leg_r: Node3D
 var _tail: Node3D
-var _leg_l_home: Vector3  # where each leg's hip sits in the cat model (models/cat.glb)
+var _leg_l_home: Vector3  # where each leg sits in cat_model.tscn (we swing them from the hip)
 var _leg_r_home: Vector3
 var _tail_home_z: float
+var _tail_base: Vector3  # the tail's root on the cat's bum (set in _ready)
+const TAIL_HALF_LENGTH := 0.225  # half of Mesh_tail's height (0.45) in cat_model.tscn
 var _leg_phase: float = 0.0
 var _tail_phase: float = 0.0
 var _leg_amount: float = 0.0  # 0 = legs still, 1 = full swing (eases in and out)
@@ -311,9 +313,9 @@ func _ready() -> void:
 	if _leg_r != null:
 		_leg_r_home = _leg_r.position
 	if _tail != null:
-		# (In models/cat.glb the Tail's origin IS its root on the cat's bum, so turning it
-		# sways the tip while the root stays put. Same for the legs: their origin is the hip.)
 		_tail_home_z = _tail.rotation.z
+		# Where the tail's thick end joins the body: the sway hinges here so it stays put.
+		_tail_base = _tail.position + _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 	add_to_group(HudHealthBars.GROUP)  # other players see a slim health bar over us once we're hurt
 	add_to_group(Interactable.GROUP)  # teammates can revive us with E while we're downed
 	collision_mask |= MessProp.SOLID_LAYER  # trash bins are solid for cats (not for cars or bots)
@@ -707,7 +709,10 @@ func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
 	# Tail: always swaying, faster with speed.
 	_tail_phase += delta * (tail_idle_speed + speed * tail_speed_per_mps)
 	if _tail != null:
-		_tail.rotation.z = _tail_home_z + sin(_tail_phase) * tail_swish  # (hinges at its root)
+		_tail.rotation.z = _tail_home_z + sin(_tail_phase) * tail_swish
+		# Turn around the tail's root, not its middle: slide it so the root stays centred on
+		# the body and only the tip swings side to side.
+		_tail.position = _tail_base - _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
 
 
 ## FRONT FLIP: the cat model is spun nose-over-tail (its rotation.x) by _update_zoomies_juice on
@@ -724,12 +729,14 @@ func _spin_around_middle() -> float:
 	return flipping
 
 
-## Turn one leg by `angle`. Each leg's origin in models/cat.glb is its HIP (the top), so the
-## paw swings forward and back while the top stays tucked under the body.
+## Turn one leg by `angle`, hinging at its top (the hip) instead of its middle, so the paw
+## swings forward and back while the top stays tucked under the body.
 func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
 	if leg == null:
 		return
-	leg.position = home
+	var half := 0.1  # half the leg's height (Mesh_leg is 0.2 tall in cat_model.tscn)
+	var hip := home + Vector3.UP * half
+	leg.position = hip + Vector3.DOWN.rotated(Vector3.RIGHT, angle) * half
 	leg.rotation.x = angle
 
 

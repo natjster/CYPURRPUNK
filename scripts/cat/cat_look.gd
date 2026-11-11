@@ -6,13 +6,9 @@ extends RefCounted
 ##
 ## A LOOK is a plain Dictionary (easy to save and send over the network):
 ##   {"fur": Color, "markings": Color, "eyes": Color, "nose": Color,
+##    "hat": "fedora", "face": "", "neck": "bell_collar",     ("" = nothing in that slot)
 ##    "voice": "female"}                                         (how it sounds when it talks: VOICES)
-## Anything missing just keeps the model's own colour.
-##
-## ACCESSORIES ARE SWITCHED OFF FOR NOW: the new armless PS1 cat (models/cat.glb) is worn plain,
-## so SLOTS below is empty and apply() takes off anything a cat was wearing. The machinery (and
-## the CatPart cards in res://cat_parts/) is all still here: put "hat", "face", "neck" back into
-## SLOTS to bring the HAT / FACE / NECK rows back (their anchors may need moving for the new head).
+## Anything missing just keeps the model's own colour / wears nothing.
 ##
 ## The OPTIONS are data, not code:
 ##   - colours: res://cat_parts/palette.tres (CatPalette)
@@ -34,15 +30,14 @@ const COLOR_PARTS: Dictionary = {
 	"eyes": ["EyeL", "EyeR"],
 	"nose": ["Nose"],
 }
-## Accessory slots, in MY CAT screen order. EMPTY ON PURPOSE for now (plain cats, see the top);
-## the old list was ["hat", "face", "neck"].
-const SLOTS: Array[String] = []
-## Where each slot's (0, 0, 0) would sit on the cat model (top of the head, in front of the eyes,
+## Accessory slots, in MY CAT screen order.
+const SLOTS: Array[String] = ["hat", "face", "neck"]
+## Where each slot's (0, 0, 0) sits on the cat model (top of the head, in front of the eyes,
 ## round the neck). A part's own Offset is added on top.
 const SLOT_ANCHORS: Dictionary = {
-	"hat": Vector3(0, 0.95, 0.0),
-	"face": Vector3(0, 0.83, -0.27),
-	"neck": Vector3(0, 0.57, 0),
+	"hat": Vector3(0, 1.02, 0.02),
+	"face": Vector3(0, 0.83, -0.33),
+	"neck": Vector3(0, 0.56, 0),
 }
 
 ## The talking voices a cat can have (MY CAT > VOICE). Each one is a set of voice blips,
@@ -149,26 +144,11 @@ static func voice_sound(look: Dictionary) -> String:
 ## Paint a cat model (scenes/cat_model.tscn, or anything with the same mesh names) and put on
 ## its accessories. Safe to call again whenever the look changes.
 static func apply(model: Node3D, look: Dictionary) -> void:
-	prepare(model)
 	for key in COLOR_KEYS:
 		if look.get(key) is Color:
 			_paint(model, key, look[key])
 	for slot in SLOTS:
 		_wear(model, slot, look.get(slot, ""))
-	# Anything worn in a slot that's switched off comes off (accessories are off for now).
-	for child in model.get_children():
-		if child.name.begins_with("Look_") and not child.name.trim_prefix("Look_").to_lower() in SLOTS:
-			model.remove_child(child)
-			child.queue_free()
-
-
-## Give the Blockbench cat (models/cat.glb) the game's PS1 material (shaders/psx_lit.gdshader),
-## keeping its painted pixel texture. Done once per model; apply() calls it.
-static func prepare(model: Node3D) -> void:
-	if model.has_meta("psx_ready"):
-		return
-	model.set_meta("psx_ready", true)
-	LevelKit.psx_ify(model)
 
 
 ## Recolour every mesh of one colour key. The first time, the model gets its OWN copy of the
@@ -181,10 +161,7 @@ static func _paint(model: Node3D, key: String, color: Color) -> void:
 		if mesh == null:
 			continue
 		if material == null:
-			var shared := mesh.get_surface_override_material(0) as ShaderMaterial
-			if shared == null:
-				continue
-			material = shared.duplicate()
+			material = (mesh.get_surface_override_material(0) as ShaderMaterial).duplicate()
 			model.set_meta(meta, material)
 		mesh.set_surface_override_material(0, material)
 	if material == null:
@@ -194,9 +171,6 @@ static func _paint(model: Node3D, key: String, color: Color) -> void:
 		# Cat eyes catch the light: a soft glow in the eye colour (none for black eyes).
 		material.set_shader_parameter("emission_color", color)
 		material.set_shader_parameter("emission_energy", 0.0 if color.get_luminance() < 0.1 else 1.2)
-		material.set_shader_parameter("emission_textured", true)  # the glow keeps the painted pupil
-		material.set_shader_parameter("specular", 0.8)  # wet, shiny eyes
-		material.set_shader_parameter("roughness", 0.2)
 
 
 ## Swap the accessory in one slot (removes the old one; "" = nothing).

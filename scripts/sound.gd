@@ -5,11 +5,8 @@ extends Node
 ## folders and it's picked up by its file name the next time the game starts:
 ##   res://sounds/sfx/       one-off effects (gunshots, pickups...)  -> SFX volume slider
 ##   res://sounds/ambience/  background loops (rain, sewer drips)    -> SFX volume slider
-##   res://sounds/music/     music loops                             -> MUSIC volume slider
-##                           (hub, city, city_ridge, city_wipeout, escape, breach: hub.gd picks
-##                           which one plays, see its Music group; made by tools/make_music_tracks.py)
-## The sound's name is the file name without the extension: sfx/shoot.wav is "shoot",
-## music/city_ridge.wav is "city_ridge" (an underscore + a word is still its own name).
+##   res://sounds/music/     music loops (one per area)              -> MUSIC volume slider
+## The sound's name is the file name without the extension: sfx/shoot.wav is "shoot".
 ## Several versions of one sound? Number them: meow_1.wav, meow_2.wav... are all "meow",
 ## and a random one plays each time (great for footsteps and meows). One exact version can still
 ## be asked for by its full name: Sound.play("meow_2").

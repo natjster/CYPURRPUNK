@@ -1,9 +1,9 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/npcs/npc.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
 [ext_resource type="Script" path="res://scripts/npcs/npc_page.gd" id="3_page"]
 [ext_resource type="Script" path="res://scripts/npcs/npc_choice.gd" id="4_choice"]
-[ext_resource type="PackedScene" path="res://scenes/cat_model.tscn" id="9_catmodel"]
 
 [sub_resource type="Resource" id="Choice_need"]
 script = ExtResource("4_choice")
@@ -118,6 +118,111 @@ lines = PackedStringArray("Five VAC-COPs, smashed by you. Gun, melee or car. The
 radius = 0.3
 height = 0.9
 
+[sub_resource type="ShaderMaterial" id="Mat_fur"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.2, 0.26, 0.3, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_white"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.93, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_nose"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.9, 0.5, 0.55, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_eye"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.75, 0.2, 1)
+shader_parameter/emission_color = Color(1, 0.75, 0.2, 1)
+shader_parameter/emission_energy = 2.0
+
+[sub_resource type="ShaderMaterial" id="Mat_orange"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(1, 0.42, 0.08, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_stripe"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.95, 0.95, 0.9, 1)
+
+[sub_resource type="ShaderMaterial" id="Mat_steel"]
+render_priority = 0
+shader = ExtResource("2_psx")
+shader_parameter/albedo_color = Color(0.55, 0.57, 0.62, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_body"]
+top_radius = 0.13
+bottom_radius = 0.2
+height = 0.42
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_leg"]
+top_radius = 0.06
+bottom_radius = 0.07
+height = 0.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+radius = 0.3
+height = 0.55
+radial_segments = 8
+rings = 5
+
+[sub_resource type="PrismMesh" id="Mesh_ear"]
+size = Vector3(0.2, 0.26, 0.09)
+
+[sub_resource type="SphereMesh" id="Mesh_muzzle"]
+radius = 0.12
+height = 0.16
+radial_segments = 7
+rings = 3
+
+[sub_resource type="BoxMesh" id="Mesh_nose"]
+size = Vector3(0.07, 0.045, 0.04)
+
+[sub_resource type="SphereMesh" id="Mesh_eye"]
+radius = 0.085
+height = 0.119
+radial_segments = 6
+rings = 3
+
+[sub_resource type="CylinderMesh" id="Mesh_tail"]
+top_radius = 0.025
+bottom_radius = 0.045
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_cone_base"]
+size = Vector3(0.6, 0.04, 0.6)
+
+[sub_resource type="CylinderMesh" id="Mesh_cone"]
+top_radius = 0.03
+bottom_radius = 0.24
+height = 0.6
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_cone_stripe"]
+top_radius = 0.125
+bottom_radius = 0.16
+height = 0.1
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="Mesh_wrench"]
+size = Vector3(0.05, 0.42, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_wrench_head"]
+size = Vector3(0.15, 0.08, 0.05)
+
 [node name="BumperCarBenny" type="StaticBody3D"]
 script = ExtResource("1_script")
 upgrade_page = "combat"
@@ -133,13 +238,95 @@ tail_speed = 3
 position = Vector3(0, 0.45, 0)
 shape = SubResource("Shape_cat")
 
-[node name="Model" parent="." instance=ExtResource("9_catmodel")]
+[node name="Model" type="Node3D" parent="."]
 rotation = Vector3(0, 3.14159, 0)
 scale = Vector3(1.05, 1.05, 1.05)
-fur_color = Color(0.2, 0.26, 0.3, 1)
-markings_color = Color(0.95, 0.93, 0.9, 1)
-eyes_color = Color(1, 0.75, 0.2, 1)
-nose_color = Color(0.9, 0.5, 0.55, 1)
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.39, 0)
+mesh = SubResource("Mesh_body")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegL" type="MeshInstance3D" parent="Model"]
+position = Vector3(-0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="LegR" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.1, 0.1, 0)
+mesh = SubResource("Mesh_leg")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Head" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.82, 0)
+mesh = SubResource("Mesh_head")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, 0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="EarR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.21, 0.2, 0.02)
+rotation = Vector3(0, 0, -0.9)
+mesh = SubResource("Mesh_ear")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="Muzzle" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.09, -0.25)
+mesh = SubResource("Mesh_muzzle")
+surface_material_override/0 = SubResource("Mat_white")
+
+[node name="Nose" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, -0.03, -0.36)
+mesh = SubResource("Mesh_nose")
+surface_material_override/0 = SubResource("Mat_nose")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(-0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0.12, 0.06, -0.23)
+mesh = SubResource("Mesh_eye")
+surface_material_override/0 = SubResource("Mat_eye")
+
+[node name="Tail" type="MeshInstance3D" parent="Model"]
+position = Vector3(0, 0.42, 0.28)
+rotation = Vector3(0.65, 0, 0)
+scale = Vector3(1, 1, 1)
+mesh = SubResource("Mesh_tail")
+surface_material_override/0 = SubResource("Mat_fur")
+
+[node name="ConeBase" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.22, 0)
+mesh = SubResource("Mesh_cone_base")
+surface_material_override/0 = SubResource("Mat_orange")
+
+[node name="Cone" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.53, 0)
+mesh = SubResource("Mesh_cone")
+surface_material_override/0 = SubResource("Mat_orange")
+
+[node name="ConeStripe" type="MeshInstance3D" parent="Model/Head"]
+position = Vector3(0, 0.5, 0)
+mesh = SubResource("Mesh_cone_stripe")
+surface_material_override/0 = SubResource("Mat_stripe")
+
+[node name="Wrench" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.27, 0.4, -0.08)
+rotation = Vector3(0.3, 0, 0)
+mesh = SubResource("Mesh_wrench")
+surface_material_override/0 = SubResource("Mat_steel")
+
+[node name="WrenchHead" type="MeshInstance3D" parent="Model"]
+position = Vector3(0.27, 0.6, -0.15)
+rotation = Vector3(0.3, 0, 0)
+mesh = SubResource("Mesh_wrench_head")
+surface_material_override/0 = SubResource("Mat_steel")
 
 [node name="Candle" type="OmniLight3D" parent="."]
 position = Vector3(-0.6, 1.2, 0.5)

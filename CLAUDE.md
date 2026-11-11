@@ -87,8 +87,8 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Sound: autoload `Sound` (`scripts/sound.gd`): files in `res://sounds/{sfx,ambience,music}/` load by
   name (`meow_1/_2` = random variants of "meow"); `play` (2D, local), `play_at` (3D, local: use where
   every peer already runs the code), `play_everywhere` (3D, RPC to all), `attach_loop`, `play_music` /
-  `play_ambience` (crossfade). MUSIC = 4 stages in hub.gd `_pick_music` (exports hub_music / `city_tracks` rotated by `city_seed` / escape_music when
-  a local cat's `exit_is_open` / breach_music on `breach_busy`, `warning_teams` or `sealed` up top), by `view_cameras()`; tracks from `tools/make_music_tracks.py`. Missing files are silent. Split screen: only player 1's
+  `play_ambience` (crossfade; hub.gd picks hub/city per area by `view_cameras()`). The 4-stage synth soundtrack was REVERTED
+  (user's call, 10 Nov 2026: liked the original music): don't bring it back unasked. Missing files are silent. Split screen: only player 1's
   camera listens, so 3D sounds / loops nearer another local player are moved via `Sound.hearing_position`. Never hand-build
   AudioStreamPlayers elsewhere. Sound table in SETUP_GUIDE.md section 12. Test: `--sound_log`.
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
@@ -403,14 +403,13 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (layout unchanged); chaos bonus = `MessManager.player_messes_this_trip` in fish_heist (`_extracted` 4th arg). Boss news `news_line()`,
   send-off `send_off_line()` (npc.gd), hub CRT `_crt_intel`, report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
 
-CHARACTER + BOT MODELS (Phase 1, 10 Nov 2026): `scenes/cat_model.tscn` = `models/cat.glb` (armless PS1 mascot cat, 370 tris,
-64x64 GREY texture multiplied by the look colours) + `scripts/cat/cat_model.gd` (exports fur/markings/eyes/nose_color; NPC scenes'
-`Model` node IS an instance of it). Group pivots = hinges: legs at the hip, Tail at its root (cat_player `_swing_leg` / tail sway just
-rotate). `CatLook.prepare` psx_ifies once; eyes use psx_lit `emission_textured`. `CatLook.SLOTS = []` on purpose (accessories off).
+CHARACTER + BOT MODELS (Phase 1, 10 Nov 2026): CATS = the ORIGINAL code-built cat (`scenes/cat_model.tscn` primitive meshes;
+each NPC scene builds its own Model with hat/cigar etc.), accessories ON (`CatLook.SLOTS` hat/face/neck). The Blockbench mascot cat
+(`models/blockbench/cat.bbmodel`) was REVERTED (user's call: liked the original cats); don't swap it back unasked.
 Bots: each scene's `Model` = `models/roomba|lint_trapper|squirt_drone.glb`; `Enemy._set_up_model` psx_ifies + `glow_parts` (part -> colour,
 `glow_energy`). EYE WEAK SPOT: `Enemy.receive_hit` -> `is_eye_hit(pos, dir)` (closest approach of the bolt's path to `eye_centre()`
 <= `eye_crit_radius` * model scale, not from behind, never blasts) forces crit + `eye_crit_multiplier`, `eye_flashing()` (roomba.gd tints
-the eye white-hot), sound `eye_crit`. Recipes: `tools/make_creature_specs.py` -> tools/model_specs/*.json (re-running REPLACES the
+the eye white-hot); `eye_crit_sound` "" = silent (the eye_crit sound was removed on request). Recipes: `tools/make_creature_specs.py` -> tools/model_specs/*.json (re-running REPLACES the
 .bbmodel). Test: `--eye_test [--roomba=vac|boss|drone|trapper]`, `--portrait=bot --roomba=X`.
 
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto

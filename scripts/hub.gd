@@ -202,24 +202,9 @@ const CITY_MOOD: int = -1
 @export var wood_supports: bool = false
 
 @export_group("Music")
-## THE MUSIC CLIMBS IN 4 STAGES as a raid heats up (_pick_music; Sound fades between them):
-##   1. SAFE SEWERS  (everyone on this computer is down here)            -> Hub Music
-##   2. STREET RAID  (someone on this computer is up top, exit not open) -> one of City Tracks
-##   3. EXIT OPEN    (up top and your gang's exit is open: run!)          -> Escape Music
-##   4. BREACH       (DEEP CLEAN up top at 100 heat, or a SEWER BREACH / its warning siren
-##                    anywhere)                                           -> Breach Music
-## Spectating (CAT-CAM, live feed) counts as being where the camera is.
-## All are file names in res://sounds/music/ (without .wav). "" = silence.
+## Music down here and up top: file names in res://sounds/music/ (without .wav). "" = silence.
 @export var hub_music: String = "hub"
-## Street raid tracks: each district plays ONE of these, picked from the district's city number
-## (so everyone in the game hears the same one, and the next district usually has another).
-## Add or remove names here to change the rotation (tools/make_music_tracks.py makes them).
-@export var city_tracks: Array[String] = ["city", "city_ridge", "city_wipeout"]
-## Plays up top once your gang's exit is open (until the hatch is sealed).
-@export var escape_music: String = "escape"
-## Plays during THE DEEP CLEAN (100 heat, for anyone watching the city) and a SEWER BREACH
-## (including its warning siren), the most urgent music of all.
-@export var breach_music: String = "breach"
+@export var city_music: String = "city"
 ## Background loops: file names in res://sounds/ambience/. "" = silence.
 @export var hub_ambience: String = "sewer"
 @export var city_ambience: String = "rain"
@@ -453,43 +438,10 @@ func _process(_delta: float) -> void:
 		for view_camera in GameScreen.instance.view_cameras():
 			anyone_up = anyone_up or not is_in_hub(view_camera.global_position)
 	_moonlight.visible = anyone_up
-	# Music (the 4 stages, see the Music group above) + background sound (sounds/ambience/sewer.wav
-	# or rain.wav). Same track as before = nothing happens.
-	Sound.play_music(_pick_music(anyone_up))
+	# Music + background sound (sounds/music/hub.wav or city.wav, sounds/ambience/sewer.wav or
+	# rain.wav). Same track as before = nothing happens.
+	Sound.play_music(city_music if anyone_up else hub_music)
 	Sound.play_ambience(city_ambience if anyone_up else hub_ambience)
-
-
-## Which music track this computer should hear now (the 4 stages). anyone_up = is any camera on
-## this computer (player 1-4's screens, including spectating ones) looking at the city?
-func _pick_music(anyone_up: bool) -> String:
-	var mainframe := Mainframe.instance
-	var heist := FishHeist.instance
-	# Stage 4: a SEWER BREACH (or its warning siren) is on: everyone hears it, wherever they are.
-	if mainframe != null and (mainframe.breach_busy or not mainframe.warning_teams.is_empty()):
-		return breach_music
-	if not anyone_up:
-		return hub_music  # Stage 1: safe in the sewers
-	# Stage 4 again: THE DEEP CLEAN (hatch sealed at 100 heat) for anyone watching the city.
-	if heist != null and heist.sealed:
-		return breach_music
-	# Stage 3: the exit of any gang played on this computer is open.
-	if heist != null and Game.instance != null:
-		for cat in Game.instance.local_cats():
-			if heist.exit_is_open(cat.team):
-				return escape_music
-	# Stage 2: a street raid. The district's city number picks the track.
-	return _city_track()
-
-
-## This district's street raid track from City Tracks (the same on every computer: the city
-## number is shared).
-func _city_track() -> String:
-	if city_tracks.is_empty():
-		return ""
-	var city_seed := 0
-	if Game.instance != null and Game.instance.city != null:
-		city_seed = Game.instance.city.city_seed
-	return city_tracks[posmod(city_seed, city_tracks.size())]
 
 
 ## THE MAINFRAME's CRT: sign text, screen tint and light colour follow THIS gang's charge
