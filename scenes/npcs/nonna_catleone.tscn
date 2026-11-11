@@ -211,8 +211,7 @@ rings = 1
 
 [node name="NonnaCatleone" type="StaticBody3D"]
 script = ExtResource("1_script")
-upgrade_page = "gourmet"
-upgrade_button = "NONNA'S KITCHEN"
+rebellion_tier = 4
 npc_name = "NONNA CATLEONE"
 voice = "meow_blip_nonna"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

@@ -193,8 +193,6 @@ size = Vector3(0.05, 0.05, 0.03)
 
 [node name="DonCatleone" type="StaticBody3D"]
 script = ExtResource("1_script")
-upgrade_page = "boss"
-upgrade_button = "UPGRADE MY RANK"
 npc_name = "DON CATLEONE"
 voice = "meow_blip_don"
 pages = Array[ExtResource("3_page")]([SubResource("Page_hello"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_howto")])

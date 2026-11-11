@@ -209,8 +209,7 @@ size = Vector3(0.05, 0.6, 0.05)
 
 [node name="LilMittens" type="StaticBody3D"]
 script = ExtResource("1_script")
-upgrade_page = "street"
-upgrade_button = "STREET TRICKS"
+rebellion_tier = 1
 npc_name = "LIL' MITTENS"
 voice = "meow_blip_mittens"
 pages = Array[ExtResource("3_page")]([SubResource("Page_ready"), SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_guilt"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

@@ -27,6 +27,7 @@ extends CanvasLayer
 ##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd)
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── Shop         <- THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) }
+##       ├── Workbench    <- THE TINKER WORKBENCH (scripts/ui/workbench_screen.gd) }
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
@@ -238,7 +239,7 @@ static func _targets(seat_number: int) -> Array:
 static func wants_input(seat_number: int = 0) -> bool:
 	var inventory := InventoryScreen.for_seat(seat_number)
 	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible) \
-		or PlayerPause.is_open_for(seat_number) or ShopScreen.is_open_for(seat_number)
+		or PlayerPause.is_open_for(seat_number) or ShopScreen.is_open_for(seat_number) or WorkbenchScreen.is_open_for(seat_number)
 
 
 ## True while something covers the whole window: a full-screen game menu (pause, settings, MY CAT)
@@ -322,7 +323,7 @@ func _process(delta: float) -> void:
 	# The INVENTORY's backpack view (inventory_ui.gd) needs a clean screen: no names over heads, no
 	# sewer cash board under its boxes (its JOB strip shows your cash).
 	var inventory := InventoryScreen.for_seat(seat)
-	var in_inventory := inventory != null and inventory.visible
+	var in_inventory := (inventory != null and inventory.visible) or WorkbenchScreen.is_open_for(seat)
 	for hidden_piece in ["Names", "Scoreboard"]:
 		var piece := element(hidden_piece, seat)
 		if piece != null:

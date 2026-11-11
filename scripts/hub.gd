@@ -811,7 +811,7 @@ func _build_shop() -> void:
 func _build_workbench() -> void:
 	var at := workbench_spot
 	var spot := Interactable.make(self, at, workbench_prompt, workbench_radius, 10)
-	spot.used.connect(func(cat: CatPlayer): Upgrades.instance.open_page(cat, "workbench", workbench_prompt))
+	spot.used.connect(func(cat: CatPlayer): WorkbenchScreen.for_seat(cat.slot).open(cat, self))  # (scripts/ui/workbench_screen.gd)
 	# The bench's front (-Z in the model) faces west, out into the room: a quarter turn.
 	var bench := LevelKit.instantiate_model("workbench", self, Vector3(half_width - 0.55, 0, at.z), PI / 2)
 	bench.name = "Workbench"

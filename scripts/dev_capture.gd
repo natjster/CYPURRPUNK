@@ -353,6 +353,8 @@ func _ready() -> void:
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
+		if args.has("rebellion_tier"):
+			Upgrades.rebellion_override = int(args["rebellion_tier"])  # (test only: scripts/upgrades.gd)
 		if args.has("cash") and multiplayer.is_server():
 			Wallet.instance.set_cash(player.player_id, int(args["cash"]))
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
@@ -442,7 +444,11 @@ func _ready() -> void:
 		# SEWER UPGRADES (scripts/upgrades.gd): print what this cat has, then buy / pick a ride.
 		#   --buy_upgrade=bigger_pack,bigger_pack,thick_fur   (one buy each, like clicking the button)
 		#   --select_vehicle=cyber_bike   (our gang's ride; needs the unlock)
-		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its page opens)
+		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its screen opens)
+		#     --workbench_tab=N           (then pick tab N: 0 boss, 1 shopkeeper, 2-6 rebellion tiers 1-5)
+		#     --workbench_recruit=N       (then press RECRUIT N times: rebellion tiers 1..N)
+		#     --workbench_buy=a,b         (then click those upgrades' cards)
+		#   --rebellion_tier=N            (every sewer counts as having recruited N tiers: test only)
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
 		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
 			await _upgrades_test(player, args)
@@ -455,7 +461,7 @@ func _ready() -> void:
 			print("DevCapture workbench: prompt=\"%s\" used=%s" % [Interactable.prompt_for(player), Interactable.try_use(player)])
 			for i in 5:
 				await get_tree().process_frame
-			print("DevCapture workbench page: open=%s line=\"%s\"" % [NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.replace("\n", " / ").left(220)])
+			await _workbench_test(player, args)
 		if args.has("vehicles_lineup"):
 			await _vehicles_lineup(player)
 		if args.has("weapons_lineup"):
@@ -1408,6 +1414,48 @@ func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void
 		report.call("after " + str(args["shop_close"]))
 
 
+## --workbench (after walking there and pressing E): print the TINKER WORKBENCH screen, then
+## --workbench_recruit=N / --workbench_buy=a,b / --workbench_tab=N ("DevCapture workbench" lines).
+func _workbench_test(player: CatPlayer, args: Dictionary) -> void:
+	var bench := WorkbenchScreen.for_seat(player.slot)
+	var hub := UndergroundHub.of(player)
+	var report := func(when: String) -> void:
+		var tabs := []
+		for i in bench._tabs.size():
+			var npc := bench.npc_for_tab(i)
+			tabs.append("%d:%s=%s" % [i, npc.name if npc != null else "-", bench.tab_state(i)])
+		var cards := bench._cards.filter(func(c): return c.visible).map(func(c): return "%s(%d)" % [c.get_node("Face").upgrade_id,
+			Upgrades.instance.current_tier(player.player_id, c.get_node("Face").upgrade_id)])
+		var present := hub.get_children().filter(func(n): return n is Npc and n.rebellion_tier > 0 and n.present).map(func(n): return n.name)
+		print("DevCapture workbench (%s): open=%s tab=%d tabs=%s cards=%s recruit=%s cash=$%d scrap=%d rebellion=%d npcs_present=%s note=\"%s\"" % [
+			when, bench.visible, bench.tab, tabs, cards, ("\"%s\"" % bench._recruit.text) if bench._recruit.visible else "-",
+			Wallet.instance.cash_of(player.player_id), ItemManager.instance.scrap_count_of(player.player_id),
+			Upgrades.rebellion_level(player.team), present, bench._note])
+	for i in 10:
+		await get_tree().process_frame
+	report.call("open")
+	for n in int(args.get("workbench_recruit", "0")):
+		bench._set_tab(Upgrades.rebellion_level(player.team) + 2)
+		bench._press_recruit()
+		for i in 30:
+			await get_tree().process_frame
+		report.call("recruit %d" % (n + 1))
+	if args.has("workbench_buy"):
+		for upgrade_id in str(args["workbench_buy"]).split(","):
+			bench._set_tab(maxi(0, Upgrades.tab_of(upgrade_id)))
+			for card in bench._cards:
+				if card.visible and card.get_node("Face").upgrade_id == upgrade_id:
+					bench._press_card(card)
+			for i in 20:
+				await get_tree().process_frame
+			report.call("buy " + upgrade_id)
+	if args.has("workbench_tab"):
+		bench._set_tab(int(args["workbench_tab"]))
+		for i in 5:
+			await get_tree().process_frame
+		report.call("tab")
+
+
 ## --inventory: after a while, print what each open inventory screen shows ("DevCapture inventory").
 func _inventory_report(seats: Array, frames: int) -> void:
 	for i in mini(60, frames / 2):
@@ -1940,6 +1988,12 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 	for node in get_tree().get_nodes_in_group(Npc.GROUP):
 		if node.name == args["talk"]:
 			npc = node
+	if npc.rebellion_tier > 0 and Upgrades.rebellion_override < 0:
+		# THE SEWER REBELLION: a recruit nobody has recruited is hidden. Old quest tests just want to talk.
+		Upgrades.rebellion_override = Upgrades.REBELLION_TIERS
+		print("DevCapture talk: %s is a REBELLION TIER %d recruit: --rebellion_tier=5 for this test" % [npc.name, npc.rebellion_tier])
+		for i in 20:
+			await get_tree().process_frame  # (they check every quarter second)
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
 	if npc is Payphone:

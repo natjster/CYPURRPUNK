@@ -208,8 +208,7 @@ rings = 1
 
 [node name="JitteryJax" type="StaticBody3D"]
 script = ExtResource("1_script")
-upgrade_page = "vehicles"
-upgrade_button = "GARAGE & ZOOMIES UPGRADES"
+rebellion_tier = 5
 npc_name = "JITTERY JAX"
 voice = "meow_blip_jax"
 pages = Array[ExtResource("3_page")]([SubResource("Page_waiting"), SubResource("Page_thanks"), SubResource("Page_hello"), SubResource("Page_ask"), SubResource("Page_about"), SubResource("Page_blame"), SubResource("Page_remind")])

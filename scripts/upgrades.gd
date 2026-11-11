@@ -4,16 +4,24 @@ extends Node
 ## WORKBENCH) with CASH + SCRAP, that stay with your cat forever (saved in your profile).
 ## Attach to the "Upgrades" node in main.tscn (right under Wallet). Reach it with Upgrades.instance.
 ##
-## WHO SELLS WHAT (each NPC has an "Upgrade Page" in the Inspector; the page lists live here, PAGES):
-##   Don Catleone / Pawnie      "boss"      BIGGER BACKPACK (6 -> 8 -> 10 -> 12 slots; the old DEEP
-##                                          POCKETS loot-bag upgrade was merged into it: _merge_old_upgrades)
-##   Tinker Workbench (hub.gd)  "workbench" WEAPON CRATES (unlock better guns in THE BLACK MARKITTEN),
-##                                          DELUXE LITTERBOX (stash), MAINFRAME CAPACITOR
-##   Frankie / Jittery Jax      "vehicles"  ESPRESSO BLOODSTREAM (run faster), TWIN-TURBO ENGINE,
-##                                          NEON ZOOM-BIKE + ARMORED MEOW-VAN (and choosing your ride)
-##   Paulie / Bumper-Car Benny  "combat"    THICK FUR (max HP), SCRAP MAGNET (bots drop scrap)
-##   Nonna / Gold-Tooth Gus     "gourmet"   GOURMET FENCE (more cash for loot), STUFFED CHEEKS (snacks)
-##   Sal / Clara / Mittens / Billy "street" HEAVY PAWS (melee), INSIDER TUNNEL (exit opens earlier)
+## WHERE THEY'RE BOUGHT: ONLY at the TINKER WORKBENCH on the east wall of each sewer (hub.gd
+## _build_workbench -> scripts/ui/workbench_screen.gd). NPCs just talk and hand out quests now.
+## The workbench has 7 tabs, one per sewer NPC (WORKBENCH_TABS below):
+##   tab 0  Don Catleone / Pawnie (always)        BIGGER BACKPACK, MAINFRAME CAPACITOR
+##   tab 1  Comrade Whiskers / Clawd (always)     WEAPON CRATES, DELUXE LITTERBOX
+##   tab 2  REBELLION TIER 1: Lil' Mittens / Billy the Kitten        STUFFED CHEEKS, INSIDER TUNNEL
+##   tab 3  REBELLION TIER 2: Paulie No-Brooms / Bumper-Car Benny    THICK FUR, SCRAP MAGNET
+##   tab 4  REBELLION TIER 3: Sal the Slapper / Calamity Clara       HEAVY PAWS
+##   tab 5  REBELLION TIER 4: Nonna Catleone / Gold-Tooth Gus        GOURMET FENCE
+##   tab 6  REBELLION TIER 5: Frankie Espresso / Jittery Jax         ESPRESSO BLOODSTREAM, TWIN-TURBO
+##                            ENGINE, NEON ZOOM-BIKE, ARMORED MEOW-VAN (+ choosing your gang's ride)
+##
+## THE SEWER REBELLION: each sewer starts with only its boss and its shopkeeper. The other five cats
+## are RECRUITED, one tier at a time, with the "rebellion_tier" upgrade (5 tiers, cash + scrap, bought
+## on the next locked "?" tab). A recruit appears in the sewer (npc.gd rebellion_tier), offers their
+## quest, fights in a SEWER BREACH, and opens their workbench tab. It's a CREW thing: a sewer shows
+## everyone up to the best tier anyone in that gang has recruited (rebellion_level), and buying
+## the next tier continues from there. Saved in your profile like every upgrade.
 ##
 ## PERSONAL vs CREW: most upgrades only help the cat who bought them. Three are CREW upgrades
 ## (MAINFRAME CAPACITOR, TWIN-TURBO ENGINE, INSIDER TUNNEL): your whole gang gets the BEST tier
@@ -39,12 +47,15 @@ extends Node
 
 ## Emitted on EVERY computer when anyone's upgrades or a gang's vehicle change.
 signal changed
+## Emitted on EVERY computer when a gang recruits a new REBELLION tier (1-5).
+signal recruited(team: int, tier: int)
 
 ## The one upgrades node (Upgrades.instance).
 static var instance: Upgrades
 
 ## Each upgrade's price per tier: id -> [[cash, scrap], ...] (see the top of this file).
 @export var costs: Dictionary = {
+	"rebellion_tier": [[100, 1], [150, 1], [200, 2], [250, 2], [320, 3]],
 	"shop_crates": [[100, 1], [200, 2], [320, 3]],
 	"bigger_pack": [[80, 1], [160, 2], [260, 3]],
 	"deluxe_litterbox": [[100, 1], [200, 2]],
@@ -95,6 +106,7 @@ static var instance: Upgrades
 
 ## Names, what they do, and which page sells them. ("crew" = shared by the whole gang.)
 const INFO := {
+	"rebellion_tier": {"name": "REBELLION RECRUIT", "crew": true, "about": "Recruit the next cat to your sewer: they move in, hand out a quest, fight in breaches and open their workbench tab."},
 	"shop_crates": {"name": "WEAPON CRATES", "tiers": ["STREET SMUGGLER CRATE", "MOB SYNDICATE CRATE", "EXPERIMENTAL CRATE"],
 		"about": "Unlocks better guns in the shop: 1 = HAIRBALL BLASTER + RED DOT, 2 = TOMMY GUN + FROZEN TUNA, 3 = YARN-ZOOKA + CUCUMBER LAUNCHER."},
 	"bigger_pack": {"name": "BIGGER BACKPACK", "about": "Backpack (loot + gear) 6 -> 8 -> 10 -> 12 slots."},
@@ -112,27 +124,26 @@ const INFO := {
 	"insider_tunnel": {"name": "INSIDER TUNNEL", "crew": true, "about": "Your gang's exit opens 5 / 10 heat earlier."},
 }
 
-## Which upgrades each page sells (an NPC's Upgrade Page picks one of these names).
-const PAGES := {
-	"shop": ["shop_crates"],  # (not on any NPC any more: the crates are on the workbench page)
-	"boss": ["bigger_pack"],
-	"workbench": ["shop_crates", "deluxe_litterbox", "mainframe_capacitor"],
-	"vehicles": ["espresso_zoomies", "turbo_engine", "unlock_cyber_bike", "unlock_fish_van"],
-	"combat": ["thick_fur", "scrap_magnet"],
-	"gourmet": ["gourmet_fence", "stuffed_cheeks"],
-	"street": ["heavy_paws", "insider_tunnel"],
-}
+## The TINKER WORKBENCH's 7 tabs (scripts/ui/workbench_screen.gd): which upgrades each sewer NPC's tab
+## sells. Tab 0 = the boss, tab 1 = the shopkeeper (always open), tabs 2-6 = REBELLION TIERS 1-5 (open
+## once that tier is recruited).
+const WORKBENCH_TABS := [
+	["bigger_pack", "mainframe_capacitor"],
+	["shop_crates", "deluxe_litterbox"],
+	["stuffed_cheeks", "insider_tunnel"],
+	["thick_fur", "scrap_magnet"],
+	["heavy_paws"],
+	["gourmet_fence"],
+	["espresso_zoomies", "turbo_engine", "unlock_cyber_bike", "unlock_fish_van"],
+]
+## A short job title for each tab's cat (shown under their name on the workbench).
+const TAB_ROLES := ["THE BOSS", "THE BLACK MARKITTEN", "STREET RUNNER", "THE MUSCLE", "ENFORCER", "THE KITCHEN & THE FENCE", "WHEELCAT"]
+const REBELLION_TIERS := 5
 
-## What the page's speaker says above the buttons.
-const PAGE_LINES := {
-	"shop": "Crates fall off trucks, comrade. Trucks need persuading. Persuading costs.",
-	"boss": "You wanna carry more for the Family? You gotta earn the pockets.",
-	"workbench": "A greasy bench of vacuum parts and solder. Somebody could rig something here.",
-	"vehicles": "Kid! Faster legs, faster wheels, NEW wheels! I'm vibrating just lookin' at you!",
-	"combat": "Brooms are for sweepin'. You? You're for smashin'. Let's toughen you up.",
-	"gourmet": "Good fish deserves a good price. And a cat deserves a snack. Mangia.",
-	"street": "Wanna hit harder? Wanna know where the back door is? Everything's got a price, pal.",
-}
+## TESTS ONLY (DevCapture --rebellion_tier=N, or --talk on a recruit): pretend every sewer has
+## recruited this many tiers. -1 = off (the real rule).
+static var rebellion_override: int = -1
+
 
 ## The rides a gang can drive (getaway_car.gd VEHICLES has their models and stats).
 ## id -> the upgrade that unlocks it ("" = everyone has it).
@@ -146,8 +157,6 @@ var team_vehicle: Array = ["interceptor", "interceptor"]
 ## Player ID -> the ride they last picked (saved in their profile, picked again next game).
 var chosen_vehicle := {}
 
-## This computer: seat -> the upgrade page open in that player's talk box, to redraw it after a buy.
-var _open := {}
 
 
 func _enter_tree() -> void:
@@ -185,7 +194,7 @@ func max_tier(upgrade_id: String) -> int:
 
 ## [cash, scrap] for the NEXT tier this player would buy ([0, 0] when maxed).
 func next_cost(player_id: int, upgrade_id: String) -> Array:
-	var tier := level(player_id, upgrade_id)
+	var tier := current_tier(player_id, upgrade_id)
 	var list: Array = costs.get(upgrade_id, [])
 	return list[tier] if tier < list.size() else [0, 0]
 
@@ -253,6 +262,37 @@ static func charge_per_scrap_for(team: int, base: float) -> float:
 
 
 ## Has this player unlocked this ride? (the INTERCEPTOR is everyone's)
+## THE SEWER REBELLION: how many tiers this gang's sewer has recruited (0-5): the best anyone in the
+## gang has bought. The TUTORIAL always has everyone (its steps need Lil' Mittens).
+static func rebellion_level(team: int) -> int:
+	if rebellion_override >= 0:
+		return rebellion_override
+	if Game.is_tutorial():
+		return REBELLION_TIERS
+	return best_in_team(team, "rebellion_tier")
+
+
+## Is workbench tab "tab" open for this gang? (0 boss and 1 shopkeeper always; 2..6 = tier 1..5.)
+static func tab_unlocked(team: int, tab: int) -> bool:
+	return tab < 2 or rebellion_level(team) >= tab - 1
+
+
+## Which workbench tab sells this upgrade (-1 = none: rebellion_tier itself).
+static func tab_of(upgrade_id: String) -> int:
+	for tab in WORKBENCH_TABS.size():
+		if upgrade_id in WORKBENCH_TABS[tab]:
+			return tab
+	return -1
+
+
+## The tier a purchase continues from: your own for normal upgrades; for REBELLION RECRUIT the
+## gang's (it's shared: a friend's recruits count, and you buy the NEXT one).
+func current_tier(player_id: int, upgrade_id: String) -> int:
+	if upgrade_id == "rebellion_tier":
+		return best_in_team(Teams.team_of(player_id), upgrade_id)
+	return level(player_id, upgrade_id)
+
+
 func has_vehicle(player_id: int, vehicle: String) -> bool:
 	if not VEHICLE_UNLOCKS.has(vehicle):
 		return false
@@ -280,7 +320,10 @@ func request_buy(player_id: int, upgrade_id: String) -> void:
 	if not UndergroundHub.is_in_hub(cat.global_position):
 		_buy_result.rpc_id(peer, player_id, false, "Upgrades are bought down in the sewers.")
 		return
-	var tier := level(player_id, upgrade_id)
+	if not tab_unlocked(Teams.team_of(player_id), tab_of(upgrade_id)):
+		_buy_result.rpc_id(peer, player_id, false, "Recruit that cat to the Rebellion first.")
+		return
+	var tier := current_tier(player_id, upgrade_id)
 	if tier >= max_tier(upgrade_id):
 		_buy_result.rpc_id(peer, player_id, false, "%s is already maxed out." % title)
 		return
@@ -298,7 +341,17 @@ func request_buy(player_id: int, upgrade_id: String) -> void:
 		return
 	_set_tier.rpc(player_id, upgrade_id, tier + 1)
 	print("[Upgrades] Player %d bought %s tier %d for $%d + %d scrap" % [player_id, upgrade_id, tier + 1, cash_cost, scrap_cost])
+	if upgrade_id == "rebellion_tier":
+		_recruited.rpc(Teams.team_of(player_id), tier + 1)
 	_buy_result.rpc_id(peer, player_id, true, "%s  TIER %d/%d!" % [title, tier + 1, max_tier(upgrade_id)])
+
+
+## Host -> everyone: a gang recruited REBELLION TIER "tier" (the new cat walks into their sewer: npc.gd
+## notices by itself; the workbench screen celebrates).
+@rpc("authority", "call_local", "reliable")
+func _recruited(team: int, tier: int) -> void:
+	recruited.emit(team, tier)
+	print("[Upgrades] Gang %d recruited REBELLION TIER %d" % [team, tier])
 
 
 ## Host -> the buyer: how it went. Plays the sound, says it, redraws the open page.
@@ -307,8 +360,11 @@ func _buy_result(player_id: int, ok: bool, text: String) -> void:
 	print("[Upgrades] %s" % text)
 	Sound.play("buy" if ok else "error")
 	var seat := PlayerId.slot_of(player_id)
-	Hud.show_message(("UPGRADED! " if ok else "") + text, 3.0, seat)
-	_refresh(seat)
+	var bench := WorkbenchScreen.for_seat(seat)
+	if bench != null and bench.visible:
+		bench.note(("UPGRADED! " if ok else "") + text, ok)  # the workbench's own message line
+	else:
+		Hud.show_message(("UPGRADED! " if ok else "") + text, 3.0, seat)
 
 
 ## Host -> everyone: this player's tier in this upgrade.
@@ -425,68 +481,3 @@ func _forget(player_id: int) -> void:
 	player_upgrades.erase(player_id)
 	chosen_vehicle.erase(player_id)
 	changed.emit()
-
-
-# --- The upgrade PAGE in the talk box (NpcDialog) ---
-
-## Open an upgrade page ("boss", "workbench"...: PAGES) in this cat's talk box.
-## speaker/voice = who's selling; back = what the BACK button does (e.g. the NPC's greeting).
-func open_page(cat: CatPlayer, page: String, speaker: String, voice: String = "", back: Callable = Callable()) -> void:
-	var me := cat.player_id
-	var items := ItemManager.instance
-	var line := "%s\nYOU HAVE: $%d   %d SCRAP (backpack + litterbox)" % [PAGE_LINES.get(page, ""), Wallet.instance.cash_of(me), items.scrap_count_of(me)]
-	var buttons := []
-	for upgrade_id in PAGES.get(page, []):
-		var info: Dictionary = INFO.get(upgrade_id, {})
-		var tier := level(me, upgrade_id)
-		var top := max_tier(upgrade_id)
-		var title: String = info.get("name", upgrade_id)
-		if info.get("crew", false):
-			title += " (CREW)"
-		line += "\n- %s: %s" % [title, info.get("about", "")]
-		var text := ""
-		if tier >= top and top == 1:
-			text = "%s  [UNLOCKED]" % title
-		elif tier >= top:
-			text = "%s  [TIER %d/%d] MAXED" % [title, tier, top]
-		elif top == 1:
-			var unlock_price := next_cost(me, upgrade_id)
-			text = "UNLOCK %s - $%d + %d SCRAP" % [title, unlock_price[0], unlock_price[1]]
-		else:
-			var price := next_cost(me, upgrade_id)
-			var tier_name := ""
-			if info.has("tiers"):
-				tier_name = " " + info.tiers[tier]
-			text = "%s  [TIER %d/%d]%s - $%d + %d SCRAP" % [title, tier, top, tier_name, price[0], price[1]]
-		buttons.append([text, _buy_pressed.bind(cat, upgrade_id)])
-	if page == "vehicles":
-		var team := cat.team
-		for vehicle in VEHICLE_UNLOCKS:
-			if has_vehicle(me, vehicle):
-				var now := " (YOUR GANG'S RIDE)" if vehicle_of(team) == vehicle else ""
-				buttons.append(["SELECT VEHICLE: %s%s" % [VEHICLE_NAMES[vehicle], now], _select_pressed.bind(cat, vehicle)])
-	var dialog := NpcDialog.for_cat(cat)
-	buttons.append(["BACK", back] if back.is_valid() else ["BYE", dialog.close])
-	_open[cat.slot] = {"cat": cat, "page": page, "speaker": speaker, "back": back, "line": line}
-	dialog.open(speaker, line, buttons, voice)
-
-
-func _buy_pressed(cat: CatPlayer, upgrade_id: String) -> void:
-	request_buy.rpc_id(1, cat.player_id, upgrade_id)
-
-
-func _select_pressed(cat: CatPlayer, vehicle: String) -> void:
-	request_select_vehicle.rpc_id(1, cat.player_id, vehicle)
-
-
-## Redraw this seat's upgrade page (new cash / scrap / tiers), if it's still the one showing.
-func _refresh(seat: int) -> void:
-	# Give the new cash / inventory a moment to arrive (they're separate messages from the host).
-	await get_tree().create_timer(0.15).timeout
-	var open: Dictionary = _open.get(seat, {})
-	if open.is_empty() or not is_instance_valid(open.cat) or not NpcDialog.is_open_for(seat):
-		return
-	var dialog := NpcDialog.for_seat(seat)
-	if dialog.line_label.text != open.line:
-		return  # they've moved on to another page
-	open_page(open.cat, open.page, open.speaker, "", open.back)  # ("" = no voice blips on every click)

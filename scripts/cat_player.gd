@@ -803,6 +803,7 @@ func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
 ## watching a teammate up top on the CAT-CAM (scripts/spectator.gd).
 func _menu_open() -> bool:
 	return PauseMenu.is_open or NpcDialog.is_open_for(slot) or PlayerPause.is_open_for(slot) or ShopScreen.is_open_for(slot) \
+		or WorkbenchScreen.is_open_for(slot) \
 		or Mainframe.instance.is_spectating(self) or RaidReportScreen.is_up() \
 		or (is_multiplayer_authority() and Spectator.is_watching(slot))  # (CAT-CAM: our buttons switch / heckle / leave)
 
