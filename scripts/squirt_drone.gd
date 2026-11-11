@@ -34,7 +34,7 @@ extends Roomba
 
 @export_group("Spotlight and Water Zap")
 ## HEAT added per second while it has a cat in sight.
-@export var heat_per_second: float = 0.5
+@export var heat_per_second: float = 0.25
 ## Seconds between water zaps.
 @export var squirt_seconds: float = 2.0
 ## How long a zap takes to land (seconds): the warning that lets you dodge.

@@ -65,6 +65,12 @@ signal destroyed(enemy: Enemy)
 ## Item dropped on the street when it's destroyed, on top of whatever it vacuumed
 ## (e.g. "golden_koi" for the boss). "" = nothing extra.
 @export var drop_on_destroy: String = ""
+## On: drop_on_destroy comes out ONCE PER CAT UP TOP (at least 1), so a crew of 4 gets 4 scrap
+## from a MEGA VAC-COP instead of fighting over 1. (Ticked on roomba_boss.tscn.)
+@export var drop_once_per_cat: bool = false
+## Chance (0.05 = 5%) that a regular bot smashed by a player drops a SCRAP. The SCRAP MAGNET
+## upgrade adds its chance on top. More kills = more scrap, but also more heat.
+@export_range(0.0, 1.0) var scrap_chance: float = 0.05
 
 @export_group("Sounds")
 ## Sound files in res://sounds/sfx/ (without .wav).
@@ -303,16 +309,24 @@ func explode() -> void:
 		ItemManager.instance.drop_on_street(stomach[i], global_position + Vector3(cos(i * 2.1), 0, sin(i * 2.1)) * 1.2)
 	stomach.clear()
 	if drop_on_destroy != "":
-		ItemManager.instance.drop_on_street(drop_on_destroy, global_position)
+		var copies := 1
+		if drop_once_per_cat and Game.instance != null:
+			copies = maxi(1, Game.instance.players_up_top())
+		for i in copies:
+			# (spread out in a little ring so they don't stack into one pickup spot)
+			var ring := Vector3(cos(i * 1.7), 0, sin(i * 1.7)) * (0.0 if i == 0 else 1.0)
+			ItemManager.instance.drop_on_street(drop_on_destroy, global_position + ring)
 	elif not is_boss and killed_by != 0:
 		if DistrictTwist.roll_scrap_drop():
 			# HIGH ALERT (scripts/district_twist.gd): even the little ones carry SCRAP, sometimes.
 			ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position)
 			print("[Enemy] %s dropped SCRAP (HIGH ALERT)" % name)
 		# SCRAP MAGNET (scripts/upgrades.gd): the cat who smashed a regular bot may get a SCRAP out of it.
-		if randf() < Upgrades.scrap_magnet_chance(killed_by):
+		# Every regular bot has a small scrap_chance; SCRAP MAGNET (scripts/upgrades.gd) adds to it
+		# for the cat who smashed it.
+		if randf() < scrap_chance + Upgrades.scrap_magnet_chance(killed_by):
 			ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, global_position + Vector3(0.6, 0, 0.6))
-			print("[Enemy] SCRAP MAGNET: %s dropped scrap for player %d" % [name, killed_by])
+			print("[Enemy] %s dropped scrap for player %d" % [name, killed_by])
 	# Smashing an enemy makes the city angrier... but smashing a boss cools it right down.
 	var heat := HeatMeter.instance
 	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)

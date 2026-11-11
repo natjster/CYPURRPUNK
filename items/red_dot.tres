@@ -7,9 +7,9 @@
 script = ExtResource("1_data")
 id = "red_dot"
 display_name = "THE RED DOT"
-description = "A tiny laser pointer. Hold the dot on something and it melts... until it overheats. 1 paw: hold two!"
+description = "A tiny laser pointer. Short reach: hold the dot on something close and it melts... until it overheats (fast). 1 paw: hold two!"
 kind = 1
-price = 90
+price = 140
 hands = 1
 hold_offset = Vector3(0.3, 0.45, -0.22)
 hold_scale = 1.2

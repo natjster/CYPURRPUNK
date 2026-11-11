@@ -501,7 +501,7 @@ The more players, the busier the city (counted on the host, players on every com
 | What | Where (select the node in `main.tscn`, Inspector) | Default |
 |---|---|---|
 | Extra VAC-COPs for every player beyond the 2nd | **Roombas** > Extra Roombas Per Player | 2 (8 players = +12) |
-| Heat rises faster per extra cat up top | **Heat** > Heat Per Extra Cat | 0.1 (+10% each) |
+| Heat rises faster per extra cat up top | **Heat** > Heat Per Extra Cat | 0.05 (+5% each) |
 | Loot grows back faster per extra player | **Items** > Regrow Faster Per Player | 0.15 (8 players = about 2x) |
 
 The script side: `Game.instance.player_count()` is how many players the game has right now.
@@ -1161,8 +1161,8 @@ new district. In the code that just means a new city seed: the whole city is gen
    district, whether you extracted or got knocked out ("You had your shot up there, kid..."). The
    sewer HUD line says **THE SEWERS - WAIT FOR THE NEXT DISTRICT**. (Who has been up:
    `went_up` in `fish_heist.gd`, decided by the host.)
-2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **10 minutes** from a
-   fresh district to max if you cause no trouble; gunfights speed it up).
+2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **15 minutes** from a
+   fresh district to max if you cause no trouble; smashing bots and making a mess speed it up a lot).
 3. At **75 heat** (60-95, set by your gang's Mainframe) your crew breaks through: your gang's **exit manhole** opens somewhere random in
    the city (the lid slides off and a glow in the gang's colour comes out of the hole). At the
    same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
@@ -1355,8 +1355,8 @@ call-in and the Smash 5 quest.
 underneath and can't smash it, so shoot it, or jump and swing at it (a bat takes two hits, the
 Frozen Tuna one). Its spotlight is cyan on patrol and turns red on the cat it tracks.
 - It spots cats from 18 m and holds about 6 m away from them.
-- With a clear view of a cat it adds **0.5 heat per second**. **This stacks:** three drones on you
-  add 1.5 per second.
+- With a clear view of a cat it adds **0.25 heat per second**. **This stacks:** three drones on you
+  add 0.75 per second.
 - Every 2 seconds it fires a water zap at the spot you're standing on. The zap takes 0.25 seconds
   to land, so keep moving. A hit (1.4 m splash) takes **15 HP** with a small hop. It never steals.
 - A **stun** (YARN-ZOOKA) makes it sink to **1 m**, in easy reach of a melee swing.
@@ -1414,9 +1414,15 @@ computer, and each player's own computer checks their own paws.
 The longer you stay up top, the angrier the city gets. The **HEAT** bar (top-right, flashing
 red and blue) is **shared by every player**:
 
-- It's the **district's clock**: it creeps up **0.167 per second** while any cat is in the city
-  (about **10 minutes** from 0 to 100 if you cause no trouble; the exit opens at about 7.5).
-- Trouble adds more: **+0.5** per gun hit on a Roomba, **+3** per Roomba destroyed. (The golden
+- It's the **district's clock**, but only a slow one: it creeps up **0.111 per second** while any cat is
+  in the city (about **15 minutes** from 0 to 100 if you cause no trouble; the exit opens at about 11),
+  **+5%** faster for every extra cat up top.
+- Most heat comes from what you DO: **+2.5** per bot destroyed, **+0.8** per mess (bins, cones, boxes,
+  posters), **+0.25/s** per squirt-drone watching you, and a little per gun hit (**+0.15** times the
+  gun's City Heat Per Hit). A loud raid (~20 kills plus mess) hits 100 in about 7 minutes.
+- **Trouble is smoothed:** heat from trouble waits in a pool and trickles onto the bar at most
+  **1 per second** (Heat > **Trouble Heat Per Second Max**; 0 = lands at once). A killing spree costs the
+  same in the end, but the bar climbs steadily instead of jumping a whole level in a few seconds. (The golden
   koi doesn't add heat any more: it's already heavy and noisy. To bring it back, set **Heat On
   Pickup** on `items/golden_koi.tres`, e.g. 20.)
 - It **never cools down** by itself (extracting and going home don't lower it). Only a new
@@ -1448,15 +1454,17 @@ Collision). Everyone hears its
 siren. A giant Roomba (`scenes/roomba_boss.tscn`) drives in from across town, following the streets around buildings until it can see you (every Roomba
 does this while chasing). It **always knows where you are** (sight 400 m), bonks for **67 HP** (two
 bonks = knocked out), can't be run over, and has **600 health** (once it's been shot, a big health bar
-floats over it, like the little ones' but twice the size). Destroy it and it spits out **SCRAP**
-(fuel for The Mainframe, see above). In the DEEP CLEAN, destroying it doesn't stop the swarm.
+floats over it, like the little ones' but twice the size). Destroy it and it spits out **one SCRAP per
+cat up top** (fuel for The Mainframe and upgrades; **Drop Once Per Cat** on `roomba_boss.tscn`). Every
+regular bot a cat smashes also has a **5%** chance to drop a SCRAP (**Scrap Chance** on each bot scene;
+SCRAP MAGNET adds to it). In the DEEP CLEAN, destroying it doesn't stop the swarm.
 
 **Where it lives:** `scripts/heat_meter.gd` on the **Heat** node in `main.tscn` (the number, the
 levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas and the boss).
 
 **Tuning:**
-- Select **Heat** in `main.tscn`: **Heating Up** (Heat Per Second, Heat Per Roomba Hit, Heat Per
-  Roomba Destroyed), **Cooling Down** (Cool Per Extraction, Cool Per Second When Empty, Cool When
+- Select **Heat** in `main.tscn`: **Heating Up** (Heat Per Second, Heat Per Extra Cat, Heat Per Roomba Hit, Heat Per
+  Roomba Destroyed, Trouble Heat Per Second Max), **Cooling Down** (Cool Per Extraction, Cool Per Second When Empty, Cool When
   Boss Destroyed), **What Each Level Does** (Extra Roombas Per Level, Speed Per Level, Sight Per
   Level).
 - Select **Roombas**: **Reinforce Seconds**, and under **MEGA VAC-COP**: Boss Spawn Distance,
@@ -1681,7 +1689,7 @@ All five are ordinary scenes + cards, so every number below is in the Inspector:
 | Weapon | Price | Paws | What it does |
 |---|---|---|---|
 | FROZEN TUNA | $80 | 2 | Melee. Slow, wide, launches cats and cars. Wet slap: `sounds/sfx/fish_slap.wav` |
-| THE RED DOT | $90 | 1 | Hold for a steady laser: 8 damage, 25 shots a second, overheats after ~2 s |
+| THE RED DOT | $140 | 1 | Hold for a steady laser: 6 damage, 25 shots a second, only **25 m** reach, overheats after ~1.2 s |
 | HAIRBALL BLASTER | $120 | 1 | 7 pellets per click, 18 damage each, 22 m range. Hold two! |
 | YARN-ZOOKA | $160 | 2 | 4.5 m blast, 35 damage, stuns VAC-COPs (bosses too) for 6 seconds |
 | CUCUMBER LAUNCHER | $280 | 2 | 5.5 m blast, 110 damage, huge shove, overheats on the second quick shot |
@@ -3419,7 +3427,7 @@ The TUTORIAL always starts with none, so it's the same for everyone.
 | Don Catleone / Pawnie | UPGRADE MY RANK | **DEEP POCKETS** (2): loot bag 3 -> 4 -> 5. **BIGGER BACKPACK** (2): 6 -> 8 -> 10. |
 | The TINKER WORKBENCH (east wall, between the litterbox and the CAT-CAM TV) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
 | Frankie "Espresso" / Jittery Jax | GARAGE & ZOOMIES UPGRADES | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), then SELECT VEHICLE buttons. |
-| Paulie "No-Brooms" / Bumper-Car Benny | COMBAT TRAINING | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): bots you smash have a 15% / 30% chance to drop a SCRAP (not bosses). |
+| Paulie "No-Brooms" / Bumper-Car Benny | COMBAT TRAINING | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): bots you smash have +15% / +30% chance to drop a SCRAP, on top of the usual 5% (not bosses). |
 | Nonna Catleone / "Gold-Tooth" Gus | NONNA'S KITCHEN / GUS'S FENCE | **GOURMET FENCE** (2): fish, sardines and koi pay +20% / +40% at the exit. **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. |
 | Sal / Calamity Clara / Lil' Mittens / Billy | STREET TRICKS | **HEAVY PAWS** (2): melee +25% / +50% damage and knockback. **INSIDER TUNNEL** (2, crew): your exit opens 5 / 10 heat earlier. |
 
@@ -3432,6 +3440,14 @@ with a Twin-Turbo upgrades everyone's car.
 - **ARMORED MEOW-VAN** (`models/fish_van.glb`): 24 m/s, heavy, smashes bots at half the speed, 3 passengers, fish sign on the roof.
 - Once you own one, Frankie / Jax show **SELECT VEHICLE** buttons. That changes your **gang's** car for everyone
   (only while it's parked and empty). Your pick is saved and comes back next game.
+
+### Balance targets (Nov 2026 balance pass)
+- A careful raid pays about **$100-150** (3-slot loot bag), a greedy koi raid **$450-500**, quests $100-250.
+- Every upgrade together costs about **$4,700 + 46 scrap** per cat: the first one after 1-2 raids, the
+  middle tiers around raid 5, everything around raids 15-20. Scrap is the real gate (bosses drop one per cat
+  up top, regular bots 5%); cash mostly buys guns and snacks.
+- DEEP POCKETS tier 1 costs **2 scrap** on purpose: +1 bag slot is +33% income, so it shouldn't be the
+  automatic first buy.
 
 ### Changing prices and numbers (Godot editor)
 - **Prices:** open `scenes/main.tscn`, click the **Upgrades** node (right under Wallet) > Inspector > **Costs**.

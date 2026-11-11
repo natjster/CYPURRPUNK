@@ -39,16 +39,24 @@ const MAX_LEVEL: int = 5
 
 @export_group("Heating up")
 ## Heat added every second while at least one cat is up in the city.
-## 0.167 = about 10 minutes up top from a fresh district to the DEEP CLEAN, if you cause no
-## trouble at all (the exit opens after about 7.5).
-@export var heat_per_second: float = 0.167
+## 0.111 = about 15 minutes up top from a fresh district to the DEEP CLEAN, if you cause no
+## trouble at all (the exit opens after about 11). It's only the slow safety clock: most heat
+## should come from what cats DO (smashing bots, making a mess).
+@export var heat_per_second: float = 0.111
 ## More cats up top heat the city faster: +this much (0.1 = +10%) for every cat up there beyond
-## the first. (8 cats up top with 0.1 = 1.7x as fast.)
-@export var heat_per_extra_cat: float = 0.1
-## Heat added each time a gun hits a Roomba.
-@export var heat_per_roomba_hit: float = 0.5
-## Heat added each time a Roomba is destroyed.
-@export var heat_per_roomba_destroyed: float = 3.0
+## the first. (8 cats up top with 0.05 = 1.35x as fast.)
+@export var heat_per_extra_cat: float = 0.05
+## Heat added each time a gun hits a Roomba (times the gun's "City Heat Per Hit"). Small on
+## purpose: just firing shouldn't matter much - what you DESTROY does.
+@export var heat_per_roomba_hit: float = 0.15
+## Heat added each time a Roomba is destroyed. (A loud raid of ~20 kills = +50 heat.)
+@export var heat_per_roomba_destroyed: float = 2.5
+
+## TROUBLE IS SMOOTHED: heat from trouble (kills, hits, mess, drones) doesn't land on the bar all
+## at once. It waits in a "pending" pool and trickles in at most this many heat per second, so a
+## killing spree still costs the same in the end but the bar climbs steadily instead of jumping a
+## whole level in a few seconds. (0 = off: trouble lands at once, like before.)
+@export var trouble_heat_per_second_max: float = 1.0
 
 ## Once the exit is open (or every cat has used its one trip up) and EVERY cat is back down in
 ## the hub (all extracted or knocked out), the heat races up by this much per second instead, so the DEEP CLEAN and the next district
@@ -74,6 +82,9 @@ const MAX_LEVEL: int = 5
 
 ## The heat right now (everyone has a copy; the host's is the real one).
 var heat: float = 0.0
+
+## Host: trouble heat still waiting to trickle onto the bar (see trouble_heat_per_second_max).
+var pending_heat: float = 0.0
 
 var _send_timer: float = 0.0
 var _last_level: int = 1
@@ -124,6 +135,9 @@ func add_heat(amount: float) -> void:
 		return  # a SEWER BREACH is underground: nothing down there touches the city's heat
 	if amount > 0.0:
 		amount *= _mainframe_multiplier()
+		if trouble_heat_per_second_max > 0.0:
+			pending_heat += amount  # trickles in from _physics_process (smoothing)
+			return
 	heat = clampf(heat + amount, 0.0, MAX_HEAT)
 	_send_timer = 0.0  # tell everyone right away
 
@@ -138,6 +152,7 @@ func start_district() -> void:
 ## THE MAINFRAME before anyone went up).
 func restart_district_heat() -> void:
 	heat = Mainframe.instance.starting_heat() if Mainframe.instance != null else 0.0
+	pending_heat = 0.0  # last district's trouble is forgotten
 	_last_level = level()  # (no level-up sound for starting high)
 	_send_timer = 0.0
 
@@ -150,6 +165,14 @@ func _mainframe_multiplier() -> float:
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or Game.instance == null:
 		return
+	# Trouble heat waiting in the pool trickles onto the bar (smoothing, see add_heat).
+	if pending_heat > 0.0:
+		if Mainframe.instance != null and Mainframe.instance.breach_busy:
+			pending_heat = 0.0
+		else:
+			var step := minf(pending_heat, trouble_heat_per_second_max * delta)
+			pending_heat -= step
+			heat = minf(heat + step, MAX_HEAT)
 	var cats_up := Game.instance.players_up_top()
 	if cats_up > 0:
 		var crowd := 1.0 + heat_per_extra_cat * (cats_up - 1)

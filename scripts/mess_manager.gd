@@ -29,7 +29,7 @@ static var instance: MessManager
 
 @export_group("Making a mess")
 ## Heat each mess adds (heat goes 0 to 100; a whole raid adds ~100 over 10 minutes).
-@export var heat_per_mess: float = 0.4
+@export var heat_per_mess: float = 0.8
 ## How fast (metres per second) a cat must run into a BIN to knock it over. Cats walk at 4.5 and
 ## do ZOOMIES at 9 (cat_player.gd), so 6 = only zoomies tip a bin.
 @export var bin_knock_speed: float = 6.0

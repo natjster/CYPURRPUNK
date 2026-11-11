@@ -44,21 +44,21 @@ static var instance: Upgrades
 
 ## Each upgrade's price per tier: id -> [[cash, scrap], ...] (see the top of this file).
 @export var costs: Dictionary = {
-	"shop_crates": [[150, 1], [300, 2], [500, 3]],
-	"deep_pockets": [[150, 1], [350, 2]],
-	"bigger_pack": [[120, 1], [250, 2]],
-	"deluxe_litterbox": [[150, 1], [300, 2]],
-	"mainframe_capacitor": [[200, 1], [400, 2]],
-	"espresso_zoomies": [[150, 1], [300, 2]],
-	"turbo_engine": [[150, 1], [300, 2]],
-	"unlock_cyber_bike": [[250, 2]],
-	"unlock_fish_van": [[350, 2]],
-	"thick_fur": [[150, 1], [300, 2]],
-	"scrap_magnet": [[200, 1], [400, 2]],
-	"gourmet_fence": [[150, 1], [300, 2]],
-	"stuffed_cheeks": [[120, 1], [250, 1]],
-	"heavy_paws": [[120, 1], [250, 2]],
-	"insider_tunnel": [[200, 1], [400, 2]],
+	"shop_crates": [[100, 1], [200, 2], [320, 3]],
+	"deep_pockets": [[100, 2], [230, 2]],
+	"bigger_pack": [[80, 1], [160, 2]],
+	"deluxe_litterbox": [[100, 1], [200, 2]],
+	"mainframe_capacitor": [[130, 1], [260, 2]],
+	"espresso_zoomies": [[100, 1], [200, 2]],
+	"turbo_engine": [[100, 1], [200, 2]],
+	"unlock_cyber_bike": [[160, 2]],
+	"unlock_fish_van": [[230, 2]],
+	"thick_fur": [[100, 1], [200, 2]],
+	"scrap_magnet": [[130, 1], [260, 2]],
+	"gourmet_fence": [[100, 1], [200, 2]],
+	"stuffed_cheeks": [[80, 1], [160, 1]],
+	"heavy_paws": [[80, 1], [160, 2]],
+	"insider_tunnel": [[130, 1], [260, 2]],
 }
 
 @export_group("Weapon crates (Comrade Whiskers / Clawd)")
