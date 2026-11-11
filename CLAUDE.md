@@ -12,7 +12,8 @@ Before changing or debugging a system, read ONLY the topic file(s) it touches (t
 |---|---|
 | `ui-hud.md` | UI LOOKS (PS1 / MODERN), the HUD + its statics, top row, HudStyle, menu view / PS1Overlay |
 | `couch-coop.md` | lobby, Seats, Controls + rebinding, SeatFocus, on-screen keyboard, PlayerPause, split screen |
-| `networking.md` | 8-player balance scaling, replication intervals, net stats |
+| `networking.md` | 8-player balance scaling, replication intervals, net stats, Net autoload (ENet, LAN, UPnP room codes) |
+| `interaction.md` | the E-key Interactable framework (prompts, priorities, members) |
 | `city.md` | CityGenerator (determinism!), LevelKit models + street props, DISTRICT TWISTS, MEOW-MART interior |
 | `gangs-modes.md` | CO-OP vs TURF WAR, Teams, gang hubs, PvP, robbing, feed, solo/co-op layout |
 | `heist.md` | extraction loop, hub deploy/return, loot tiers, HEAT + bosses, one trip per district, manholes, payphones, exits, green arrow |
@@ -43,6 +44,10 @@ short; detail goes in topic files. When notes in a topic file go stale, fix them
 - Run long test batches in one command and print only the lines you need (pipe through `Select-String "DevCapture"`).
 - `.claude/worktrees/` holds old copies of the whole project: never search inside it.
 - The art/sound tool servers (`.mcp.json`) are off by default; see `docs/claude/tools-pipeline.md` to turn them on.
+- Files over ~800 lines (`meow_mart_interior.gd`, `item_manager.gd`, `hub.gd`, `cat_player.gd`, `city_generator.gd`,
+  `guide/08-*.md`): when a task already touches one, split a self-contained chunk into its own file (like
+  `scripts/dev_tests/`), so later sessions read less. Don't split files just for the sake of it.
+- This file must stay under ~10 KB: new detail goes in a topic file, with at most a one-line pointer here.
 
 ## Layout
 - Main scene = `scenes/game_screen.tscn` (`scripts/ui/game_screen.gd`, `GameScreen.instance`): `main.tscn`
@@ -66,9 +71,8 @@ short; detail goes in topic files. When notes in a topic file go stale, fix them
   seat stands still). Couch players: `Game.add_local_player(slot, {name, look, cat_id})` / `remove_local_player(slot)`;
   `PlayerProfile.restore(player_id, cat_id, name)` per local player. Per-player HUD feedback currently only
   for `PlayerId.first_local()`. Test: `--add_local=N --as_local=S`, `--remove_local=S`.
-- Autoloads: `Net` (`scripts/net.gd`: ENet host/join/leave on port 7777 — the only file that knows
-  the transport; Steam swaps in here; LAN discovery: hosts broadcast `Net.advert` (set by game.gd
-  `_process`) on UDP 7778, the MULTIPLAYER screen `start_listening()` -> `found_games` / `games_changed`; INTERNET: `host()` starts a UPnP Thread, `upnp_status` ""/opening/ready/unavailable + `room_code`, signal `upnp_updated`, `ip_to_code`/`code_to_ip`; `join` takes a code or address; `_close_router` in `_go_offline`/`_exit_tree`; invite rows in PauseMenu + PlayerPause; test runs never touch the real router. Test: `--test-room-code`, `--fake_upnp=IP|off`, `--address=`), `Settings` (`scripts/settings.gd`: all player settings,
+- Autoloads: `Net` (`scripts/net.gd`: ENet/LAN/UPnP room codes, the only file that knows the transport;
+  details in `docs/claude/networking.md`), `Settings` (`scripts/settings.gd`: all player settings,
   saved to `user://settings.cfg` = `%APPDATA%\MeowCity1999` (old name kept on purpose so saves survive the rename to CYPURRPUNK); test runs with `--capture` use
   defaults and never save), `Controls`, `Events`, `DevCapture` (debug builds only).
 - EVENTS: autoload `Events` (`scripts/events.gd`): signals `district_sealed`, `player_extracted`, `player_knocked_out`,
@@ -79,13 +83,8 @@ short; detail goes in topic files. When notes in a topic file go stale, fix them
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
 
 ## Interaction framework (E key)
-`scripts/interactable.gd` (`Interactable`): anything in group `interactables` answers `interact_distance(cat)` (-1 = not
-now), `interact_prompt(cat)` ("" = no HUD line), `interact(cat)`, optional `interact_priority()` (items 30, NPCs 20, stash 10,
-car 0). cat_player E -> `Interactable.try_use(cat)`; hud.gd `_update_prompt` shows `Interactable.prompt_for(cat)` in `Prompt`.
-`Interactable` is also a node (Prompt/Radius/Priority exports, `used(cat)` signal; `Interactable.make(parent, at, text, r, prio)`):
-the stash lockers are one. Members: ItemManager (nearest press-E street item), Npc (+ Payphone/Shopkeeper), GetawayCar
-(`nearby_car` door zone, "GET IN"). Runs on the presser's computer; game changes go through host RPCs. Never add
-interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames after `--pos`), `--talk`, `--grab`.
+`scripts/interactable.gd` (`Interactable`, group `interactables`): never add interact branches to cat_player.
+Details in `docs/claude/interaction.md`.
 
 ## Git
 Git for Windows is NOT on PATH in Claude's shell: use `& "$env:ProgramFiles\Git\cmd\git.exe"`.
