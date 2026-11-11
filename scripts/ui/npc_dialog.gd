@@ -15,7 +15,8 @@ extends Control
 ## Inspector > Layout > Transform and change Size (in HUD units: the screen is 720 tall).
 ## On a narrow split screen it shrinks by itself to fit (_fit_panel), never past that size.
 ## It's anchored to the bottom middle of the screen, so it stays centred on wide monitors.
-## Colours / borders of the box and buttons: ui/hud_theme.tres.
+## Colours / borders of the box and buttons: ui/hud_theme.tres (ocean blue, like ui/hud_style.tres;
+## the corner brackets come from HudStyle.draw_corners).
 ##
 ## Whoever wants to talk calls NpcDialog.for_cat(cat).open(name, line, choices), where each
 ## choice is [button text, function to run when clicked]. NPCs (scripts/npcs/npc.gd) do this
@@ -82,6 +83,8 @@ func _ready() -> void:
 	hide()
 	_design = [panel.offset_left, panel.offset_top, panel.offset_right, panel.offset_bottom]
 	resized.connect(_fit_panel)
+	# The bright corner brackets every other HUD box has (HudStyle), drawn over the theme's box.
+	panel.draw.connect(func(): HudStyle.draw_corners(panel, Rect2(Vector2.ZERO, panel.size)))
 	_focus.highlighted.connect(func(button: Button): scroll.ensure_control_visible(button))  # long pages scroll along
 	_fit_panel()
 

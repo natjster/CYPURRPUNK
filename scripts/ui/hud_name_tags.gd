@@ -34,6 +34,17 @@ const GROUP := "hud_name_tags"
 ## Which physics layers count as walls for hide_behind_walls (layer 1 = the city and hub).
 @export_flags_3d_physics var wall_layers: int = 1
 
+@export_group("Shouts (MEOW taunt)")
+## A shout slams in this many times its size...
+@export var shout_pop: float = 1.8
+## ...and snaps down to normal over this many seconds.
+@export var shout_slam_seconds: float = 0.14
+## Shake while it lands, and the tremble after (fractions of the text height: 0.12 = 12%).
+@export var shout_shake: float = 0.14
+@export var shout_tremble: float = 0.03
+## It fades out over its last this-many seconds.
+@export var shout_fade: float = 0.3
+
 ## Label3D instance id -> its HUD Label.
 var _labels := {}
 
@@ -107,8 +118,26 @@ func _place(label: Label, tag: Label3D, camera: Camera3D, game_size: Vector2) ->
 	# Position: the game picture is game_size pixels; this HUD layer covers it exactly.
 	var on_screen := camera.unproject_position(where) * (size / game_size)
 	label.size = label.get_combined_minimum_size()
+	label.pivot_offset = label.size / 2.0
+	label.scale = Vector2.ONE
+	if tag.has_meta("shout_at"):
+		on_screen += _shout(label, tag, font_size)
 	label.position = (on_screen - label.size / 2.0).round()
 	return true
+
+
+## A SHOUT (a cat's MEOW taunt: meta "shout_at" = when, in msec; "shout_seconds" = how long it
+## stays): it slams in at Shout Pop times its size and snaps down, shakes hard then keeps trembling,
+## and fades over the last Shout Fade seconds. Returns how far to nudge it this frame (the shake).
+func _shout(label: Label, tag: Label3D, font_size: int) -> Vector2:
+	var age := (Time.get_ticks_msec() - int(tag.get_meta("shout_at"))) / 1000.0
+	var life: float = tag.get_meta("shout_seconds", 1.8)
+	var slam := clampf(age / maxf(shout_slam_seconds, 0.01), 0.0, 1.0)
+	label.scale = Vector2.ONE * lerpf(shout_pop, 1.0, 1.0 - pow(1.0 - slam, 3.0))
+	# Shake: strong for the first moment, then a small tremble (in font-size units, so far = small).
+	var strength := lerpf(shout_shake, shout_tremble, clampf(age / 0.35, 0.0, 1.0)) * font_size
+	label.modulate.a *= clampf((life - age) / maxf(shout_fade, 0.01), 0.0, 1.0)
+	return Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * strength
 
 
 ## Is there a wall between the camera and this name? (The cat / NPC itself, our own cat and

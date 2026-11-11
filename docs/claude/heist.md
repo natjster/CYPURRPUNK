@@ -1,4 +1,4 @@
-# Extraction loop, heat, one trip per district, manholes / payphones / exits, green arrow
+# Extraction loop, heat, one trip per district, manholes / payphones / exits, blue arrow
 
 (Split out of CLAUDE.md. Keep this file up to date when this system changes.)
 
@@ -34,6 +34,6 @@
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
   `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
-  GREEN ARROW: HUD `Compass` (`HudCompassArrow`, scripts/ui/hud_compass_arrow.gd, software-projected 3D, `point_at(yaw, text, urgent)` /
+  BLUE ARROW: HUD `Compass` (`HudCompassArrow`, scripts/ui/hud_compass_arrow.gd, software-projected 3D, `point_at(yaw, text, urgent)` /
   `hide_arrow`), driven by `fish_heist._update_hud_for`: up top + own exit open + not sealed -> nearest payphone (`nearest_payphone`)
   until `is_revealed(team)`, then `exit_for(team)`; urgent at `seal_warning_at_heat`. DropOff now only = sewers / breach text. `DevCapture compass`.

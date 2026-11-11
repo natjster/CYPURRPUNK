@@ -1,6 +1,6 @@
 class_name HudCompassArrow
 extends Control
-## CYPURRPUNK — the big GREEN 3D ARROW at the top-middle of the screen ("Crazy Taxi" style).
+## CYPURRPUNK — the big OCEAN-BLUE 3D ARROW at the top-middle of the screen ("Crazy Taxi" style).
 ## Lives at scenes/ui/hud.tscn > HUD > Frame > Top > Compass (every player's HUD has one).
 ##
 ## It shows up as soon as YOUR GANG'S EXIT IS OPEN while you're up in the city:
@@ -25,11 +25,15 @@ extends Control
 ## is showing it slides down underneath it by itself. Everything else is in the Inspector.
 
 @export_group("Colours")
-## The arrow's green (the lit top face; sides are darker shades of it).
+## On = the arrow and its label box use the shared HUD colours (ui/hud_style.tres: the same ocean
+## blue as the weapon box, buff badges and talk box), so the three colours below are ignored.
+## Off = use the three colours below instead.
+@export var use_hud_style: bool = true
+## The arrow's colour (the lit top face; sides are darker shades of it).
 @export var arrow_color: Color = Color(0.15, 1.0, 0.25)
 ## Thin outline round every face (chunky PS1 edges).
 @export var edge_color: Color = Color(0.02, 0.22, 0.05)
-## The words under the arrow ("PAYPHONE  45m").
+## The words under the arrow ("PAYPHONE  45m"), in a little HUD box.
 @export var label_color: Color = Color(0.45, 1.0, 0.5)
 
 @export_group("Shape")
@@ -161,22 +165,29 @@ func _draw() -> void:
 	var flash := 0.0
 	if _urgent:
 		flash = 0.35 * maxf(0.0, sin(_clock * TAU * bob_speed))
+	var style := HudStyle.current()
+	var body := Color(style.border_color, 1.0) if use_hud_style else arrow_color
+	var edge := Color(0.01, 0.05, 0.1) if use_hud_style else edge_color
+	var words := style.text_color if use_hud_style else label_color
 	for face in faces:
-		var colour: Color = (arrow_color * float(face["shade"])).lerp(Color.WHITE, flash)
+		var colour: Color = (body * float(face["shade"])).lerp(Color.WHITE, flash)
 		colour.a = 1.0
 		# (draw_primitive takes a 3- or 4-cornered face as it is: no cutting into triangles that a
 		# squashed, pixel-snapped face could make fail.)
 		draw_primitive(face["points"], PackedColorArray([colour]), PackedVector2Array())
 		var outline: PackedVector2Array = face["points"].duplicate()
 		outline.append(outline[0])
-		draw_polyline(outline, edge_color, Hud.line(1.5))
+		draw_polyline(outline, edge, Hud.line(1.5))
 	# The words underneath: "PAYPHONE  45m" / "EXIT  80m".
 	if _text != "":
 		var font := get_theme_font("font", "Label")
 		var text_size := font.get_string_size(_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size)
 		var at := Vector2((size.x - text_size.x) * 0.5, arrow_size * 2.35 + text_size.y * 0.5)
-		draw_string_outline(font, at, _text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, Hud.outline(6), Color(0.01, 0.06, 0.02))
-		draw_string(font, at, _text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, label_color.lerp(Color.WHITE, flash))
+		# The same translucent box with bright corners as every other HUD panel (HudStyle).
+		var box := Rect2(at.x - 10.0, at.y - font.get_ascent(label_font_size) - 4.0, text_size.x + 20.0, text_size.y + 8.0)
+		HudStyle.draw_panel(self, box)
+		draw_string_outline(font, at, _text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, Hud.outline(4), Color(0.01, 0.04, 0.08))
+		draw_string(font, at, _text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, words.lerp(Color.WHITE, flash))
 
 
 ## Turn a point (or direction) of the arrow to point at the target (_yaw), then tilt it towards

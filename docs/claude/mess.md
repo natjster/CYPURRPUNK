@@ -13,9 +13,9 @@
   Remarks: every computer counts knocks -> `OvercleanAnnouncer.say(overclean_mess_N)`. Bots (`roomba.gd`): states appended
   `TIDY_GO/TIDYING/INVESTIGATE` (keep new states at the END: synced int), `_look_for_mess` -> `claim_nearest` (claim valid while
   `tidying_prop()`), `distracted_sight`, `MessManager.tidy(id)`; `tidies_messes` false for drone/trapper (their `_ready`), never
-  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (`TauntBubble` name-tag marker under CatModel, plain outlined text, meta
-  `typed` (visible_characters); `_type_taunt` types it and plays `CatLook.voice_sound(look)`
-  blips at `voice_pitch()`; voice = look key `voice` (`CatLook.VOICES` male/female, `voice_of`, MY CAT VOICE row)) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
+  boss/breach. MEOW: `CatPlayer.meow()` -> `_meow` RPC (`TauntBubble` name-tag marker under CatModel, white SHOUT, no typing: metas
+  `shout_at` (msec) / `shout_seconds` -> `HudNameTags._shout` pop/shake/fade; `moves.puff()` + `Feedback.shake_near`; `_shout_blips`
+  plays a burst of `CatLook.voice_sound(look)` at `voice_pitch()*taunt_shout_pitch`; voice = look key `voice` (`CatLook.VOICES` male/female, `voice_of`, MY CAT VOICE row)) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
   Test: `--mess=N`, `--ram_prop=bin|cone|box [--ram_trace]`, `--scratch`, `--shoot_prop`, `--ghost`, `--face_mess`,
   `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines, `layout=` hash = same city check). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`
   kind / `generate_cat_taunt`, presets `cardboard_thump`, `vacuum`).

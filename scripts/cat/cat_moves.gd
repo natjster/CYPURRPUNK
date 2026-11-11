@@ -222,6 +222,13 @@ func air_lean(on_floor: bool, vertical_speed: float) -> float:
 ## EVERY computer, every cat (from CatPlayer._update_footsteps): squash and stretch the model.
 ## vertical_speed = how fast the cat moved up (+) or down (-) this frame; grounded = on the floor
 ## (our own cat knows, other cats are guessed from their motion).
+## Every computer: stretch the cat tall for a moment ("amount" = 0.25 -> 25% taller), then it
+## springs back with the usual wobble. The MEOW shout uses it (cat_player.gd _show_taunt).
+func puff(amount: float) -> void:
+	_squash = clampf(amount, -0.5, 0.5)
+	_squash_speed = 0.0
+
+
 func animate(delta: float, vertical_speed: float, grounded: bool) -> void:
 	var model := _cat.cat_model
 	if model == null:

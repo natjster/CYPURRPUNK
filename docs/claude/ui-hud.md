@@ -13,7 +13,8 @@
   driver only, `_update_boost`]).
   OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
   `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
-  phases 2-4 (Inventory, Shop, Workbench). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  phases 2-4 (Inventory, Shop, Workbench). `ui/hud_theme.tres` (talk box + pause buttons/panels) uses the same ocean-blue
+  values by hand (+ `HudStyle.draw_corners` on NpcDialog's Panel); the Compass arrow reads HudStyle (`use_hud_style`). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
   GameScreen keeps that player's input for their HUD.

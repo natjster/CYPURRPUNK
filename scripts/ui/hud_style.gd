@@ -102,17 +102,26 @@ static func draw_panel(canvas: CanvasItem, rect: Rect2, faint: bool = false, edg
 	var border := edge if edge.a > 0.0 else (style.faint_border_color if faint else style.border_color)
 	var width := Hud.line(style.border_width)
 	canvas.draw_rect(rect.grow(-width / 2.0), border, false, width)
-	if style.corner_length > 0.0 and not faint:
-		var bright := border.lightened(0.35)
-		bright.a = 1.0
-		var c := minf(style.corner_length, minf(rect.size.x, rect.size.y) / 3.0)
-		var w := Hud.line(style.border_width * 1.5)
-		var p := rect.position
-		var q := rect.end
-		for corner in [[p, Vector2(1, 1)], [Vector2(q.x, p.y), Vector2(-1, 1)], [Vector2(p.x, q.y), Vector2(1, -1)], [q, Vector2(-1, -1)]]:
-			var at: Vector2 = corner[0] + corner[1] * w / 2.0
-			canvas.draw_line(at, at + Vector2(c * corner[1].x, 0), bright, w)
-			canvas.draw_line(at, at + Vector2(0, c * corner[1].y), bright, w)
+	if not faint:
+		draw_corners(canvas, rect, border)
+
+
+## Just the brighter corner brackets of a panel (the talk box's PanelContainer draws its own box
+## from ui/hud_theme.tres, then adds these on top so it matches the rest of the HUD).
+static func draw_corners(canvas: CanvasItem, rect: Rect2, edge: Color = Color(0, 0, 0, 0)) -> void:
+	var style := current()
+	if style.corner_length <= 0.0:
+		return
+	var bright := (edge if edge.a > 0.0 else style.border_color).lightened(0.35)
+	bright.a = 1.0
+	var c := minf(style.corner_length, minf(rect.size.x, rect.size.y) / 3.0)
+	var w := Hud.line(style.border_width * 1.5)
+	var p := rect.position
+	var q := rect.end
+	for corner in [[p, Vector2(1, 1)], [Vector2(q.x, p.y), Vector2(-1, 1)], [Vector2(p.x, q.y), Vector2(1, -1)], [q, Vector2(-1, -1)]]:
+		var at: Vector2 = corner[0] + corner[1] * w / 2.0
+		canvas.draw_line(at, at + Vector2(c * corner[1].x, 0), bright, w)
+		canvas.draw_line(at, at + Vector2(0, c * corner[1].y), bright, w)
 
 
 ## Item side-profile icon (ui/icons/items/<id>.png), or null if there isn't one yet.

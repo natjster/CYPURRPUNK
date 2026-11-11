@@ -67,8 +67,8 @@ extends Node3D
 ## ...and from every entry manhole, where cats come up.
 @export var payphone_min_distance: float = 25.0
 
-@export_group("The green arrow (HUD)")
-## From this heat on, the big green arrow at the top of the screen (scripts/ui/hud_compass_arrow.gd)
+@export_group("The blue arrow (HUD)")
+## From this heat on, the big blue arrow at the top of the screen (scripts/ui/hud_compass_arrow.gd)
 ## bobs and pulses faster: the hatch seals at 100!
 @export var seal_warning_at_heat: float = 90.0
 
@@ -520,7 +520,7 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var mainframe := Mainframe.instance
 	var alarm := mainframe.breach_busy or not mainframe.warning_teams.is_empty()
 	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if alarm else DROP_OFF_COLOR, seat)
-	# THE GREEN ARROW (Hud "Compass", scripts/ui/hud_compass_arrow.gd): up top, once our gang's exit
+	# THE BLUE ARROW (Hud "Compass", scripts/ui/hud_compass_arrow.gd): up top, once our gang's exit
 	# is open and the hatch isn't sealed. First it points at the nearest ringing payphone; once
 	# someone in our gang has called the boss, at our exit manhole.
 	var compass := Hud.element("Compass", seat) as HudCompassArrow

@@ -7,12 +7,12 @@ extends Node
 ## What the player sees:
 ##   - A box at the top of the screen (HUD "TutorialBox") with the current step in yellow and a
 ##     white line saying what to do.
-##   - The real game's big GREEN ARROW (HUD "Compass", scripts/ui/hud_compass_arrow.gd) just under
+##   - The real game's big BLUE ARROW (HUD "Compass", scripts/ui/hud_compass_arrow.gd) just under
 ##     the box, pointing at the thing to go to, with its name and distance ("SHOP  12m").
 ##     Steps 1-7 and 9: this script points it. Step 8: fish_heist.gd points it, exactly like in a
 ##     real raid (nearest ringing PAYPHONE first, then the EXIT once you've called).
 ##   - A glowing cyan beacon (an arrow bobbing over a ring of light) floating above the target
-##     (steps 1-7 and 9 only: at step 8 you find the payphone and exit with the green arrow alone).
+##     (steps 1-7 and 9 only: at step 8 you find the payphone and exit with the blue arrow alone).
 ##
 ## The 9 steps (all the text is editable: select Tutorial in main.tscn, Inspector > Step 1..9):
 ##   PART 1 - THE SEWERS     1 take MITTENS' FISH from Lil' Mittens   2 buy a weapon at the shop
@@ -115,12 +115,12 @@ extends Node
 ## Shown if a VAC-COP bonked a fish out of your bag.
 @export_multiline var step7_fish_back: String = "A VAC-COP knocked a fish loose! Grab it back [{E}] ({fish}/{need})."
 @export_group("Step 8 - Payphone + Extract")
-## Shown before you've answered a payphone (the green arrow points at the nearest PAYPHONE).
-@export var step8_title: String = "STEP 8/9: FOLLOW THE GREEN ARROW TO A PAYPHONE"
-@export_multiline var step8_hint: String = "HEAT HIT {heat}! Your exit is open! Follow the big GREEN ARROW at the top to the nearest ringing PAYPHONE and press [{E}] so Don sends you the exit location."
-## Shown the moment you've answered (the green arrow flips to the EXIT).
-@export var step8_exit_title: String = "STEP 8/9: FOLLOW THE GREEN ARROW TO THE EXIT"
-@export_multiline var step8_exit: String = "Don's on the line above the phone! The GREEN ARROW now points to the EXIT - follow it to the glowing manhole to bring your Fish and Scrap home in your backpack!"
+## Shown before you've answered a payphone (the blue arrow points at the nearest PAYPHONE).
+@export var step8_title: String = "STEP 8/9: FOLLOW THE BLUE ARROW TO A PAYPHONE"
+@export_multiline var step8_hint: String = "HEAT HIT {heat}! Your exit is open! Follow the big BLUE ARROW at the top to the nearest ringing PAYPHONE and press [{E}] so Don sends you the exit location."
+## Shown the moment you've answered (the blue arrow flips to the EXIT).
+@export var step8_exit_title: String = "STEP 8/9: FOLLOW THE BLUE ARROW TO THE EXIT"
+@export_multiline var step8_exit: String = "Don's on the line above the phone! The BLUE ARROW now points to the EXIT - follow it to the glowing manhole to bring your Fish and Scrap home in your backpack!"
 @export_group("Step 9 - Feed")
 @export var step9_title: String = "STEP 9/9: FEED SCRAP TO THE MAINFRAME"
 @export_multiline var step9_hint: String = "You're home with your fish + the $100 quest bonus! (Sell fish to Comrade Whiskers later.) Walk to the Mainframe on the west wall and press [{E}] to feed it your SCRAP (+25%)."
@@ -491,12 +491,12 @@ func _show(cat: CatPlayer, target: Vector3) -> void:
 	Hud.set_color("TutorialHint", hint_color, seat)
 	# The beacon floats over the target (only on the same level as the cat: city or sewers).
 	var same_level := target != Vector3.INF and UndergroundHub.is_in_hub(target) == UndergroundHub.is_in_hub(cat.global_position)
-	# Step 8 is the real game's way of finding the exit: no beacon, just the green arrow.
+	# Step 8 is the real game's way of finding the exit: no beacon, just the blue arrow.
 	_beacon.visible = same_level and step != 8
 	if _beacon.visible:
 		_beacon.global_position = target + Vector3(0, beacon_height + sin(_clock * 2.5) * beacon_bob, 0)
 		_beacon_arrow.rotation.y = _clock * beacon_spin
-	# THE GREEN ARROW. At step 8 fish_heist.gd drives it (PAYPHONE, then EXIT), so hands off.
+	# THE BLUE ARROW. At step 8 fish_heist.gd drives it (PAYPHONE, then EXIT), so hands off.
 	if step != 8:
 		_point_compass(cat, target if same_level else Vector3.INF)
 
@@ -512,7 +512,7 @@ func _hide() -> void:
 			compass.hide_arrow()  # (fish_heist.gd takes the arrow back from here)
 
 
-## Point the big green arrow (HUD "Compass") at the target, with its name and distance under it
+## Point the big blue arrow (HUD "Compass") at the target, with its name and distance under it
 ## ("SHOP  12m"). No target (or it's on the other level: city vs sewers) = the arrow hides.
 func _point_compass(cat: CatPlayer, target: Vector3) -> void:
 	var compass := Hud.element("Compass", cat.slot) as HudCompassArrow
@@ -527,7 +527,7 @@ func _point_compass(cat: CatPlayer, target: Vector3) -> void:
 	compass.point_at(yaw, "%s  %dm" % [_compass_name(), metres], false)
 
 
-## The word under the green arrow for the current step.
+## The word under the blue arrow for the current step.
 func _compass_name() -> String:
 	match step:
 		1:

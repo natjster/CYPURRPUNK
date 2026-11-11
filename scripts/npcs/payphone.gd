@@ -50,7 +50,7 @@ func _ready() -> void:
 
 
 ## Pick up the phone: your own boss answers, and what they say depends on the heat. Once your
-## exit is open the call also switches your gang's green arrow from PAYPHONE to EXIT.
+## exit is open the call also switches your gang's blue arrow from PAYPHONE to EXIT.
 func talk(cat: CatPlayer) -> void:
 	var heist := FishHeist.instance
 	var boss := UndergroundHub.of(cat)

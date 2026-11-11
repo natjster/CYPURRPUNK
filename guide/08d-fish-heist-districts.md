@@ -25,7 +25,7 @@ new district. In the code that just means a new city seed: the whole city is gen
    same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
 4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
    your boss. No talk box opens and your cat never stops: the boss's line **types out as floating
-   text right above the phone** (in their voice, coming out of the phone), and the **green HUD
+   text right above the phone** (in their voice, coming out of the phone), and the **blue HUD
    arrow switches from PAYPHONE to EXIT for your whole gang** (not the rival's). (Call before 75 and they say there's no
    way down yet: the crew is still digging. No hint where.)
 5. Walk (or drive) onto the open manhole: you're back in the hub WITH your loot (it stays in your
@@ -61,11 +61,11 @@ Fish and sardines grow back after 20 seconds, the store's goods after 90-120 sec
 is refilled with the next district. If you drove onto the exit,
 the getaway car goes back to its parking spot.
 
-**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = the **big green 3D
+**HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = the **big blue 3D
 arrow** (below), or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
 **only while you're in the sewers**.
 
-**THE GREEN ARROW ("Crazy Taxi" style, `scripts/ui/hud_compass_arrow.gd`):** a chunky bevelled 3D
+**THE BLUE ARROW ("Crazy Taxi" style, `scripts/ui/hud_compass_arrow.gd`):** a chunky bevelled 3D
 arrow at the top-middle of every player's screen. It appears the moment **your gang's exit opens**
 while you're up in the city:
 1. `PAYPHONE  45m`: it points at the **nearest ringing payphone**. Call your boss on it.
@@ -77,11 +77,13 @@ during a Sewer Breach alarm, before your exit opens and once the hatch seals. In
 slides down under the tutorial box. It's drawn in code (no extra 3D scene), so four split-screen
 arrows cost nothing.
 - **Where:** `scenes/ui/hud.tscn` > HUD > Frame > Top > **Compass** (move it like any Control).
-  Select it for the knobs: **Arrow Color**, **Edge Color**, **Label Color**, **Arrow Size**,
+  It uses the shared ocean-blue HUD colours (`ui/hud_style.tres`, same as the weapon box and talk
+  box) and its words sit in a matching little box. Select it for the knobs: **Use Hud Style** (untick
+  to use your own **Arrow Color**, **Edge Color**, **Label Color**), **Arrow Size**,
   **Tilt Degrees** (how much of its top you see), **Thickness**, **Bevel**, **Snap** (PS1 wobble;
   0 = smooth), **Label Font Size**, **Turn Speed**, **Bob Height/Speed**, **Pulse Amount**,
   **Urgent Speed**, **Urgent Pulse**.
-- **When it hurries:** **Heist** node in `main.tscn` > Inspector > **The green arrow (HUD)** >
+- **When it hurries:** **Heist** node in `main.tscn` > Inspector > **The blue arrow (HUD)** >
   **Seal Warning At Heat** (90).
 - Test: `--host --deploy --heat=80 --capture=shots/arrow.png` (payphone), add
   `--talk=Payphone0 --choose=0` (exit), `--heat=93 --heat_hold=30` (hurrying). The

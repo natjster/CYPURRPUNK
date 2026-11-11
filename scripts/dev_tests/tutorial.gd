@@ -99,7 +99,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	get_tree().quit(0)
 
 
-## Print what the green arrow + beacon show right now ("DevCapture tutorial arrow ..." line) and,
+## Print what the blue arrow + beacon show right now ("DevCapture tutorial arrow ..." line) and,
 ## with --tutorial_shots, save the whole window to shots/<file>.
 func _tutorial_arrow(when: String, file: String) -> void:
 	await _seconds(0.4)  # (let the arrow turn + the box settle)
