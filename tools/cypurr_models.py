@@ -370,6 +370,7 @@ def _poly_element(spec: dict) -> dict:
     spec:
       name, vertices {"nl": [x,y,z], ...}  (pixels, like everything else),
       faces [{"v": ["nl", "nr", "wr", "wl"], "uv": [x1,y1,x2,y2]}, ...]  (3 or 4 corners each),
+                    or {"v": [...], "uvs": [[u,v], ...]} = the exact texture point of each corner,
       uv            default rect for faces that don't give their own,
       outward_from  [x,y,z]: faces are turned to point AWAY from this point. Leave it out and the
                     middle of the shape is used, which is right for any closed, bulging shape
@@ -397,9 +398,18 @@ def _poly_element(spec: dict) -> dict:
             n[1] += (a[2] - b[2]) * (a[0] + b[0])
             n[2] += (a[0] - b[0]) * (a[1] + b[1])
         centre = [sum(p[i] for p in pts) / len(pts) for i in range(3)]
+        # "uvs" = the exact texture point [u, v] of each corner, in the same order as "v" (used by
+        # tools/make_weapon_specs.py to wrap stripes and labels round a barrel). Without it the
+        # rect is projected onto the face (below).
+        corner_uvs = [list(p) for p in fspec["uvs"]] if "uvs" in fspec else None
         if sum(n[i] * (centre[i] - middle[i]) for i in range(3)) < 0:
             keys.reverse()
             n = [-c for c in n]
+            if corner_uvs:
+                corner_uvs.reverse()
+        if corner_uvs:
+            faces["f%d" % index] = {"uv": dict(zip(keys, corner_uvs)), "vertices": keys, "texture": 0}
+            continue
         # Lay the rect onto the face from the axis it faces most.
         axis = max(range(3), key=lambda i: abs(n[i]))
         def project(p):

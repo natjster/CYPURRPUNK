@@ -1,55 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
-[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
-
-[sub_resource type="ShaderMaterial" id="Mat_tube"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.2, 0.55, 0.25, 1)
-shader_parameter/specular = 0.5
-shader_parameter/roughness = 0.4
-
-[sub_resource type="ShaderMaterial" id="Mat_dark"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.13, 0.2, 0.15, 1)
-shader_parameter/specular = 0.5
-shader_parameter/roughness = 0.4
-
-[sub_resource type="ShaderMaterial" id="Mat_cuke"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.35, 1, 0.3, 1)
-shader_parameter/emission_color = Color(0.35, 1, 0.3, 1)
-shader_parameter/emission_energy = 4.0
-
-[sub_resource type="CylinderMesh" id="Mesh_tube"]
-top_radius = 0.115
-bottom_radius = 0.095
-height = 0.7
-radial_segments = 8
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_cuke"]
-top_radius = 0.075
-bottom_radius = 0.075
-height = 0.26
-radial_segments = 7
-rings = 1
-
-[sub_resource type="CylinderMesh" id="Mesh_ring"]
-top_radius = 0.125
-bottom_radius = 0.125
-height = 0.04
-radial_segments = 8
-rings = 1
-
-[sub_resource type="BoxMesh" id="Mesh_grip"]
-size = Vector3(0.08, 0.16, 0.09)
-
-[sub_resource type="BoxMesh" id="Mesh_tank"]
-size = Vector3(0.14, 0.14, 0.26)
+[ext_resource type="PackedScene" path="res://models/cucumber_launcher.glb" id="2_model"]
 
 [sub_resource type="CapsuleMesh" id="Mesh_cucumber_shot"]
 radius = 0.1
@@ -81,37 +33,11 @@ hot_color = Color(1, 0.8, 0.2, 1)
 bolt_time = 0.14
 bolt_width = 0.24
 hud_name = "CUCUMBER LAUNCHER"
+neon_parts = {"Cucumber": 1.5, "Gauge": 3.0}
 
 [node name="Model" type="Node3D" parent="."]
 
-[node name="Tube" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0, -0.12)
-rotation = Vector3(-1.5708, 0, 0)
-mesh = SubResource("Mesh_tube")
-surface_material_override/0 = SubResource("Mat_tube")
-
-[node name="Ring" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0, -0.44)
-rotation = Vector3(-1.5708, 0, 0)
-mesh = SubResource("Mesh_ring")
-surface_material_override/0 = SubResource("Mat_cuke")
-
-[node name="Cucumber" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0, -0.5)
-rotation = Vector3(-1.5708, 0, 0)
-mesh = SubResource("Mesh_cuke")
-surface_material_override/0 = SubResource("Mat_cuke")
-
-[node name="Tank" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.15, 0)
-mesh = SubResource("Mesh_tank")
-surface_material_override/0 = SubResource("Mat_dark")
-
-[node name="Grip" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, -0.17, 0.04)
-rotation = Vector3(0.3, 0, 0)
-mesh = SubResource("Mesh_grip")
-surface_material_override/0 = SubResource("Mat_dark")
+[node name="Mesh" parent="Model" instance=ExtResource("2_model")]
 
 [node name="Muzzle" type="Marker3D" parent="Model"]
 position = Vector3(0, 0, -0.62)

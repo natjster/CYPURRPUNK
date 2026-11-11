@@ -79,6 +79,7 @@ extends Node
 ##   --deploy_again=N  N frames after the above, ask Don AGAIN (one trip per district: refused once
 ##                     you've been up); prints went_up / in_hub / heat
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
+##   --weapons_lineup[=a,b] a display rack of the weapons (own camera) + "DevCapture weapon" lines
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
 ##   --fresh_profile   start this test's saved cash + stash from scratch (user://test_profiles/)
@@ -429,6 +430,8 @@ func _ready() -> void:
 			print("DevCapture workbench page: open=%s line=\"%s\"" % [NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.replace("\n", " / ").left(220)])
 		if args.has("vehicles_lineup"):
 			await _vehicles_lineup(player)
+		if args.has("weapons_lineup"):
+			await _weapons_lineup(player)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			UndergroundHub.of(player).deploy(player)
@@ -1217,6 +1220,76 @@ func _vehicles_lineup(player: CatPlayer) -> void:
 	for car in cars:
 		print("DevCapture lineup: %s = %s at %s max_speed=%.1f seats=%d wheels=%d trim=%s" % [car.name, car.vehicle,
 			car.global_position.snapped(Vector3.ONE * 0.1), car.max_speed, car.passenger_seats, car._wheels.size(), car.trim_color()])
+
+
+## --weapons_lineup[=a,b,...]: a display rack of the weapons (default: every weapon card) floating
+## side-on in a 4-wide grid in front of us, under a work light, with its own camera (no HUD), for
+## judging the Blockbench models. --lineup_dist=M moves the camera back, --lineup_yaw=DEG turns them. Prints one
+## "DevCapture weapon" line each: where its Muzzle ended up (snapped onto the model's own @Muzzle
+## marker), whether a HeatCoil / glow parts were found, its triangles and the PS1 shader check.
+func _weapons_lineup(player: CatPlayer) -> void:
+	var ids: Array[String] = []
+	if str(_args["weapons_lineup"]) not in ["", "true"]:
+		for item_id in str(_args["weapons_lineup"]).split(","):
+			ids.append(item_id)
+	else:
+		for item_id in ItemManager.instance.catalog:
+			var data: ItemData = ItemManager.instance.catalog[item_id]
+			if data.scene == null:
+				continue
+			var probe := data.scene.instantiate()
+			if probe is Weapon:
+				ids.append(item_id)
+			probe.free()
+		ids.sort()
+	if UndergroundHub.is_in_hub(player.global_position):
+		UndergroundHub.of(player).deploy(player)  # (up to the street: no sewer fog in the photo)
+		for i in 30:
+			await get_tree().physics_frame
+	for seat in 4:
+		if Hud.of(seat) != null:
+			Hud.of(seat).visible = false
+	player.visible = false
+	var rack := Node3D.new()
+	rack.name = "WeaponRack"
+	Game.instance.add_child(rack)
+	rack.global_position = player.global_position + Vector3(0, 1.8, -3.0)
+	var columns := mini(4, ids.size())
+	var guns: Array[Weapon] = []
+	for i in ids.size():
+		var data: ItemData = ItemManager.instance.catalog[ids[i]]
+		var gun := data.scene.instantiate() as Weapon
+		gun.position = Vector3(((i % columns) - (columns - 1) / 2.0) * 1.1, -floorf(i / float(columns)) * 0.9, 0)
+		gun.rotation.y = -PI / 2 + deg_to_rad(float(_args.get("lineup_yaw", "0")))  # barrel (-Z) pointing right: we see its side
+		rack.add_child(gun)
+		guns.append(gun)
+	LevelKit.add_light(rack, Vector3(0, 1.5, 1.5), Color(1, 0.94, 0.85), 4.0, 8.0)
+	var camera := Camera3D.new()
+	camera.fov = 50.0
+	rack.add_child(camera)
+	camera.position = Vector3(0, -0.45 if ids.size() > columns else 0.0, float(_args.get("lineup_dist", "3.4" if ids.size() > 2 else "1.4")))
+	camera.make_current()
+	for i in 20:
+		await get_tree().process_frame
+	for i in guns.size():
+		var gun := guns[i]
+		var tris := 0
+		for mesh: MeshInstance3D in gun.find_children("*", "MeshInstance3D", true, false):
+			for surface in mesh.mesh.get_surface_count():
+				var count: int = mesh.mesh.surface_get_array_index_len(surface)
+				tris += (count if count > 0 else mesh.mesh.surface_get_array_len(surface)) / 3
+		print("DevCapture weapon: %s muzzle=%s coil=%s glow=%s neon=%s tris=%d psx=%s" % [ids[i],
+			gun._muzzle.position.snapped(Vector3.ONE * 0.001) if gun._muzzle != null else "none", gun._coil != null,
+			gun.glow_parts.keys(), gun.neon_parts.keys(), tris, _all_psx(gun)])
+
+
+## True if every mesh under node draws with the game's PS1 shader.
+func _all_psx(node: Node) -> bool:
+	for mesh: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		var material := mesh.get_active_material(0) as ShaderMaterial
+		if material == null or material.shader != LevelKit.PSX_SHADER:
+			return false
+	return true
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.

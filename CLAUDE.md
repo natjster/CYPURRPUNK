@@ -441,6 +441,15 @@ to the greeting (or action `upgrades:<page>`). TINKER WORKBENCH = hub `_build_wo
 Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_bag_size`) inside a ScrollContainer (`_fit_scroll`).
 Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --workbench --vehicles_lineup` ("DevCapture upgrades/vehicle/lineup/workbench").
 
+WEAPON MODELS (ROADMAP §5 #6, SETUP_GUIDE §9 "The weapon models"): the 8 weapon scenes' `Model/Mesh` = `models/<weapon>.glb` from
+`tools/make_weapon_specs.py` (recipes in CM, `--build` runs cypurr_models `all`; REPLACES the .bbmodels). One shared 128x128 atlas
+(`atlas_paint()`, 16x16 swatches, layout in the script docstring; `can()` maps a swatch's X ALONG a round part, Y ROUND it, via the
+kit's new poly face `"uvs"` = exact per-corner UVs). Groups: Body, `HeatCoil` (tommy; weapon.gd `find_child`), glow groups. weapon.gd
+`_ready`: `LevelKit.psx_ify(Model)` + exports `glow_parts` {part: Color} (`LevelKit.make_parts_glow`, also used by Enemy) / `neon_parts`
+{part: strength} (`LevelKit.make_neon_paint_glow` = shader `texture_glow`); `_snap_muzzle_to_model` moves Model/Muzzle onto the glb's
+`Muzzle` locator. Melee models stand along +Y (handle at origin). Test: `--weapons_lineup[=a,b] [--lineup_dist --lineup_yaw]`
+("DevCapture weapon" lines), `--give=X --portrait=me --portrait_side=1.3 --portrait_dist=1.5 --portrait_height=0.55`.
+
 ## Items framework
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour
