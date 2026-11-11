@@ -9,7 +9,8 @@
   `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
   Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
-  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`]).
+  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`], Boost [HudBoostBar, bottom-left above Held,
+  driver only, `_update_boost`]).
   OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
   `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
   phases 2-4 (Inventory, Shop, Workbench). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;

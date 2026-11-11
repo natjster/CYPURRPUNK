@@ -7,11 +7,12 @@ extends Node3D
 ## Attach to the "Boost" node under GetawayCar in scenes/getaway_car.tscn. Its knobs: open that
 ## scene, click Boost, and look at the Inspector.
 ##
-## CHARGES come from the AFTERBURNER sewer upgrade (scripts/upgrades.gd, bought at the TINKER
-## WORKBENCH on Paulie No-Brooms / Bumper-Car Benny's tab): tier 1 = 1 charge, tier 2 = 2 charges.
+## CHARGES: every car starts with ONE (Base Charges). The AFTERBURNER sewer upgrade (scripts/upgrades.gd,
+## bought at the TINKER WORKBENCH on Paulie No-Brooms / Bumper-Car Benny's tab) adds more:
+## tier 1 = 2 charges, tier 2 = 3 charges.
 ## It's a CREW upgrade: the gang's best tier counts, whoever drives. A used charge slowly comes
-## back (Recharge Seconds each). The driver sees one flame badge per charge next to their health
-## bar (hud.gd _update_status), filling up while it recharges.
+## back (Recharge Seconds each). The driver sees the BOOST bar bottom-left (scripts/ui/hud_boost_bar.gd):
+## one bar, split into a piece per charge, the next piece filling up while it recharges.
 ##
 ## Network: the HOST owns the charges. The driver's computer asks (request_boost), the host checks
 ## a charge is there and tells EVERY computer (_start_boost): they all show the flames, the
@@ -27,6 +28,8 @@ extends Node3D
 @export var boost_accel: float = 30.0
 ## Top speed while boosting, compared to normal (1.7 = 70% faster).
 @export var top_speed_multiplier: float = 1.7
+## Charges every car has before any upgrade (each AFTERBURNER tier adds one more).
+@export var base_charges: int = 1
 ## Seconds for ONE used charge to come back.
 @export var recharge_seconds: float = 25.0
 
@@ -111,9 +114,11 @@ func speed_multiplier() -> float:
 	return top_speed_multiplier if is_boosting() else 1.0
 
 
-## How many charges this car can hold: the gang's best AFTERBURNER tier (scripts/upgrades.gd).
+## How many charges this car can hold: Base Charges + the gang's best AFTERBURNER tier (scripts/upgrades.gd).
 func max_charges() -> int:
-	return test_charges if test_charges >= 0 else Upgrades.best_in_team(car.gang(), "afterburner")
+	if test_charges >= 0:
+		return test_charges
+	return base_charges + Upgrades.best_in_team(car.gang(), "afterburner")
 
 
 func _physics_process(delta: float) -> void:

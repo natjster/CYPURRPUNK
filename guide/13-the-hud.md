@@ -88,7 +88,8 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Hitmarker        <- "X" flash when your shot/swing lands; RED = you smashed it (ui/hud_hitmarker.gd)
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
-    │   └── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
+    │   ├── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
+    │   └── Boost            <- bottom-left above Held, only while driving: the AFTERBURNER bar, split per charge (ui/hud_boost_bar.gd)
     ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
     └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
         └── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script

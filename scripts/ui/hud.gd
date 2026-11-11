@@ -24,7 +24,9 @@ extends CanvasLayer
 ##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
 ##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt,
 ##       │                   Held (bottom-left: the guns in your paws + quick-use slots, in the ocean-blue
-##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd)
+##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd),
+##       │                   Boost (bottom-left, above Held, only while driving: the AFTERBURNER
+##       │                   bar split into one piece per charge; scripts/ui/hud_boost_bar.gd)
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── Shop         <- THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) }
 ##       ├── Workbench    <- THE TINKER WORKBENCH (scripts/ui/workbench_screen.gd) }
@@ -476,15 +478,28 @@ func _update_status() -> void:
 			effects.append({"id": "catnip", "fraction": cat.boost_fraction(), "seconds_left": cat.boost_seconds_left(), "debuff": false})
 		if cat.air_jump_seconds_left() > 0.0:
 			effects.append({"id": "catdip", "fraction": cat.air_jump_fraction(), "seconds_left": cat.air_jump_seconds_left(), "debuff": false})
-		# Driving: one flame badge per AFTERBURNER charge (scripts/car/car_boost.gd); the next one fills
-		# up while it recharges, empty ones wait their turn.
-		var car := cat.riding_car
-		if car != null and car.driver_id == cat.player_id and car.boost != null:
-			for i in car.boost.max_charges():
-				var full := 1.0 if i < car.boost.charges else (car.boost.recharge if i == car.boost.charges else 0.0)
-				effects.append({"id": "boost", "fraction": full, "seconds_left": 99.0, "debuff": false, "dim": i >= car.boost.charges})
 	icons.set_effects(effects)
+	_update_boost(cat)
 	_place_status_icons(icons, effects.size())
+
+
+## The AFTERBURNER BOOST bar (Frame/Middle/Boost, scripts/ui/hud_boost_bar.gd): only while this
+## player DRIVES. It sits just above the guns box (Held) when that's showing, else in the corner.
+func _update_boost(cat: CatPlayer) -> void:
+	var bar := element("Boost", seat) as HudBoostBar
+	if bar == null:
+		return
+	bar.seat = seat
+	var car: GetawayCar = cat.riding_car if cat != null and cat.reads_input() else null
+	if car == null or car.driver_id != cat.player_id or car.boost == null:
+		bar.set_boost(0, 0, 0.0, false)
+		return
+	var b: CarBoost = car.boost
+	bar.set_boost(b.max_charges(), b.charges, b.recharge, b.is_boosting())
+	var held := element("Held", seat)
+	if held != null:
+		var bottom := held.position.y if held.visible else held.position.y + held.size.y
+		bar.position.y = bottom - bar.size.y - 8.0
 
 
 ## The badges sit right of the health bar. On a narrow HUD (4:3 in the PS1 look, split screen) that

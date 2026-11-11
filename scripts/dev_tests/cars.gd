@@ -15,7 +15,7 @@ func _car_test(scene: Node, player: CatPlayer) -> void:
 	var boost := car.boost
 	var health := car.health
 	print("DevCapture car_test start: hp=%d/%d charges=%d max=%d" % [health.health, health.max_health, boost.charges, boost.max_charges()])
-	# Pretend the crew bought AFTERBURNER tier 2 (2 charges). (A test switch, not a real upgrade:
+	# Pretend the crew bought AFTERBURNER tier 1 (2 charges: 1 to start + 1). (A test switch, not a real upgrade:
 	# real upgrades would be saved into the test cat's profile.)
 	CarBoost.test_charges = 2
 	for i in 5:

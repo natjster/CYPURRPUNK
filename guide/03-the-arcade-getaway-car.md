@@ -129,16 +129,19 @@ A new district fixes it too. Test: `--drive --car_test` ("DevCapture car_test" l
 --car_chase` (a VAC-COP chases the car and rams it).
 
 ### The AFTERBURNER boost (`scripts/car/car_boost.gd`)
-Bought at the TINKER WORKBENCH (§25, Paulie No-Brooms / Bumper-Car Benny's tab): **AFTERBURNER**
-tier 1 = 1 charge, tier 2 = 2 charges (a CREW upgrade: the gang's best tier counts, whoever drives).
+Every car starts with **1 charge** (*Base Charges* on the Boost node). The TINKER WORKBENCH (§25, Paulie
+No-Brooms / Bumper-Car Benny's tab) sells **AFTERBURNER**: tier 1 = 2 charges, tier 2 = 3 charges (a CREW
+upgrade: the gang's best tier counts, whoever drives).
 While driving press **BOOST** (Shift, or A on a controller; rebind it in SETTINGS > KEYS): the car
 kicks forward and floors it past its top speed for a moment, with **fire roaring out of the exhaust**
 (two flame jets, an orange glow on the street, a trail of fire cubes, a wider + shaking camera).
 **Nothing gets killed by the boost: it all goes FLYING.** Bots in the exhaust fire, or rammed while
 boosting, are launched into the air, spin, land and lie dazed (bosses are too heavy). Cats on foot
 in the fire get launched too (no damage), and bins and cones go over. A used charge comes back after
-**Recharge Seconds** (25). The driver sees one flame badge per charge next to their health bar; a
-dim one is still recharging. Knobs: click **Boost** in `scenes/getaway_car.tscn` (*Boost*, *Sending
+**Recharge Seconds** (25). The driver sees the **BOOST bar** bottom-left (just above the guns box,
+`scripts/ui/hud_boost_bar.gd`, node `scenes/ui/hud.tscn` > Frame > Middle > **Boost**): ONE bar that always
+stays the same width and is split into a piece per charge (1, 2 or 3); bright = ready, the next piece fills
+up while it recharges. Its colours / thickness / split gap are in the Inspector with Boost selected. Knobs: click **Boost** in `scenes/getaway_car.tscn` (*Boost*, *Sending
 stuff flying*, *Look*); how long a launched bot lies dazed is **Launch Daze Seconds** on the bot.
-The sound and badge come from `python tools/make_boost_assets.py`. Test: `--drive --car_test
+The sound and flame icon come from `python tools/make_boost_assets.py`. Test: `--drive --car_test
 [--boost_snap --frames=20]` (the second takes a picture mid-boost).

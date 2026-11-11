@@ -34,10 +34,11 @@
   `wrecked` (empty_car + hop + `_boom`, refuses entry, `repair()` after `wreck_seconds` = park). Crashes detected on the car's
   authority (`_recent_speed` drop, skips `car.teleport_frame`) -> `report_crash`. Rival gunfire: `car.receive_hit` -> `request_shot`.
   `car.gang()`, `car.health_bar_info()` (car in HudHealthBars group; friend = same gang). Fx helpers `scripts/car/car_fx.gd`.
-- AFTERBURNER `scripts/car/car_boost.gd` (`car.boost`, node Boost): host owns `charges`/`recharge` (`max_charges` = crew tier of
+- AFTERBURNER `scripts/car/car_boost.gd` (`car.boost`, node Boost): host owns `charges`/`recharge` (`max_charges` = `base_charges` (1) + crew tier of
   "afterburner"; static `test_charges` for tests, never touch real upgrades in tests: they save to test_profiles), action "boost"
   (car context, Shift / Pad A) -> `request_boost` -> `_start_boost` rpc (flames, kick impulse on authority, FOV/shake).
   `_integrate_forces` floors it (`speed_multiplier`). Host `_exhaust_blast`: `Enemy.launch(push)` (is_flying, daze stun; roomba
   skips steering + spins), `get_zapped` cats, `MessManager.knock`. Ram while boosting = launch, not smash (`Enemy.run_over_by_car`).
-  HUD badges "boost" (`dim` key in HudStatusIcons). Test `--drive --car_test [--boost_snap --frames=20]`, `--car_chase`
+  HUD = `HudBoostBar` (`scripts/ui/hud_boost_bar.gd`, Frame/Middle/Boost, fed by hud.gd `_update_boost`,
+  sits above Held): one fixed-width bar split per charge. Test `--drive --car_test [--boost_snap --frames=20]`, `--car_chase`
   (module `scripts/dev_tests/cars.gd`). getaway_car.gd is ~800 lines: put new car features in `scripts/car/`.

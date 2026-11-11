@@ -37,7 +37,7 @@ extends Node
 ##   item_manager.gd  pack_size_for / stash_size_for / quick_stack_size_for, sell_price (gourmet)
 ##   shopkeeper.gd    shop_allows (weapon crates)       cat_player.gd   zoomies_multiplier
 ##   getaway_car.gd   engine_multiplier, set_vehicle   cat_health.gd   max_health_for
-##   car/car_boost.gd "afterburner" tier = boost charges
+##   car/car_boost.gd "afterburner" tier = extra boost charges (1 + tier)
 ##   enemy.gd         scrap_magnet_chance
 ##   melee_weapon.gd  melee_multiplier                 mainframe.gd    charge_per_scrap_for, exit_heat
 ##
@@ -124,7 +124,7 @@ const INFO := {
 	"stuffed_cheeks": {"name": "STUFFED CHEEKS", "about": "Quick-use snack stacks 3 -> 4 -> 5."},
 	"heavy_paws": {"name": "HEAVY PAWS", "about": "Melee hits +25% / +50% damage and knockback."},
 	"insider_tunnel": {"name": "INSIDER TUNNEL", "crew": true, "about": "Your gang's exit opens 5 / 10 heat earlier."},
-	"afterburner": {"name": "AFTERBURNER", "crew": true, "about": "BOOST your ride (Shift / pad A): fire out the exhaust sends bots and cats flying! 1 / 2 charges, slowly recharging."},
+	"afterburner": {"name": "AFTERBURNER", "crew": true, "about": "BOOST your ride (Shift / pad A): fire out the exhaust sends bots and cats flying! 2 / 3 charges (you start with 1), slowly recharging."},
 }
 
 ## The TINKER WORKBENCH's 7 tabs (scripts/ui/workbench_screen.gd): which upgrades each sewer NPC's tab
