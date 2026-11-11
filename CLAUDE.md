@@ -105,6 +105,10 @@ Godot console exe: `C:\GoDot\Godot_v4.7.2-stable_win64_console.exe`. Run from th
 - Captures print car/cat state (`DevCapture ...` lines) — prefer checking those over viewing images;
   view screenshots only when judging visuals, and use `--scale=2` to keep them small.
 - `shots/` has a `.gdignore`, so Godot ignores it.
+- dev_capture.gd = option list (header) + `_ready` flow + small checks. Bigger tests live in `scripts/dev_tests/`
+  (lineups, menus, fights, tutorial, mess, spectate_report, meow_mart): child nodes made by `_add_module`, called as
+  `_menus._shop_test(...)`; shared helpers + `_args` in `dev_test.gd` (base of all of them). New test = add it to the
+  matching module (or a new one + an `_add_module` line), never back into dev_capture.gd. RPCs stay in dev_capture.gd.
 
 ## Style references
 `C:\Users\Nathaniel\Desktop\Game Styling` — fog, glowing light pools in darkness, OSRS flat-shaded

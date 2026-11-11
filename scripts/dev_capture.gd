@@ -1,5 +1,5 @@
-extends Node
-## DEV TOOL â€” takes a screenshot of the running game, saves it, then quits.
+extends "res://scripts/dev_tests/dev_test.gd"
+## DEV TOOL — takes a screenshot of the running game, saves it, then quits.
 ## Does nothing during normal play (it only wakes up when given --capture).
 ##
 ## Run from a terminal in the project folder, e.g.:
@@ -86,7 +86,7 @@ extends Node
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
 ##   --fresh_profile   start this test's saved cash + stash from scratch (user://test_profiles/)
 ##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
-##                     --cash=500 --talk=ComradeWhiskers --shop_buy=pistol; see _shop_test for all the --shop_ flags)
+##                     --cash=500 --talk=ComradeWhiskers --shop_buy=pistol; see _menus._shop_test for all the --shop_ flags)
 ##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
@@ -218,8 +218,14 @@ extends Node
 ## The shot list and the editing script live in trailer/ (record.py, edit.py).
 
 
-## The command line options (so helper functions can read them too).
-var _args: Dictionary = {}
+## The test modules (scripts/dev_tests/): each is a child node sharing `_args` and the helpers in dev_test.gd.
+var _lineups: Node
+var _menus: Node
+var _fights: Node
+var _tutorial: Node
+var _mess: Node
+var _spectate_report: Node
+var _meow_mart: Node
 
 
 func _ready() -> void:
@@ -233,6 +239,14 @@ func _ready() -> void:
 	if not args.has("capture") or not OS.is_debug_build():
 		queue_free()
 		return
+	# The test modules (scripts/dev_tests/*.gd): children, so they can await frames and see _args.
+	_lineups = _add_module("res://scripts/dev_tests/lineups.gd")
+	_menus = _add_module("res://scripts/dev_tests/menus.gd")
+	_fights = _add_module("res://scripts/dev_tests/fights.gd")
+	_tutorial = _add_module("res://scripts/dev_tests/tutorial.gd")
+	_mess = _add_module("res://scripts/dev_tests/mess.gd")
+	_spectate_report = _add_module("res://scripts/dev_tests/spectate_report.gd")
+	_meow_mart = _add_module("res://scripts/dev_tests/meow_mart.gd")
 
 	# --window=WxH   open the game window at that size (e.g. 1720x720 = ultrawide shape; never saved)
 	if args.has("window"):
@@ -266,7 +280,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var scene: Node = Game.instance  # the game (main.tscn), inside scenes/game_screen.tscn
 
-	# Wait (up to ~10 s) for OUR cat to exist â€” a joining game needs time to connect.
+	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
 	var player: CatPlayer = null
 	if args.has("host") or args.has("join") or args.has("solo") or args.has("tutorial"):
@@ -343,9 +357,9 @@ func _ready() -> void:
 	if player != null:
 		for i in int(args.get("wait", 0)):
 			await get_tree().process_frame
-		await _apply_look(args)  # dressed before anything else happens (trailer clips film it all)
+		await _lineups._apply_look(args)  # dressed before anything else happens (trailer clips film it all)
 		if args.has("tutorial_auto"):
-			await _tutorial_auto(player)
+			await _tutorial._tutorial_auto(player)
 			return
 		if args.has("twist") or args.has("twist_rolls"):
 			_print_twist(scene, args)
@@ -369,17 +383,17 @@ func _ready() -> void:
 		if args.has("breach_warning"):
 			Mainframe.instance.breach_warning_seconds = float(args["breach_warning"])
 		if args.has("breach_log"):
-			_breach_log(int(args["breach_log"]))
+			_fights._breach_log(int(args["breach_log"]))
 		if args.has("breach_wipe"):
-			_breach_wipe(int(args["breach_wipe"]))
+			_fights._breach_wipe(int(args["breach_wipe"]))
 		if args.has("breach_knock"):
-			_breach_knock(int(args["breach_knock"]))
+			_fights._breach_knock(int(args["breach_knock"]))
 		# THE RAID REPORT (scripts/raid_report.gd): every report that goes up is printed here.
-		Events.raid_report_shown.connect(_print_report)
+		Events.raid_report_shown.connect(_spectate_report._print_report)
 		if args.has("raid_report") and multiplayer.is_server():
-			_force_report(int(args["raid_report"]) if args["raid_report"] != "true" else 0, int(args.get("raid_report_after", 30)))
+			_spectate_report._force_report(int(args["raid_report"]) if args["raid_report"] != "true" else 0, int(args.get("raid_report_after", 30)))
 		if args.has("report_ready"):
-			_report_ready(args["report_ready"].split(","), int(args.get("report_ready_delay", 60)))
+			_spectate_report._report_ready(args["report_ready"].split(","), int(args.get("report_ready_delay", 60)))
 		if args.has("mainframe") and multiplayer.is_server():
 			# (host) --mainframe=N or =A,B: the gangs' charges are N (0/25/50/75/100; A = Catleone,
 			# B = Burrow), and this district starts over on them (heat, overclock, 0% boss).
@@ -424,7 +438,7 @@ func _ready() -> void:
 			for i in 20:
 				await get_tree().process_frame
 		if args.has("hud_heat") or args.has("hud_buffs"):
-			_hud_preview(player, args)
+			_lineups._hud_preview(player, args)
 		if args.has("to_stash") or args.has("from_stash"):
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
@@ -453,7 +467,7 @@ func _ready() -> void:
 		#   --rebellion_tier=N            (every sewer counts as having recruited N tiers: test only)
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
 		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
-			await _upgrades_test(player, args)
+			await _menus._upgrades_test(player, args)
 		if args.has("workbench"):
 			var hub := UndergroundHub.of(player)
 			player.teleport_to(hub.to_global(hub.workbench_spot + Vector3(-1.6, 0, 0)), 0.0)
@@ -463,13 +477,13 @@ func _ready() -> void:
 			print("DevCapture workbench: prompt=\"%s\" used=%s" % [Interactable.prompt_for(player), Interactable.try_use(player)])
 			for i in 5:
 				await get_tree().process_frame
-			await _workbench_test(player, args)
+			await _menus._workbench_test(player, args)
 		if args.has("vehicles_lineup"):
-			await _vehicles_lineup(player)
+			await _lineups._vehicles_lineup(player)
 		if args.has("weapons_lineup"):
-			await _weapons_lineup(player)
+			await _lineups._weapons_lineup(player)
 		if args.has("cat_lineup"):
-			await _cat_lineup(player)
+			await _lineups._cat_lineup(player)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			UndergroundHub.of(player).deploy(player)
@@ -506,7 +520,7 @@ func _ready() -> void:
 			_near_speaker(player, args)
 		if args.has("test_meow_mart") or args.has("inside_meow_mart") or args.has("shatter_tank") or args.has("mart_log") \
 				or args.has("mart_swat") or args.has("mart_topple") or args.has("mart_plate") or args.has("mart_drag") or args.has("mart_tank_hits"):
-			await _meow_mart_test(player, args)
+			await _meow_mart._meow_mart_test(player, args)
 		if args.has("yaw"):
 			player.camera_pivot.rotation.y = deg_to_rad(float(args["yaw"]))
 		if args.has("pitch"):
@@ -525,7 +539,7 @@ func _ready() -> void:
 				car.add_child(lamp)
 				lamp.position = Vector3(1.5, 3.0, 1.0)
 		if args.has("cam_from") or args.has("cam_orbit"):
-			_film_camera(player, args)  # runs alongside everything below (not awaited)
+			_lineups._film_camera(player, args)  # runs alongside everything below (not awaited)
 		if args.has("mouse_test"):
 			# Move the mouse 100 real screen pixels to the right (as if the player did) and print
 			# how far that is in game pixels (should be 100 x 240 / window height).
@@ -540,11 +554,11 @@ func _ready() -> void:
 			var moved := (yaw_before - player.camera_pivot.rotation.y) / (player.mouse_sensitivity * Settings.mouse_speed)
 			print("DevCapture mouse: 100 screen px = %.2f game px (expected %.2f)" % [moved, 100.0 * 240.0 / get_window().size.y])
 		if args.has("talk"):
-			await _talk(player, args)
+			await _menus._talk(player, args)
 		if args.has("announce"):
 			await _announce(args)
 		if args.has("portrait"):
-			_portrait(player, args)
+			_lineups._portrait(player, args)
 		if args.has("drive"):
 			for i in 20:
 				await get_tree().process_frame  # let the host see our new position first
@@ -706,17 +720,17 @@ func _ready() -> void:
 				print("DevCapture twist scrap: %d regular kills -> %d SCRAP on the street (twist %s)" % [int(args["kill_roombas"]),
 					_count_world_items("scrap"), DistrictTwist.name_of(DistrictTwist.current_kind()) if DistrictTwist.current_kind() != 0 else "NONE"])
 		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost") or args.has("use_prop") or args.has("look_prop") or args.has("instant_props"):
-			await _mess_tests(scene, player, args)
+			await _mess._mess_tests(scene, player, args)
 		if args.has("spectate") or args.has("spectate_ko"):
-			await _spectate_tests(scene, args)
+			await _spectate_report._spectate_tests(scene, args)
 		if (args.has("down") and multiplayer.is_server()) or (args.has("revive") and not multiplayer.is_server()):
-			await _down_and_revive(scene, player, args)
+			await _fights._down_and_revive(scene, player, args)
 		if args.has("shoot_rival"):
-			await _shoot_rival(scene, player, args)
+			await _fights._shoot_rival(scene, player, args)
 		if args.has("blast_car"):
-			await _blast_car(scene, player)
+			await _fights._blast_car(scene, player)
 		if args.has("blast_probe"):
-			_blast_probe(player)
+			_fights._blast_probe(player)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.
@@ -825,10 +839,10 @@ func _ready() -> void:
 			for i in int(args["talk_again_after"]):
 				await get_tree().process_frame
 			args.erase("choose")
-			await _talk(player, args)
+			await _menus._talk(player, args)
 
 	if player == null:
-		await _apply_look(args)  # (no game: e.g. the start menu's cat preview)
+		await _lineups._apply_look(args)  # (no game: e.g. the start menu's cat preview)
 	if args.has("inventory"):
 		# --inventory = player 1's (same as pressing Tab); --inventory=0,1 = those split-screen seats'.
 		var seats: Array = [0] if args["inventory"] == "true" else Array(args["inventory"].split(",")).map(func(v): return int(v))
@@ -837,7 +851,7 @@ func _ready() -> void:
 			var seat_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
 			if screen != null:
 				screen._set_open(true, seat_cat)
-		_inventory_report.call_deferred(seats, int(args.get("frames", "90")))
+		_menus._inventory_report.call_deferred(seats, int(args.get("frames", "90")))
 	if args.has("press_key"):
 		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
 		for i in 10:
@@ -1003,7 +1017,7 @@ func _ready() -> void:
 				props[file].append((node as Node3D).global_position.snapped(Vector3.ONE * 0.1))
 		for file in props:
 			print("DevCapture props: %d x %s, e.g. %s" % [props[file].size(), file, props[file].slice(0, 4)])
-		_print_mess("snap")
+		_mess._print_mess("snap")
 	var heist := scene.get_node_or_null("Heist") as FishHeist
 	if heist != null:
 		# --mode: which mode this computer is playing, every cat's gang, and the layout it made.
@@ -1133,861 +1147,12 @@ func _describe(steps: Array) -> String:
 	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
 
 
-## --breach_log=N: a line every N frames: the gangs breached, the clock, cats, bots, gates, camera.
-func _breach_log(every: int) -> void:
-	while is_instance_valid(Game.instance):
-		for i in every:
-			await get_tree().process_frame
-		if not is_instance_valid(Game.instance):
-			return
-		var mainframe := Mainframe.instance
-		var bots := []
-		for node in RoombaPatrol.instance.get_children():
-			if UndergroundHub.is_in_hub(node.global_position):
-				bots.append(node)
-		var chasing := bots.filter(func(bot): return bot.state == Roomba.State.CHASE).size()
-		var cats := []
-		for cat in Game.instance.players.get_children():
-			cats.append("%s team=%d hp=%d ko=%s pos=%s feed=%s" % [cat.name, cat.team, CatHealth.instance.get_health(cat.player_id), cat.knocked_out, cat.global_position.snapped(Vector3.ONE * 0.1), mainframe.is_spectating(cat)])
-		var camera := GameScreen.instance.game_viewport.get_camera_3d()
-		print("DevCapture breach: busy=%s teams=%s left=%.1f charges=%s heat=%.0f sewer bots=%d chasing=%d hurt=%d east_bank=%d queue=%d gates=%s safe=%s camera=%s line=\"%s\" cats=%s" % [mainframe.breach_busy, mainframe.breached_teams, mainframe.breach_left, mainframe.charges, HeatMeter.instance.heat, bots.size(), chasing, bots.filter(func(bot): return bot.health < bot.max_health).size(), bots.filter(func(bot): return UndergroundHub.hub_at(bot.global_position).to_local(bot.global_position).x > 2.0).size(), RoombaPatrol.instance._breach_queue.size(),
-			[UndergroundHub.for_team(0)._gate.position.y, UndergroundHub.for_team(1)._gate.position.y], [UndergroundHub.is_safe(UndergroundHub.for_team(0).global_position), UndergroundHub.is_safe(UndergroundHub.for_team(1).global_position)], camera.name if camera != null else "none", (Hud.element("DropOff") as Label).text, cats])
-
-		var fighters := get_tree().get_nodes_in_group(Npc.GROUP).filter(func(npc): return npc.fighting)
-		var shots := 0
-		var hits := 0
-		for npc in fighters:
-			shots += npc.breach_shots
-			hits += npc.breach_hits
-		print("DevCapture breach npcs: fighting=%d guns=%d down=%d shots=%d hits=%d" % [fighters.size(), fighters.filter(func(npc): return npc._gun != null).size(), fighters.filter(func(npc): return npc.is_knocked_down).size(), shots, hits])
-
-
-## --breach_knock=N: after N frames, a bot right beside every fighting NPC.
-func _breach_knock(frames: int) -> void:
-	for i in frames:
-		await get_tree().process_frame
-	var bots := get_tree().get_nodes_in_group(Enemy.GROUP).filter(func(bot): return UndergroundHub.is_in_hub(bot.global_position))
-	var fighters := get_tree().get_nodes_in_group(Npc.GROUP).filter(func(npc): return npc.fighting)
-	for i in mini(bots.size(), fighters.size()):
-		bots[i].global_position = fighters[i].global_position + Vector3(1.0, 0.1, 0.0)
-
-
-## --breach_wipe=N: after N frames, a killing blow for every cat in a breached sewer.
-func _breach_wipe(frames: int) -> void:
-	for i in frames:
-		await get_tree().process_frame
-	for player_id in Game.instance.player_ids():
-		if Mainframe.instance.is_breached(Teams.team_of(player_id)):
-			CatHealth.instance.damage(player_id, 99999, "THE TEST")
-
-
-## The car the --drive / --ride_along / --exit_after tests use: the one this cat is in, else its
-## own gang's car (getaway_car.gd team), else the nearest.
-func _car_for(player: CatPlayer) -> GetawayCar:
-	var inside := Game.instance.car_of(player.player_id)
-	if inside != null:
-		return inside
-	var best: GetawayCar = null
-	for car in Game.instance.cars():
-		if car.team == player.team:
-			return car
-		if best == null or car.global_position.distance_to(player.global_position) < best.global_position.distance_to(player.global_position):
-			best = car
-	return best
-
-
-## SEWER UPGRADES test (--buy_upgrade / --select_vehicle / --upgrade_log): one "DevCapture upgrades"
-## line before, after each buy, and after the ride is picked.
-func _upgrades_test(player: CatPlayer, args: Dictionary) -> void:
-	for i in 30:
-		await get_tree().physics_frame  # the save (cash, stash, upgrades) arrives first
-	_print_upgrades(player, "start")
-	if args.has("buy_upgrade"):
-		for upgrade_id in args["buy_upgrade"].split(","):
-			Upgrades.instance.request_buy.rpc_id(1, player.player_id, upgrade_id)
-			for i in 15:
-				await get_tree().physics_frame
-			_print_upgrades(player, "bought " + upgrade_id)
-	if args.has("select_vehicle"):
-		Upgrades.instance.request_select_vehicle.rpc_id(1, player.player_id, args["select_vehicle"])
-		for i in 15:
-			await get_tree().physics_frame
-		var car := _car_for(player)
-		print("DevCapture vehicle: %s is %s max_speed=%.1f (x%.2f turbo) accel=%.1f turn=%.1f mass=%.0f seats=%d smash x%.1f box=%s model=%s wheels=%d" % [
-			car.name, car.vehicle, car.max_speed, Upgrades.engine_multiplier(maxi(0, car.team)), car.engine_accel,
-			car.turn_speed, car.mass, car.passenger_seats, car.smash_speed_factor,
-			(car.get_node("CollisionShape3D").shape as BoxShape3D).size, car.get_node("Model/CarModel").scene_file_path.get_file(), car._wheels.size()])
-
-
-func _print_upgrades(player: CatPlayer, when: String) -> void:
-	var me := player.player_id
-	var items := ItemManager.instance
-	var inv := items.get_inventory(me)
-	var shop := PackedStringArray()
-	var whiskers := UndergroundHub.of(player).shopkeeper as Shopkeeper
-	if whiskers != null:
-		for item_id in whiskers.stock:
-			if Upgrades.shop_allows(me, item_id):
-				shop.append(item_id)
-	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (pack %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
-		when, Upgrades.instance.player_upgrades.get(me, {}), Wallet.instance.cash_of(me), items.scrap_count_of(me),
-		inv.pack.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
-		items.stash_size_for(me), items.quick_stack_size_for(me), CatHealth.instance.max_health_for(me), CatHealth.instance.get_health(me),
-		Upgrades.zoomies_multiplier(me), Upgrades.gourmet_multiplier(me), Upgrades.melee_multiplier(me), Upgrades.scrap_magnet_chance(me),
-		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_scrap_for(player.team),
-		Upgrades.instance.vehicle_of(player.team), ",".join(shop)])
-
-
-## --vehicles_lineup (host, TURF WAR so both cars exist, e.g. --teams=0): the Catleone car becomes the
-## ZOOM-BIKE and the Burrow car the MEOW-VAN (straight onto every computer, no unlock needed: test only),
-## parked side by side in front of us, three-quarter on. Then a "DevCapture lineup" line.
-func _vehicles_lineup(player: CatPlayer) -> void:
-	if UndergroundHub.is_in_hub(player.global_position):
-		UndergroundHub.of(player).deploy(player)  # (up to the street first)
-		for i in 30:
-			await get_tree().physics_frame
-	# Face north, so a film camera can find them: they park 5.5 m north of the cat, 4.6 m apart, e.g.
-	#   --vehicles_lineup --no_hud --cam_follow --cam_from=0,1.8,-1 --look_from=0,0.4,-5.5
-	player.camera_pivot.rotation.y = 0.0
-	var cars := Game.instance.cars()
-	var rides := ["cyber_bike", "fish_van", "interceptor"]
-	var forward := -player.camera_pivot.global_basis.z
-	forward.y = 0.0
-	forward = forward.normalized()
-	var right := forward.cross(Vector3.UP)
-	var ground := player.global_position
-	for i in cars.size():
-		var car := cars[i]
-		Upgrades.instance._set_team_vehicle.rpc(maxi(0, car.team), rides[mini(i, rides.size() - 1)])
-		var spot := ground + forward * 5.5 + right * (i * 4.6 - 2.3) + Vector3(0, 0.5, 0)
-		car._teleport(Transform3D(Basis(Vector3.UP, player.camera_pivot.global_rotation.y + PI * 0.7), spot))
-	# A work light over the pair (test only), so the photo shows the models and not just their neon.
-	LevelKit.add_light(Game.instance, ground + forward * 4.0 + Vector3(0, 4.0, 0), Color(1, 0.92, 0.8), 6.0, 14.0)
-	for i in 30:
-		await get_tree().physics_frame
-	for car in cars:
-		print("DevCapture lineup: %s = %s at %s max_speed=%.1f seats=%d wheels=%d trim=%s" % [car.name, car.vehicle,
-			car.global_position.snapped(Vector3.ONE * 0.1), car.max_speed, car.passenger_seats, car._wheels.size(), car.trim_color()])
-
-
-## --cat_lineup[=res://a.tscn,...]: the cat model (scenes/cat_model.tscn) plus any other cat scenes
-## named, standing in a row under a work light with their own camera (no HUD), wearing the player's
-## look (classic orange tabby where it sets nothing). For judging cat model changes side by side.
-func _cat_lineup(player: CatPlayer) -> void:
-	var paths: Array[String] = ["res://scenes/cat_model.tscn"]
-	for extra in str(_args["cat_lineup"]).split(","):
-		if extra.ends_with(".tscn"):
-			paths.append(extra)
-	if UndergroundHub.is_in_hub(player.global_position):
-		UndergroundHub.of(player).deploy(player)
-		for i in 30:
-			await get_tree().physics_frame
-	for seat in 4:
-		if Hud.of(seat) != null:
-			Hud.of(seat).visible = false
-	player.visible = false
-	var look := {"fur": Color(0.95, 0.55, 0.2), "markings": Color(1, 0.93, 0.82), "eyes": Color(0.04, 0.03, 0.06),
-		"nose": Color(1, 0.45, 0.6)}
-	look.merge(player.look, true)
-	var row := Node3D.new()
-	row.name = "CatLineup"
-	Game.instance.add_child(row)
-	row.global_position = player.global_position + Vector3(0, 0, -3.0)
-	for i in paths.size():
-		var cat := (load(paths[i]) as PackedScene).instantiate() as Node3D
-		cat.position = Vector3((i - (paths.size() - 1) / 2.0) * 1.05, 0, 0)
-		cat.rotation.y = PI + deg_to_rad(float(_args.get("lineup_yaw", "20")))  # cats face -Z: turn to the camera
-		row.add_child(cat)
-		CatLook.apply(cat, look)
-		print("DevCapture cat_model: %d %s" % [i, paths[i]])
-	LevelKit.add_light(row, Vector3(0, 2.2, 1.8), Color(1, 0.94, 0.85), 5.0, 9.0)
-	var camera := Camera3D.new()
-	camera.fov = float(_args.get("lineup_fov", "45"))
-	row.add_child(camera)
-	camera.position = Vector3(0, 0.75, float(_args.get("lineup_dist", "2.2")))
-	camera.rotation.x = deg_to_rad(-8)
-	camera.make_current()
-	for i in 20:
-		await get_tree().process_frame
-
-
-## --weapons_lineup[=a,b,...]: a display rack of the weapons (default: every weapon card) floating
-## side-on in a 4-wide grid in front of us, under a work light, with its own camera (no HUD), for
-## judging the Blockbench models. --lineup_dist=M moves the camera back, --lineup_yaw=DEG turns them. Prints one
-## "DevCapture weapon" line each: where its Muzzle ended up (snapped onto the model's own @Muzzle
-## marker), whether a HeatCoil / glow parts were found, its triangles and the PS1 shader check.
-func _weapons_lineup(player: CatPlayer) -> void:
-	var ids: Array[String] = []
-	if str(_args["weapons_lineup"]) not in ["", "true"]:
-		for item_id in str(_args["weapons_lineup"]).split(","):
-			ids.append(item_id)
-	else:
-		for item_id in ItemManager.instance.catalog:
-			var data: ItemData = ItemManager.instance.catalog[item_id]
-			if data.scene == null:
-				continue
-			var probe := data.scene.instantiate()
-			if probe is Weapon:
-				ids.append(item_id)
-			probe.free()
-		ids.sort()
-	if UndergroundHub.is_in_hub(player.global_position):
-		UndergroundHub.of(player).deploy(player)  # (up to the street: no sewer fog in the photo)
-		for i in 30:
-			await get_tree().physics_frame
-	for seat in 4:
-		if Hud.of(seat) != null:
-			Hud.of(seat).visible = false
-	player.visible = false
-	var rack := Node3D.new()
-	rack.name = "WeaponRack"
-	Game.instance.add_child(rack)
-	rack.global_position = player.global_position + Vector3(0, 1.8, -3.0)
-	var columns := mini(4, ids.size())
-	var guns: Array[Weapon] = []
-	for i in ids.size():
-		var data: ItemData = ItemManager.instance.catalog[ids[i]]
-		var gun := data.scene.instantiate() as Weapon
-		gun.position = Vector3(((i % columns) - (columns - 1) / 2.0) * 1.1, -floorf(i / float(columns)) * 0.9, 0)
-		gun.rotation.y = -PI / 2 + deg_to_rad(float(_args.get("lineup_yaw", "0")))  # barrel (-Z) pointing right: we see its side
-		rack.add_child(gun)
-		guns.append(gun)
-	LevelKit.add_light(rack, Vector3(0, 1.5, 1.5), Color(1, 0.94, 0.85), 4.0, 8.0)
-	var camera := Camera3D.new()
-	camera.fov = 50.0
-	rack.add_child(camera)
-	camera.position = Vector3(0, -0.45 if ids.size() > columns else 0.0, float(_args.get("lineup_dist", "3.4" if ids.size() > 2 else "1.4")))
-	camera.make_current()
-	for i in 20:
-		await get_tree().process_frame
-	for i in guns.size():
-		var gun := guns[i]
-		var tris := 0
-		for mesh: MeshInstance3D in gun.find_children("*", "MeshInstance3D", true, false):
-			for surface in mesh.mesh.get_surface_count():
-				var count: int = mesh.mesh.surface_get_array_index_len(surface)
-				tris += (count if count > 0 else mesh.mesh.surface_get_array_len(surface)) / 3
-		print("DevCapture weapon: %s muzzle=%s coil=%s glow=%s neon=%s tris=%d psx=%s" % [ids[i],
-			gun._muzzle.position.snapped(Vector3.ONE * 0.001) if gun._muzzle != null else "none", gun._coil != null,
-			gun.glow_parts.keys(), gun.neon_parts.keys(), tris, _all_psx(gun)])
-
-
-## True if every mesh under node draws with the game's PS1 shader.
-func _all_psx(node: Node) -> bool:
-	for mesh: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		var material := mesh.get_active_material(0) as ShaderMaterial
-		if material == null or material.shader != LevelKit.PSX_SHADER:
-			return false
-	return true
-
-
-## THE BLACK MARKITTEN (scripts/ui/shop_screen.gd): --talk=ComradeWhiskers presses E on him (the shop
-## screen opens), then, in this order:
-##   --shop_tab=N               switch tab (0 MELEE, 1 CONSUMABLES, 2 FIREARMS)
-##   --shop_buy=a,b             click those items' rows (locked ones should refuse)
-##   --shop_sell=pack:0,hand:0  click those backpack / paw / quick slots (sells them)
-##   --shop_sell_all            click SELL ALL LOOT
-##   --shop_pad=right,down,...  move the d-pad highlight (prints what it lands on)
-##   --shop_close=Tab|Esc       a real key press that should close it
-## Prints "DevCapture shop" lines (tab, rows, locked, cash, backpack, highlight, message).
-func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void:
-	var used := Interactable.try_use(player)
-	var shop := ShopScreen.for_seat(player.slot)
-	var items := ItemManager.instance
-	var report := func(when: String) -> void:
-		var rows := shop._rows.filter(func(r): return r.visible).map(func(r): return "%s%s" % [r.get_node("Face").item_id, "(LOCKED)" if r.get_node("Face").locked else ""])
-		var focus: Button = shop._focus.current
-		var focus_name := "-"
-		if focus != null:
-			focus_name = focus.text if focus.text != "" else (focus.get_node("Face").item_id if focus.has_meta("row") else "%s%d:%s" % [focus.get_meta("where", "?"), focus.get_meta("index", 0), focus.get_meta("item", "")])
-		var inventory := InventoryScreen.for_seat(player.slot)
-		print("DevCapture shop (%s): open=%s tab=%d rows=%s cash=$%d pack=%s hands=%s inventory_open=%s shop_mode=%s focus=%s note=\"%s\" sell_all=\"%s\"" % [
-			when, shop.visible, shop.tab, rows, Wallet.instance.cash_of(player.player_id), items.get_inventory(player.player_id).pack,
-			items.get_inventory(player.player_id).hands, inventory.visible, inventory.shop_mode, focus_name, shop._note, shop._sell_all.text])
-	for i in 30:
-		await get_tree().process_frame
-	print("DevCapture shop: %s used=%s menu_blocks_cat=%s wants_input=%s" % [keeper.name, used, player._menu_open(), Hud.wants_input(player.slot)])
-	report.call("open")
-	if args.has("shop_tab"):
-		shop._set_tab(int(args["shop_tab"]))
-		report.call("tab")
-	if args.has("shop_buy"):
-		for item_id in str(args["shop_buy"]).split(","):
-			for tab_index in 3:
-				if item_id in shop._tab_items(tab_index):
-					shop._set_tab(tab_index)
-			for row in shop._rows:
-				if row.visible and row.get_node("Face").item_id == item_id:
-					shop._press_row(row)
-			for i in 20:
-				await get_tree().process_frame
-			report.call("buy " + item_id)
-	if args.has("shop_sell"):
-		var inventory := InventoryScreen.for_seat(player.slot)
-		for slot in str(args["shop_sell"]).split(","):
-			var parts: PackedStringArray = slot.split(":")
-			var list: Array = {"pack": inventory._pack_buttons, "hand": inventory._paw_buttons, "quick": inventory._quick_buttons}[parts[0]]
-			for button in list:
-				if button.get_meta("index") == int(parts[1]):
-					inventory._use_slot(button, parts[0], int(parts[1]), false)
-					break
-			for i in 20:
-				await get_tree().process_frame
-			report.call("sell " + slot)
-	if args.has("shop_sell_all"):
-		shop._sell_all_loot()
-		for i in 20:
-			await get_tree().process_frame
-		report.call("sell all")
-	if args.has("shop_pad"):
-		for direction in str(args["shop_pad"]).split(","):
-			var move := InputEventAction.new()
-			move.action = "ui_" + direction
-			move.pressed = true
-			shop._focus.handle(move)
-			report.call("pad " + direction)
-	if args.has("shop_close"):
-		for pressed in [true, false]:
-			var key := InputEventKey.new()
-			key.physical_keycode = OS.find_keycode_from_string(args["shop_close"])
-			key.keycode = key.physical_keycode
-			key.pressed = pressed
-			Input.parse_input_event(key)
-			await get_tree().process_frame
-		for i in 10:
-			await get_tree().process_frame
-		report.call("after " + str(args["shop_close"]))
-
-
-## --workbench (after walking there and pressing E): print the TINKER WORKBENCH screen, then
-## --workbench_recruit=N / --workbench_buy=a,b / --workbench_tab=N ("DevCapture workbench" lines).
-func _workbench_test(player: CatPlayer, args: Dictionary) -> void:
-	var bench := WorkbenchScreen.for_seat(player.slot)
-	var hub := UndergroundHub.of(player)
-	var report := func(when: String) -> void:
-		var tabs := []
-		for i in bench._tabs.size():
-			var npc := bench.npc_for_tab(i)
-			tabs.append("%d:%s=%s" % [i, npc.name if npc != null else "-", bench.tab_state(i)])
-		var cards := bench._cards.filter(func(c): return c.visible).map(func(c): return "%s(%d)" % [c.get_node("Face").upgrade_id,
-			Upgrades.instance.current_tier(player.player_id, c.get_node("Face").upgrade_id)])
-		var present := hub.get_children().filter(func(n): return n is Npc and n.rebellion_tier > 0 and n.present).map(func(n): return n.name)
-		print("DevCapture workbench (%s): open=%s tab=%d tabs=%s cards=%s recruit=%s cash=$%d scrap=%d rebellion=%d npcs_present=%s note=\"%s\"" % [
-			when, bench.visible, bench.tab, tabs, cards, ("\"%s\"" % bench._recruit.text) if bench._recruit.visible else "-",
-			Wallet.instance.cash_of(player.player_id), ItemManager.instance.scrap_count_of(player.player_id),
-			Upgrades.rebellion_level(player.team), present, bench._note])
-	for i in 10:
-		await get_tree().process_frame
-	report.call("open")
-	for n in int(args.get("workbench_recruit", "0")):
-		bench._set_tab(Upgrades.rebellion_level(player.team) + 2)
-		bench._press_recruit()
-		for i in 30:
-			await get_tree().process_frame
-		report.call("recruit %d" % (n + 1))
-	if args.has("workbench_buy"):
-		for upgrade_id in str(args["workbench_buy"]).split(","):
-			bench._set_tab(maxi(0, Upgrades.tab_of(upgrade_id)))
-			for card in bench._cards:
-				if card.visible and card.get_node("Face").upgrade_id == upgrade_id:
-					bench._press_card(card)
-			for i in 20:
-				await get_tree().process_frame
-			report.call("buy " + upgrade_id)
-	if args.has("workbench_tab"):
-		bench._set_tab(int(args["workbench_tab"]))
-		for i in 5:
-			await get_tree().process_frame
-		report.call("tab")
-
-
-## --inventory: after a while, print what each open inventory screen shows ("DevCapture inventory").
-func _inventory_report(seats: Array, frames: int) -> void:
-	for i in mini(60, frames / 2):
-		await get_tree().process_frame
-	for seat in seats:
-		var screen := InventoryScreen.for_seat(seat)
-		if screen == null or screen.owner_cat == null:
-			print("DevCapture inventory seat %d: none" % seat)
-			continue
-		var cat := screen.owner_cat
-		var shown := func(list: Array) -> String:
-			return ",".join(list.map(func(b):
-				var count: int = (b.get_node("Face") as InventoryScreen.SlotFace).count
-				return (str(b.get_meta("item")) + ("x%d" % count if count > 1 else "")) if b.get_meta("item") != "" else "-"))
-		print("DevCapture inventory seat %d: open=%s view=%.2f at_stash=%s cam_len=%.2f paws=[%s] quick=[%s] pack=[%s] stash=[%s] info=\"%s\"" % [
-			seat, screen.visible, cat.inventory_view_amount(), screen._at_stash, cat.spring_arm.spring_length,
-			shown.call(screen._paw_buttons), shown.call(screen._quick_buttons), shown.call(screen._pack_buttons),
-			shown.call(screen._stash_buttons.filter(func(b): return b.visible)), screen._info.text])
-
-
-## --hud_heat / --hud_buffs: hold the gun heat and buff timers still until the snap, so the new
-## ocean-blue HUD pieces (scripts/ui/hud_weapon_display.gd, hud_status_icons.gd) can be checked.
-func _hud_preview(player: CatPlayer, args: Dictionary) -> void:
-	var heats: Array = []
-	for value in str(args.get("hud_heat", "")).split(",", false):
-		heats.append(clampf(float(value), 0.0, 1.0))
-	var buffs: PackedStringArray = str(args.get("hud_buffs", "")).split(",", false)
-	if "catnip" in buffs:
-		player.start_boost(1.3, 30.0)
-	if "catdip" in buffs:
-		player.start_double_jump(1, 20.0)
-	var frames := int(args.get("frames", "90"))
-	for frame in frames:
-		for hand in mini(heats.size(), 2):
-			var weapon := ItemManager.instance.held_item(player, hand) as Weapon
-			if weapon != null:
-				weapon.heat = heats[hand]
-				weapon.is_overheated = heats[hand] >= 1.0
-		if "sticky" in buffs:
-			player._sticky_left = player.sticky_seconds * 0.6
-		if frame == mini(30, frames / 2):  # (physics frames can run slower than the snap's frames)
-			var display := Hud.element("Held", player.slot) as HudWeaponDisplay
-			var icons := Hud.element("StatusIcons", player.slot) as HudStatusIcons
-			print("DevCapture hud loadout: paws=%s quick=%s badges=%s" % [
-				", ".join(display._paws.map(func(p): return "%s heat=%.2f%s key=%s" % [p.id, p.heat, " OVERHEAT" if p.overheated else "", p.key])) if display != null else "?",
-				", ".join(display._quick.map(func(q): return "%s x%d [%s]" % [q.id if q.id != "" else "-", q.count, q.key])) if display != null else "?",
-				", ".join(icons._effects.map(func(e): return "%s %.0f%%" % [e.id, e.fraction * 100.0])) if icons != null and icons.visible else "none"])
-		await get_tree().physics_frame
-
-
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.
 @rpc("any_peer", "reliable")
 func _test_give(player_id: int, item_list: String) -> void:
 	if multiplayer.is_server() and PlayerId.sender_owns(player_id):
 		for item_id in item_list.split(","):
 			ItemManager.instance._put_in_inventory(player_id, item_id, Vector3.ZERO)
-
-
-## --shoot_rival=N [--rival_wait=F]: stand 4 m from the nearest cat of the OTHER gang (waits up to
-## F frames for one, default 600) and hit it N times with the gun in our right paw (--give=pistol),
-## exactly like a real bolt does (Hit -> receive_hit). Prints its health after each hit.
-func _shoot_rival(scene: Node, player: CatPlayer, args: Dictionary) -> void:
-	var health := CatHealth.instance
-	var rival: CatPlayer = null
-	for i in int(args.get("rival_wait", "600")):
-		for other in scene.players.get_children():
-			var cat := other as CatPlayer
-			# (--shoot_friend: aim at our own gang instead, to check friendly fire is off)
-			if cat != player and (cat.team != player.team) != args.has("shoot_friend") \
-					and Game.instance.is_up_top(cat.player_id) and not health.is_down(cat.player_id) \
-					and (rival == null or cat.global_position.distance_to(player.global_position) < rival.global_position.distance_to(player.global_position)):
-				rival = cat
-		if rival != null:
-			break
-		await get_tree().physics_frame
-	if rival == null:
-		print("DevCapture shoot: no rival up top to shoot")
-		return
-	player.teleport_to(rival.global_position + Vector3(4, 0.2, 0), 0.0)
-	for i in 20:
-		await get_tree().physics_frame  # let the host see our new position first
-	var gun := ItemManager.instance.held_item(player, 0) as Weapon
-	for shot in int(args["shoot_rival"]):
-		if gun != null and gun.blast_radius > 0.0:
-			# A blast gun: set it off right on them, the way a real shot lands.
-			gun._blast(rival.global_position + Vector3(0.5, 0, 0), Vector3.LEFT)
-			for i in 15:
-				await get_tree().physics_frame
-			print("DevCapture blast %d at %s (gang %d): hp=%d at %s" % [shot + 1, rival.display_name(), rival.team,
-				health.get_health(rival.player_id), rival.global_position.snapped(Vector3.ONE * 0.1)])
-			continue
-		for volley in int(args.get("rival_volley", "1")) - 1:
-			var pellet := gun._make_hit((rival.global_position - player.global_position).normalized(), rival.global_position)
-			rival.receive_hit(pellet)
-		var hit := Hit.new()
-		hit.shooter = player
-		hit.weapon = gun
-		hit.damage = gun.damage if gun != null else 40
-		hit.direction = (rival.global_position - player.global_position).normalized()
-		hit.position = rival.global_position + Vector3.UP * 0.5
-		var number := rival.receive_hit(hit) if gun != null else false
-		for i in 15:
-			await get_tree().physics_frame
-		print("DevCapture shoot %d at %s (gang %d): number=%s hp=%d downed=%s knocked_out_or_down=%s" % [shot + 1,
-			rival.display_name(), rival.team, number, health.get_health(rival.player_id), health.is_downed(rival.player_id),
-			health.is_down(rival.player_id)])
-
-
-## --blast_car: blast beside the nearest car and print where it was, its speed and where it landed.
-func _blast_car(scene: Node, player: CatPlayer) -> void:
-	for i in 30:
-		await get_tree().physics_frame
-	var gun := ItemManager.instance.held_item(player, 0) as Weapon
-	var car: GetawayCar = null
-	for candidate: GetawayCar in (scene as Game).cars():
-		if car == null or candidate.global_position.distance_to(player.global_position) < car.global_position.distance_to(player.global_position):
-			car = candidate
-	var before := car.global_position
-	gun._blast(before + Vector3(1, 0, 0), Vector3.LEFT)
-	for i in 30:
-		await get_tree().physics_frame
-	print("DevCapture blast_car %s driver=%d: from %s to %s speed=%.1f" % [car.name, car.driver_id, before.snapped(Vector3.ONE * 0.1),
-		car.global_position.snapped(Vector3.ONE * 0.1), car.linear_velocity.length()])
-
-
-## --blast_probe: everything a blast's sphere finds at our feet, and how many of those can be hit.
-func _blast_probe(player: CatPlayer) -> void:
-	var sphere := SphereShape3D.new()
-	sphere.radius = 5.5
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = sphere
-	query.transform = Transform3D(Basis.IDENTITY, player.global_position)
-	var found := player.get_world_3d().direct_space_state.intersect_shape(query, 2048)
-	var hittable := 0
-	for result in found:
-		if Hit.target_of(result.collider) != null:
-			hittable += 1
-	print("DevCapture blast_probe: %d found, %d hittable" % [found.size(), hittable])
-
-
-## --down=S [--revive=N] [--bleed_out=SEC]: knock the cat in slot S down in front of us, then
-## (with --revive) press and hold E on it like a teammate would. Prints what happened.
-func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
-	var health := CatHealth.instance
-	if args.has("bleed_out"):
-		health.bleed_out_seconds = float(args["bleed_out"])
-	var victim: CatPlayer = null
-	if multiplayer.is_server():
-		victim = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(args["down"])))
-	else:
-		# A client with --revive=N: wait (up to ~10 s) for any downed cat, then walk up to it.
-		for i in 600:
-			for other in scene.players.get_children():
-				if health.is_downed((other as CatPlayer).player_id):
-					victim = other
-			if victim != null:
-				break
-			await get_tree().physics_frame
-		if victim != null:
-			player.teleport_to(victim.global_position + Vector3(1.0, 0.2, 0), 0.0)
-			for i in 20:
-				await get_tree().physics_frame  # let the host see our new position first
-	if victim == null:
-		print("DevCapture down: no cat to down / revive")
-		return
-	var report := func(label: String) -> void:
-		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d robbed=%s knocked_out=%s their_bag=%s our_bag=%s" % [
-			label, victim.name, health.get_health(victim.player_id), health.is_downed(victim.player_id),
-			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), health.is_being_robbed(victim.player_id),
-			victim.knocked_out, ItemManager.instance.loot_in_pack(victim.player_id), ItemManager.instance.loot_in_pack(player.player_id)])
-	if multiplayer.is_server():
-		if victim != player:
-			var ahead := -player.camera_pivot.global_basis.z
-			victim.teleport_to(player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * 1.5, 0.0)
-		for i in 10:
-			await get_tree().physics_frame
-		if args.has("down_loot"):
-			for item_id in args["down_loot"].split(","):
-				ItemManager.instance._put_in_inventory(victim.player_id, item_id, victim.global_position)
-		health.damage(victim.player_id, 100, "A TEST")
-		for i in 5:
-			await get_tree().physics_frame
-	report.call("after hit")
-	if victim != player:
-		print("DevCapture down prompt for us: \"%s\"" % Interactable.prompt_for(player))
-	if args.has("revive") and victim != player:
-		Interactable.try_use(player)  # what pressing E does...
-		Input.action_press(Seats.action(player.slot, "interact"))  # ...and keep holding it
-		for i in int(args["revive"]):
-			await get_tree().physics_frame
-			if i == 60:
-				report.call("1 s into revive (prompt \"%s\")" % Interactable.prompt_for(player))
-			if i == 100 and args.has("revive_snap"):  # --revive_snap=PATH: a picture mid-revive
-				get_tree().root.get_texture().get_image().save_png("res://" + args["revive_snap"])
-		Input.action_release(Seats.action(player.slot, "interact"))
-		for i in 10:
-			await get_tree().physics_frame
-		report.call("after revive")
-
-
-## The Roomba --bait_roomba / --zap_roomba act on: the nearest one, or the MEGA VAC-COP
-## with --roomba=boss (waits for it to appear).
-func _pick_roomba(scene: Node, near: Vector3, args: Dictionary) -> Roomba:
-	if args.get("roomba", "") == "boss":
-		for wait in 300:
-			for roomba in scene.get_node("Roombas").get_children():
-				if roomba is Roomba and (roomba as Roomba).is_boss:
-					return roomba
-			await get_tree().physics_frame
-	if args.get("roomba", "") in ["drone", "trapper", "vac"]:
-		# --roomba=drone / trapper / vac: the nearest of that kind (waits for one to appear;
-		# vac = a plain VAC-COP, not a boss, drone or trapper).
-		while true:
-			var best: Roomba = null
-			for node in scene.get_node("Roombas").get_children():
-				var kind_ok: bool = node is SquirtDrone if args["roomba"] == "drone" else (node is LintTrapper if args["roomba"] == "trapper" \
-					else (node is Roomba and not node is SquirtDrone and not node is LintTrapper and not (node as Roomba).is_boss))
-				if kind_ok \
-						and (best == null or near.distance_to(node.global_position) < near.distance_to(best.global_position)):
-					best = node
-			if best != null:
-				return best
-			await get_tree().physics_frame
-	return _nearest_roomba(scene, near)
-
-
-func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
-	var best: Roomba = null
-	for roomba in scene.get_node("Roombas").get_children():
-		if best == null or from.distance_to(roomba.global_position) < from.distance_to(best.global_position):
-			best = roomba
-	return best
-
-
-## --tutorial --tutorial_auto: play the whole TUTORIAL (scripts/tutorial.gd) the quick way (moving
-## the cat, asking the host like a player's buttons would), checking each step advances. Quits with
-## 0 when it reaches TUTORIAL COMPLETE and the start menu comes back, 1 if a step got stuck.
-func _tutorial_auto(player: CatPlayer) -> void:
-	var tutorial := Tutorial.instance
-	var me := player.player_id
-	var items := ItemManager.instance
-	var hub := UndergroundHub.of(player)
-	await _seconds(0.5)
-	var profile_file := PlayerProfile.PROFILES_FOLDER + str(Settings.current_cat().get("id", "")).validate_filename() + ".cfg"
-	var profile_time := FileAccess.get_modified_time(profile_file) if FileAccess.file_exists(profile_file) else 0
-	print("DevCapture tutorial start: step=%d cash=$%d stash=%s pack_size=%d mainframe=%d%% in_hub=%s box=%s \"%s\" | \"%s\"" % [
-		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.pack_size_for(me),
-		int(Mainframe.instance.charge_of(player.team)), UndergroundHub.is_in_hub(player.global_position),
-		Hud.element("TutorialBox").visible, (Hud.element("TutorialStep") as Label).text, (Hud.element("TutorialHint") as Label).text])
-	await _tutorial_arrow("step1", "tutorial_step1_arrow.png")
-	# Too early for Don: he should refuse.
-	hub.deploy(player)
-	await _seconds(0.3)
-	print("DevCapture tutorial early deploy refused: %s" % UndergroundHub.is_in_hub(player.global_position))
-	# 1. The quest (as if MITTENS' FISH was clicked in Lil' Mittens' talk box).
-	player.teleport_to(hub.get_node("LilMittens").global_position + Vector3(0, 0, 2), 0.0)
-	QuestManager.instance.start_quest(me, tutorial.quest_id)
-	if not await _until_step(2): return
-	# 2. Buy a PAW-PISTOL.
-	player.teleport_to(hub.shopkeeper.global_position + hub.shopkeeper.global_basis.z * 2.0, 0.0)
-	items.request_buy.rpc_id(1, me, "pistol")
-	if not await _until_step(3): return
-	# 3. Open the stash lockers (E), then close them.
-	player.teleport_to(hub.to_global(hub.stash_spot), 0.0)
-	await _seconds(0.3)
-	print("DevCapture tutorial stash E: %s" % Interactable.try_use(player))
-	await _seconds(0.5)
-	print("DevCapture tutorial stash open=%s pack slots=%d" % [InventoryScreen.for_seat(0).visible, InventoryScreen.for_seat(0)._pack_buttons.size()])
-	InventoryScreen.for_seat(0)._set_open(false)
-	if not await _until_step(4): return
-	# 4. Stand at the Mainframe.
-	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)
-	if not await _until_step(5): return
-	# 5. Don: SEND ME UP TOP.
-	hub.deploy(player)
-	if not await _until_step(6): return
-	# 6. Three fish.
-	for i in 10:
-		if items.count_in_bag(me, "fish") >= tutorial.fish_needed:
-			break
-		await _grab_nearest(player, "fish")
-	if not await _until_step(7): return
-	print("DevCapture tutorial fish in bag: %d, heat=%.1f (frozen)" % [items.count_in_bag(me, "fish"), HeatMeter.instance.heat])
-	# 7. Wait for a VAC-COP to be brought over, smash it, grab the scrap.
-	await _seconds(1.0)
-	var bot := tutorial._nearest_bot(player)
-	print("DevCapture tutorial bot %s at %.1fm" % [bot.name if bot != null else "none", bot.global_position.distance_to(player.global_position) if bot != null else -1.0])
-	if bot != null:
-		bot.take_hit(me, 500)
-	await _seconds(0.5)
-	await _grab_nearest(player, "scrap")
-	if not await _until_step(8): return
-	# 8. A payphone (E), then the exit.
-	await _seconds(0.5)
-	print("DevCapture tutorial heat=%.1f exit_open=%s" % [HeatMeter.instance.heat, FishHeist.instance.exit_is_open(player.team)])
-	await _tutorial_arrow("step8 phase0", "tutorial_step8_payphone.png")
-	var phone := tutorial._nearest_payphone(player)
-	var phone_npc: Node3D = null
-	for node in FishHeist.instance.get_children():
-		if node is Payphone and (node as Node3D).global_position.distance_to(phone) < 0.1:
-			phone_npc = node
-	player.teleport_to(phone_npc.global_position + phone_npc.global_basis.z * 1.8, 0.0)
-	for i in 15:
-		await get_tree().physics_frame
-	print("DevCapture tutorial payphone E: %s line=\"%s\" talk box open=%s" % [Interactable.try_use(player), (phone_npc as Payphone).last_line, NpcDialog.is_open_for(player.slot)])
-	await _seconds(0.5)
-	await _tutorial_arrow("step8 phase1", "tutorial_step8_exit.png")
-	print("DevCapture tutorial revealed=%s phase=%d hint=\"%s\"" % [FishHeist.instance.is_revealed(player.team), tutorial.phase, (Hud.element("TutorialHint") as Label).text])
-	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
-	if not await _until_step(9): return
-	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).pack, UndergroundHub.is_in_hub(player.global_position)])
-	# 9. Feed the scrap.
-	await _seconds(1.0)
-	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)
-	for i in 15:
-		await get_tree().physics_frame
-	print("DevCapture tutorial mainframe E: %s" % Interactable.try_use(player))
-	if not await _until_step(Tutorial.DONE): return
-	print("DevCapture tutorial done: mainframe=%d%% banner=\"%s\"" % [int(Mainframe.instance.charge_of(player.team)), (Hud.element("Banner") as Label).text.replace("\n", " ")])
-	var old_game := Game.instance
-	var give_up := Time.get_ticks_msec() + 10000
-	while Game.instance == old_game and Time.get_ticks_msec() < give_up:
-		await get_tree().process_frame
-	await _seconds(0.5)
-	var touched := FileAccess.file_exists(profile_file) and FileAccess.get_modified_time(profile_file) != profile_time
-	print("DevCapture tutorial back at menu: %s tutorial=%s real save touched=%s" % [
-		Game.instance != old_game and Game.instance.main_menu.visible, Game.is_tutorial(), touched])
-	get_tree().quit(0)
-
-
-## Print what the green arrow + beacon show right now ("DevCapture tutorial arrow ..." line) and,
-## with --tutorial_shots, save the whole window to shots/<file>.
-func _tutorial_arrow(when: String, file: String) -> void:
-	await _seconds(0.4)  # (let the arrow turn + the box settle)
-	var compass := Hud.element("Compass") as HudCompassArrow
-	print("DevCapture tutorial arrow %s: visible=%s text=\"%s\" beacon=%s step_line=\"%s\"" % [when,
-		compass.visible, compass._text, Tutorial.instance._beacon.visible, (Hud.element("TutorialStep") as Label).text])
-	if _args.has("tutorial_shots") and DisplayServer.get_name() != "headless":
-		var path := ProjectSettings.globalize_path("res://shots/" + file)
-		get_viewport().get_texture().get_image().save_png(path)
-		print("DevCapture saved: ", path)
-
-
-## Wait until the tutorial reaches this step (up to 15 s). False (and quits with 1) if it never does.
-func _until_step(wanted: int) -> bool:
-	var give_up := Time.get_ticks_msec() + 15000
-	while Tutorial.instance.step < wanted and Time.get_ticks_msec() < give_up:
-		await get_tree().process_frame
-	if Tutorial.instance.step < wanted:
-		print("DevCapture tutorial STUCK on step %d (phase %d), wanted %d" % [Tutorial.instance.step, Tutorial.instance.phase, wanted])
-		get_tree().quit(1)
-		return false
-	return true
-
-
-func _seconds(seconds: float) -> void:
-	await get_tree().create_timer(seconds).timeout
-
-
-## Teleport next to the nearest ITEM on the ground and ask the host for it, like pressing E.
-func _grab_nearest(player: CatPlayer, item_id: String) -> void:
-	var items := ItemManager.instance
-	var best := -1
-	for id in items.world:
-		if items.world[id].item == item_id and (best == -1 or items.world[id].pos.distance_to(player.global_position) < items.world[best].pos.distance_to(player.global_position)):
-			best = id
-	if best == -1:
-		print("DevCapture tutorial: no %s lying around" % item_id)
-		await _seconds(3.5)  # (the tutorial drops spare fish every few seconds)
-		return
-	player.teleport_to(items.world[best].pos + Vector3(0.8, 0.3, 0), 0.0)
-	for i in 12:
-		await get_tree().physics_frame
-	items.request_pickup.rpc_id(1, player.player_id, best)
-	await _seconds(0.3)
-
-
-## Turns ["--capture=a.png", "--drive"] into {"capture": "a.png", "drive": "true"}.
-## --talk[=NODE_NAME]: stand in front of that NPC (default Don) and press E,
-## then click the --choose buttons in order (0 = top button), as if the player did.
-## --portrait[=NAME]: a close-up of an NPC's face (for icons / posters). Hides the HUD and our
-## own cat, and points a new camera at the NPC from the front. --portrait_dist / --portrait_height
-## / --portrait_side (metres) move the camera; --portrait_fov sets the zoom.
-func _portrait(player: CatPlayer, args: Dictionary) -> void:
-	for seat in 4:
-		var hud := Hud.of(seat)
-		if hud != null:
-			hud.visible = false
-	var camera := Camera3D.new()
-	camera.fov = float(args.get("portrait_fov", "40"))
-	var face := Vector3(0, float(args.get("portrait_height", "0.95")), 0)
-	var offset := Vector3(float(args.get("portrait_side", "0")), 0.05, float(args.get("portrait_dist", "1.6")))
-	var target: Node3D
-	if args["portrait"] == "me":
-		# Our own cat: its model faces -Z (nose first), so the camera goes on that side.
-		target = player.cat_model
-		offset.z = -offset.z
-	elif args["portrait"] == "bot":
-		# --portrait=bot: the bot --roomba picks (vac / boss / drone / trapper). The camera hangs off
-		# its Model (faces -Z), so the MEGA VAC-COP's 2.6x scale moves the camera back to match.
-		var bot: Roomba = await _pick_roomba(Game.instance, player.global_position, args)
-		target = bot.model
-		offset.z = -offset.z
-		player.visible = false
-	else:
-		target = Game.instance.hub.npc
-		for node in get_tree().get_nodes_in_group(Npc.GROUP):
-			if node.name == args["portrait"]:
-				target = node
-		player.visible = false
-		# NPCs face their +Z (the way a cat walks up to talk to them).
-	target.add_child(camera)
-	camera.position = face + offset
-	camera.look_at(target.to_global(face))
-	camera.make_current()
-
-
-## --look=N: a random cat look from seed N, as if picked in the MY CAT screen
-## (our cat wears it and shares it; test runs never save it).
-## --wear=hat:mohawk,neck:bandolier,fur:#808080 then sets exact parts / colours on top.
-func _apply_look(args: Dictionary) -> void:
-	if not (args.has("look") or args.has("wear")):
-		return
-	var look := CatLook.default_look()
-	if args.has("look"):
-		var rng := RandomNumberGenerator.new()
-		rng.seed = int(args["look"])
-		look = CatLook.random_look(rng)
-	if args.has("wear"):
-		for pair in args["wear"].split(","):
-			var bits: PackedStringArray = pair.split(":")
-			look[bits[0]] = Color(bits[1]) if bits[0] in CatLook.COLOR_KEYS else bits[1]
-	Settings.update_current_cat({"look": CatLook.clean(look)})
-	for i in 10:
-		await get_tree().process_frame
-
-
-## Trailer camera (--cam_from / --cam_to / --look_* / --cam_follow / --cam_orbit): a new camera
-## in the game world that glides between two spots (or circles a point) over --cam_frames.
-func _film_camera(player: CatPlayer, args: Dictionary) -> void:
-	var camera := Camera3D.new()
-	camera.fov = float(args.get("cam_fov", "60"))
-	Game.instance.add_child(camera)
-	var vec := func(key: String, fallback: Vector3) -> Vector3:
-		if not args.has(key):
-			return fallback
-		var p: PackedFloat64Array = args[key].split_floats(",")
-		return Vector3(p[0], p[1], p[2])
-	var cam_from: Vector3 = vec.call("cam_from", Vector3.ZERO)
-	var cam_to: Vector3 = vec.call("cam_to", cam_from)
-	var look_from: Vector3 = vec.call("look_from", Vector3.ZERO)
-	var look_to: Vector3 = vec.call("look_to", look_from)
-	var frames := maxi(1, int(args.get("cam_frames", args.get("frames", "90"))))
-	var delay := int(args.get("cam_delay", "0"))
-	var ease_on: bool = args.get("cam_ease", "true") != "false"
-	var i := -delay
-	var anchor := player.global_position  # what --cam_follow follows
-	while is_instance_valid(camera):
-		var t := clampf(float(i) / frames, 0.0, 1.0)
-		if ease_on:
-			t = smoothstep(0.0, 1.0, t)
-		# Follow the cat, or the car while the cat drives it. A sudden jump of 30 m+ (extracted
-		# down to the hub, say) is ignored, so the camera stays where the action was.
-		var followed := Game.instance.player_position(player.player_id)
-		if followed.distance_to(anchor) < 30.0:
-			anchor = followed
-		var head := anchor + Vector3(0, 0.6, 0)  # roughly the cat's head
-		var at: Vector3
-		var target: Vector3
-		if args.has("cam_orbit"):
-			var o: PackedFloat64Array = args["cam_orbit"].split_floats(",")
-			var angle := deg_to_rad(lerpf(o[5], o[6], t))
-			target = Vector3(o[0], o[1], o[2])
-			at = target + Vector3(sin(angle) * o[3], o[4], cos(angle) * o[3])
-		else:
-			at = cam_from.lerp(cam_to, t)
-			target = look_from.lerp(look_to, t) if args.has("look_from") else head
-			if args.has("cam_follow"):
-				at += anchor
-				if args.has("look_from"):
-					target += anchor
-		camera.global_position = at
-		if not at.is_equal_approx(target):
-			camera.look_at(target)
-		camera.make_current()  # (the cat's own camera may grab it back when it spawns)
-		i += 1
-		await get_tree().process_frame
 
 
 ## --near_speaker=D: stand D metres out in the street from the loudspeaker pole nearest the
@@ -2028,69 +1193,6 @@ func _announce(args: Dictionary) -> void:
 		if (node as FloatingLine).is_talking():
 			talking += 1
 	print("DevCapture speaker: announced \"%s\" on %d poles, subtitle shown=%s" % [a.last_text.left(50), talking, (Hud.element("Subtitle") as Control).visible if Hud.element("Subtitle") != null else false])
-
-
-func _talk(player: CatPlayer, args: Dictionary) -> void:
-	var npc: Npc = UndergroundHub.of(player).npc  # (our own gang's boss)
-	for node in get_tree().get_nodes_in_group(Npc.GROUP):
-		if node.name == args["talk"]:
-			npc = node
-	if npc.rebellion_tier > 0 and Upgrades.rebellion_override < 0:
-		# THE SEWER REBELLION: a recruit nobody has recruited is hidden. Old quest tests just want to talk.
-		Upgrades.rebellion_override = Upgrades.REBELLION_TIERS
-		print("DevCapture talk: %s is a REBELLION TIER %d recruit: --rebellion_tier=5 for this test" % [npc.name, npc.rebellion_tier])
-		for i in 20:
-			await get_tree().process_frame  # (they check every quarter second)
-	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
-	await get_tree().physics_frame
-	if npc is Payphone:
-		# A payphone opens no talk box: the boss's line types out over the phone, and the cat can
-		# keep moving. Face the phone (the line floats above it) and print what the boss said.
-		var facing := npc.global_basis.z
-		player.camera_pivot.rotation.y = atan2(facing.x, facing.z)
-		var used := Interactable.try_use(player)
-		print("DevCapture payphone: %s used=%s line=\"%s\" talk box open=%s" % [npc.name, used, (npc as Payphone).last_line, NpcDialog.is_open_for(player.slot)])
-		for i in 20:
-			await get_tree().physics_frame
-		print("DevCapture payphone: revealed=%s typing=\"%s\"" % [FishHeist.instance.is_revealed(player.team), npc.get_node("Readout").text.replace("
-", " / ")])
-		return
-	if npc is Shopkeeper:
-		await _shop_test(player, npc as Shopkeeper, args)  # (E opens THE BLACK MARKITTEN shop screen, not a talk box)
-		return
-	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
-	if args.has("click_choice"):
-		# --click_choice=N: a REAL mouse click on talk-box button N (through the game screen and
-		# the HUD, like a player's click), instead of --choose's direct button press.
-		for i in 3:
-			await get_tree().process_frame  # let the talk box lay out its buttons first
-		var button := NpcDialog.for_cat(player).choices_box.get_child(int(args["click_choice"])) as Button
-		# (The HUD has its own viewport, drawn at Hud1's spot on the screen.)
-		var hud_view := GameScreen.instance.get_node("Hud1") as Control
-		var at := get_viewport().get_final_transform() * (hud_view.position + button.get_global_rect().get_center() * Hud.of(0).scale)
-		var button_text := button.text
-		for pressed in [true, false]:
-			var click := InputEventMouseButton.new()
-			click.button_index = MOUSE_BUTTON_LEFT
-			click.pressed = pressed
-			click.position = at
-			click.global_position = at
-			Input.parse_input_event(click)
-			await get_tree().process_frame
-		for i in 5:
-			await get_tree().process_frame
-		print("DevCapture click_choice %s (\"%s\"): open=%s line=\"%s\"" % [args["click_choice"], button_text, NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.left(40)])
-	if args.has("choose"):
-		for n in args["choose"].split(","):
-			var buttons := NpcDialog.for_cat(player).choices_box.get_children()
-			if not NpcDialog.is_open_for(0) or int(n) >= buttons.size():
-				print("DevCapture choose: no button %s" % n)
-				break
-			(buttons[int(n)] as Button).pressed.emit()
-			for i in 5:
-				await get_tree().process_frame
-			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open_for(0),
-				NpcDialog.for_cat(player).line_label.text.left(40), NpcDialog.for_cat(player).choices_box.get_child_count()])
 
 
 ## --car_watch=N: every N frames, print where the car camera is looking (runs alongside the rest).
@@ -2182,527 +1284,6 @@ func _count_world_items(item_id: String) -> int:
 	return count
 
 
-## Every RAID REPORT that goes up (any computer): one line for the crew, one per card.
-func _print_report(report: Dictionary) -> void:
-	print("DevCapture report: district %d twist=\"%s\" ending=\"%s\" total=$%d turf=%s cards=%d seconds=%.1f reveal=%.1f invite=\"%s\" mess_shown=%s" % [
-		int(report.district), str(report.get("twist", "")), report.ending, int(report.total), report.turf, report.rows.size(),
-		float(report.seconds_left), float(report.reveal_end), report.invite, report.show_mess])
-	for gang in report.gangs:
-		print("DevCapture report gang: %s $%d" % [gang.name, int(gang.total)])
-	for row in report.rows:
-		print("DevCapture report row: %s id=%d team=%d went_up=%d %s cash=$%d (loot %d + quest %d) bots=%d bosses=%d downs=%d revives=%d damage=%d vacuumed=%d robbed=%d mess=%d left=%d award=%s \"%s\" / \"%s\"" % [
-			row.name, int(row.id), int(row.team), int(row.went_up), row.ending, int(row.cash), int(row.loot), int(row.bonus), int(row.bots),
-			int(row.bosses), int(row.downs), int(row.revives), int(row.damage), int(row.vacuumed), int(row.robbed), int(row.get("mess", 0)),
-			int(row.left), row.award_id, row.award_title, row.award_line])
-	var ids: Array = report.rows.map(func(row): return row.award_id)
-	var unique := {}
-	for id in ids:
-		unique[id] = true
-	print("DevCapture report awards: %d cards, %d different awards (%s)" % [ids.size(), unique.size(), "OK" if unique.size() == ids.size() else "DUPLICATE!"])
-	# The ONE report screen on this computer (scripts/ui/raid_report_screen.gd).
-	await get_tree().create_timer(0.5).timeout
-	var screen := RaidReportScreen.instance
-	var hud_frames: Array = []
-	for seat in 4:
-		hud_frames.append(Hud.of(seat) != null and Hud.of(seat).frame.visible)
-	print("DevCapture report screen: up=%s size=%s scale=%.2f rows=%d shown_seats=%s hud_frames=%s menu_view=%s" % [
-		RaidReportScreen.is_up(), screen.size, screen._content.scale.x, screen._row_cells.size(),
-		GameScreen.instance.shown_seats(), hud_frames, GameScreen.instance.menu_view.visible])
-	# ...and once it has gone: split screen, HUDs and moving cats should all be back.
-	while RaidReportScreen.is_up():
-		await get_tree().process_frame
-	for i in 30:
-		await get_tree().process_frame
-	hud_frames.clear()
-	for seat in 4:
-		hud_frames.append(Hud.of(seat) != null and Hud.of(seat).frame.visible)
-	print("DevCapture after report: up=%s shown_seats=%s hud_frames=%s cats=%s" % [RaidReportScreen.is_up(),
-		GameScreen.instance.shown_seats(), hud_frames,
-		Game.instance.local_cats().map(func(c): return "slot %d can_move=%s" % [c.slot, not c._input_blocked()])])
-
-
-# --- MESS-MAKING tests (scripts/mess_manager.gd) ---
-
-## --mess / --ram_prop / --scratch / --shoot_prop / --ghost / --bait_mess / --meow / --mess_log.
-func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
-	var mess := MessManager.instance
-	for i in 20:
-		await get_tree().physics_frame
-	if args.has("ghost"):
-		player.unseen_by_bots = true  # (roomba.gd _can_chase skips us)
-		if not multiplayer.is_server():
-			print("DevCapture mess: --ghost only hides us from the HOST's bots on the host")
-	if args.has("mess_log"):
-		_mess_log(int(args["mess_log"]))
-	_print_mess("start")
-	var first: MessProp = null
-	if args.has("mess"):
-		for i in int(args["mess"]):
-			var p := _nearest_prop(player.global_position, "")
-			if p == null:
-				break
-			first = p if first == null else first
-			mess.knock(player.player_id, p.id, Motion.flat(p.global_position - player.global_position).normalized())
-			for f in 15:
-				await get_tree().physics_frame
-		_print_mess("after --mess")
-	if args.has("ram_prop"):
-		var p := _nearest_prop(player.global_position, str(args["ram_prop"]))
-		if p != null:
-			first = p if first == null else first
-			# Stand 4 m away along the pavement-facing side, and run straight at it.
-			var away := Motion.flat(player.global_position - p.global_position).normalized()
-			if p.kind == MessProp.Kind.NEON_SIGN:
-				away = -p.global_basis.z  # (signs face along the pavement: run at one from the front)
-			if away == Vector3.ZERO:
-				away = Vector3.BACK
-			var dir := -away
-			player.teleport_to(p.global_position + away * 4.0 + Vector3.UP * 0.2, atan2(-dir.x, -dir.z))
-			for f in 10:
-				await get_tree().physics_frame
-			var keys: Array[String] = ["move_forward"]
-			if p.kind == MessProp.Kind.BIN:
-				keys.append("sprint")
-			for key in keys:
-				Input.action_press(Seats.action(player.slot, key))
-			for f in 70:
-				await get_tree().physics_frame
-				if args.has("ram_trace") and f % 3 == 0:
-					print("DevCapture ram trace: f=%d gap=%.2f speed=%.2f pos=%s" % [f, Motion.flat_distance(player.global_position, p.global_position),
-						Vector3(player.velocity.x, 0, player.velocity.z).length(), player.global_position.snapped(Vector3.ONE * 0.1)])
-				if p.knocked:
-					break
-			for key in keys:
-				Input.action_release(Seats.action(player.slot, key))
-			for f in 15:
-				await get_tree().physics_frame
-			print("DevCapture mess ram: %s %s knocked=%s cat now %.1f m from it" % [p.name, MessProp.Kind.keys()[p.kind], p.knocked,
-				Motion.flat_distance(player.global_position, p.global_position)])
-	if args.has("scratch"):
-		var p := _nearest_prop(player.global_position, "poster")
-		if p != null:
-			first = p if first == null else first
-			var front := -p.global_basis.z
-			player.teleport_to(p.tidy_spot() + Vector3.UP * 0.2, atan2(front.x, front.z))
-			for f in 12:
-				await get_tree().physics_frame
-			var prompt := Interactable.prompt_for(player)
-			var used := Interactable.try_use(player)
-			for f in 15:
-				await get_tree().physics_frame
-			print("DevCapture mess scratch: %s prompt=\"%s\" used=%s knocked=%s" % [p.name, prompt, used, p.knocked])
-	if args.has("use_prop"):
-		var used_prop := await _use_prop_test(scene, player, args)
-		first = used_prop if first == null else first
-	if args.has("shoot_prop"):
-		var p := _nearest_prop(player.global_position, "" if str(args["shoot_prop"]) == "true" else str(args["shoot_prop"]))
-		if p != null:
-			first = p if first == null else first
-			var hit := Hit.new()
-			hit.shooter = player
-			hit.damage = 10
-			hit.direction = Motion.flat(p.global_position - player.global_position).normalized()
-			(p.get_node("Hitbox").get_parent() as MessProp).receive_hit(hit)
-			for f in 15:
-				await get_tree().physics_frame
-			print("DevCapture mess shoot: %s %s knocked=%s" % [p.name, MessProp.Kind.keys()[p.kind], p.knocked])
-			_print_prop(p, "after shot")
-	if args.has("bait_mess") and multiplayer.is_server() and first != null:
-		var bot: Roomba = null
-		var best := INF
-		for node in scene.get_node("Roombas").get_children():
-			var r := node as Roomba
-			if r != null and r.tidies_messes and not r.is_boss and r.breach_hub == null and not r.is_queued_for_deletion():
-				var d := Motion.flat_distance(r.global_position, first.global_position)
-				if d < best:
-					best = d
-					bot = r
-		if bot != null:
-			var side := Motion.flat(first.tidy_spot() - player.global_position).normalized()
-			if side == Vector3.ZERO:
-				side = Vector3.RIGHT
-			bot.global_position = first.tidy_spot() + side.cross(Vector3.UP) * float(args["bait_mess"]) + Vector3.UP * 0.1
-			bot.state = Roomba.State.PATROL
-			bot._mess_check_left = 0.0
-			print("DevCapture mess bait: %s placed %.1f m from %s" % [bot.name, float(args["bait_mess"]), first.name])
-	if args.has("instant_props"):
-		# --instant_props: what a LATE JOINER sees (show_knocked instant) for every street-pack kind, then tidied.
-		for k in ["vending", "hydrant", "cart", "neon_sign", "dumpster"]:
-			var p := _nearest_prop(player.global_position, k)
-			if p != null:
-				p.show_knocked(0.7, true)
-				await get_tree().physics_frame
-				_print_prop(p, "instant")
-				p.show_standing(true)
-				await get_tree().physics_frame
-				_print_prop(p, "instant tidied")
-	if args.has("look_prop"):
-		# --look_prop=KIND: stand 3 m in front of the nearest standing one and look at it (screenshots).
-		var p := _nearest_prop(player.global_position, str(args["look_prop"]))
-		if p != null:
-			var front := -p.global_basis.z
-			player.teleport_to(p.global_position + front * 3.0 + p.global_basis.x * 1.2 + Vector3.UP * 0.2, atan2(front.x + 0.4 * p.global_basis.x.x, front.z + 0.4 * p.global_basis.x.z))
-			print("DevCapture prop look: %s %s at %s front %s" % [p.name, MessProp.Kind.keys()[p.kind], p.global_position.snapped(Vector3.ONE * 0.01), front.snapped(Vector3.ONE * 0.01)])
-	if args.has("face_mess") and first != null:
-		# Stand 4.5 m from the first mess and look at it (for screenshots).
-		var away := Motion.flat(player.global_position - first.tidy_spot()).normalized()
-		if away.length() < 0.5:
-			away = -first.global_basis.z
-		player.teleport_to(first.tidy_spot() + away * 4.5 + Vector3.UP * 0.2, atan2(away.x, away.z))
-	if args.has("meow"):
-		for f in (30 if args["meow"] == "true" else int(args["meow"])):
-			await get_tree().physics_frame
-		player._next_meow_at = 0.0
-		player.meow()
-		for f in 30:
-			await get_tree().physics_frame
-		_print_mess("after --meow")
-
-
-## --spectate / --spectate_ko / --heckle / --spectate_switch / --spectate_exit: THE CAT-CAM (scripts/spectator.gd).
-func _spectate_tests(scene: Node, args: Dictionary) -> void:
-	var seat := int(args.get("spectate", "0")) if args.get("spectate", "true") != "true" else 0
-	var me: CatPlayer = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
-	var spectator := Spectator.instance
-	var others: Array = scene.local_cats().filter(func(c): return c != me)
-	if others.is_empty():
-		# Online: wait for another computer's cat to come up top (e.g. a client with --deploy).
-		for i in 900:
-			if not Spectator.instance.watchable_for(me).is_empty():
-				break
-			await get_tree().physics_frame
-		others = Spectator.instance.watchable_for(me)
-		for other in others:
-			print("DevCapture spectate remote: %s yaw=%.2f (sent %.2f) pitch=%.2f (sent %.2f)" % [other.display_name(),
-				other.camera_pivot.rotation.y, other.sync_camera_yaw, other.spring_arm.rotation.x, other.sync_camera_pitch])
-	if me == null or others.is_empty():
-		print("DevCapture spectate: needs --add_local=1 or a client up top (no other cat)")
-		return
-	var friend: CatPlayer = others[0]
-	for other in others:  # (every other couch cat goes up: --spectate_switch needs two)
-		other.unseen_by_bots = true  # (so the parked bot LISTENS instead of chasing straight away)
-		if other.is_multiplayer_authority():
-			UndergroundHub.of(other).deploy(other)
-	if args.has("spectate_ko"):
-		UndergroundHub.of(me).deploy(me)
-	for i in 30:
-		await get_tree().physics_frame
-	# A VAC-COP 10 m from the friend (out of sight behind them), for the heckle.
-	if multiplayer.is_server():
-		var bot: Roomba = null
-		for node in scene.get_node("Roombas").get_children():
-			if node is Roomba and not (node as Roomba).is_boss:
-				bot = node
-				break
-		if bot != null:
-			bot.global_position = friend.global_position + Vector3(10, 0.1, 0)
-	if args.has("spectate_ko"):
-		CatHealth.instance.damage(me.player_id, 99999, "A VAC-COP", true)
-		var waited := 0
-		while not Spectator.is_watching(seat) and waited < 900:
-			await get_tree().physics_frame
-			waited += 1
-		print("DevCapture spectate ko: watching=%s after %d frames in_hub=%s" % [Spectator.is_watching(seat), waited,
-			UndergroundHub.is_in_hub(me.global_position)])
-	else:
-		me.teleport_to(UndergroundHub.of(me).to_global(UndergroundHub.of(me).catcam_spot) + Vector3(-0.8, 0.2, 0), -PI / 2)
-		for i in 15:
-			await get_tree().physics_frame
-		print("DevCapture spectate prompt: \"%s\"" % Interactable.prompt_for(me))
-		await _tap_action(seat, "interact")
-	await get_tree().create_timer(spectator.button_grace_seconds + 0.2).timeout  # (headless frames are quick)
-	_print_spectate("watching", seat)
-	if args.has("spectate_car"):
-		# --spectate_car: the watched cat climbs into the getaway car: the view should be the car's chase cam.
-		var watched := spectator.watched_cat(seat)
-		var car: GetawayCar = scene.cars()[0]
-		watched.teleport_to(car.global_position + Vector3(2, 0.2, 0), 0.0)
-		for i in 10:
-			await get_tree().physics_frame
-		car.request_enter.rpc_id(1, watched.player_id)
-		for i in 30:
-			await get_tree().physics_frame
-		var camera := GameScreen.instance.camera_for_seat(seat)
-		print("DevCapture spectate car: in_car=%s watching=%s cam_to_car=%.1f cam_y_above_car=%.1f" % [scene.car_of(watched.player_id) != null,
-			Spectator.is_watching(seat), camera.global_position.distance_to(car.global_position), camera.global_position.y - car.global_position.y])
-	if args.has("spectate_switch"):
-		await _tap_action(seat, "move_right")
-		await get_tree().create_timer(spectator.button_grace_seconds + 0.2).timeout
-		_print_spectate("after switch", seat)
-	if args.has("heckle"):
-		await _tap_action(seat, "meow")
-		for i in 40:
-			await get_tree().process_frame
-		print("DevCapture heckle: seen=%d text=\"%s\" bots_heard=%d" % [spectator.heckles_seen, spectator.last_heckle_text, spectator.last_heckle_heard])
-		await _tap_action(seat, "meow")  # (cooldown: must not heckle again yet)
-		print("DevCapture heckle again (cooldown): seen=%d" % spectator.heckles_seen)
-	if args.has("spectate_exit"):
-		for i in int(args["spectate_exit"]):
-			await get_tree().process_frame
-		await _tap_action(seat, "interact")
-		for i in 10:
-			await get_tree().process_frame
-		_print_spectate("after exit", seat)
-
-
-## Press and let go of a seat's button with real input (Seats' per-seat action), a few frames each.
-## Seat 0: its first bound KEY, through the game screen like a real player's. Others: the action.
-func _tap_action(seat: int, action_name: String) -> void:
-	var key: InputEvent = Controls.event_for(Controls.bindings[action_name][0]) if seat == 0 else null
-	for pressed in [true, false]:
-		if key != null:
-			var event := key.duplicate() as InputEvent
-			event.set("pressed", pressed)
-			Input.parse_input_event(event)
-		elif pressed:
-			Input.action_press(Seats.action(seat, action_name))
-		else:
-			Input.action_release(Seats.action(seat, action_name))
-		for i in 3:
-			await get_tree().process_frame
-
-
-func _print_spectate(when: String, seat: int) -> void:
-	var spectator := Spectator.instance
-	var me := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
-	var watched := spectator.watched_cat(seat)
-	var camera := GameScreen.instance.camera_for_seat(seat)
-	print("DevCapture spectate %s: watching=%s who=%s camera=%s cam_pos=%s cam_to_watched=%.1f me_pos=%s me_in_hub=%s hud=\"%s\"" % [when,
-		Spectator.is_watching(seat), watched.display_name() if watched != null else "-", camera.name if camera != null else "-",
-		camera.global_position.snapped(Vector3.ONE * 0.1) if camera != null else Vector3.ZERO,
-		camera.global_position.distance_to(watched.global_position) if camera != null and watched != null else -1.0,
-		me.global_position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(me.global_position),
-		Hud.element("DropOff", seat).get("text") if Hud.element("DropOff", seat) != null else "?"])
-	if watched != null:
-		print("DevCapture spectate look: %s yaw=%.2f (sent %.2f) pitch=%.2f (sent %.2f)" % [watched.display_name(),
-			watched.camera_pivot.rotation.y, watched.sync_camera_yaw, watched.spring_arm.rotation.x, watched.sync_camera_pitch])
-
-
-## --use_prop=KIND (+ --cart_bowl, --geyser_jump, --geyser_bot, --prop_twice): the STREET PROPS PACK.
-func _use_prop_test(scene: Node, player: CatPlayer, args: Dictionary) -> MessProp:
-	var p := _nearest_prop(player.global_position, str(args["use_prop"]))
-	if p == null:
-		print("DevCapture prop: no standing %s in this city" % args["use_prop"])
-		return null
-	# Stand where a cat would: in front of wall-backed props, else on the pavement side we came from.
-	var away := Motion.flat(player.global_position - p.global_position).normalized()
-	if p.kind in [MessProp.Kind.VENDING, MessProp.Kind.DUMPSTER]:
-		away = -p.global_basis.z
-	if away == Vector3.ZERO:
-		away = Vector3.BACK
-	var stand := p.global_position + away * (p.radius() + 0.7)
-	player.teleport_to(stand + Vector3.UP * 0.2, atan2(away.x, away.z))
-	for f in 12:
-		await get_tree().physics_frame
-	var push := Motion.flat(p.global_position - player.global_position).normalized()
-	if args.has("cart_bowl") and multiplayer.is_server() and p.kind == MessProp.Kind.CART:
-		var bot := _nearest_tidy_bot(scene, p.global_position)
-		var cone := _nearest_prop(p.global_position + push * 4.0, "cone")
-		if bot != null:
-			bot.global_position = p.global_position + push * 3.0 + Vector3.UP * 0.1
-			bot.state = Roomba.State.PATROL
-			print("DevCapture prop bowl: %s put 3 m down the cart's path (hp %d)" % [bot.name, bot.health])
-		if cone != null:
-			cone.global_position = p.global_position + push * 5.5
-			print("DevCapture prop bowl: %s moved 5.5 m down the path" % cone.name)
-	var prompt := Interactable.prompt_for(player)
-	var used := Interactable.try_use(player)
-	for f in 20:
-		await get_tree().physics_frame
-	print("DevCapture prop use: %s %s prompt=\"%s\" used=%s knocked=%s" % [p.name, MessProp.Kind.keys()[p.kind], prompt, used, p.knocked])
-	for f in 40:
-		await get_tree().physics_frame
-	_print_prop(p, "after use")
-	if args.has("cart_bowl"):
-		for node in scene.get_node("Roombas").get_children():
-			var r := node as Roomba
-			if r != null and Motion.flat_distance(r.global_position, p.tidy_spot()) < 12.0:
-				print("DevCapture prop bowl: %s state=%s hp=%d %.1f m from the cart's rest spot" % [r.name, Roomba.State.keys()[r.state], r.health,
-					Motion.flat_distance(r.global_position, p.tidy_spot())])
-		_print_mess("after bowl")
-	if args.has("geyser_jump") and p.kind == MessProp.Kind.HYDRANT:
-		player.teleport_to(p.global_position + away * 0.6 + Vector3.UP * 0.2, atan2(away.x, away.z))
-		var top := player.global_position.y
-		for f in 70:
-			await get_tree().physics_frame
-			top = maxf(top, player.global_position.y)
-		print("DevCapture prop geyser_jump: geyser=%s cat flew to %.1f m (from %.1f)" % [p.geyser_active(), top, p.global_position.y])
-	if args.has("geyser_bot") and multiplayer.is_server() and p.kind == MessProp.Kind.HYDRANT:
-		var bot := _nearest_tidy_bot(scene, p.global_position)
-		if bot != null:
-			bot.global_position = p.global_position + Vector3.RIGHT * 1.5 + Vector3.UP * 0.1
-			bot.state = Roomba.State.PATROL
-			for f in 20:
-				await get_tree().physics_frame
-			print("DevCapture prop geyser_bot: %s state=%s %.1f m from the hydrant, could claim it=%s" % [bot.name, Roomba.State.keys()[bot.state],
-				Motion.flat_distance(bot.global_position, p.global_position), MessManager.instance.claim_nearest(p.global_position, 20.0, bot) == p])
-	if args.has("prop_twice") and multiplayer.is_server():
-		MessManager.instance.tidy(p.id)
-		for f in 30:
-			await get_tree().physics_frame
-		_print_prop(p, "tidied")
-		MessManager.instance._asked.clear()
-		MessManager.instance.knock(player.player_id, p.id, push)
-		for f in 30:
-			await get_tree().physics_frame
-		_print_prop(p, "busted again")
-	return p
-
-
-func _nearest_tidy_bot(scene: Node, to: Vector3) -> Roomba:
-	var bot: Roomba = null
-	var best := INF
-	for node in scene.get_node("Roombas").get_children():
-		var r := node as Roomba
-		if r != null and r.tidies_messes and not r.is_boss and r.breach_hub == null and not r.is_queued_for_deletion():
-			var d := Motion.flat_distance(r.global_position, to)
-			if d < best:
-				best = d
-				bot = r
-	return bot
-
-
-## One "DevCapture prop" line: everything a STREET PROPS PACK prop is doing right now.
-func _print_prop(p: MessProp, when: String) -> void:
-	var drops: Array = []
-	for world_id in ItemManager.instance.world:
-		var entry: Dictionary = ItemManager.instance.world[world_id]
-		if Motion.flat_distance(entry.pos, p.global_position) < 3.0 and int(world_id) >= 100000:
-			drops.append(entry.item)
-	var glow := "-"
-	if not p._glow_meshes.is_empty():
-		glow = "%.2f" % (p._glow_meshes[0].get_instance_shader_parameter("instance_tint") as Color).r
-	var lid := "-"
-	if p._lid != null:
-		lid = "%.0f deg" % rad_to_deg(p._lid_home.basis.get_rotation_quaternion().angle_to(p._lid.transform.basis.get_rotation_quaternion()))
-	var cap := "-"
-	if p._cap != null:
-		cap = "%.2f m" % p._cap.position.distance_to(p._cap_home.origin)
-	var flap := "-"
-	if p._flap != null:
-		flap = "%.0f deg" % rad_to_deg(p._flap_home.basis.get_rotation_quaternion().angle_to(p._flap.transform.basis.get_rotation_quaternion()))
-	print("DevCapture prop (%s): %s %s knocked=%s geyser=%s (%.1f s) rest=%s moved=%.1f m lid=%s cap=%s flap=%s glow=%s light=%s looted=%s drops=%s debris=%d layer=%d" % [
-		when, p.name, MessProp.Kind.keys()[p.kind], p.knocked, p.geyser_active(), p._geyser_left, p.tidy_spot().snapped(Vector3.ONE * 0.1),
-		Motion.flat_distance(p.tidy_spot(), p.global_position), lid, cap, flap, glow, str(p._light.visible) if p._light != null else "-",
-		MessManager.instance.was_looted(p.id), drops, p._debris.get_child_count() if p._debris != null else 0, p._body.collision_layer])
-
-
-## The nearest standing mess prop of a kind ("" = any; "bin", "cone", "box", "poster", "vending", "hydrant",
-## "cart", "neon_sign", "dumpster").
-func _nearest_prop(from: Vector3, kind: String) -> MessProp:
-	var best: MessProp = null
-	var best_distance := INF
-	for p in MessManager.instance.props():
-		if p.knocked or (kind != "" and MessProp.Kind.keys()[p.kind] != kind.to_upper()):
-			continue
-		var d := Motion.flat_distance(p.global_position, from)
-		if d < best_distance:
-			best = p
-			best_distance = d
-	return best
-
-
-## One "DevCapture mess" line: the props, the counters and what every bot is up to.
-func _print_mess(when: String) -> void:
-	var mess := MessManager.instance
-	if mess == null or Game.instance == null:
-		return
-	var kinds := {}
-	var knocked: Array = []
-	var layout := ""  # (every prop's number, kind and spot: must be the same on every computer)
-	for p in mess.props():
-		var k: String = MessProp.Kind.keys()[p.kind]
-		kinds[k] = int(kinds.get(k, 0)) + 1
-		layout += "%d%s%s;" % [p.id, k, p.global_position.snapped(Vector3.ONE * 0.01)]
-		if p.knocked:
-			knocked.append(p.id)
-	var states := {}
-	var roombas := Game.instance.get_node_or_null("Roombas")
-	if roombas != null:
-		for node in roombas.get_children():
-			if node is Roomba:
-				var st: String = Roomba.State.keys()[(node as Roomba).state]
-				states[st] = int(states.get(st, 0)) + 1
-	print("DevCapture mess (%s): props=%d layout=%08x %s knocked=%s made=%d tidied=%d heat=%.2f bots=%s (%s)" % [when, mess.props().size(), layout.hash(), kinds, knocked,
-		mess.messes_made, mess.messes_tidied, HeatMeter.instance.heat if HeatMeter.instance != null else 0.0, states,
-		"host" if multiplayer.is_server() else "client"])
-
-
-func _mess_log(every: int) -> void:
-	while is_inside_tree():
-		for f in every:
-			await get_tree().physics_frame
-		_print_mess("log")
-
-
-## --raid_report[=N]: (host) made-up numbers, then the report (scripts/raid_report.gd test_report).
-func _force_report(cards: int, after: int) -> void:
-	for i in after:
-		await get_tree().physics_frame
-	RaidReport.instance.test_report(cards)
-
-
-## --report_ready=A,B,...: once the report is up (after --report_ready_delay frames), press these
-## one by one with REAL input events, printing who is ready after each:
-##   S         seat S presses their own READY button (E for seat 0 on the keyboard, A on a pad)
-##   S:pad     seat S presses A on their controller (seat 0: the first controller)
-##   S:stick   seat S pushes their stick down (must change nothing)
-##   spare:D   A on controller D, which nobody has claimed (must change nothing)
-##   S:pause   seat S presses Esc / START (player 1: the pause menu opens over the report; others: nothing)
-func _report_ready(presses: PackedStringArray, delay: int) -> void:
-	for i in 3000:
-		if RaidReport.instance.showing:
-			break
-		await get_tree().physics_frame
-	for i in delay:
-		await get_tree().process_frame
-	for press in presses:
-		var parts := press.split(":")
-		var events: Array[InputEvent] = []
-		for pressed in [true, false]:
-			var event: InputEvent
-			if parts[0] == "spare":
-				event = Controls._event_from_name("Pad A")
-				event.device = int(parts[1])
-				event.pressed = pressed
-			else:
-				var seat := int(parts[0])
-				var how := parts[1] if parts.size() > 1 else ("key" if seat == 0 and Seats.pads[0] < 0 else "pad")
-				var device: int = Seats.pads[seat] if Seats.pads[seat] >= 0 else int(_args.get("pad_device", "0"))
-				if how == "pause" and seat == 0 and Seats.pads[0] < 0:
-					event = InputEventKey.new()  # player 1's Esc
-					event.keycode = KEY_ESCAPE
-					event.physical_keycode = KEY_ESCAPE
-					event.pressed = pressed
-				elif how == "pause":
-					event = Controls._event_from_name("Pad Start")
-					event.device = device
-					event.pressed = pressed
-				elif how == "key":
-					event = InputEventKey.new()
-					event.keycode = KEY_E
-					event.physical_keycode = KEY_E
-					event.pressed = pressed
-				elif how == "stick":
-					event = Controls._event_from_name("Pad Left Stick Down")
-					event.device = device
-					if not pressed:
-						event.axis_value = 0.0
-				else:
-					event = Controls._event_from_name("Pad A")
-					event.device = device
-					event.pressed = pressed
-			events.append(event)
-		for event in events:
-			Input.parse_input_event(event)
-			await get_tree().process_frame
-		for i in 10:
-			await get_tree().process_frame
-		var counts := RaidReport.instance.ready_count()
-		print("DevCapture report_ready %s: ready=%d/%d ready_ids=%s showing=%s report_up=%s paused=%s" % [press, counts[0], counts[1],
-			RaidReport.instance.ready_ids, RaidReport.instance.showing, RaidReportScreen.is_up(), PauseMenu.is_open])
-
-
 ## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all
 ## the way (pressed) or let go (not pressed). Same names as Controls.PAD_BUTTONS / PAD_AXES.
 func _pad_event(pad_name: String, pressed: bool) -> InputEvent:
@@ -2770,127 +1351,11 @@ func _parse_args(raw: PackedStringArray) -> Dictionary:
 
 # --- MEOW-MART (scripts/interiors/meow_mart_interior.gd) ---
 
-func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
-	var mart := MeowMartInterior.instance
-	if mart == null:
-		print("DevCapture mart: no MeowMart node")
-		return
-	if args.has("mart_log"):
-		_mart_log(player, maxi(1, int(args["mart_log"]) if args["mart_log"] != "true" else 60))
-	if args.has("test_meow_mart"):
-		var distance := float(args["test_meow_mart"]) if args["test_meow_mart"] != "true" else 4.0
-		var out := mart.street_outward()
-		player.teleport_to(mart.street_spot(distance) + Vector3(0, 0.3, 0), atan2(out.x, out.z))  # facing the doors
-		print("DevCapture mart door: door=%s outward=%s cat=%s" % [mart.street_door().snapped(Vector3.ONE * 0.1), out, player.global_position.snapped(Vector3.ONE * 0.1)])
-	if args.has("inside_meow_mart"):
-		var where: String = args["inside_meow_mart"]
-		var spots := {"plate": MeowMartInterior.PLATE_SPOT + Vector3(1.6, 0.2, 0), "aisle": Vector3(-0.75, 0.2, 3.6),
-			"tank": MeowMartInterior.TANK_SPOT + Vector3(0, 0.2, 1.6), "backroom": Vector3(4.0, 0.2, -5.0),
-			"counter": Vector3(8.4, 0.2, 0.0), "door": Vector3(0, 0.2, 7.0)}
-		var local: Vector3 = spots.get(where, MeowMartInterior.FOYER_SPOT)
-		player.teleport_to(mart.to_global(local), PI if where == "door" else 0.0)
-		for i in 10:
-			await get_tree().physics_frame
-		print("DevCapture mart inside: at %s contains=%s prompt=\"%s\"" % [where, MeowMartInterior.contains(player.global_position), Interactable.prompt_for(player)])
-	if args.has("mart_swat"):
-		var done := 0
-		for stack in mart._stacks:
-			if done >= int(args["mart_swat"]):
-				break
-			var home: Vector3 = stack.get_meta("home").origin
-			if home.y > 0.5:
-				continue  # (the low ledges: reachable from the floor)
-			var side := signf(home.x - MeowMartInterior.AISLE_X[stack.get_meta("aisle")])
-			player.teleport_to(mart.to_global(Vector3(home.x + side * 0.5, 0.2, home.z)), 0.0)
-			for i in 4:
-				await get_tree().physics_frame
-			var prompt := Interactable.prompt_for(player)
-			mart.cat_bump(player, Vector3(-side * 4.5, 0, 0))  # walk into it (E would grab loot first, if any is near)
-			for i in 6:
-				await get_tree().physics_frame
-			print("DevCapture mart swat: stack %d prompt=\"%s\" swatted=%s" % [stack.get_meta("id"), prompt, mart.swatted.has(stack.get_meta("id"))])
-			done += 1
-	if args.has("mart_topple"):
-		var aisle := clampi(int(args["mart_topple"]) - 1, 0, 1)
-		player.teleport_to(mart.to_global(Vector3(MeowMartInterior.AISLE_X[aisle] - 0.3, 0.2, MeowMartInterior.AISLE_LENGTH * 0.5 + 0.5)), 0.0)
-		for i in 4:
-			await get_tree().physics_frame
-		mart.cat_bump(player, Vector3(0, 0, -9.0))  # as if the cat ran at it with zoomies
-		for i in 90:
-			await get_tree().physics_frame
-		print("DevCapture mart topple: aisle %d toppled=%s swatted=%d" % [aisle + 1, mart.toppled, mart.swatted.size()])
-	if args.has("mart_plate"):
-		player.teleport_to(mart.to_global(MeowMartInterior.PLATE_SPOT + Vector3(0, 0.2, 0)), 0.0)
-		for i in 30:
-			await get_tree().physics_frame
-		print("DevCapture mart plate on: plate=%s door=%s" % [mart.plate_pressed, mart.security_open])
-		player.teleport_to(mart.to_global(MeowMartInterior.FOYER_SPOT), 0.0)
-		for i in 60:
-			await get_tree().physics_frame
-		print("DevCapture mart plate off 1s: plate=%s door=%s" % [mart.plate_pressed, mart.security_open])
-		for i in 60:
-			await get_tree().physics_frame
-		print("DevCapture mart plate off 2s: plate=%s door=%s" % [mart.plate_pressed, mart.security_open])
-	if args.has("mart_drag"):
-		var start := mart.crate_pos
-		var goal := MeowMartInterior.PLATE_SPOT
-		var heading := Motion.flat(goal - start).normalized()
-		player.teleport_to(mart.to_global(start + heading * 1.0 + Vector3(0, 0.2, 0)), 0.0)
-		for i in 6:
-			await get_tree().physics_frame
-		print("DevCapture mart drag prompt: \"%s\" best=%s cat=%s" % [Interactable.prompt_for(player), mart._best_action(player), mart.to_local(player.global_position).snapped(Vector3.ONE * 0.1)])
-		Interactable.try_use(player)
-		for i in 6:
-			await get_tree().physics_frame
-		var walk_from := start + heading * 1.0
-		var walk_to := goal + heading * mart.crate_drag_distance
-		var steps := int(walk_from.distance_to(walk_to) / 0.06)
-		for i in steps:
-			var at := walk_from.lerp(walk_to, float(i + 1) / steps)
-			player.global_position = mart.to_global(at + Vector3(0, 0.05, 0))
-			await get_tree().physics_frame
-		for i in 10:
-			await get_tree().physics_frame
-		Interactable.try_use(player)  # (let go)
-		player.teleport_to(mart.to_global(MeowMartInterior.FOYER_SPOT), 0.0)
-		for i in 150:
-			await get_tree().physics_frame
-		print("DevCapture mart drag: crate=%s dragger=%d plate=%s door=%s" % [mart.crate_pos.snapped(Vector3.ONE * 0.1), mart.crate_dragger, mart.plate_pressed, mart.security_open])
-	if args.has("mart_tank_hits"):
-		player.teleport_to(mart.to_global(MeowMartInterior.TANK_SPOT + Vector3(0, 0.2, 1.2)), 0.0)
-		for i in int(args["mart_tank_hits"]):
-			for f in 70:  # (one ask per second per thing)
-				await get_tree().physics_frame
-			var prompt := Interactable.prompt_for(player)
-			Interactable.try_use(player)
-			for f in 5:
-				await get_tree().physics_frame
-			print("DevCapture mart tank hit: prompt=\"%s\" hits=%d shattered=%s" % [prompt, mart.tank_hits, mart.shattered])
-	if args.has("shatter_tank") and multiplayer.is_server():
-		for i in (int(args["shatter_tank"]) if args["shatter_tank"] != "true" else 30):
-			await get_tree().physics_frame
-		var heat_before := HeatMeter.instance.heat
-		var bots_before := RoombaPatrol.instance.get_child_count()
-		mart.test_shatter(player.player_id)
-		for i in 30:
-			await get_tree().physics_frame
-		var investigating := 0
-		for bot in RoombaPatrol.instance.get_children():
-			if bot is Roomba and (bot as Roomba).state == Roomba.State.INVESTIGATE:
-				investigating += 1
-		var koi := 0
-		for id in ItemManager.instance.world:
-			if ItemManager.instance.world[id].item == mart.tank_item and MeowMartInterior.contains(ItemManager.instance.world[id].pos):
-				koi += 1
-		print("DevCapture mart shatter: shattered=%s alarm=%.0f heat %.1f -> %.1f bots %d -> %d investigating=%d koi_on_floor=%d" % [mart.shattered,
-			mart.alarm_left, heat_before, HeatMeter.instance.heat, bots_before, RoombaPatrol.instance.get_child_count(), investigating, koi])
 
-
-## --mart_log=N: the store's state every N frames, for as long as the run lasts.
-func _mart_log(player: CatPlayer, every: int) -> void:
-	while is_inside_tree():
-		for i in every:
-			await get_tree().physics_frame
-		if MeowMartInterior.instance == null or not is_instance_valid(player):
-			return
-		print("DevCapture mart: %s cat=%s in=%s" % [MeowMartInterior.instance.debug_line(), player.global_position.snapped(Vector3.ONE * 0.1), MeowMartInterior.contains(player.global_position)])
+## Makes one test module (a child node) and hands it the command line options.
+func _add_module(path: String) -> Node:
+	var module: Node = (load(path) as GDScript).new()
+	module.name = path.get_file().get_basename()
+	module._args = _args
+	add_child(module)
+	return module

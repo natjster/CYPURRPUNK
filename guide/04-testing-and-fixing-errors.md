@@ -44,6 +44,7 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
   `--heat=100` (max HEAT: the DEEP CLEAN), `--kill_roombas=3` (destroys 3 VAC-COPs: the MEGA
   VAC-COP is called in; add `--kill_bosses` to destroy bosses too), `--grab=golden_koi`,
   `--roomba=boss --bait_roomba=7` (put the boss 7 m in front of you) or `--zap_roomba=18` (kill it).
-  The full list is at the top of `dev_capture.gd`.
+  The full list is at the top of `dev_capture.gd`. The bigger tests live next to it in `scripts/dev_tests/`
+  (one file per area: lineups, menus, fights, tutorial, mess, spectate_report, meow_mart), so each file stays small.
 - Test runs **use the default settings and never save**, so they can't change your settings or
   cat name. The tool switches itself off in release (exported) builds.
