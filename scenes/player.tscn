@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/cat_model.tscn" id="2_model"]
 [ext_resource type="Script" path="res://scripts/cat/cat_moves.gd" id="3_moves"]
 [ext_resource type="Script" path="res://scripts/cat/cat_ride.gd" id="4_ride"]
+[ext_resource type="Script" path="res://scripts/cat/cat_aim.gd" id="5_aim"]
 
 [sub_resource type="SceneReplicationConfig" id="Sync_cat"]
 properties/0/path = NodePath(".:position")
@@ -49,6 +50,9 @@ script = ExtResource("3_moves")
 
 [node name="Ride" type="Node" parent="."]
 script = ExtResource("4_ride")
+
+[node name="Aim" type="Node" parent="."]
+script = ExtResource("5_aim")
 
 [node name="CameraPivot" type="Node3D" parent="."]
 position = Vector3(0, 0.75, 0)

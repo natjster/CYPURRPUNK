@@ -329,6 +329,7 @@ func _use_held_items(delta: float) -> void:
 		# (Walking, or a GUNNER in a car's passenger seat: scripts/cat/cat_ride.gd. Drivers keep their
 		# paws on the wheel.)
 		if not cat.reads_input() or not (cat.is_controlled or cat.is_gunner()) or cat.knocked_out or cat.is_downed():
+			cat.aim.wants_aim = false  # (no aiming down sights either)
 			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
 		var safe_zone := UndergroundHub.is_safe(cat.global_position)  # (a SEWER BREACH: fight!)
 		var allowed := _can_use_items(cat)
@@ -336,6 +337,11 @@ func _use_held_items(delta: float) -> void:
 		for slot in 2:
 			if allowed and Seats.is_just_pressed(cat.slot, "quick_%d" % (slot + 1)) and not quick_slots(cat.player_id)[slot].is_empty():
 				request_quick_use.rpc_id(1, cat.player_id, slot)
+		# AIM DOWN SIGHTS (scripts/cat/cat_aim.gd): a gun in the right paw (or a two-paw gun) and
+		# NOTHING in the left paw = the left-paw button (right mouse / LT) aims instead.
+		var right := held_item(cat, 0)
+		var can_aim := right is Weapon and not right is MeleeWeapon and held_item(cat, 1) == null and not safe_zone
+		cat.aim.wants_aim = can_aim and allowed and Seats.is_pressed(cat.slot, "use_left")
 		for hand in 2:
 			var held := held_item(cat, hand)
 			if held == null or (safe_zone and held is Weapon):

@@ -10,6 +10,20 @@ system, so new items need no new networking or pickup code.
 - **Paws:** a cat has a right and left paw. A **1-paw** item (pistol, catnip, catdip) uses one,
   so you can hold two at once (dual wield). A **2-paw** item (the tommy gun) takes both.
   **Left Mouse** uses the right-paw item (or the 2-paw item), **Right Mouse** the left-paw item.
+- **AIM DOWN SIGHTS (Helldivers-style):** holding a gun with the LEFT PAW EMPTY (or a 2-paw gun),
+  **hold Right Mouse / LT** to aim: the camera snaps in close over the cat's shoulder and zooms,
+  the crosshair tightens and gets corner brackets, shots are much tighter and kick less, but you
+  walk slower and can't do zoomies. Something in the left paw = Right Mouse uses it as before.
+  Knobs: click **Player > Aim** in `scenes/player.tscn` (Ads Camera Distance / Side / Lift, Ads Fov
+  Scale = zoom, Ads Speed, Ads Move Speed, Ads Look Speed, and the Recoil settle speeds).
+- **GUN FEEL:** every shot kicks your aim UP (recoil you pull back down), rolls and thumps the
+  camera, BLOOMS the spread (holding the trigger sprays, tapping stays accurate, the crosshair opens
+  up to show it), slams the gun model back in the paw, flashes a spiky muzzle star, spits a shell
+  casing and throws sparks off whatever it hits. Per gun: open its scene (e.g.
+  `scenes/items/tommy_gun.tscn`), click the root, Inspector > **Feel**: Recoil Degrees / Sideways /
+  Return, Ads Recoil Scale, Ads Spread Scale, Spread Bloom Degrees, Max Bloom, Camera Roll, Fov
+  Punch, Gun Kickback / Kick Degrees / Kick Time, Muzzle Flash Size, Eject Casings + Casing Color,
+  Impact Sparks.
 - **BACKPACK (one for everything):** 6 slots (8 / 10 / 12 with BIGGER BACKPACK) for loot (fish,
   koi, scrap) AND gear you aren't holding. Every item takes one slot, EXCEPT consumables (catnip,
   catdip: anything with **Quick Use** ticked), which stack in the backpack like in a QUICK USE slot

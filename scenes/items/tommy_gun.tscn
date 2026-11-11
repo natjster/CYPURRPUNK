@@ -5,6 +5,18 @@
 
 [node name="TommyGun" type="Node3D"]
 script = ExtResource("1_script")
+recoil_degrees = 0.7
+recoil_sideways_degrees = 0.35
+recoil_return = 0.5
+spread_bloom_degrees = 0.25
+max_bloom_degrees = 3.5
+camera_roll_degrees = 0.5
+fov_punch_degrees = 0.8
+gun_kickback = 0.05
+gun_kick_degrees = 6.0
+gun_kick_time = 0.07
+muzzle_flash_size = 0.32
+impact_sparks = 6
 fire_rate = 12.0
 camera_kick = 0.05
 automatic = true

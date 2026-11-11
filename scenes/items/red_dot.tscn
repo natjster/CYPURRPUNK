@@ -5,6 +5,18 @@
 
 [node name="RedDot" type="Node3D"]
 script = ExtResource("1_script")
+recoil_degrees = 0.08
+recoil_sideways_degrees = 0.05
+recoil_return = 0.9
+spread_bloom_degrees = 0.0
+camera_roll_degrees = 0.0
+fov_punch_degrees = 0.1
+gun_kickback = 0.015
+gun_kick_degrees = 1.0
+gun_kick_time = 0.035
+muzzle_flash_size = 0.15
+eject_casings = false
+impact_sparks = 3
 fire_rate = 25.0
 camera_kick = 0.0
 automatic = true

@@ -1105,6 +1105,10 @@ func _ready() -> void:
 	if players != null:
 		for cat in players.get_children():
 			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s team=%d" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.player_id), cat.knocked_out, cat.team])
+			# AIM DOWN SIGHTS + recoil (scripts/cat/cat_aim.gd).
+			print("DevCapture aim %s: aiming=%s amount=%.2f bloom=%.2f fov=%.1f arm_len=%.2f arm_x=%.2f pitch=%.1f" % [cat.name,
+				cat.aim.is_aiming(), cat.aim.amount(), cat.aim.bloom_degrees, cat.camera.fov, cat.spring_arm.spring_length,
+				cat.spring_arm.position.x, rad_to_deg(cat.spring_arm.rotation.x)])
 			# What it's wearing, as seen on THIS computer (fur colour as hex + accessories).
 			var model: Node3D = cat.cat_model
 			var worn := PackedStringArray()

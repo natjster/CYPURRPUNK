@@ -31,6 +31,38 @@ extends HeldItem
 ## Camera kick on every shot (0 = none, 1 = huge; shotguns ~0.25, a tommy gun ~0.06).
 ## Scaled by SETTINGS > EFFECTS > SCREEN SHAKE. See scripts/feedback.gd.
 @export_range(0.0, 1.0) var camera_kick: float = 0.12
+## RECOIL: each shot tips your aim UP this many degrees (you pull it back down, Helldivers-style).
+@export var recoil_degrees: float = 0.8
+## ...and nudges it left or right by up to this many degrees.
+@export var recoil_sideways_degrees: float = 0.25
+## Share of the climb that settles back by itself (1 = all of it, 0 = you pull every bit down).
+@export_range(0.0, 1.0) var recoil_return: float = 0.6
+## While AIMING DOWN SIGHTS the recoil is multiplied by this (0.6 = 40% less kick).
+@export_range(0.0, 1.0) var ads_recoil_scale: float = 0.6
+## While AIMING DOWN SIGHTS the spread is multiplied by this (0.3 = shots much tighter).
+@export_range(0.0, 1.0) var ads_spread_scale: float = 0.3
+## Spread BLOOM: each shot adds this many degrees of extra wobble (shrinks back when you stop),
+## so tapping is accurate and holding the trigger sprays. The crosshair opens up with it.
+@export var spread_bloom_degrees: float = 0.3
+## The most bloom can grow to (degrees).
+@export var max_bloom_degrees: float = 3.0
+## Camera ROLL punch per shot (degrees, random left or right).
+@export var camera_roll_degrees: float = 0.6
+## ZOOM punch per shot: the view widens this many degrees for a split second (feels like a THUMP).
+@export var fov_punch_degrees: float = 1.0
+## The gun MODEL slams back this far in the paw on each shot (metres)...
+@export var gun_kickback: float = 0.07
+## ...and its nose flips up this many degrees.
+@export var gun_kick_degrees: float = 9.0
+## How long the model takes to settle back (seconds).
+@export var gun_kick_time: float = 0.12
+## Size of the bright muzzle-flash STAR at the barrel tip (metres; 0 = no star, just the light).
+@export var muzzle_flash_size: float = 0.35
+## Spit out a brass SHELL CASING on each shot (lasers and launchers: off).
+@export var eject_casings: bool = true
+@export var casing_color: Color = Color(1.0, 0.75, 0.25)
+## Sparks that burst off whatever a bolt hits (0 = none). Blasts don't use them.
+@export var impact_sparks: int = 7
 
 @export_group("Overheat")
 ## Heat added per shot (1.0 = fully overheated). 0 = this gun never overheats.
@@ -134,6 +166,13 @@ var _bolt_mesh := BoxMesh.new()
 var _bolt_material: ShaderMaterial
 var _lob_material: ShaderMaterial
 var _rng := RandomNumberGenerator.new()  # spread only — NOT the city's RNG
+var _gun_model: Node3D
+var _gun_rest := Transform3D.IDENTITY  # where the model sits in the paw when not kicking
+var _kick_tween: Tween
+var _flash_star: MeshInstance3D           # the muzzle-flash star (built in _ready)
+var _flash_material: StandardMaterial3D
+static var _casing_mesh: BoxMesh
+static var _spark_mesh: BoxMesh
 
 
 func _ready() -> void:
@@ -159,6 +198,10 @@ func _ready() -> void:
 	_rng.randomize()
 	if _muzzle_flash != null:
 		_muzzle_flash.light_energy = 0.0
+	_gun_model = model as Node3D
+	if _gun_model != null:
+		_gun_rest = _gun_model.transform
+	_build_flash_star()
 	_update_heat_look()
 
 
@@ -185,7 +228,9 @@ func _snap_muzzle_to_model(model: Node) -> void:
 func _process(delta: float) -> void:
 	_flash_time = maxf(_flash_time - delta, 0.0)
 	if _muzzle_flash != null:
-		_muzzle_flash.light_energy = 6.0 * _flash_time / 0.05 if _flash_time > 0.0 else 0.0
+		_muzzle_flash.light_energy = 10.0 * _flash_time / 0.05 if _flash_time > 0.0 else 0.0
+	if _flash_star != null:
+		_flash_star.visible = _flash_time > 0.0
 
 
 func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
@@ -206,6 +251,10 @@ func _fire() -> void:
 	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.3  # cat turns to face the shot
 	Seats.rumble(holder.player_id, 0.4, 0.1, 0.06)  # a little kick on the shooter's controller with every shot
 	Feedback.shake(holder.player_id, camera_kick)  # ...and on their camera (scripts/feedback.gd)
+	# RECOIL (scripts/cat/cat_aim.gd): aim climbs, view rolls and thumps, spread blooms. Less when aiming.
+	var aimed := lerpf(1.0, ads_recoil_scale, holder.aim.amount())
+	holder.aim.kick(recoil_degrees * aimed, recoil_sideways_degrees * aimed, recoil_return,
+		camera_roll_degrees * aimed, fov_punch_degrees * aimed, spread_bloom_degrees, max_bloom_degrees)
 
 	var ends := PackedVector3Array()  # where each bolt landed
 	for i in maxi(pellets_per_shot, 1):
@@ -222,7 +271,8 @@ func _fire() -> void:
 func _fire_bolt() -> Vector3:
 	var camera := holder.camera
 	var aim := -camera.global_basis.z
-	var spread := deg_to_rad(spread_degrees)
+	# Spread = the gun's own wobble + bloom from firing fast, much tighter when aiming down sights.
+	var spread := deg_to_rad((spread_degrees + holder.aim.bloom_degrees) * holder.aim.spread_scale(ads_spread_scale))
 	aim = aim.rotated(camera.global_basis.x, _rng.randf_range(-spread, spread))
 	aim = aim.rotated(camera.global_basis.y, _rng.randf_range(-spread, spread))
 
@@ -310,6 +360,10 @@ func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 	if _muzzle_flash != null:
 		_muzzle_flash.light_color = color
 	_flash_time = 0.05
+	_show_flash_star(color)
+	_kick_model()
+	if eject_casings:
+		_eject_casing()
 	if shots_seen % maxi(shots_per_sound, 1) == 0:
 		Sound.play_at(shot_sound, start, -4.0)  # every computer runs this, so play it just here
 
@@ -400,6 +454,8 @@ func _draw_bolt(start: Vector3, end: Vector3, color: Color) -> void:
 	add_child(spark)
 	spark.global_position = end - (end - start).normalized() * 0.2
 	get_tree().create_timer(bolt_time * 1.5).timeout.connect(spark.queue_free)
+	if length < max_range * 0.95:  # (a miss into the sky: no sparks in mid-air)
+		_burst_sparks(end, (start - end).normalized(), color)
 
 
 ## The blast: a neon sphere that grows to blast_radius and fades, with a flash of light. It lives
@@ -459,3 +515,127 @@ func hud_text() -> String:
 
 func wants_crosshair() -> bool:
 	return true
+
+
+# --- GUN FEEL: muzzle star, model kick, shell casings, impact sparks (every computer) ---
+
+## The muzzle-flash STAR: two crossed glowing diamonds along the barrel plus a spiky burst facing
+## forward, at the barrel tip, shown for one flash.
+func _build_flash_star() -> void:
+	if _muzzle == null or muzzle_flash_size <= 0.0:
+		return
+	_flash_material = StandardMaterial3D.new()
+	_flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_flash_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var tools := SurfaceTool.new()
+	tools.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var w := 0.35
+	for flip in [Vector3(1, 0, 0), Vector3(0, 1, 0)]:
+		var side: Vector3 = flip * w
+		for tri in [[Vector3.ZERO, side, Vector3(0, 0, -1)], [Vector3.ZERO, -side, Vector3(0, 0, -1)],
+				[Vector3.ZERO, side, Vector3(0, 0, 0.25)], [Vector3.ZERO, -side, Vector3(0, 0, 0.25)]]:
+			for corner in tri:
+				tools.add_vertex(corner)
+	for i in 8:  # the forward-facing burst: 8 spikes, long and short
+		var angle := TAU * i / 8.0
+		var spike := 0.6 if i % 2 == 0 else 0.3
+		tools.add_vertex(Vector3(cos(angle - 0.2), sin(angle - 0.2), 0) * 0.12)
+		tools.add_vertex(Vector3(cos(angle + 0.2), sin(angle + 0.2), 0) * 0.12)
+		tools.add_vertex(Vector3(cos(angle), sin(angle), 0) * spike)
+	_flash_star = MeshInstance3D.new()
+	_flash_star.mesh = tools.commit()
+	_flash_star.material_override = _flash_material
+	_flash_star.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_flash_star.visible = false
+	_muzzle.add_child(_flash_star)
+
+
+func _show_flash_star(color: Color) -> void:
+	if _flash_star == null:
+		return
+	_flash_material.albedo_color = Color(color.lerp(Color.WHITE, 0.45), 0.95)
+	_flash_star.rotation = Vector3(0, 0, _rng.randf() * TAU)  # a new spin every shot
+	_flash_star.scale = Vector3.ONE * muzzle_flash_size * _rng.randf_range(0.75, 1.3)
+	_flash_star.visible = true
+
+
+## The gun model slams back in the paw and flips its nose up, then eases back.
+func _kick_model() -> void:
+	if _gun_model == null or (gun_kickback <= 0.0 and gun_kick_degrees <= 0.0):
+		return
+	if _kick_tween != null:
+		_kick_tween.kill()
+	# Back = towards the cat: the barrel points along -Z, so +Z is back. Nose up = turn around X.
+	var kicked := _gun_rest.translated_local(Vector3(0, 0, gun_kickback))
+	kicked.basis = kicked.basis * Basis(Vector3.RIGHT, deg_to_rad(gun_kick_degrees))
+	_gun_model.transform = kicked
+	_kick_tween = create_tween()
+	_kick_tween.tween_property(_gun_model, "transform", _gun_rest, gun_kick_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+## Where the casings and sparks go: the game world (so dropping the gun doesn't delete them).
+func _effects_parent() -> Node:
+	return Game.instance if Game.instance != null else self
+
+
+## A brass shell casing spins out of the right side of the gun, arcs and drops away.
+func _eject_casing() -> void:
+	if _gun_model == null or not is_inside_tree():
+		return
+	if _casing_mesh == null:
+		_casing_mesh = BoxMesh.new()
+		_casing_mesh.size = Vector3(0.035, 0.035, 0.09)
+	var casing := MeshInstance3D.new()
+	casing.mesh = _casing_mesh
+	casing.material_override = LevelKit.psx_material({"albedo_color": casing_color, "emission_color": casing_color, "emission_energy": 0.6})
+	casing.top_level = true
+	casing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_effects_parent().add_child(casing)
+	var gun_basis := _gun_model.global_basis.orthonormalized()
+	var from := _gun_model.global_position + gun_basis.y * 0.08
+	casing.global_position = from
+	var out := gun_basis.x * _rng.randf_range(0.5, 0.8) + gun_basis.z * _rng.randf_range(0.0, 0.2)
+	var seconds := 0.55
+	var tween := casing.create_tween().set_parallel()
+	tween.tween_method(_fly_casing.bind(casing, from, out), 0.0, 1.0, seconds)
+	tween.tween_property(casing, "rotation", Vector3(_rng.randf_range(8, 14), _rng.randf_range(-4, 4), 0), seconds)
+	tween.chain().tween_callback(casing.queue_free)
+
+
+## One step of a casing's arc: out to the side, a little hop up, then falling.
+func _fly_casing(t: float, casing: MeshInstance3D, from: Vector3, out: Vector3) -> void:
+	casing.global_position = from + out * t + Vector3.UP * (1.6 * t - 3.2 * t * t)
+
+
+## A burst of little glowing chips flying off where a bolt hit ("back" = back towards the shooter).
+func _burst_sparks(where: Vector3, back: Vector3, color: Color) -> void:
+	if impact_sparks <= 0 or not is_inside_tree():
+		return
+	if _spark_mesh == null:
+		_spark_mesh = BoxMesh.new()
+		_spark_mesh.size = Vector3.ONE * 0.05
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo = true
+		_spark_mesh.material = material
+	var sparks := CPUParticles3D.new()
+	sparks.mesh = _spark_mesh
+	sparks.amount = impact_sparks
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.lifetime = 0.35
+	sparks.direction = back
+	sparks.spread = 55.0
+	sparks.initial_velocity_min = 3.0
+	sparks.initial_velocity_max = 7.0
+	sparks.gravity = Vector3(0, -14, 0)
+	sparks.scale_amount_min = 0.6
+	sparks.scale_amount_max = 1.4
+	sparks.color = color.lerp(Color.WHITE, 0.3)
+	sparks.top_level = true
+	_effects_parent().add_child(sparks)
+	sparks.global_position = where + back * 0.1
+	sparks.emitting = true
+	get_tree().create_timer(0.6).timeout.connect(sparks.queue_free)

@@ -74,6 +74,9 @@ extends CharacterBody3D
 @onready var moves: CatMoves = $Moves
 ## RIDING (scripts/cat/cat_ride.gd): driving, or in a passenger seat as the GUNNER. Knobs: Player > Ride.
 @onready var ride: CatRide = $Ride
+## AIM DOWN SIGHTS + gun recoil (scripts/cat/cat_aim.gd): right mouse / LT with a gun and a free
+## left paw. Knobs: Player > Aim.
+@onready var aim: CatAim = $Aim
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 ## False while driving — the cat ignores input and stays hidden.
@@ -107,6 +110,8 @@ var _base_spring_length: float = 3.5
 var knocked_out: bool = false
 
 var _base_fov: float
+var _camera_fov: float = 75.0   # the eased field of view (before the gun's zoom punch)
+var _camera_tilt: float = 0.0   # the eased camera roll (before the gun's roll punch)
 
 ## Fur colours handed out to each player so cats are easy to tell apart.
 const FUR_COLORS: Array[Color] = [
@@ -332,6 +337,7 @@ func _ready() -> void:
 	# FIELD OF VIEW comes from the Settings menu (the Camera3D's own fov is ignored).
 	_base_fov = Settings.field_of_view
 	camera.fov = _base_fov
+	_camera_fov = _base_fov
 	Settings.changed.connect(_on_settings_changed)
 	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
 	spring_arm.add_excluded_object(get_rid())
@@ -516,7 +522,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Mouse look: left/right turns the pivot, up/down tilts the spring arm.
 	# MOUSE SPEED and INVERT MOUSE Y come from the Settings menu.
 	if slot == 0 and event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sensitivity := mouse_sensitivity * Settings.mouse_speed
+		var sensitivity := mouse_sensitivity * Settings.mouse_speed * _aim_look_scale()
 		var pitch_sign := -1.0 if Settings.invert_y else 1.0
 		camera_pivot.rotate_y(-event.relative.x * sensitivity)
 		spring_arm.rotation.x = clamp(
@@ -627,7 +633,7 @@ func _stick_look(delta: float) -> void:
 	if stick == Vector2.ZERO:
 		return
 	stick *= stick.length()  # response curve: half tilt = quarter speed
-	var turn := stick_turn_speed * Seats.stick_speed(slot) * delta  # this player's own STICK SPEED
+	var turn := stick_turn_speed * Seats.stick_speed(slot) * delta * _aim_look_scale()  # this player's own STICK SPEED
 	var pitch_sign := -1.0 if Seats.invert_stick_y(slot) else 1.0
 	camera_pivot.rotate_y(-stick.x * turn)
 	spring_arm.rotation.x = clamp(
@@ -676,7 +682,9 @@ func _physics_process(delta: float) -> void:
 
 	# Zoomies = holding Shift while actually moving (or being boosted).
 	var is_zooming := (Seats.is_pressed(slot, "sprint") or speed_boost > 1.0) and direction != Vector3.ZERO and not downed
+	is_zooming = is_zooming and not aim.is_aiming()  # no zoomies while aiming down sights
 	var target_speed := zoomies_speed if is_zooming else walk_speed
+	target_speed *= lerpf(1.0, aim.ads_move_speed, aim.amount())  # aiming = careful steps
 	target_speed *= Upgrades.zoomies_multiplier(player_id)  # ESPRESSO BLOODSTREAM (scripts/upgrades.gd)
 	if downed:
 		target_speed = walk_speed * CatHealth.instance.crawl_speed
@@ -719,7 +727,7 @@ func _physics_process(delta: float) -> void:
 
 	# Smoothly turn the cat model to face where it's going. (Godot's "forward" is -Z.)
 	# While firing a weapon, face where the camera looks instead, so the gun points at the target.
-	var is_aiming := Time.get_ticks_msec() / 1000.0 < aim_until
+	var is_aiming := Time.get_ticks_msec() / 1000.0 < aim_until or aim.is_aiming()
 	if is_aiming:
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, camera_pivot.rotation.y, 1.0 - exp(-turn_speed * 2.0 * delta))
 	elif moves.steering_locked() and Vector2(velocity.x, velocity.z).length() > 0.5:
@@ -864,6 +872,11 @@ func teleport_to(where: Vector3, yaw: float) -> void:
 
 
 ## Lean the cat, roll the camera and widen the FOV while sprinting; ease back otherwise.
+## Mouse / stick look speed: slower while aiming down sights (Player > Aim > Ads Look Speed).
+func _aim_look_scale() -> float:
+	return lerpf(1.0, aim.ads_look_speed, aim.amount())
+
+
 func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> void:
 	var weight := 1.0 - exp(-8.0 * delta)
 	var lean := deg_to_rad(zoomies_lean_degrees) if is_zooming else 0.0
@@ -881,8 +894,12 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 		var t := 1.0 - _flip_time_left / flip_seconds
 		flip = -TAU * flip_turns * (1.0 - pow(1.0 - t, 2.0))  # (minus = nose goes down first)
 	cat_model.rotation.x = _lean_x + flip
-	camera.rotation.z = lerp(camera.rotation.z, tilt, weight)
-	camera.fov = lerp(camera.fov, fov, weight)
+	# (Kept in their own variables so the gun's roll / zoom punch (CatAim) sits on top without smearing.)
+	fov *= lerpf(1.0, aim.ads_fov_scale, aim.amount())  # AIM DOWN SIGHTS zooms in
+	_camera_tilt = lerp(_camera_tilt, tilt, weight)
+	_camera_fov = lerp(_camera_fov, fov, weight)
+	camera.rotation.z = _camera_tilt + aim.roll()
+	camera.fov = _camera_fov + aim.fov_punch()
 	# Over-the-shoulder view while holding a weapon that asks for it. (We slide the whole
 	# spring arm, because a SpringArm3D always puts its camera back on its own centre line.)
 	var shoulder_x := gun_shoulder_offset if shoulder_view else 0.0
@@ -894,9 +911,12 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	if b > 0.0 and GameScreen.instance != null:
 		var pane := GameScreen.instance.screen_size_for_seat(slot)
 		side *= clampf((pane.x / maxf(pane.y, 1.0)) / (4.0 / 3.0), 0.35, 1.3)
-	spring_arm.position.x = lerp(spring_arm.position.x, lerpf(shoulder_x, side, b), weight)
-	spring_arm.position.y = lerpf(0.0, inventory_camera_lift, b)
-	spring_arm.spring_length = lerpf(_base_spring_length, inventory_camera_distance, b)
+	# AIM DOWN SIGHTS: tight over the shoulder (CatAim eases its own amount, so no extra lerp here).
+	var a := aim.amount()
+	shoulder_x = lerpf(shoulder_x, aim.ads_camera_side, a)
+	spring_arm.position.x = lerp(spring_arm.position.x, lerpf(shoulder_x, side, b), maxf(weight, a))
+	spring_arm.position.y = lerpf(lerpf(0.0, aim.ads_camera_lift, a), inventory_camera_lift, b)
+	spring_arm.spring_length = lerpf(lerpf(_base_spring_length, aim.ads_camera_distance, a), inventory_camera_distance, b)
 
 
 ## INVENTORY VIEW: glide the camera in behind the cat (and back out when it closes), tilt it, and

@@ -55,3 +55,15 @@ rpc `show_swing` tweens `Model`; 3-hit COMBO + slam shockwave: see ui-hud.md MEL
 Weapon extras (exports, all `_make_hit` -> `Hit`): `pellets_per_shot`, `blast_radius` (`_blast`: sphere query, outward direction; replaces the
 direct hit), `stun_seconds` -> `Enemy.take_hit(id, amount, stun, push, city_heat)` -> `_on_stunned`/`_on_pushed`, `enemy_knockback` (`knockback_taken`), `car_launch`
 (m/s, x mass), `city_heat_per_hit`, `shots_per_sound`. `show_shot(ends, heat)` = one RPC per pull. STUNNED Roombas ignore `_on_hurt`. `CatHealth.finish_grace_seconds` = no finishing right after going down. Test: SETUP_GUIDE §9, `--rival_volley=N`, `--blast_car`, `--blast_probe`.
+
+ADS + GUN FEEL (11 Nov 2026): `scripts/cat/cat_aim.gd` (`CatAim`, node `Player/Aim`, `cat.aim`). ItemManager `_use_held_items` sets
+`cat.aim.wants_aim` = right paw is a non-melee Weapon AND `held_item(cat,1) == null` AND "use_left" held (so RMB/LT aims only with a
+free left paw; reset when the cat is skipped). `is_aiming()` also needs `is_controlled` (no ADS as gunner). cat_player reads
+`aim.amount()` in `_update_zoomies_juice` (arm side/length/lift, fov x `ads_fov_scale`; `_camera_fov`/`_camera_tilt` hold the eased
+values so `aim.fov_punch()`/`roll()` sit on top), walk speed, `_aim_look_scale()` (mouse + stick), no zoomies, faces camera.
+Weapon "Feel" exports: recoil_* -> `aim.kick()` (pitch/yaw straight onto spring_arm/pivot, `recoil_return` share settles back),
+bloom (`aim.bloom_degrees`, added to spread x `aim.spread_scale(ads_spread_scale)`), crosshair `HudCrosshair.set_aim(amount, bloom)`
+(gap + ADS brackets). draw_shot (every computer, NPC guns too): `_show_flash_star` (SurfaceTool star under Muzzle), `_kick_model`
+(`_gun_model`/`_gun_rest`; NOT `_model`, MeleeWeapon owns that name), `_eject_casing`, `_burst_sparks` (CPUParticles3D, skipped on
+max-range misses). Test: `--deploy --give=tommy_gun --hold=shoot,use_left --keep_holding --hold_delay=120 --hold_frames=25`
+("DevCapture aim" line: aiming/amount/bloom/fov/arm).

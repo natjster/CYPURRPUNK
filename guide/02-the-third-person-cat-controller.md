@@ -14,6 +14,8 @@ Player (CharacterBody3D)            script: cat_player.gd
 │   │    Colours and hats/shades/collars come from the player's MY CAT look, §11.)
 ├── Moves (Node)                     script: scripts/cat/cat_moves.gd — CAT MOVES (pounce, wall
 │                                    kick, clamber, snappy jumps, squash & stretch). Its knobs live here.
+├── Aim (Node)                       script: scripts/cat/cat_aim.gd — AIM DOWN SIGHTS + gun recoil
+│                                    (camera distance/side/zoom while aiming, walk + look speed). §9.
 ├── CameraPivot (Node3D)             position y=0.6 — mouse left/right turns this
 │   └── SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 — mouse up/down tilts this
 │       └── Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
