@@ -7,7 +7,10 @@ each NPC scene builds its own Model with hat/cigar etc.), accessories ON (`CatLo
 (`models/blockbench/cat.bbmodel`) was REVERTED (user's call: liked the original cats); don't swap it back unasked.
 
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
-`scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`) + part id per slot (`SLOTS`, at `SLOT_ANCHORS`).
+`scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`, plus any descendant mesh named `Fur_*`/`Markings_*`/`Eyes_*`/`Nose_*`:
+paws, cheek tufts, inner ears, tail tip; legs stay 0.2 tall + tail 0.45 (walk hinges); test `--cat_lineup[=res://x.tscn]`)
++ part id per slot (`SLOTS`, at `SLOT_ANCHORS`). Nov 11 2026: user chose to KEEP the original cat and only smooth/detail it
+(8 candidate redesigns, primitive + Blockbench, were rejected and deleted).
 Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and
 `cat_parts/palette.tres` (`CatPalette`). `CatLook.apply(model, look)` / `clean()` / `random_look()`.
 Players have several cats: `Settings.cats` ([{id, name, look}]) + `current_cat_id`; use

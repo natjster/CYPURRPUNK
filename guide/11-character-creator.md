@@ -71,6 +71,15 @@ colour of each list is what a brand-new cat starts with in MY CAT.
 - `scenes/cat_model.tscn` — the cat's body, used by player cats and the MY CAT preview. The colour
   rows paint meshes **by name** (FUR = Body, legs, Head, ears, Tail; MARKINGS = Belly, Muzzle;
   EYES = EyeL/EyeR; NOSE = Nose), listed in `COLOR_PARTS` in `cat_look.gd`.
+  Extra pieces get a colour by their NAME too: anything called `Fur_...`, `Markings_...`, `Eyes_...` or
+  `Nose_...` (anywhere in the cat, e.g. `LegL > Fur_PawL`, `EarL > Nose_InnerEarL`, `Head > Fur_CheekL`,
+  `Tail > Fur_TailTip`). Put a detail UNDER the part it belongs to so it moves with it (paws swing with
+  the legs). Pieces with other names (the white eye `Shine`s) keep their own colour. To add one: open
+  `scenes/cat_model.tscn`, right-click a part > **Add Child Node** > MeshInstance3D, name it
+  `Fur_Something`, pick a Mesh, and set Surface Material Override to `Mat_fur` (or the matching one).
+  Keep the leg meshes 0.2 m tall and the tail 0.45 m long: the walk animation hinges them at those sizes.
+  Test: `--solo --cat_lineup` shows the cat big under a work light (`--cat_lineup=res://other.tscn`
+  puts another cat scene beside it for a before / after).
 - `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
   itself: the cat row, then one row per colour and per slot.
 - `scripts/settings.gd` — your cats: `Settings.cats` (each `{"id", "name", "look"}`) and

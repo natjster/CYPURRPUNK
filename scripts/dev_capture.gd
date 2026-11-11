@@ -1,5 +1,5 @@
 extends Node
-## DEV TOOL — takes a screenshot of the running game, saves it, then quits.
+## DEV TOOL â€” takes a screenshot of the running game, saves it, then quits.
 ## Does nothing during normal play (it only wakes up when given --capture).
 ##
 ## Run from a terminal in the project folder, e.g.:
@@ -79,6 +79,8 @@ extends Node
 ##   --deploy_again=N  N frames after the above, ask Don AGAIN (one trip per district: refused once
 ##                     you've been up); prints went_up / in_hub / heat
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
+##   --cat_lineup[=res://x.tscn,...] the cat model (+ other cat scenes) side by side, own camera, no HUD
+##                     (--lineup_yaw=DEG turns them, --lineup_dist=M, --lineup_fov)
 ##   --weapons_lineup[=a,b] a display rack of the weapons (own camera) + "DevCapture weapon" lines
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
@@ -264,7 +266,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var scene: Node = Game.instance  # the game (main.tscn), inside scenes/game_screen.tscn
 
-	# Wait (up to ~10 s) for OUR cat to exist — a joining game needs time to connect.
+	# Wait (up to ~10 s) for OUR cat to exist â€” a joining game needs time to connect.
 	# Without --host / --join no cat ever appears, and we just photograph the lobby.
 	var player: CatPlayer = null
 	if args.has("host") or args.has("join") or args.has("solo") or args.has("tutorial"):
@@ -466,6 +468,8 @@ func _ready() -> void:
 			await _vehicles_lineup(player)
 		if args.has("weapons_lineup"):
 			await _weapons_lineup(player)
+		if args.has("cat_lineup"):
+			await _cat_lineup(player)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.
 			UndergroundHub.of(player).deploy(player)
@@ -1264,6 +1268,47 @@ func _vehicles_lineup(player: CatPlayer) -> void:
 	for car in cars:
 		print("DevCapture lineup: %s = %s at %s max_speed=%.1f seats=%d wheels=%d trim=%s" % [car.name, car.vehicle,
 			car.global_position.snapped(Vector3.ONE * 0.1), car.max_speed, car.passenger_seats, car._wheels.size(), car.trim_color()])
+
+
+## --cat_lineup[=res://a.tscn,...]: the cat model (scenes/cat_model.tscn) plus any other cat scenes
+## named, standing in a row under a work light with their own camera (no HUD), wearing the player's
+## look (classic orange tabby where it sets nothing). For judging cat model changes side by side.
+func _cat_lineup(player: CatPlayer) -> void:
+	var paths: Array[String] = ["res://scenes/cat_model.tscn"]
+	for extra in str(_args["cat_lineup"]).split(","):
+		if extra.ends_with(".tscn"):
+			paths.append(extra)
+	if UndergroundHub.is_in_hub(player.global_position):
+		UndergroundHub.of(player).deploy(player)
+		for i in 30:
+			await get_tree().physics_frame
+	for seat in 4:
+		if Hud.of(seat) != null:
+			Hud.of(seat).visible = false
+	player.visible = false
+	var look := {"fur": Color(0.95, 0.55, 0.2), "markings": Color(1, 0.93, 0.82), "eyes": Color(0.04, 0.03, 0.06),
+		"nose": Color(1, 0.45, 0.6)}
+	look.merge(player.look, true)
+	var row := Node3D.new()
+	row.name = "CatLineup"
+	Game.instance.add_child(row)
+	row.global_position = player.global_position + Vector3(0, 0, -3.0)
+	for i in paths.size():
+		var cat := (load(paths[i]) as PackedScene).instantiate() as Node3D
+		cat.position = Vector3((i - (paths.size() - 1) / 2.0) * 1.05, 0, 0)
+		cat.rotation.y = PI + deg_to_rad(float(_args.get("lineup_yaw", "20")))  # cats face -Z: turn to the camera
+		row.add_child(cat)
+		CatLook.apply(cat, look)
+		print("DevCapture cat_model: %d %s" % [i, paths[i]])
+	LevelKit.add_light(row, Vector3(0, 2.2, 1.8), Color(1, 0.94, 0.85), 5.0, 9.0)
+	var camera := Camera3D.new()
+	camera.fov = float(_args.get("lineup_fov", "45"))
+	row.add_child(camera)
+	camera.position = Vector3(0, 0.75, float(_args.get("lineup_dist", "2.2")))
+	camera.rotation.x = deg_to_rad(-8)
+	camera.make_current()
+	for i in 20:
+		await get_tree().process_frame
 
 
 ## --weapons_lineup[=a,b,...]: a display rack of the weapons (default: every weapon card) floating
