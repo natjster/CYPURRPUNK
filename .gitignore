@@ -21,3 +21,6 @@ desktop.ini
 
 # Python caches from tools/ (the Model Shop and Sound Lab).
 __pycache__/
+
+# Claude Code's working copies of the project (one per side session). Not part of the game.
+.claude/worktrees/

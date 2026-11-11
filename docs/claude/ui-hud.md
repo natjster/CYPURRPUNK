@@ -1,0 +1,38 @@
+# UI looks, HUD, menus
+
+(Split out of CLAUDE.md. Keep this file up to date when this system changes.)
+
+- UI LOOKS: `Settings.modern_ui` (SETTINGS > EFFECTS > UI STYLE). false = PS1: `menu_viewport` and every HUD SubViewport render at game pixels
+  (size = the pane's game viewport, `size_2d_override` keeps the layout), blown up nearest, and `CRTOverlay` (top-level ColorRect, psx_post with `pixel_scale`/`area_offset`/`area_scale`) covers game+HUD+menus; the per-pane CRT is off (`_game_dither` hidden, panes show the raw viewport). true (default) = MODERN: real-res UI, overlay hidden, per-pane CRT on. One player + PS1: `hud_scale_for` = fit * `ps1_hud_scale` (1.33). Thin lines in HUD `_draw` need `Hud.line(w)`, text outlines `Hud.outline(w)`, small font sizes `Hud.text_size(n)` (PS1 min 18). TOP ROW (Health | DropOff | Heat) is laid out every frame by hud.gd `_layout_top_row` (bars shrink, DropOff drops under them on narrow screens; `_second_row_shift` moves Feed/Scoreboard/StatusIcons): never set those widths elsewhere. `limits/global_shader_variables/buffer_size` is raised on purpose (city `instance_tint` overflowed it).
+- HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport, in a SubViewport (`GameScreen._seat_huds[seat]`, seat 0 too: GameScreen._input pushes each seat's events to its HUD first; player 1's mouse only while `Hud.wants_input(0)`). Use the statics: `Hud.set_text/show_element/set_color/
+  show_message/popup/set_in_game/element` by label name (Health, StatusIcons [HudStatusIcons, buff badges, fed by hud.gd
+  `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
+  Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
+  Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
+  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`]).
+  OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
+  `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
+  phases 2-4 (Inventory, Shop, Workbench). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
+  HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
+  GameScreen keeps that player's input for their HUD.
+  ONE HUD PER LOCAL PLAYER: `Hud.seat`; `Hud.of(seat)`; every static takes an optional seat (labels default
+  to seat 0; `show_message`/`popup` default -1 = all). Players 2-4's HUDs are hud.tscn copies (own GUI focus).
+  HUD scripts filter `Seats.seat_of_event(e) != seat`. Per-player
+  producers loop `Game.instance.playing_cats()`; windows: `NpcDialog.for_cat(cat)/for_seat`,
+  `InventoryScreen.for_seat`, `Hud.wants_input(seat)`. `hud.fit_to(rect, scale)` (`hud_scale_for`).
+  Name tags use `GameScreen.camera_for_seat/screen_size_for_seat`.
+  HUD windows must NOT use grab_focus (Godot keeps one focus per Window, across SubViewports): each keeps a
+  `SeatFocus` (`scripts/ui/seat_focus.gd`: set_buttons/handle(event)/clear, highlight = "hover" stylebox).
+- UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
+  emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
+  keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,
+  then `ColorDepthDither` LAST. MENU VIEW: at start `GameScreen._build_menu_view` reparents `ColorDepthDither`
+  into a new `Main/CRT` CanvasLayer and the whole `PS1Overlay` into `GameScreen/MenuView/MenuViewport`
+  (size_2d_override = game pixels; see UI LOOKS); `_input` pushes events there first, then to the game
+  viewport if unhandled. Menu focus lives in `GameScreen.menu_viewport` (not game_viewport). (`NpcDialog.is_open_for(seat)` -> cat ignores keys; it and `Inventory` are in the HUD.) Each menu handles its own Esc in `_input`; tree order decides who
+  sees Esc first. (The HUD is not here: see `Hud` above.)
+  Widescreen: the game viewport is always 240 tall but can be wider (`Settings.widescreen`).
+  `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
+  ColorRect backgrounds stretched back out); ColorDepthDither is full width. HUD labels must use
+  anchors (the HUD Frame matches the game picture's shape). Test: `--window=1720x720`.
