@@ -164,11 +164,13 @@ red and blue) is **shared by every player**:
 - **75** opens the exit manhole, **90** = Don's warning, **100** = the hatch is sealed and the
   **DEEP CLEAN** starts (see Fish Heist above).
 
-Every 25 heat is one **HEAT LEVEL** (an alarm sound). The HUD shows the heat as a bar in the TOP-RIGHT, a mirror image
-of your health bar (number box on the right, 0-100), flashing RED and BLUE like police lights - faster
-at each level, with a white flash on the frame when a level goes up. Tick marks show 25/50/75 (75 = the
-exit opens). It's **Frame > Top > Heat** in `scenes/ui/hud.tscn` (script `scripts/ui/hud_heat_bar.gd`):
-select it and change the two colours, flash speed and smoothness in the Inspector. Each level above 1 brings
+Every 25 heat is one **HEAT LEVEL** (an alarm sound). The HUD shows the heat as ONE bar in the TOP-RIGHT with the
+number (0-100) written inside its right end, flashing RED and BLUE like police lights - faster
+at each level, with a white flash on the frame when a level goes up. In the sewers the same bar is your
+Mainframe, with "MAINFRAME" inside its left end. It's **Frame > Top > Heat** in `scenes/ui/hud.tscn` (script
+`scripts/ui/hud_heat_bar.gd`): select it and change the two colours, flash speed and smoothness in the
+Inspector; **Shape** has Bar Thickness, Number Font Size, and two extras that are OFF to keep it clean:
+**Show Level Ticks** (25/50/75 marks) and **Show Exit Mark** (a notch where your exit opens). Each level above 1 brings
 **+5 Roombas** (they roll in one every 2 seconds), and all Roombas chase **7% faster** and spot
 you from **10% further**. At level 4, a chasing Roomba is almost as fast as a cat on zoomies
 carrying the koi...

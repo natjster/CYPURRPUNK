@@ -62,7 +62,8 @@ is refilled with the next district. If you drove onto the exit,
 the getaway car goes back to its parking spot.
 
 **HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = the **big blue 3D
-arrow** (below), or `THE SEWERS - SAFE ZONE` in the hub; top-right = everyone's cash,
+arrow** (below), or `THE SEWERS - SAFE ZONE` in the hub (shows for 4 seconds when you arrive, then fades
+out: **Heist** node in `main.tscn` > **Sewer Title (HUD)** > Sewer Title Seconds / Fade); top-right = everyone's cash,
 **only while you're in the sewers**.
 
 **THE BLUE ARROW ("Crazy Taxi" style, `scripts/ui/hud_compass_arrow.gd`):** a chunky bevelled 3D

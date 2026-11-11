@@ -57,6 +57,10 @@ Test runs save to `test_profiles\` instead, so they never touch your real saves.
 - The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, §13),
   drawn sharp at full resolution. The "[E] TALK TO ..." line above it is the HUD's prompt for
   anything usable (§16 "Pressing E").
+- TALK CAMERA: while the box is open the camera glides in over your cat's shoulder and frames the NPC
+  (face centred, above the box) and your cat turns to face them, like the backpack view. Knobs: your cat,
+  `scenes/player.tscn` > **Talk Camera** (Distance, Side, Lift, **Talk Face Height** = where the face sits
+  on screen, 0.3 = a third down; Speed). The face is aimed at half a metre under the NPC's NameTag.
 - NPC names over their heads: each NPC's **NameTag** (Label3D) sets where the name floats and
   its colour (**Modulate**); the HUD draws it sharp (§13). Its text comes from **Npc Name**.
 

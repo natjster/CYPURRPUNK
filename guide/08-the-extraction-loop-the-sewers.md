@@ -83,7 +83,8 @@ letting OVERCLEAN take over:
 - **Tuning** (select **Health** in `main.tscn`, group **PvP (the other gang)**): **Rob Seconds**
   (2), **Shots Finish Downed** (on), **Pvp Max Range** (75), **Pvp Max Damage** (120). How hard a
   gun hits is its **Damage** in `scenes/items/pistol.tscn` / `tommy_gun.tscn` (the same number it
-  does to VAC-COPs). The feed: **Feed Seconds** / **Feed Lines** on the HUD root in `hud.tscn`.
+  does to VAC-COPs). The feed (top-left: downs, knockouts, robberies; each line fades after 4 s): **Feed Seconds** /
+  **Feed Lines** / **Feed Fade Seconds** on the HUD root in `hud.tscn`.
 - **Each gang's own way in and out (phase 4):**
   - **CO-OP and SOLO are different:** one manhole in the centre crossroads, one car beside it,
     one exit (`Game.is_turf_war()` is false). Everything below is TURF WAR.

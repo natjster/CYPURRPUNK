@@ -77,8 +77,10 @@ var seat: int = 0
 @export var popup_fade_seconds: float = 1.0
 ## The FEED (downs, knockouts, revives, robberies): how long a line stays (seconds) and how many
 ## lines show at once (the oldest goes first).
-@export var feed_seconds: float = 7.0
+@export var feed_seconds: float = 4.0
 @export var feed_lines: int = 5
+## A feed line fades out over its last this-many seconds.
+@export var feed_fade_seconds: float = 1.5
 
 @export_group("Top row (fits any screen shape)")
 ## The top row = health bar (left) + DropOff line (middle) + heat / Mainframe bar (right). On a
@@ -346,7 +348,7 @@ func _process(delta: float) -> void:
 			line.left -= delta
 		var before := _feed.size()
 		_feed = _feed.filter(func(line): return line.left > 0.0)
-		if _feed.size() != before or _feed.any(func(line): return line.left < 1.0):
+		if _feed.size() != before or _feed.any(func(line): return line.left < feed_fade_seconds):
 			_draw_feed()
 
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
@@ -366,7 +368,7 @@ func _process(delta: float) -> void:
 
 
 ## Write the feed's lines into Frame/Top/Feed (a RichTextLabel: each line its own colour,
-## fading out in its last second).
+## fading out over its last feed_fade_seconds).
 func _draw_feed() -> void:
 	var label := element("Feed", seat) as RichTextLabel
 	if label == null:
@@ -374,7 +376,7 @@ func _draw_feed() -> void:
 	var text := ""
 	for line in _feed:
 		var color: Color = line.color
-		color.a = clampf(line.left, 0.0, 1.0)
+		color.a = clampf(line.left / maxf(feed_fade_seconds, 0.01), 0.0, 1.0)
 		text += "[color=#%s]%s[/color]\n" % [color.to_html(true), line.text]
 	label.text = text
 

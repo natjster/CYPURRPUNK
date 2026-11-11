@@ -84,46 +84,47 @@ extends Node
 ## How long the banner shows before you go back to the start menu (seconds).
 @export var finale_seconds: float = 4.0
 
-# The words. {E} = your interact key, {TAB} = your inventory key, {fish} = fish in your bag,
+# The words: keep each hint to ONE short line (about 50 letters) so the box stays small.
+# {E} = your interact key, {TAB} = your inventory key, {fish} = fish in your bag,
 # {need} = fish needed, {heat} = the heat the exit opened at.
 @export_group("Step 1 - Quest")
 @export var step1_title: String = "STEP 1/9: TAKE A QUEST FROM LIL' MITTENS"
-@export_multiline var step1_hint: String = "Walk to Lil' Mittens by the east wall boxes and press [{E}] -> accept MITTENS' FISH (3 fish for +$100)."
+@export_multiline var step1_hint: String = "[{E}] Lil' Mittens (east wall) -> accept MITTENS' FISH"
 @export_group("Step 2 - Shop")
-@export var step2_title: String = "STEP 2/9: BUY A WEAPON AT THE BLACK MARKITTEN"
-@export_multiline var step2_hint: String = "Press [{E}] on Comrade Whiskers: his shop opens. Buy a PAW-PISTOL ($60, FIREARMS tab) or a NEON BAT ($20, MELEE tab) with your $100."
+@export var step2_title: String = "STEP 2/9: BUY A WEAPON"
+@export_multiline var step2_hint: String = "[{E}] Comrade Whiskers: buy a PAW-PISTOL or NEON BAT"
 @export_group("Step 3 - Stash")
 @export var step3_title: String = "STEP 3/9: CHECK THE LITTERBOX"
-@export_multiline var step3_hint: String = "Walk to the glowing LITTERBOX on the east wall and press [{E}]. Anything buried here is safe if you get knocked out! Press [{TAB}] or [Esc] to close."
+@export_multiline var step3_hint: String = "[{E}] the glowing LITTERBOX: loot in it is safe"
 ## Shown if you closed the stash with your weapon still inside it.
-@export_multiline var step3_take_back: String = "Your weapon is in the litterbox! Open it again [{E}] and click your weapon to take it back with you!"
+@export_multiline var step3_take_back: String = "Take your weapon back: [{E}] the LITTERBOX, click it"
 @export_group("Step 4 - Mainframe")
 @export var step4_title: String = "STEP 4/9: CHECK THE MAINFRAME"
-@export_multiline var step4_hint: String = "Walk up to the giant CRT on the west wall. It drains 25% each district - if it hits 0%, OVERCLEAN breaches the sewer! Feed it SCRAP from bosses to charge it."
+@export_multiline var step4_hint: String = "Walk to the giant CRT. SCRAP keeps it charged"
 @export_group("Step 5 - Deploy")
 @export var step5_title: String = "STEP 5/9: DEPLOY TO THE CITY"
-@export_multiline var step5_hint: String = "Talk to Don Catleone at the north end [{E}] -> SEND ME UP TOP. You get ONE trip per district!"
+@export_multiline var step5_hint: String = "[{E}] Don Catleone (north end) -> SEND ME UP TOP"
 ## Don says this if you ask to go up before step 5.
 @export_multiline var too_early_to_deploy: String = "Not so fast, kid. Finish your prep down here first - follow the yellow line at the top."
 @export_group("Step 6 - Fish")
-@export var step6_title: String = "STEP 6/9: GRAB 3 FISH FOR YOUR BACKPACK"
-@export_multiline var step6_hint: String = "Follow the beacon to Meow-Mart and press [{E}] on 3 Fish ($50 each). They go in your BACKPACK. ({fish}/{need})"
+@export var step6_title: String = "STEP 6/9: GRAB 3 FISH"
+@export_multiline var step6_hint: String = "Follow the beacon to Meow-Mart, [{E}] fish ({fish}/{need})"
 @export_group("Step 7 - Scrap")
-@export var step7_title: String = "STEP 7/9: DESTROY A VAC-COP FOR SCRAP"
-@export_multiline var step7_hint: String = "Shoot or smash a patrolling VAC-COP! (In normal raids, MEGA VAC-COP bosses drop SCRAP - this tutorial bot is carrying a piece for you!)"
-@export_multiline var step7_pickup: String = "PICK UP THE GLOWING CYAN SCRAP [{E}]!"
+@export var step7_title: String = "STEP 7/9: DESTROY A VAC-COP"
+@export_multiline var step7_hint: String = "Shoot or smash the VAC-COP: it drops SCRAP"
+@export_multiline var step7_pickup: String = "PICK UP THE CYAN SCRAP [{E}]!"
 ## Shown if a VAC-COP bonked a fish out of your bag.
-@export_multiline var step7_fish_back: String = "A VAC-COP knocked a fish loose! Grab it back [{E}] ({fish}/{need})."
+@export_multiline var step7_fish_back: String = "A bot knocked a fish loose! [{E}] it ({fish}/{need})"
 @export_group("Step 8 - Payphone + Extract")
 ## Shown before you've answered a payphone (the blue arrow points at the nearest PAYPHONE).
-@export var step8_title: String = "STEP 8/9: FOLLOW THE BLUE ARROW TO A PAYPHONE"
-@export_multiline var step8_hint: String = "HEAT HIT {heat}! Your exit is open! Follow the big BLUE ARROW at the top to the nearest ringing PAYPHONE and press [{E}] so Don sends you the exit location."
+@export var step8_title: String = "STEP 8/9: FOLLOW THE ARROW TO A PAYPHONE"
+@export_multiline var step8_hint: String = "Exit open! [{E}] a ringing PAYPHONE to call Don"
 ## Shown the moment you've answered (the blue arrow flips to the EXIT).
-@export var step8_exit_title: String = "STEP 8/9: FOLLOW THE BLUE ARROW TO THE EXIT"
-@export_multiline var step8_exit: String = "Don's on the line above the phone! The BLUE ARROW now points to the EXIT - follow it to the glowing manhole to bring your Fish and Scrap home in your backpack!"
+@export var step8_exit_title: String = "STEP 8/9: FOLLOW THE ARROW TO THE EXIT"
+@export_multiline var step8_exit: String = "The arrow points at your EXIT manhole now. Go!"
 @export_group("Step 9 - Feed")
 @export var step9_title: String = "STEP 9/9: FEED SCRAP TO THE MAINFRAME"
-@export_multiline var step9_hint: String = "You're home with your fish + the $100 quest bonus! (Sell fish to Comrade Whiskers later.) Walk to the Mainframe on the west wall and press [{E}] to feed it your SCRAP (+25%)."
+@export_multiline var step9_hint: String = "Home! [{E}] the Mainframe to feed it SCRAP (+25%)"
 
 const STEPS := 9
 const DONE := 10

@@ -61,6 +61,8 @@ Select **Tutorial** in `scenes/main.tscn` (Scene dock: **Main > Tutorial**). In 
   your inventory key, `{fish}` / `{need}` the fish count, `{heat}` the exit heat. Step 8 has two
   titles: **Step8 Title** (before the payphone) and **Step8 Exit Title** (after it), with
   **Step8 Hint** / **Step8 Exit** under them.
+  Keep every hint to ONE short line (about 50 letters): the box grows to fit, and a long hint
+  pushes the blue arrow down the screen.
 
 The HUD box is `scenes/ui/hud.tscn` > **Frame > Top > TutorialBox** (a PanelContainer with
 **TutorialStep** and **TutorialHint** labels): move or restyle it there.

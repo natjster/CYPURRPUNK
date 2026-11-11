@@ -35,6 +35,9 @@ static var instance: NpcDialog
 var seat: int = 0
 ## True while this talk box is up.
 var is_open: bool = false
+## Who we're talking to (set by npc.gd just before open(); null = nobody in the world, e.g. a
+## script's message). The cat's TALK CAMERA (cat_player.gd _update_talk_camera) turns to frame them.
+var talking_to: Node3D = null
 
 ## Height of each answer button (HUD units).
 @export var choice_height: float = 40.0
@@ -215,6 +218,7 @@ func _finish_typing() -> void:
 ## Back to the game: grab the mouse again.
 func close() -> void:
 	is_open = false
+	talking_to = null
 	_typed = -1.0
 	hide()
 	_focus.clear()

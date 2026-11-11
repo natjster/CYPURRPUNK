@@ -72,6 +72,14 @@ extends Node3D
 ## bobs and pulses faster: the hatch seals at 100!
 @export var seal_warning_at_heat: float = 90.0
 
+@export_group("Sewer title (HUD)")
+## Down in the sewers the top line ("THE SEWERS - SAFE ZONE") shows for this many seconds when you
+## arrive (or when the line changes), then fades out so the top of the screen stays clean.
+## 0 = keep it up the whole time.
+@export var sewer_title_seconds: float = 4.0
+## ...fading out over its last this-many seconds.
+@export var sewer_title_fade: float = 1.0
+
 @export_group("The DEEP CLEAN (max heat)")
 ## Once the hatch is sealed, the swarm hunts whoever is still up top for this many seconds.
 ## Then anyone still standing is knocked out anyway (loot lost), and a new district is built.
@@ -111,6 +119,8 @@ var _built: Array[Node] = []  # manholes and payphones, so a new district can cl
 var _exits: Array[Manhole] = []  # by team number
 var _payphones: Array[Payphone] = []
 var _clock: float = 0.0
+## The sewer title per HUD seat: {"line": what it said, "since": when it first showed (seconds)}.
+var _sewer_title := {}
 ## Host: player ID -> time until we ignore that cat at the exit (it's on its way down).
 var _extract_wait := {}
 ## Host: when the DEEP CLEAN's time is up (knock out whoever is left), and when to build the
@@ -511,6 +521,29 @@ func _update_hud() -> void:
 		_update_hud_for(cat)
 
 
+## The sewer title: up for sewer_title_seconds after it appears or changes, fading at the end,
+## then hidden (so the health and Mainframe bars get the whole top row back).
+func _show_sewer_title(seat: int, line: String) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var shown: Dictionary = _sewer_title.get(seat, {})
+	if shown.get("line", "") != line:
+		shown = {"line": line, "since": now}
+		_sewer_title[seat] = shown
+	Hud.set_text("DropOff", line, seat)
+	var alpha := 1.0
+	if sewer_title_seconds > 0.0:
+		var left := sewer_title_seconds - (now - float(shown["since"]))
+		alpha = clampf(left / maxf(sewer_title_fade, 0.01), 0.0, 1.0)
+	Hud.show_element("DropOff", alpha > 0.0, seat)
+	_fade_drop_off(seat, alpha)
+
+
+func _fade_drop_off(seat: int, alpha: float) -> void:
+	var label := Hud.element("DropOff", seat)
+	if label != null:
+		label.modulate.a = alpha
+
+
 func _update_hud_for(my_cat: CatPlayer) -> void:
 	var me := my_cat.player_id
 	var seat := my_cat.slot
@@ -528,6 +561,9 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	# this real payphone -> exit arrow). Then hands off: null = nothing below touches the arrow.
 	if Tutorial.active() and Tutorial.instance.step != 8:
 		compass = null
+	if not in_sewers or alarm or Spectator.is_watching(seat):
+		_sewer_title.erase(seat)  # (back in the sewers later = the title shows again)
+		_fade_drop_off(seat, 1.0)
 	if alarm:
 		Hud.show_element("DropOff", true, seat)
 		Hud.set_text("DropOff", mainframe.breach_text(my_cat), seat)
@@ -540,12 +576,11 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		_hide_compass(compass)
 		return
 	if in_sewers:
-		Hud.show_element("DropOff", true, seat)
 		var line := "THE SEWERS - WAIT FOR THE NEXT DISTRICT" if has_been_up(me) else "THE SEWERS - SAFE ZONE"
 		var spectator := Spectator.instance
 		if has_been_up(me) and spectator != null and spectator.jump_to_watch_after_trip and spectator.can_spectate(my_cat):
 			line += "   [%s] WATCH CREW" % Hud.key_for("jump", seat)  # (scripts/spectator.gd)
-		Hud.set_text("DropOff", line, seat)
+		_show_sewer_title(seat, line)
 		_hide_compass(compass)
 		return
 	Hud.show_element("DropOff", false, seat)

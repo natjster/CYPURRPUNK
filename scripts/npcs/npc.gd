@@ -288,6 +288,7 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 		buttons.append([choice.text, _choose.bind(cat, choice)])
 	if buttons.is_empty():
 		buttons.append(["BYE", NpcDialog.for_cat(cat).close])  # never leave the player stuck
+	NpcDialog.for_cat(cat).talking_to = self  # (the cat's TALK CAMERA turns to look at us: cat_player.gd)
 	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)  # in the talking player's own HUD
 
 
@@ -327,6 +328,7 @@ func _say_busy(cat: CatPlayer) -> void:
 		giver = "somebody else"
 	var line := "You're already on a job. Finish that first." if busy_lines.is_empty() \
 			else busy_lines[randi() % busy_lines.size()]
+	NpcDialog.for_cat(cat).talking_to = self
 	NpcDialog.for_cat(cat).open(npc_name, line.replace("{giver}", giver), [["OK", NpcDialog.for_cat(cat).close]], voice)
 
 
