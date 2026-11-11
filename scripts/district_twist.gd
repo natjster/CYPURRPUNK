@@ -219,7 +219,7 @@ static func send_off_line(usual: String) -> String:
 	return line if line != "" else usual
 
 
-## THE MAINFRAME CRT's intel line (hub.gd).
+## This district's intel line (used to be on THE MAINFRAME's CRT; now only the --twist test prints it).
 static func intel_line() -> String:
 	if instance == null:
 		return ""

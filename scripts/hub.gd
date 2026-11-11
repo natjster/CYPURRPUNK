@@ -144,6 +144,8 @@ const MART_MOOD: int = -2
 @export var mainframe_spot: Vector3 = Vector3(-11.0, 0, 0)
 ## How close (metres) you must be to the mainframe spot.
 @export var mainframe_radius: float = 2.5
+## Font size of the charge % on the Mainframe's screen (the only words on it).
+@export var mainframe_percent_size: int = 64
 
 @export_group("CAT-CAM TV")
 ## Where you stand to watch the CAT-CAM (a chunky TV on a crate on the east wall, across the water
@@ -249,7 +251,6 @@ var _crt_screen: MeshInstance3D
 var _crt_light: OmniLight3D
 var _crt_sign: Label3D
 ## The INTEL line under the CRT: this district's DISTRICT TWIST (scripts/district_twist.gd).
-var _crt_intel: Label3D
 ## The moonlight's normal brightness (a BLACKOUT dims it).
 var _moon_energy: float = 1.0
 var _crt_key := ""  # what the CRT shows now, so it's only rewritten when that changes
@@ -466,16 +467,11 @@ func _update_mainframe_crt() -> void:
 	var colour := mainframe.tier_color(team)
 	var critical := mainframe.tier(team) == Mainframe.Tier.CRITICAL
 	var flash_on := not critical or fmod(Time.get_ticks_msec() / 1000.0 * 2.0, 1.0) < 0.5
-	var intel := DistrictTwist.intel_line()
-	var key := "%d %s %s %s" % [mainframe.percent(team), mainframe.tier_name(team), flash_on, intel]
+	var key := "%d %s" % [mainframe.percent(team), flash_on]
 	if key == _crt_key:
 		return
 	_crt_key = key
-	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(team), mainframe.percent(team)]
-	# Under it: what the crew's heard about this district (a DISTRICT TWIST in amber, else green).
-	_crt_intel.text = intel.replace(" (", "\n(")  # (the bracket part on its own line: readable at 240p)
-	var twisted := DistrictTwist.current_kind() != DistrictTwist.Kind.NONE
-	_crt_intel.modulate = Color((Color(1, 0.7, 0.15) if twisted else Color(0.25, 1, 0.45)) * 2.5, 1)
+	_crt_sign.text = "%d%%" % mainframe.percent(team)  # (only the number: the window says the rest)
 	var shown := colour * 0.5 if flash_on else colour * 0.15  # (dimmer than a plain neon box: the junk around it should read)
 	_crt_screen.set_instance_shader_parameter("instance_tint", Color(shown, 1.0))
 	_crt_light.light_color = colour
@@ -757,10 +753,8 @@ func _build_mainframe() -> void:
 	_crt_screen = LevelKit.add_box(self, Vector3(wall_x + 1.04, 1.94, z), Vector3(0.04, 2.45, 3.3), _neon, false)
 	_crt_screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
 	_crt_light = LevelKit.add_light(self, Vector3(wall_x + 2.5, 2.3, z), Color(0.2, 1, 0.45), 2.5, 8.0)
-	_crt_sign = LevelKit.add_sign(self, "THE MAINFRAME\nSYSTEM ONLINE\n75%", Vector3(wall_x + 1.09, 2.35, z), Color(0.0, 0.06, 0.02), 22, PI / 2)
-	# The INTEL line at the bottom of the screen: this district's DISTRICT TWIST (district_twist.gd).
-	_crt_intel = LevelKit.add_sign(self, "SECTOR: STANDARD PATROL", Vector3(wall_x + 1.09, 1.05, z), Color(0.25, 1, 0.45), 13, PI / 2)
-	LevelKit.add_sign(self, "FEED ME\nELECTRONICS", Vector3(wall_x + 1.55, 0.95, z), Color(0.8, 0.4, 1.0) * 0.5, 12, PI / 2)
+	# Just the charge % on the screen, big (Mainframe Percent Size in the Inspector).
+	_crt_sign = LevelKit.add_sign(self, "75%", Vector3(wall_x + 1.09, 1.94, z), Color(0.0, 0.06, 0.02), mainframe_percent_size, PI / 2)
 	# THE CHARGE GAUGE: 4 battery cells stacked in the rack (the model's rack is 2.06..2.94 m along Z).
 	var cell_gap := 0.08
 	_gauge_cell_height = (3.1 - 0.9 - cell_gap * 3.0) / 4.0

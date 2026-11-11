@@ -1313,11 +1313,7 @@ func _print_twist(scene: Node, args: Dictionary) -> void:
 	for p in city.mess_props:
 		var key: String = MessProp.Kind.keys()[p.kind]
 		kinds[key] = int(kinds.get(key, 0)) + 1
-	var intel: Array = []
-	for team in 2:
-		var hub := UndergroundHub.for_team(team)
-		if hub != null and hub._crt_intel != null:
-			intel.append(hub._crt_intel.text)
+	var intel: Array = [DistrictTwist.intel_line()]  # (the line itself: the CRT only shows the % now)
 	print("DevCapture twist: %s district=%d city=#%d lamps lit %d/%d ambient=%.2f moon=%.2f bot sight=%.1f m (x%.2f) mess props=%d %s" % [
 		DistrictTwist.name_of(twist.kind) if twist.kind != 0 else "NONE", twist.district_number, city.city_seed, lamps_lit, lamps,
 		(scene.get_node("WorldEnvironment") as WorldEnvironment).environment.ambient_light_energy,

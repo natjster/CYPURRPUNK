@@ -23,7 +23,7 @@
   no repeat of `kind`; district 1 + tutorial = NONE), sent WITH the seed: `_receive_city_seed(seed, twist, district)` -> `set_twist` before
   `city.generate`. Ask `is_blackout()/...` or `sight/prop/heat/bot_multiplier()`, `roll_scrap_drop()`. BIN DAY extras use city `_bin_rng`
   (layout unchanged); chaos bonus = `MessManager.player_messes_this_trip` in fish_heist (`_extracted` 4th arg). Boss news `news_line()`,
-  send-off `send_off_line()` (npc.gd), hub CRT `_crt_intel`, report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
+  send-off `send_off_line()` (npc.gd), (the hub CRT shows only the Mainframe % now; `intel_line()` is test-only), report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
 
 - MEOW-MART INTERIOR (SETUP_GUIDE §27): `scripts/interiors/meow_mart_interior.gd` (`MeowMartInterior.instance`, node `Main/MeowMart` at
   y=-50 (above `DEPTH_LINE`: counts as up top), GameSystems + Interactable (one `_best_action` dispatcher, prio 5)). Code-built, no randomness:

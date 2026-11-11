@@ -18,8 +18,8 @@ and the same twist never comes twice in a row.
 - When the new district is ready, your gang boss (Don Catleone or Pawnie) says what's up there,
   e.g. *"New district, kid. Power grid's blown up there - total BLACKOUT..."*. A normal district
   gets the old *"We're movin' to a new part of town..."* line.
-- THE MAINFRAME's big CRT has an **INTEL line** under the screen, in both sewers: green
-  `SECTOR: STANDARD PATROL` on a normal district, amber `INTEL: GRID BLACKOUT (DARK STREETS)` etc. on a twisted one.
+- (THE MAINFRAME's CRT no longer shows an INTEL line: it only shows its charge %. The boss's news and send-off
+  lines still tell you the twist.)
 - Picking **SEND ME UP TOP** gets a twist reminder from the boss instead of the usual send-off.
 - There is **no pop-up** when you climb out up top (on purpose: the HUD stays clean).
 - The **RAID REPORT** header names it: `DISTRICT 2 — BLACKOUT — CLEAN GETAWAY`.
@@ -34,7 +34,7 @@ Inspector:
 - **Meow-Mart Clearance:** *Clearance Fish Multiplier* (2), *Clearance Prize Item* (`golden_koi`;
   empty = no prize), *Clearance Heat Multiplier* (1.25).
 - **High Alert:** *High Alert Bot Multiplier* (1.5), *High Alert Scrap Chance* (0.35).
-- **What the boss says** and **Mainframe CRT intel line**: every line players read, editable.
+- **What the boss says**: every line players read, editable. (The **Intel** lines are no longer shown in game.)
 
 Keep the **Twist** node ABOVE **City** and **Items** in the scene tree (drag it if needed): the
 twist is decided before the city, the loot and the patrol are built.
@@ -49,7 +49,7 @@ to late joiners), so every computer builds the same twisted city. Other scripts 
 (`sight_multiplier`, `prop_multiplier`, `heat_multiplier`, `bot_multiplier`, `roll_scrap_drop`):
 - `city_generator.gd`: lamps off (BLACKOUT); BIN DAY's extra props use their own random numbers
   (`_bin_rng`), so the rest of the city matches a normal day.
-- `hub.gd`: darker ambient + moon (BLACKOUT), the CRT INTEL line. `npc.gd`: the send-off line.
+- `hub.gd`: darker ambient + moon (BLACKOUT). `npc.gd`: the send-off line.
 - `roomba.gd` `_can_chase`: sight. `heat_meter.gd`: passive heat. `roomba_patrol.gd`: patrol size.
 - `enemy.gd` `explode`: HIGH ALERT scrap. `item_manager.gd`: Meow-Mart fish rows + the koi.
 - `mess_manager.gd` `player_messes_this_trip` + `fish_heist.gd`: the CHAOS BONUS.

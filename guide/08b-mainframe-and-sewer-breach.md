@@ -11,8 +11,8 @@ all loot. A knockout loses them, like any loot. Spares can go in your litterbox.
 **SCRAP is not Mainframe food any more**: it only pays for SEWER UPGRADES at the Tinker Workbench (§25).
 
 **THE MAINFRAME** is the rebels' home-made computer on the west wall of your sewer: a big old CRT on
-a pallet, crates, car batteries, a desk fan and a wok for a satellite dish, with a **FEED ME
-ELECTRONICS** chute at cat height. **Each gang has its own**. Its charge is **4 battery cells** of 25%
+a pallet, crates, car batteries, a desk fan and a wok for a satellite dish, and a feed chute at cat height.
+The screen shows only its charge %. **Each gang has its own**. Its charge is **4 battery cells** of 25%
 (0-100%); the rack on its right shows them glowing, and the desk fan spins faster the more cells are lit.
 A new game starts both at **75%** (3 cells; charges are not saved between games).
 
@@ -39,7 +39,7 @@ Esc / Tab / B closes it; walking away closes it too.
 Your gang's charge sets when **your** exit opens. The **lowest** charge of any gang in the game sets
 how the shared city starts:
 
-| Cells (charge) | CRT says | Your exit opens at | City start (lowest gang) |
+| Cells (charge) | Tier (in its window; the CRT glows this colour and shows only the %) | Your exit opens at | City start (lowest gang) |
 |---|---|---|---|
 | 4 (75.1-100%) | OVERCLOCK ACTIVE (cyan) | 60 heat | 0 heat, and heat rises 20% slower |
 | 3 (50.1-75%) | SYSTEM ONLINE (green) | 75 heat | 0 heat |
