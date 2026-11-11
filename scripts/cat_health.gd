@@ -16,11 +16,11 @@ extends Node
 ##       * A GANG-MATE who walks up and HOLDS [E] for revive_seconds picks you back up with
 ##         revive_health HP, loot and all. Over your head your gang sees a cyan "DOWNED" bar that
 ##         drains as you bleed out (seen through walls, from far away).
-##       * A RIVAL who walks up and HOLDS [E] for rob_seconds ROBS you: your loot bag goes into
-##         theirs (what doesn't fit drops on the street). You stay downed.
+##       * A RIVAL who walks up and HOLDS [E] for rob_seconds ROBS you: the LOOT in your backpack goes
+##         into theirs (what doesn't fit drops on the street). You stay downed.
 ##       * A RIVAL who SHOOTS you while you're down finishes you off: knocked out on the spot.
 ##       * Nobody comes within bleed_out_seconds (or you HOLD [E] for give_up_seconds to give
-##         up)? You're KNOCKED OUT: EVERYTHING you carry (paws, backpack and loot bag) drops on
+##         up)? You're KNOCKED OUT: EVERYTHING you carry (paws, quick-use slots and backpack) drops on
 ##         the street where you fell, you lie there for knockout_seconds, then wake up back in
 ##         the sewers with nothing. Anyone can go up and grab your stuff: you, a friend... or a rival.
 ##   - Nobody left in your gang who could save you (solo, or the rest of your gang is down too)?
@@ -68,7 +68,7 @@ extends Node
 @export var downed_seen_from: float = 150.0
 
 @export_group("PvP (the other gang)")
-## How long a rival HOLDS the interact button next to a downed cat to rob its loot bag (seconds).
+## How long a rival HOLDS the interact button next to a downed cat to rob its backpack (seconds).
 @export var rob_seconds: float = 2.0
 ## Can a rival finish off a downed cat by shooting it? (false = shots on downed cats do nothing.)
 @export var shots_finish_downed: bool = true
@@ -296,7 +296,7 @@ func _revive(player_id: int, reviver_id: int) -> void:
 	print("[Health] Player %d was revived by %d" % [player_id, reviver_id])
 
 
-## Host: a rival finished robbing a downed cat: its loot bag goes into the robber's.
+## Host: a rival finished robbing a downed cat: its backpack goes into the robber's.
 ## (The victim stays downed: their gang can still pick them up, now with an empty bag.)
 func _rob(player_id: int, robber_id: int) -> void:
 	_set_reviving.rpc(player_id, 0, 0.0, false)
@@ -514,7 +514,7 @@ func downed_distance(patient: CatPlayer, helper: CatPlayer) -> float:
 	if by != 0 and by != helper.player_id:
 		return -1.0  # someone else is already on it
 	if patient.team != helper.team and by == 0 and ItemManager.instance.bag_used(patient.player_id) <= 0:
-		return -1.0  # a rival with an empty loot bag: nothing to rob
+		return -1.0  # a rival with an empty backpack: nothing to rob
 	var distance := patient.global_position.distance_to(helper.global_position)
 	var reach := revive_radius + (revive_slack if by == helper.player_id else 0.0)
 	return distance if distance <= reach else -1.0

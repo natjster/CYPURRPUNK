@@ -9,12 +9,12 @@ extends Node
 ##
 ## Multiplayer: the HOST is the referee, same as items and cash.
 ##   - Taking a quest asks the host (request_start). The host tells everyone (_set_quests).
-##   - CARRY_ITEM progress isn't sent at all: it's counted from your loot bag, which every
+##   - CARRY_ITEM progress isn't sent at all: it's counted from your backpack, which every
 ##     computer already knows about (ItemManager.inventories).
 ##   - Kills / disrespect are counted by the host from Events (tallies) and sent with _set_quests.
 ##     Getting knocked out wipes your tallies.
 ##   - At the exit manhole, fish_heist.gd asks the host's QuestManager for the bonus
-##     (complete_on_extract) BEFORE the loot bag is emptied.
+##     (complete_on_extract). The loot stays in the backpack (it's sold at the shop).
 ##   - Late joiners get everyone's quests (send_state_to); quitters are forgotten.
 ##
 ## ONE QUEST AT A TIME: a player can only have one active quest. Other quest-givers refuse
@@ -99,7 +99,7 @@ func giver_of(player_id: int) -> String:
 
 
 ## One line saying how the current quest is going, for the inventory's JOB box, e.g.
-## "FISH in your loot bag: 1/3". "" if no quest.
+## "FISH in your backpack: 1/3". "" if no quest.
 func progress_text(player_id: int) -> String:
 	var quest_id := current_quest(player_id)
 	if quest_id == "" or not catalog.has(quest_id):
@@ -110,7 +110,7 @@ func progress_text(player_id: int) -> String:
 		QuestData.Kind.CARRY_ITEM:
 			var item: ItemData = ItemManager.instance.catalog.get(data.item)
 			var item_name := item.display_name if item != null else data.item
-			return "%s in your loot bag: %d/%d" % [item_name, mini(have, data.count), data.count]
+			return "%s in your backpack: %d/%d" % [item_name, mini(have, data.count), data.count]
 		QuestData.Kind.DESTROY_ROOMBAS:
 			return "VAC-COPs smashed: %d/%d" % [mini(have, data.count), data.count]
 		QuestData.Kind.EXTRACT_AT_HEAT:
@@ -124,7 +124,7 @@ func progress(player_id: int, quest_id: String) -> int:
 	var data: QuestData = catalog[quest_id]
 	match data.kind:
 		QuestData.Kind.CARRY_ITEM:
-			return ItemManager.instance.get_inventory(player_id).bag.count(data.item)
+			return ItemManager.instance.count_in_bag(player_id, data.item)  # (in the backpack)
 		QuestData.Kind.EXTRACT_AT_HEAT:
 			return 1 if HeatMeter.instance.heat >= data.heat_needed else 0
 		_:

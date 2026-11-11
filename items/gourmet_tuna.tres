@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "gourmet_tuna"
 display_name = "GOURMET TUNA"
-description = "A tin of the good stuff from Meow-Mart's aisles. Worth $60 at the drop-off."
+description = "A tin of the good stuff from Meow-Mart's aisles. Sells for $60 at the Black Markitten."
 kind = 0
 cash_value = 60
 bag_space = 1

@@ -1,32 +1,34 @@
 class_name Shopkeeper
 extends Npc
-## CYPURRPUNK — a SHOPKEEPER: a normal NPC (npc.gd) who can also sell items.
-## Comrade Whiskers, who runs THE BLACK MARKITTEN down in the sewers
-## (scenes/npcs/comrade_whiskers.tscn), is one.
+## CYPURRPUNK — a SHOPKEEPER: an NPC (npc.gd) who runs THE BLACK MARKITTEN.
+## Comrade Whiskers (scenes/npcs/comrade_whiskers.tscn, in the Hub) and Clawd (GangHub) are ones.
 ##
 ## How it works:
-##   - Talk to him like any NPC. Give one of his choices the Action  shop  and clicking it
-##     opens the SHOP PAGE: one "BUY <ITEM> - $<price>" button per item in Stock, then BACK.
-##   - Prices live on the item cards (res://items/*.tres > Shop > Price), so the same price
-##     shows everywhere. Items with no price (0) are skipped, even if they're in Stock.
-##   - Clicking BUY asks the HOST (ItemManager.request_buy), which checks your cash, takes it,
-##     and puts the item in your paws (or backpack). The answer pops up on screen.
-##     The shop page stays open so you can keep shopping.
+##   - Press E on him and the SHOP SCREEN opens straight away (scripts/ui/shop_screen.gd, in your own
+##     HUD): your backpack on the left (click = SELL), his goods on the right in three tabs (MELEE /
+##     CONSUMABLES / FIREARMS; click a row = BUY). No talk box.
+##   - Prices live on the item cards (res://items/*.tres > Shop > Price). He sells at that price and
+##     buys gear back at half; street loot he buys at its full Cash Value (+GOURMET FENCE); scrap
+##     never (ItemManager.sell_price_for). The HOST checks every buy and sale.
+##   - Guns from a WEAPON CRATE you haven't unlocked show as black silhouettes: the crates are bought
+##     at the TINKER WORKBENCH now (scripts/upgrades.gd "workbench" page), not from him.
 ##
-## To sell something new: give its item card a Price, then add its id to Stock in the
-## Inspector (select ComradeWhiskers under Hub in main.tscn, or open his scene).
+## To sell something new: give its item card a Price, add its id to Stock below (Inspector: select
+## ComradeWhiskers under Hub in main.tscn, or open his scene) AND to one of the shop screen's tab
+## lists (select Shop in scenes/ui/hud.tscn: Melee / Consumable / Firearm Items).
 
-## Item ids for sale, top to bottom, e.g. "pistol". Prices come from the item cards.
+## Item ids he sells. Prices come from the item cards; the shop screen's tabs decide the order.
 @export var stock: Array[String] = ["neon_bat", "catnip", "catdip", "frozen_tuna", "red_dot", "hairball_blaster", "pistol", "yarn_zooka", "tommy_gun", "cucumber_launcher"]
-## What he says on the shop page. One is picked at random. %d = your cash.
+## What he says when the shop opens (one at random, under the title). %d = your cash.
 @export_multiline var shop_lines: PackedStringArray = ["Take your pick. You've got $%d."]
-## Button that leaves the shop page (goes back to the greeting).
-@export var back_text: String = "BACK"
-## Button on the shop page that opens the WEAPON CRATES upgrade page (scripts/upgrades.gd).
-@export var crates_text: String = "UNLOCK NEW WEAPON CRATES"
 
 
-## The "shop" action opens the shop page. Anything else goes to the normal NPC handling.
+## E: open the shop screen (in this player's own HUD).
+func interact(cat: CatPlayer) -> void:
+	open_shop(cat)
+
+
+## The "shop" action (an old talk-box button) opens the shop screen too.
 func _on_action(action: String, cat: CatPlayer) -> void:
 	if action == "shop":
 		open_shop(cat)
@@ -34,34 +36,10 @@ func _on_action(action: String, cat: CatPlayer) -> void:
 		super(action, cat)
 
 
-## Show the shop page: what he says + a BUY button per item in stock + BACK.
+## Open THE BLACK MARKITTEN for this cat.
 func open_shop(cat: CatPlayer) -> void:
-	var my_cash: int = Wallet.instance.cash_of(cat.player_id)
-	var line: String = shop_lines[randi() % shop_lines.size()] if not shop_lines.is_empty() else "Take your pick."
-	if line.contains("%d"):
-		line = line % my_cash
-	var buttons := []
-	var locked := []
-	for item_id in stock:
-		var data: ItemData = ItemManager.instance.catalog.get(item_id)
-		if data == null or data.price <= 0:
-			continue  # unknown item, or it has no price on its card
-		# WEAPON CRATES (scripts/upgrades.gd): guns from a crate you haven't unlocked are listed
-		# at the bottom as LOCKED; clicking one opens the crate page.
-		if not Upgrades.shop_allows(cat.player_id, item_id):
-			locked.append(["LOCKED: %s (CRATE %d)" % [data.display_name, Upgrades.crate_for(item_id)], open_upgrades.bind(cat, "shop")])
-			continue
-		buttons.append(["BUY %s - $%d" % [data.display_name, data.price], _buy.bind(cat, item_id)])
-	buttons.append([crates_text, open_upgrades.bind(cat, "shop")])
-	buttons.append_array(locked)
-	buttons.append([back_text, talk.bind(cat)])
-	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)
-
-
-## A BUY button: ask the host, then re-open the shop page (so the cash line is fresh).
-func _buy(cat: CatPlayer, item_id: String) -> void:
-	ItemManager.instance.request_buy.rpc_id(1, cat.player_id, item_id)
-	# Give the host's answer (new cash) a moment to arrive before redrawing the page.
-	await get_tree().create_timer(0.2).timeout
-	if NpcDialog.is_open_for(cat.slot):
-		open_shop(cat)
+	var screen := ShopScreen.for_seat(cat.slot)
+	if screen == null:
+		return
+	NpcDialog.for_cat(cat).close()
+	screen.open(cat, self)

@@ -183,8 +183,6 @@ size = Vector3(0.05, 0.05, 0.03)
 
 [node name="Clawd" type="StaticBody3D"]
 script = ExtResource("1_script")
-upgrade_page = "shop"
-upgrade_button = "UNLOCK NEW WEAPON CRATES"
 shop_lines = PackedStringArray("Cash first, questions never. You got $%d.", "All fell off a VAC-COP. You got $%d.", "Pick somethin' loud. You got $%d.")
 talk_radius = 3.5
 npc_name = "CLAWD"

@@ -84,7 +84,7 @@ extends Node
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
 ##   --fresh_profile   start this test's saved cash + stash from scratch (user://test_profiles/)
 ##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
-##                     --cash=500 --talk=ComradeWhiskers --choose=0,3 buys the 4th item)
+##                     --cash=500 --talk=ComradeWhiskers --shop_buy=pistol; see _shop_test for all the --shop_ flags)
 ##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
@@ -123,6 +123,10 @@ extends Node
 ##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
+##   --hud_heat=R[,L]  keep the guns in our right (and left) paw at this HEAT (0..1; 1 = OVERHEATED) so the
+##                     bottom-left gun box shows it, e.g. --give=pistol,red_dot --hud_heat=0.3,0.9
+##   --hud_buffs=LIST  switch on buff / debuff badges (top-left): sticky (held at 60%), catnip, catdip
+##                     -> prints a "DevCapture hud loadout" line (what the gun box and badges show)
 ##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --setting=NAME:VALUE  change a setting for this run (never saved), e.g. --setting=split_side_by_side:false
@@ -349,6 +353,8 @@ func _ready() -> void:
 		if args.has("net_interval"):
 			# Simulate a bad connection: only send our cat's position every N seconds.
 			(player.get_node("MultiplayerSynchronizer") as MultiplayerSynchronizer).replication_interval = float(args["net_interval"])
+		if args.has("rebellion_tier"):
+			Upgrades.rebellion_override = int(args["rebellion_tier"])  # (test only: scripts/upgrades.gd)
 		if args.has("cash") and multiplayer.is_server():
 			Wallet.instance.set_cash(player.player_id, int(args["cash"]))
 			multiplayer.peer_connected.connect(func(peer_id: int) -> void:
@@ -415,6 +421,8 @@ func _ready() -> void:
 			_test_give.rpc_id(1, player.player_id, args["give"])
 			for i in 20:
 				await get_tree().process_frame
+		if args.has("hud_heat") or args.has("hud_buffs"):
+			_hud_preview(player, args)
 		if args.has("to_stash") or args.has("from_stash"):
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
@@ -434,9 +442,13 @@ func _ready() -> void:
 				for i in 10:
 					await get_tree().process_frame
 		# SEWER UPGRADES (scripts/upgrades.gd): print what this cat has, then buy / pick a ride.
-		#   --buy_upgrade=deep_pockets,deep_pockets,thick_fur   (one buy each, like clicking the button)
+		#   --buy_upgrade=bigger_pack,bigger_pack,thick_fur   (one buy each, like clicking the button)
 		#   --select_vehicle=cyber_bike   (our gang's ride; needs the unlock)
-		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its page opens)
+		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its screen opens)
+		#     --workbench_tab=N           (then pick tab N: 0 boss, 1 shopkeeper, 2-6 rebellion tiers 1-5)
+		#     --workbench_recruit=N       (then press RECRUIT N times: rebellion tiers 1..N)
+		#     --workbench_buy=a,b         (then click those upgrades' cards)
+		#   --rebellion_tier=N            (every sewer counts as having recruited N tiers: test only)
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
 		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
 			await _upgrades_test(player, args)
@@ -449,7 +461,7 @@ func _ready() -> void:
 			print("DevCapture workbench: prompt=\"%s\" used=%s" % [Interactable.prompt_for(player), Interactable.try_use(player)])
 			for i in 5:
 				await get_tree().process_frame
-			print("DevCapture workbench page: open=%s line=\"%s\"" % [NpcDialog.is_open_for(player.slot), NpcDialog.for_cat(player).line_label.text.replace("\n", " / ").left(220)])
+			await _workbench_test(player, args)
 		if args.has("vehicles_lineup"):
 			await _vehicles_lineup(player)
 		if args.has("weapons_lineup"):
@@ -814,7 +826,14 @@ func _ready() -> void:
 	if player == null:
 		await _apply_look(args)  # (no game: e.g. the start menu's cat preview)
 	if args.has("inventory"):
-		InventoryScreen.for_seat(0)._set_open(true)  # same as pressing Tab
+		# --inventory = player 1's (same as pressing Tab); --inventory=0,1 = those split-screen seats'.
+		var seats: Array = [0] if args["inventory"] == "true" else Array(args["inventory"].split(",")).map(func(v): return int(v))
+		for seat in seats:
+			var screen := InventoryScreen.for_seat(seat)
+			var seat_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
+			if screen != null:
+				screen._set_open(true, seat_cat)
+		_inventory_report.call_deferred(seats, int(args.get("frames", "90")))
 	if args.has("press_key"):
 		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
 		for i in 10:
@@ -1206,9 +1225,9 @@ func _print_upgrades(player: CatPlayer, when: String) -> void:
 		for item_id in whiskers.stock:
 			if Upgrades.shop_allows(me, item_id):
 				shop.append(item_id)
-	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (bag %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
+	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (pack %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
 		when, Upgrades.instance.player_upgrades.get(me, {}), Wallet.instance.cash_of(me), items.scrap_count_of(me),
-		inv.bag.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
+		inv.pack.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
 		items.stash_size_for(me), items.quick_stack_size_for(me), CatHealth.instance.max_health_for(me), CatHealth.instance.get_health(me),
 		Upgrades.zoomies_multiplier(me), Upgrades.gourmet_multiplier(me), Upgrades.melee_multiplier(me), Upgrades.scrap_magnet_chance(me),
 		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_scrap_for(player.team),
@@ -1315,6 +1334,174 @@ func _all_psx(node: Node) -> bool:
 		if material == null or material.shader != LevelKit.PSX_SHADER:
 			return false
 	return true
+
+
+## THE BLACK MARKITTEN (scripts/ui/shop_screen.gd): --talk=ComradeWhiskers presses E on him (the shop
+## screen opens), then, in this order:
+##   --shop_tab=N               switch tab (0 MELEE, 1 CONSUMABLES, 2 FIREARMS)
+##   --shop_buy=a,b             click those items' rows (locked ones should refuse)
+##   --shop_sell=pack:0,hand:0  click those backpack / paw / quick slots (sells them)
+##   --shop_sell_all            click SELL ALL LOOT
+##   --shop_pad=right,down,...  move the d-pad highlight (prints what it lands on)
+##   --shop_close=Tab|Esc       a real key press that should close it
+## Prints "DevCapture shop" lines (tab, rows, locked, cash, backpack, highlight, message).
+func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void:
+	var used := Interactable.try_use(player)
+	var shop := ShopScreen.for_seat(player.slot)
+	var items := ItemManager.instance
+	var report := func(when: String) -> void:
+		var rows := shop._rows.filter(func(r): return r.visible).map(func(r): return "%s%s" % [r.get_node("Face").item_id, "(LOCKED)" if r.get_node("Face").locked else ""])
+		var focus: Button = shop._focus.current
+		var focus_name := "-"
+		if focus != null:
+			focus_name = focus.text if focus.text != "" else (focus.get_node("Face").item_id if focus.has_meta("row") else "%s%d:%s" % [focus.get_meta("where", "?"), focus.get_meta("index", 0), focus.get_meta("item", "")])
+		var inventory := InventoryScreen.for_seat(player.slot)
+		print("DevCapture shop (%s): open=%s tab=%d rows=%s cash=$%d pack=%s hands=%s inventory_open=%s shop_mode=%s focus=%s note=\"%s\" sell_all=\"%s\"" % [
+			when, shop.visible, shop.tab, rows, Wallet.instance.cash_of(player.player_id), items.get_inventory(player.player_id).pack,
+			items.get_inventory(player.player_id).hands, inventory.visible, inventory.shop_mode, focus_name, shop._note, shop._sell_all.text])
+	for i in 30:
+		await get_tree().process_frame
+	print("DevCapture shop: %s used=%s menu_blocks_cat=%s wants_input=%s" % [keeper.name, used, player._menu_open(), Hud.wants_input(player.slot)])
+	report.call("open")
+	if args.has("shop_tab"):
+		shop._set_tab(int(args["shop_tab"]))
+		report.call("tab")
+	if args.has("shop_buy"):
+		for item_id in str(args["shop_buy"]).split(","):
+			for tab_index in 3:
+				if item_id in shop._tab_items(tab_index):
+					shop._set_tab(tab_index)
+			for row in shop._rows:
+				if row.visible and row.get_node("Face").item_id == item_id:
+					shop._press_row(row)
+			for i in 20:
+				await get_tree().process_frame
+			report.call("buy " + item_id)
+	if args.has("shop_sell"):
+		var inventory := InventoryScreen.for_seat(player.slot)
+		for slot in str(args["shop_sell"]).split(","):
+			var parts: PackedStringArray = slot.split(":")
+			var list: Array = {"pack": inventory._pack_buttons, "hand": inventory._paw_buttons, "quick": inventory._quick_buttons}[parts[0]]
+			for button in list:
+				if button.get_meta("index") == int(parts[1]):
+					inventory._use_slot(button, parts[0], int(parts[1]), false)
+					break
+			for i in 20:
+				await get_tree().process_frame
+			report.call("sell " + slot)
+	if args.has("shop_sell_all"):
+		shop._sell_all_loot()
+		for i in 20:
+			await get_tree().process_frame
+		report.call("sell all")
+	if args.has("shop_pad"):
+		for direction in str(args["shop_pad"]).split(","):
+			var move := InputEventAction.new()
+			move.action = "ui_" + direction
+			move.pressed = true
+			shop._focus.handle(move)
+			report.call("pad " + direction)
+	if args.has("shop_close"):
+		for pressed in [true, false]:
+			var key := InputEventKey.new()
+			key.physical_keycode = OS.find_keycode_from_string(args["shop_close"])
+			key.keycode = key.physical_keycode
+			key.pressed = pressed
+			Input.parse_input_event(key)
+			await get_tree().process_frame
+		for i in 10:
+			await get_tree().process_frame
+		report.call("after " + str(args["shop_close"]))
+
+
+## --workbench (after walking there and pressing E): print the TINKER WORKBENCH screen, then
+## --workbench_recruit=N / --workbench_buy=a,b / --workbench_tab=N ("DevCapture workbench" lines).
+func _workbench_test(player: CatPlayer, args: Dictionary) -> void:
+	var bench := WorkbenchScreen.for_seat(player.slot)
+	var hub := UndergroundHub.of(player)
+	var report := func(when: String) -> void:
+		var tabs := []
+		for i in bench._tabs.size():
+			var npc := bench.npc_for_tab(i)
+			tabs.append("%d:%s=%s" % [i, npc.name if npc != null else "-", bench.tab_state(i)])
+		var cards := bench._cards.filter(func(c): return c.visible).map(func(c): return "%s(%d)" % [c.get_node("Face").upgrade_id,
+			Upgrades.instance.current_tier(player.player_id, c.get_node("Face").upgrade_id)])
+		var present := hub.get_children().filter(func(n): return n is Npc and n.rebellion_tier > 0 and n.present).map(func(n): return n.name)
+		print("DevCapture workbench (%s): open=%s tab=%d tabs=%s cards=%s recruit=%s cash=$%d scrap=%d rebellion=%d npcs_present=%s note=\"%s\"" % [
+			when, bench.visible, bench.tab, tabs, cards, ("\"%s\"" % bench._recruit.text) if bench._recruit.visible else "-",
+			Wallet.instance.cash_of(player.player_id), ItemManager.instance.scrap_count_of(player.player_id),
+			Upgrades.rebellion_level(player.team), present, bench._note])
+	for i in 10:
+		await get_tree().process_frame
+	report.call("open")
+	for n in int(args.get("workbench_recruit", "0")):
+		bench._set_tab(Upgrades.rebellion_level(player.team) + 2)
+		bench._press_recruit()
+		for i in 30:
+			await get_tree().process_frame
+		report.call("recruit %d" % (n + 1))
+	if args.has("workbench_buy"):
+		for upgrade_id in str(args["workbench_buy"]).split(","):
+			bench._set_tab(maxi(0, Upgrades.tab_of(upgrade_id)))
+			for card in bench._cards:
+				if card.visible and card.get_node("Face").upgrade_id == upgrade_id:
+					bench._press_card(card)
+			for i in 20:
+				await get_tree().process_frame
+			report.call("buy " + upgrade_id)
+	if args.has("workbench_tab"):
+		bench._set_tab(int(args["workbench_tab"]))
+		for i in 5:
+			await get_tree().process_frame
+		report.call("tab")
+
+
+## --inventory: after a while, print what each open inventory screen shows ("DevCapture inventory").
+func _inventory_report(seats: Array, frames: int) -> void:
+	for i in mini(60, frames / 2):
+		await get_tree().process_frame
+	for seat in seats:
+		var screen := InventoryScreen.for_seat(seat)
+		if screen == null or screen.owner_cat == null:
+			print("DevCapture inventory seat %d: none" % seat)
+			continue
+		var cat := screen.owner_cat
+		var shown := func(list: Array) -> String:
+			return ",".join(list.map(func(b): return str(b.get_meta("item")) if b.get_meta("item") != "" else "-"))
+		print("DevCapture inventory seat %d: open=%s view=%.2f at_stash=%s cam_len=%.2f paws=[%s] quick=[%s] pack=[%s] stash=[%s] info=\"%s\"" % [
+			seat, screen.visible, cat.inventory_view_amount(), screen._at_stash, cat.spring_arm.spring_length,
+			shown.call(screen._paw_buttons), shown.call(screen._quick_buttons), shown.call(screen._pack_buttons),
+			shown.call(screen._stash_buttons.filter(func(b): return b.visible)), screen._info.text])
+
+
+## --hud_heat / --hud_buffs: hold the gun heat and buff timers still until the snap, so the new
+## ocean-blue HUD pieces (scripts/ui/hud_weapon_display.gd, hud_status_icons.gd) can be checked.
+func _hud_preview(player: CatPlayer, args: Dictionary) -> void:
+	var heats: Array = []
+	for value in str(args.get("hud_heat", "")).split(",", false):
+		heats.append(clampf(float(value), 0.0, 1.0))
+	var buffs: PackedStringArray = str(args.get("hud_buffs", "")).split(",", false)
+	if "catnip" in buffs:
+		player.start_boost(1.3, 30.0)
+	if "catdip" in buffs:
+		player.start_double_jump(1, 20.0)
+	var frames := int(args.get("frames", "90"))
+	for frame in frames:
+		for hand in mini(heats.size(), 2):
+			var weapon := ItemManager.instance.held_item(player, hand) as Weapon
+			if weapon != null:
+				weapon.heat = heats[hand]
+				weapon.is_overheated = heats[hand] >= 1.0
+		if "sticky" in buffs:
+			player._sticky_left = player.sticky_seconds * 0.6
+		if frame == mini(30, frames / 2):  # (physics frames can run slower than the snap's frames)
+			var display := Hud.element("Held", player.slot) as HudWeaponDisplay
+			var icons := Hud.element("StatusIcons", player.slot) as HudStatusIcons
+			print("DevCapture hud loadout: paws=%s quick=%s badges=%s" % [
+				", ".join(display._paws.map(func(p): return "%s heat=%.2f%s key=%s" % [p.id, p.heat, " OVERHEAT" if p.overheated else "", p.key])) if display != null else "?",
+				", ".join(display._quick.map(func(q): return "%s x%d [%s]" % [q.id if q.id != "" else "-", q.count, q.key])) if display != null else "?",
+				", ".join(icons._effects.map(func(e): return "%s %.0f%%" % [e.id, e.fraction * 100.0])) if icons != null and icons.visible else "none"])
+		await get_tree().physics_frame
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.
@@ -1436,7 +1623,7 @@ func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d robbed=%s knocked_out=%s their_bag=%s our_bag=%s" % [
 			label, victim.name, health.get_health(victim.player_id), health.is_downed(victim.player_id),
 			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), health.is_being_robbed(victim.player_id),
-			victim.knocked_out, ItemManager.instance.get_inventory(victim.player_id).bag, ItemManager.instance.get_inventory(player.player_id).bag])
+			victim.knocked_out, ItemManager.instance.loot_in_pack(victim.player_id), ItemManager.instance.loot_in_pack(player.player_id)])
 	if multiplayer.is_server():
 		if victim != player:
 			var ahead := -player.camera_pivot.global_basis.z
@@ -1512,8 +1699,8 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	await _seconds(0.5)
 	var profile_file := PlayerProfile.PROFILES_FOLDER + str(Settings.current_cat().get("id", "")).validate_filename() + ".cfg"
 	var profile_time := FileAccess.get_modified_time(profile_file) if FileAccess.file_exists(profile_file) else 0
-	print("DevCapture tutorial start: step=%d cash=$%d stash=%s bag_size=%d mainframe=%d%% in_hub=%s box=%s \"%s\" | \"%s\"" % [
-		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.bag_size,
+	print("DevCapture tutorial start: step=%d cash=$%d stash=%s pack_size=%d mainframe=%d%% in_hub=%s box=%s \"%s\" | \"%s\"" % [
+		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.pack_size_for(me),
 		int(Mainframe.instance.charge_of(player.team)), UndergroundHub.is_in_hub(player.global_position),
 		Hud.element("TutorialBox").visible, (Hud.element("TutorialStep") as Label).text, (Hud.element("TutorialHint") as Label).text])
 	await _tutorial_arrow("step1", "tutorial_step1_arrow.png")
@@ -1534,7 +1721,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	await _seconds(0.3)
 	print("DevCapture tutorial stash E: %s" % Interactable.try_use(player))
 	await _seconds(0.5)
-	print("DevCapture tutorial stash open=%s bag slots=%d" % [InventoryScreen.for_seat(0).visible, InventoryScreen.for_seat(0)._bag_buttons.size()])
+	print("DevCapture tutorial stash open=%s pack slots=%d" % [InventoryScreen.for_seat(0).visible, InventoryScreen.for_seat(0)._pack_buttons.size()])
 	InventoryScreen.for_seat(0)._set_open(false)
 	if not await _until_step(4): return
 	# 4. Stand at the Mainframe.
@@ -1577,7 +1764,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	print("DevCapture tutorial revealed=%s phase=%d hint=\"%s\"" % [FishHeist.instance.is_revealed(player.team), tutorial.phase, (Hud.element("TutorialHint") as Label).text])
 	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
 	if not await _until_step(9): return
-	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).bag, UndergroundHub.is_in_hub(player.global_position)])
+	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).pack, UndergroundHub.is_in_hub(player.global_position)])
 	# 9. Feed the scrap.
 	await _seconds(1.0)
 	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)
@@ -1801,6 +1988,12 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 	for node in get_tree().get_nodes_in_group(Npc.GROUP):
 		if node.name == args["talk"]:
 			npc = node
+	if npc.rebellion_tier > 0 and Upgrades.rebellion_override < 0:
+		# THE SEWER REBELLION: a recruit nobody has recruited is hidden. Old quest tests just want to talk.
+		Upgrades.rebellion_override = Upgrades.REBELLION_TIERS
+		print("DevCapture talk: %s is a REBELLION TIER %d recruit: --rebellion_tier=5 for this test" % [npc.name, npc.rebellion_tier])
+		for i in 20:
+			await get_tree().process_frame  # (they check every quarter second)
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
 	if npc is Payphone:
@@ -1814,6 +2007,9 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			await get_tree().physics_frame
 		print("DevCapture payphone: revealed=%s typing=\"%s\"" % [FishHeist.instance.is_revealed(player.team), npc.get_node("Readout").text.replace("
 ", " / ")])
+		return
+	if npc is Shopkeeper:
+		await _shop_test(player, npc as Shopkeeper, args)  # (E opens THE BLACK MARKITTEN shop screen, not a talk box)
 		return
 	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):

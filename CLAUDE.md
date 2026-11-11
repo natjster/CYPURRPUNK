@@ -12,8 +12,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI LOOKS: `Settings.modern_ui` (SETTINGS > EFFECTS > UI STYLE). false = PS1: `menu_viewport` and every HUD SubViewport render at game pixels
   (size = the pane's game viewport, `size_2d_override` keeps the layout), blown up nearest, and `CRTOverlay` (top-level ColorRect, psx_post with `pixel_scale`/`area_offset`/`area_scale`) covers game+HUD+menus; the per-pane CRT is off (`_game_dither` hidden, panes show the raw viewport). true (default) = MODERN: real-res UI, overlay hidden, per-pane CRT on. One player + PS1: `hud_scale_for` = fit * `ps1_hud_scale` (1.33). Thin lines in HUD `_draw` need `Hud.line(w)`, text outlines `Hud.outline(w)`.
 - HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport, in a SubViewport (`GameScreen._seat_huds[seat]`, seat 0 too: GameScreen._input pushes each seat's events to its HUD first; player 1's mouse only while `Hud.wants_input(0)`). Use the statics: `Hud.set_text/show_element/set_color/
-  show_message/popup/set_in_game/element` by label name (Health, Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
-  Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  show_message/popup/set_in_game/element` by label name (Health, StatusIcons [HudStatusIcons, buff badges, fed by hud.gd
+  `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
+  Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
+  Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
+  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`]).
+  OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
+  `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
+  phases 2-4 (Inventory, Shop, Workbench). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
   GameScreen keeps that player's input for their HUD.
@@ -187,7 +193,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `use_for(team)`: FEED +25 / HACK `hack_target(team)` -25 at 100% (feed line `_hacked`) / FULL refuses. `exit_heat(team)` = that gang's exit, live;
   `lowest_charge()` sets city-wide `starting_heat()` / `heat_multiplier()` / `boss_at_start()`. `_refresh_district` (host, each second + after a feed):
   while `went_up.is_empty()` a changed lowest restarts the district (covers late-arriving gangs too; `RoombaPatrol.restart_heat_levels` spawns the 0% boss).
-  Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
+  Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: the shop won't buy it, it stays in
   the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N` or `=A,B`
   (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
 - SEWER BREACH (`mainframe.gd`, host `_run_breach`): a gang reaching 0% gets one LAST RAID first (`_had_last_raid[team]` = at 0% as the district starts, `_note_last_raids`, banner; a hack before anyone goes up counts). `doomed_gangs()` = at 0% AND had it. Doomed + `sealed` + `players_up_top()==0` -> siren `_run_warning` / `_set_warning` RPC (`warning_teams`, `warning_left`, `breach_warning_seconds`, line = `breach_text`); `FishHeist._run_deep_clean` holds `new_district` while `breach_coming()`; scrap in time = cancelled. Time up -> `_start_breach` RPC (`breached_teams`, `breach_left`,
@@ -234,7 +240,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
   Players see it as THE LITTERBOX (code names stay "stash"; prompt `hub.stash_prompt` "STORE YOUR SHIT").
   Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (litterbox on the east wall,
-  `hub._build_stash`); the inventory screen (`InventoryScreen`) swaps the loot bag for the stash there.
+  `hub._build_stash`); the inventory screen (`InventoryScreen`) opens a LITTERBOX box there. ANY item is stashable (fish too).
   (`request_put_away` = paw -> backpack.) `scripts/player_profile.gd` (`Profile` node): each player saves
   their OWN cash + stash to `user://profiles/<name>.cfg`, sends it to the host on start/join
   (`_request_restore`, host validates), and saves only after `_restore_done`. Test runs use
@@ -303,8 +309,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   9 steps (`step` 1..9, `phase` for sub-steps, DONE=10 -> banner -> `_back_to_menu(false)`), HUD `Frame/Top/TutorialBox`
   (`TutorialStep`/`TutorialHint`), code-built cyan beacon. Training rules: `PlayerProfile.restore` sends $starting_cash + empty
   stash and never reads/writes the save; heat held each physics frame (priority 100; step 8 = `exit_heat`); `Tutorial.health_floor()`
-  in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets `bag_size` 4 (inventory grid grows on open:
-  `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
+  in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets the Mainframe charge (the 6-slot backpack fits 3 fish + scrap); city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
   GREEN ARROW: tutorial `_point_compass` drives HUD `Compass` on steps 1-7/9 (fish_heist nulls its compass then); step 8 = fish_heist's
   real PAYPHONE -> EXIT arrow, no beacon, `step8_exit_title` at phase 1. `--tutorial_shots` (windowed) saves shots/tutorial_step*.png.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
@@ -322,6 +327,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   data-driven text in an export too (`--export-debug` build accepts the `-- --host --talk=` test args; add `--capture` or it never quits).
 
 ## Models + tool servers + OVERCLEAN (Phase 0, SETUP_GUIDE §20-21)
+- ICONS: `tools/cypurr_icons.py` + MCP `tools/icon_mcp.py` ("cypurrpunk-icons"): a numpy rasteriser that reads .tscn primitives +
+  .glb -> `ui/icons/items/<id>.png` (64px WHITE orthographic side profiles, seams/texture = darker lines; `ITEMS` table = source +
+  view side/high/melee + yaw), `status/<id>.png` (32px, drawn in code), `npcs/<id>.png` (64px coloured 3/4 portraits from the
+  NPC scene's `Model`, + `locked_mystery`). `python tools/cypurr_icons.py all`, then `--headless --import`.
 - `.mcp.json` = two local stdio MCP servers (Python, mcp 2.x `MCPServer` with 1.x `FastMCP` fallback): `tools/model_mcp.py`
   (logic `tools/cypurr_models.py`: spec JSON -> `.bbmodel` (Blockbench 4.10 "free" format, groups inline in outliner, cubes +
   "prism" meshes + locators, embedded PNG painted by ops) -> `.glb` (group = node, locator = empty node, 16 px = 1 m, NEAREST,
@@ -453,17 +462,24 @@ Cat creator NEXT/BACK route by `main_menu._cat_from` (`cat_done` / `cat_closed`)
 Test: `--solo`, `--name=`, `--look=N`, `--menu=cat|mode|coop|local|online|play`; prints `DevCapture look`.
 
 SEWER UPGRADES (SETUP_GUIDE §25): `scripts/upgrades.gd` (`Upgrades.instance`, node `Upgrades` under Main right below Wallet, GameSystems).
-`player_upgrades` {player_id: {id: tier}} synced (`_set_tier`/`_set_all`), `costs` export (id -> [[cash, scrap] per tier]), `INFO`/`PAGES`.
+`player_upgrades` {player_id: {id: tier}} synced (`_set_tier`/`_set_all`), `costs` export (id -> [[cash, scrap] per tier]), `INFO`/`WORKBENCH_TABS`.
 Host `request_buy(player_id, id)` = Wallet.spend + `ItemManager.spend_scrap` (bag first, then stash; `scrap_count_of`). Read with static
 `Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel). Hooks: `ItemManager.bag/pack/stash/
-quick_stack_size_for(pid)` (NEVER read bag_size etc. directly), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
+quick_stack_size_for(pid)` (NEVER read pack_size etc. directly; `bag_size_for` = old alias of `pack_size_for`), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
 request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_scrap_for`.
-Pages open in NpcDialog via `Upgrades.open_page(cat, page, speaker, voice, back)`; NPC export `upgrade_page`/`upgrade_button` adds the button
-to the greeting (or action `upgrades:<page>`). TINKER WORKBENCH = hub `_build_workbench` (`models/workbench.glb`). RIDES: `team_vehicle[team]`,
+NO upgrades in NPC chat any more (no upgrade_page / open_page): EVERYTHING is bought at the TINKER WORKBENCH = hub `_build_workbench`
+(`models/workbench.glb`) -> `WorkbenchScreen` (`scripts/ui/workbench_screen.gd`, HUD `Frame/Workbench`, in `Hud.wants_input` + `cat._menu_open`;
+7 portrait tabs = `Upgrades.WORKBENCH_TABS` [boss, shopkeeper, rebellion tiers 1-5] via `npc_for_tab` (hub.npc / hub.shopkeeper / child Npc
+with that `rebellion_tier`), portraits `ui/icons/npcs/<scene file name>.png`, "?" = locked_mystery; CardFace = name, pips, BUY pill; ride buttons
+on tab 6; `note()` gets `_buy_result`). SEWER REBELLION: crew upgrade `rebellion_tier` (5 tiers); `Upgrades.rebellion_level(team)` (best in gang,
+tutorial = 5, test `rebellion_override`), `tab_unlocked`, `current_tier` (rebellion = gang's), host refuses locked tabs, `_recruited` RPC ->
+`recruited` signal. `Npc.rebellion_tier` (export, set on the 10 recruit scenes) + `is_recruited()`/`present`: hidden, collision off, no E,
+no breach fighting until recruited (checked every 0.25 s in `_process`, never in `_ready`: Game.players isn't ready yet). RIDES: `team_vehicle[team]`,
 `request_select_vehicle` (car must be empty) -> `GetawayCar.set_vehicle(id)` swaps Model/CarModel (`cyber_bike.glb`/`fish_van.glb`), box, stats
 (`bike_*`/`van_*` exports, `smash_speed_factor`); any `Trim*` part glows gang colour. Profile saves "upgrades" + "vehicle"; tutorial sends {}.
-Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_bag_size`) inside a ScrollContainer (`_fit_scroll`).
-Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --workbench --vehicles_lineup` ("DevCapture upgrades/vehicle/lineup/workbench").
+Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_sizes`; slots shrink to fit).
+Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --vehicles_lineup`, `--workbench [--workbench_recruit=N --workbench_buy=a,b
+--workbench_tab=N]` ("DevCapture workbench"), `--rebellion_tier=N` (`--talk=<recruit>` sets 5 by itself).
 
 WEAPON MODELS (ROADMAP §5 #6, SETUP_GUIDE §9 "The weapon models"): the 8 weapon scenes' `Model/Mesh` = `models/<weapon>.glb` from
 `tools/make_weapon_specs.py` (recipes in CM, `--build` runs cypurr_models `all`; REPLACES the .bbmodels). One shared 128x128 atlas
@@ -475,6 +491,27 @@ kit's new poly face `"uvs"` = exact per-corner UVs). Groups: Body, `HeatCoil` (t
 ("DevCapture weapon" lines), `--give=X --portrait=me --portrait_side=1.3 --portrait_dist=1.5 --portrait_height=0.55`.
 
 ## Items framework
+ONE BACKPACK (Phase 2 UI overhaul): inventory = `{"hands", "pack", "stash", "quick"}` (NO "bag" any more). `pack` holds loot AND
+spare gear, 1 slot each, `pack_size_for(pid)` = 6 + 2 per `bigger_pack` tier (3 tiers; old `deep_pockets` merged in
+`Upgrades._merge_old_upgrades`). Full pack = `_can_take` false for loot. NOTHING is sold at the exit: fish_heist reports
+`loot_value`/`loot_in_pack` (`_extracted(pid, worth, quest, chaos, count)`, Events.player_extracted loot_value = worth) and pays only
+quest/chaos; the SHOP buys loot: `ItemManager.request_sell(pid, pack_index | -1)` (`sell_price` incl. gourmet, `pack_sell_value`,
+Events.loot_sold), Shopkeeper `_sell_buttons`. Helpers `take_all_loot` (rob), `take_one_loot` (last LOOT only), `count_in_bag`/
+`take_from_bag`/`bag_used` (= loot count) read the pack. Cats wear `models/cat_backpack.glb` (`tools/make_backpack_spec.py`) at
+`CatModel/BackPack` (`ItemManager.BACKPACK_SPOT`, `_update_backpack`: "Strip" glow cyan->amber->red by fullness; `PackAnchor` locator,
+`backpack_anchor(cat)`). INVENTORY = NMS backpack view: `CatPlayer.inventory_open()` blocks moving/looking and glides the camera
+(`_update_inventory_camera`, "Inventory Camera" exports, side offset scaled by pane aspect, `inventory_view_amount()`); `inventory_ui.gd`
+lays out ocean-blue boxes on the right (`_layout`), draws callout lines from projected 3D anchors (`_project` via
+`GameScreen.camera_for_seat`), slots = Buttons + `SlotFace` (icon, name, price badge). Hud hides Names/Scoreboard while it's open.
+Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`.
+SHOP (Phase 3): `Shopkeeper.interact` -> `ShopScreen` (`scripts/ui/shop_screen.gd`, HUD `Frame/Shop`, `for_seat/is_open_for`; in
+`Hud.wants_input` + `cat._menu_open`): right half = 3 tabs (exports melee/consumable/firearm_items, filtered by keeper.stock), rows =
+Button + `RowFace` (icon or black silhouette when `!Upgrades.shop_allows`, BUY pill), SELL ALL; it opens the inventory in `shop_mode`
+(`open_for_shop`: left column at `shop_column_start`, SELL badges, click = `request_sell(pid, where, index)`, cat camera `shop_camera_side`)
+and drives ONE SeatFocus over both (inventory `_input` returns while the shop is open). Prices = `ItemManager.sell_price_for` (loot
+100% x gourmet, gear max(1, price/2), scrap 0); `request_sell_all_loot`; `_buy_result`/`_sell_result` -> `ShopScreen.note`. WEAPON CRATES
+moved to the workbench page (`Upgrades.PAGES.workbench`). Test: `--talk=ComradeWhiskers --shop_tab/--shop_buy/--shop_sell/--shop_sell_all/
+--shop_pad/--shop_close` ("DevCapture shop").
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour
 extend `HeldItem`, guns extend `Weapon` (data-driven via exports). Host referees pickup/drop/
@@ -524,15 +561,15 @@ interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames 
 ## Quest framework
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
-progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
-`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more.)
+progress is counted from the backpack (`count_in_bag`, not synced separately). `fish_heist.gd` calls
+`complete_on_extract` at the exit (items stay in the backpack) and adds the bonus in `_extracted`. (No HUD quest line any more.)
 ONE QUEST AT A TIME: `current_quest(id)`, `giver_of(id)` (`givers`, 5th arg of `_set_quests`), `progress_text(id)`;
 host `_request_start` refuses while one is active; `Npc._choose` says `busy_lines` instead; inventory JOB box + ABANDON
 (`abandon_quest`, hub only, two presses). Test: `--quest=X --abandon_quest`.
 Five shared cards (table in SETUP_GUIDE §8), `QuestData.kind`: CARRY_ITEM (bag), DESTROY_ROOMBAS, EXTRACT_AT_HEAT
 (`heat_needed`), DISRESPECT. Kill / disrespect counts = host `tallies` from Events (`enemy_destroyed` + `Enemy.killed_by`,
 `player_robbed`, `player_slapped` from `request_shot`'s melee flag), synced in `_set_quests`, wiped by `player_knocked_out`.
-Quest givers = 5 per sewer in matching spots, both gangs use the same quest ids; pages ready/waiting/thanks/hello/ask/about/
+Quest givers = 5 per sewer in matching spots (REBELLION recruits: only there once recruited at the workbench), both gangs use the same quest ids; pages ready/waiting/thanks/hello/ask/about/
 blame/remind (Frankie and Jax have no "ready" page: their progress is live heat). Story: SETUP_GUIDE "Night of the Big Red Button".
 Test: `--talk=PaulieNoBrooms --choose=0,0 --kill_roombas=5 --heat=80 --goto_dropoff_after=60 --talk_again_after=40`;
 `--quest=ID` skips the NPC (use it with `--deploy`, `--talk` pulls the cat back to the hub).

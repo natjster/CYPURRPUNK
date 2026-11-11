@@ -3,12 +3,23 @@
     "cypurrpunk-models": {
       "type": "stdio",
       "command": "python",
-      "args": ["tools/model_mcp.py"]
+      "args": [
+        "tools/model_mcp.py"
+      ]
     },
     "cypurrpunk-sound-lab": {
       "type": "stdio",
       "command": "python",
-      "args": ["tools/sound_mcp.py"]
+      "args": [
+        "tools/sound_mcp.py"
+      ]
+    },
+    "cypurrpunk-icons": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "tools/icon_mcp.py"
+      ]
     }
   }
 }

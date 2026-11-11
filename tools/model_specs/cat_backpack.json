@@ -1,0 +1,627 @@
+{
+ "name": "cat_backpack",
+ "kind": "prop",
+ "about": "A chunky PS1 cyberpunk cat backpack (0.28 x 0.28 x 0.17 m): charcoal-purple fabric, a zipped back pocket, a cyan status strip, a metal canister on the side, a stubby antenna and two shoulder straps. 16 px = 1 m; the inner face is at z=0, it sticks out to +Z.",
+ "texture_size": 64,
+ "seed": 7,
+ "background": "#3a2f4a",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,16] body fabric: ripstop squares + grime"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "color": "#3a2f4a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "colors": [
+    "#ffffff10",
+    "#00000000",
+    "#00000000",
+    "#00000014"
+   ],
+   "width": 1
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "colors": [
+    "#ffffff0c",
+    "#00000000",
+    "#00000000",
+    "#00000010"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "color": "#251d31"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "dither",
+   "rect": [
+    0,
+    8,
+    32,
+    16
+   ],
+   "color": "#120e18",
+   "top": 0.0,
+   "bottom": 0.5
+  },
+  {
+   "op": "comment",
+   "note": "[32,0,48,16] body top / bottom"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#251d31"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.3,
+   "spread": 0.15
+  },
+  {
+   "op": "comment",
+   "note": "[48,0,56,8] status strip: WHITE on purpose (it glows and the game paints the colour: how full)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    0,
+    56,
+    8
+   ],
+   "color": "#ffffff"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    48,
+    0,
+    56,
+    8
+   ],
+   "colors": [
+    "#ffffff",
+    "#e0e0e0",
+    "#e0e0e0",
+    "#707070"
+   ],
+   "width": 1
+  },
+  {
+   "op": "comment",
+   "note": "[56,0,64,8] antenna tip"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    56,
+    0,
+    64,
+    8
+   ],
+   "color": "#ff4fd8"
+  },
+  {
+   "op": "comment",
+   "note": "[0,16,32,24] the top flap: darker, with a pink stencil tag"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    16,
+    32,
+    24
+   ],
+   "color": "#251d31"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    16,
+    32,
+    24
+   ],
+   "color": "#100c16"
+  },
+  {
+   "op": "line",
+   "from": [
+    1,
+    22
+   ],
+   "to": [
+    30,
+    22
+   ],
+   "color": "#5b4a70"
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    17
+   ],
+   "text": "MEOW",
+   "color": "#ff4fd8c0",
+   "worn": 0.2
+  },
+  {
+   "op": "comment",
+   "note": "[0,24,32,36] back pocket with a yellow zip"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    24,
+    32,
+    36
+   ],
+   "color": "#4b3a60"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    26
+   ],
+   "to": [
+    31,
+    26
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     27,
+     27,
+     "#ffd23a"
+    ],
+    [
+     27,
+     28,
+     "#ffd23a"
+    ],
+    [
+     28,
+     28,
+     "#c89a20"
+    ]
+   ]
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    24,
+    32,
+    36
+   ],
+   "color": "#251d31"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    24,
+    32,
+    36
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "comment",
+   "note": "[32,16,64,24] metal canister: steel + hazard band"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    64,
+    24
+   ],
+   "color": "#8a96a0"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    19,
+    64,
+    21
+   ],
+   "colors": [
+    "#f0c020",
+    "#1a1a1a"
+   ],
+   "width": 2
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    16,
+    64,
+    24
+   ],
+   "amount": 0.35,
+   "spread": 0.2
+  },
+  {
+   "op": "comment",
+   "note": "[32,24,48,32] straps / antenna: black webbing"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    24,
+    48,
+    32
+   ],
+   "color": "#17141d"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    24,
+    48,
+    32
+   ],
+   "colors": [
+    "#2a2532",
+    "#17141d"
+   ],
+   "width": 1
+  },
+  {
+   "op": "comment",
+   "note": "[48,24,56,32] canister cap"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    24,
+    56,
+    32
+   ],
+   "color": "#5a646c"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    24,
+    56,
+    32
+   ],
+   "color": "#30363c"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Pack",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Strip",
+   "origin": [
+    0,
+    3,
+    2.4
+   ]
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "body",
+   "group": "Pack",
+   "from": [
+    -2.25,
+    0,
+    0
+   ],
+   "to": [
+    2.25,
+    4.2,
+    2.3
+   ],
+   "sides": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "bottom": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "flap",
+   "group": "Pack",
+   "from": [
+    -2.4,
+    3.3,
+    -0.05
+   ],
+   "to": [
+    2.4,
+    4.6,
+    2.5
+   ],
+   "sides": [
+    0,
+    16,
+    32,
+    24
+   ],
+   "top": [
+    0,
+    16,
+    32,
+    24
+   ],
+   "bottom": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "pocket",
+   "group": "Pack",
+   "from": [
+    -1.7,
+    0.4,
+    2.3
+   ],
+   "to": [
+    1.7,
+    2.3,
+    2.8
+   ],
+   "sides": [
+    0,
+    24,
+    32,
+    36
+   ],
+   "top": [
+    0,
+    24,
+    32,
+    26
+   ],
+   "bottom": [
+    0,
+    24,
+    32,
+    26
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "canister",
+   "group": "Pack",
+   "sides": 6,
+   "center": [
+    2.85,
+    0.3,
+    1.1
+   ],
+   "height": 3.0,
+   "radius": 0.6,
+   "side_uv": [
+    32,
+    16,
+    64,
+    24
+   ],
+   "top_uv": [
+    48,
+    24,
+    56,
+    32
+   ],
+   "bottom_uv": [
+    48,
+    24,
+    56,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "strap_l",
+   "group": "Pack",
+   "from": [
+    -1.9,
+    0.6,
+    -0.45
+   ],
+   "to": [
+    -1.3,
+    4.4,
+    0
+   ],
+   "all": [
+    32,
+    24,
+    48,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "strap_r",
+   "group": "Pack",
+   "from": [
+    1.3,
+    0.6,
+    -0.45
+   ],
+   "to": [
+    1.9,
+    4.4,
+    0
+   ],
+   "all": [
+    32,
+    24,
+    48,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "antenna",
+   "group": "Pack",
+   "from": [
+    -2.0,
+    4.6,
+    1.7
+   ],
+   "to": [
+    -1.8,
+    6.6,
+    1.9
+   ],
+   "all": [
+    32,
+    24,
+    48,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "strip",
+   "group": "Strip",
+   "from": [
+    -1.7,
+    2.65,
+    2.3
+   ],
+   "to": [
+    1.7,
+    3.05,
+    2.42
+   ],
+   "all": [
+    48,
+    0,
+    56,
+    8
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "tip",
+   "group": "Strip",
+   "from": [
+    -2.08,
+    6.6,
+    1.62
+   ],
+   "to": [
+    -1.72,
+    6.95,
+    1.98
+   ],
+   "all": [
+    56,
+    0,
+    64,
+    8
+   ]
+  },
+  {
+   "type": "locator",
+   "name": "PackAnchor",
+   "position": [
+    0,
+    2.0,
+    2.8
+   ]
+  }
+ ]
+}

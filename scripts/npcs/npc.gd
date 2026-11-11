@@ -47,14 +47,12 @@ signal action_chosen(action: String, cat: CatPlayer)
 ## Sound Lab (tools/sound_specs/npc_voices.json, SETUP_GUIDE §20).
 @export var voice: String = ""
 
-@export_group("Sewer upgrades")
-## Which SEWER UPGRADES page this NPC sells (scripts/upgrades.gd PAGES: shop, boss, workbench,
-## vehicles, combat, gourmet, street). Empty = they sell no upgrades. When set, a button with
-## Upgrade Button's text appears on their greeting (just above the last answer) and opens the page.
-## (A choice with the Action  upgrades:<page>  does the same, if you'd rather place it yourself.)
-@export var upgrade_page: String = ""
-## The text of that button, e.g. "UPGRADE MY RANK".
-@export var upgrade_button: String = "UPGRADES"
+@export_group("Sewer rebellion")
+## THE SEWER REBELLION (scripts/upgrades.gd): 0 = always in the sewer (the boss, the shopkeeper,
+## payphones...). 1-5 = a RECRUIT: hidden (invisible, no collision, can't be talked to, doesn't fight
+## in a breach) until this sewer's gang has recruited that tier at the TINKER WORKBENCH. (NPCs sell no
+## upgrades any more: everything is bought at the workbench.)
+@export_range(0, 5) var rebellion_tier: int = 0
 ## ONE QUEST AT A TIME: said instead of handing out a quest when you already have one.
 ## {giver} = whoever gave you your current job ("me" if it was this NPC). One picked at random.
 @export_multiline var busy_lines: PackedStringArray = [
@@ -139,6 +137,10 @@ var _greeting: NpcPage  # the page this conversation started on (its buttons are
 
 ## True while our sewer is breached and we're fighting (each computer works this out for itself).
 var fighting: bool = false
+## False while this RECRUIT hasn't joined the rebellion yet (rebellion_tier): hidden and switched off.
+var present: bool = true
+var _home: UndergroundHub = null  # the sewer we live in (null for payphones up in the city)
+var _presence_check: float = 0.0
 ## True once a bot has flattened us (the host decides, see _knocked_down). Lasts until the breach ends.
 var is_knocked_down: bool = false
 ## Shots this computer has drawn for us, and (host only) how many landed. The test tool prints them.
@@ -165,8 +167,11 @@ func _ready() -> void:
 	if _model != null:
 		_model_home_position = _model.position
 		_model_home_rotation = _model.rotation
+	_home = get_parent() as UndergroundHub
 	if not breach_weapon.is_empty():
-		_hub = get_parent() as UndergroundHub
+		_hub = _home
+	# (Whether a RECRUIT is here yet is checked from the first frame on: _process. The game isn't
+	# ready to say who's playing while the scene is still loading.)
 	var tag := get_node_or_null("NameTag") as Label3D
 	if tag != null:
 		tag.text = npc_name
@@ -176,6 +181,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_clock += delta
+	_presence_check -= delta
+	if _presence_check <= 0.0:
+		_presence_check = 0.25
+		_update_presence()
+	if not present:
+		return  # not recruited yet: not here at all
 	if _tail != null:
 		_tail.rotation.z = sin(_clock * tail_speed) * tail_swish
 	if _hub != null and _hub.breached != fighting:
@@ -195,6 +206,27 @@ func _process(delta: float) -> void:
 			_model.rotation.y = lerp_angle(_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
 
 
+## THE SEWER REBELLION: is this cat in the sewer yet? Every computer works it out from the synced
+## upgrades (Upgrades.rebellion_level), so a new recruit appears for everyone at once.
+func is_recruited() -> bool:
+	return rebellion_tier <= 0 or _home == null or Upgrades.rebellion_level(_home.team) >= rebellion_tier
+
+
+## Show / hide this NPC (and switch its collision and fighting off) to match is_recruited().
+func _update_presence() -> void:
+	var now := is_recruited()
+	if now == present:
+		return
+	present = now
+	visible = now
+	for shape in find_children("*", "CollisionShape3D", true, false):
+		(shape as CollisionShape3D).set_deferred("disabled", not now)
+	if not now and fighting:
+		_stop_fighting()
+	if now:
+		print("[NPC] %s joined the rebellion (tier %d)" % [npc_name, rebellion_tier])
+
+
 func _nearest_cat() -> Node3D:
 	var nearest: Node3D = null
 	var best := look_range
@@ -209,7 +241,7 @@ func _nearest_cat() -> Node3D:
 # --- The E key (scripts/interactable.gd): "[E] TALK TO <name>" when a cat is close ---
 
 func interact_distance(cat: CatPlayer) -> float:
-	if fighting:
+	if fighting or not present:
 		return -1.0  # nobody stops to chat in a firefight
 	var distance := global_position.distance_to(cat.global_position)
 	return distance if distance < talk_radius else -1.0
@@ -254,11 +286,6 @@ func show_page(cat: CatPlayer, page_id: String) -> void:
 	var buttons := []
 	for choice in choices:
 		buttons.append([choice.text, _choose.bind(cat, choice)])
-	# SEWER UPGRADES: on the greeting (and pages that reuse its answers), add the upgrade button
-	# just above the last answer (that's usually "BYE"). Skipped if a choice already opens it.
-	var has_own := choices.any(func(c: NpcChoice): return c.action.begins_with("upgrades:"))
-	if upgrade_page != "" and not has_own and (page == _greeting or page.choices.is_empty()):
-		buttons.insert(maxi(buttons.size() - 1, 0), [upgrade_button, open_upgrades.bind(cat, upgrade_page)])
 	if buttons.is_empty():
 		buttons.append(["BYE", NpcDialog.for_cat(cat).close])  # never leave the player stuck
 	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)  # in the talking player's own HUD
@@ -304,10 +331,7 @@ func _say_busy(cat: CatPlayer) -> void:
 
 
 func _run_action(action: String, cat: CatPlayer) -> void:
-	if action.begins_with("upgrades:"):
-		# "upgrades:boss" = open that SEWER UPGRADES page (scripts/upgrades.gd PAGES).
-		open_upgrades(cat, action.trim_prefix("upgrades:"))
-	elif action.begins_with("quest:"):
+	if action.begins_with("quest:"):
 		# "quest:mittens_fish" = give the player that quest (quest_manager.gd asks the host).
 		QuestManager.instance.start_quest(cat.player_id, action.trim_prefix("quest:"), npc_name)
 	else:
@@ -319,13 +343,6 @@ func _run_action(action: String, cat: CatPlayer) -> void:
 			_:
 				_on_action(action, cat)
 	action_chosen.emit(action, cat)
-
-
-## Open one of the SEWER UPGRADES pages (scripts/upgrades.gd) in this cat's talk box,
-## with a BACK button to our greeting.
-func open_upgrades(cat: CatPlayer, page: String) -> void:
-	if Upgrades.instance != null:
-		Upgrades.instance.open_page(cat, page, npc_name, voice, talk.bind(cat))
 
 
 ## Override this in a script that "extends Npc" to give an NPC its own actions:
