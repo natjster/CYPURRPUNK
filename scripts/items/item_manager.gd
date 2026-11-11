@@ -495,60 +495,130 @@ func request_buy(player_id: int, item_id: String) -> void:
 func _buy_result(player_id: int, ok: bool, text: String) -> void:
 	print("[Items] Shop says: %s" % text)
 	Sound.play("buy" if ok else "error")
-	Hud.show_message(("SOLD! " if ok else "") + text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
+	var shop := ShopScreen.for_seat(PlayerId.slot_of(player_id))
+	if shop != null and shop.visible:
+		shop.note(text, ok)  # the shop screen's own message line
+	else:
+		Hud.show_message(text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
 
 
-## What the shop pays this player for one of this item: its card's Cash Value (fish $50...),
-## +20% / +40% with the GOURMET FENCE upgrade. 0 = the shop won't buy it (scrap, gear).
-func sell_price(player_id: int, item_id: String) -> int:
+# --- SELLING to THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) ---
+
+## What the shop pays THIS player for one of this item (the shop screen, the backpack badges and the
+## host all use this, so they always agree):
+##   street LOOT (fish, koi, treats...)  = 100% of its card's Cash Value, x the GOURMET FENCE upgrade
+##   HELD gear (guns, catnip...)         = half its shop Price (at least $1)
+##   SCRAP (and anything else with no value) = 0: the shop won't take it (feed THE MAINFRAME instead)
+func sell_price_for(player_id: int, item_id: String) -> int:
 	var data: ItemData = catalog.get(item_id)
-	if data == null or data.kind != ItemData.Kind.LOOT or data.cash_value <= 0:
+	if data == null or item_id == Mainframe.SCRAP_ID:
 		return 0
-	return roundi(data.cash_value * Upgrades.gourmet_multiplier(player_id))
+	if data.kind == ItemData.Kind.LOOT:
+		return roundi(data.cash_value * Upgrades.gourmet_multiplier(player_id)) if data.cash_value > 0 else 0
+	return maxi(1, data.price / 2) if data.price > 0 else 0
 
 
-## What all the sellable loot in a player's backpack is worth at the shop right now.
+## (Old name, same thing.)
+func sell_price(player_id: int, item_id: String) -> int:
+	return sell_price_for(player_id, item_id)
+
+
+## What all the street LOOT in a player's backpack sells for right now (SELL ALL LOOT; gear and
+## scrap don't count).
 func pack_sell_value(player_id: int) -> int:
 	var total := 0
-	for item_id in get_inventory(player_id).pack:
-		total += sell_price(player_id, item_id)
+	for item_id in loot_in_pack(player_id):
+		total += sell_price_for(player_id, item_id)
 	return total
 
 
-## A player sells loot at the shop (scripts/npcs/shopkeeper.gd SELL buttons). pack_index = that
-## backpack slot, -1 = EVERY piece of loot the shop buys. Host only: checks the player is down in
-## the sewers, pays (Wallet.earn) and empties those slots. The seller gets "_buy_result" back.
+## A player sells ONE thing to the shop: where = "pack" (backpack slot), "hand" (0 right / 1 left)
+## or "quick" (one off that stack). Host only: checks the seller is down in the sewers and the shop
+## buys it (sell_price_for > 0), takes it away and pays them (Wallet.earn).
 @rpc("any_peer", "call_local", "reliable")
-func request_sell(player_id: int, pack_index: int) -> void:
+func request_sell(player_id: int, where: String, index: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var cat := _cat(player_id)
 	if cat == null or not UndergroundHub.is_in_hub(cat.global_position):
 		return  # the fence is down in the sewers
 	var inventory := get_inventory(player_id).duplicate(true)
-	var pack: Array = inventory.pack
+	var item_id := ""
+	match where:
+		"pack":
+			if index >= 0 and index < inventory.pack.size():
+				item_id = inventory.pack[index]
+		"hand":
+			item_id = inventory.hands[clampi(index, 0, 1)]
+		"quick":
+			var stack: Array = quick_slots_of(inventory)[clampi(index, 0, 1)]
+			item_id = stack[0] if not stack.is_empty() else ""
+	var price := sell_price_for(player_id, item_id)
+	if item_id == "" or price <= 0:
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "I don't buy that, comrade.")
+		return
+	match where:
+		"pack":
+			inventory.pack.remove_at(index)
+		"hand":
+			if _is_two_handed(inventory.hands):
+				inventory.hands = ["", ""]
+			else:
+				inventory.hands[clampi(index, 0, 1)] = ""
+		"quick":
+			_pop_quick(inventory, index)
+	_set_inventory.rpc(player_id, inventory)
+	_paid_for(player_id, [item_id], price)
+
+
+## SELL ALL LOOT: every piece of street loot in the backpack (fish, koi, treats...; scrap and gear
+## stay). Host only, same checks as request_sell.
+@rpc("any_peer", "call_local", "reliable")
+func request_sell_all_loot(player_id: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
+		return
+	var cat := _cat(player_id)
+	if cat == null or not UndergroundHub.is_in_hub(cat.global_position):
+		return
+	var inventory := get_inventory(player_id).duplicate(true)
+	var kept: Array = []
 	var sold: Array = []
 	var earned := 0
-	for i in range(pack.size() - 1, -1, -1):
-		if (pack_index < 0 or i == pack_index) and sell_price(player_id, pack[i]) > 0:
-			earned += sell_price(player_id, pack[i])
-			sold.append(pack.pop_at(i))
+	for item_id in inventory.pack:
+		var data: ItemData = catalog.get(item_id)
+		var price := sell_price_for(player_id, item_id)
+		if data != null and data.kind == ItemData.Kind.LOOT and price > 0:
+			sold.append(item_id)
+			earned += price
+		else:
+			kept.append(item_id)
 	if sold.is_empty():
-		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "Nothing I'd buy in there, comrade.")
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No loot to sell, comrade.")
 		return
-	inventory.pack = pack
+	inventory.pack = kept
 	_set_inventory.rpc(player_id, inventory)
-	Wallet.instance.earn(player_id, earned, "sold %d loot" % sold.size())
+	_paid_for(player_id, sold, earned)
+
+
+## Host: pay a seller and tell them (and the RAID REPORT / anything else listening: Events.loot_sold).
+func _paid_for(player_id: int, sold: Array, earned: int) -> void:
+	Wallet.instance.earn(player_id, earned, "sold %s" % ", ".join(sold))
 	Events.loot_sold.emit(player_id, sold, earned)  # (host only: scripts/events.gd)
 	print("[Items] Player %d sold %s for $%d" % [player_id, sold, earned])
-	_sell_result.rpc_id(PlayerId.peer_of(player_id), player_id, "Sold %d for $%d." % [sold.size(), earned])
+	var what: String = (catalog[sold[0]] as ItemData).display_name if sold.size() == 1 else "%d items" % sold.size()
+	_sell_result.rpc_id(PlayerId.peer_of(player_id), player_id, "Sold %s for $%d." % [what, earned])
 
 
-## Host -> the seller: the sale went through (shown in the middle of their screen, cash sound).
+## Host -> the seller: the sale went through (cash sound; the shop screen shows the words, or the
+## middle of their screen if it's closed).
 @rpc("authority", "call_local", "reliable")
 func _sell_result(player_id: int, text: String) -> void:
 	Sound.play("buy")
-	Hud.show_message("SOLD! " + text, 3.0, PlayerId.slot_of(player_id))
+	var shop := ShopScreen.for_seat(PlayerId.slot_of(player_id))
+	if shop != null and shop.visible:
+		shop.note("SOLD! " + text, true)
+	else:
+		Hud.show_message("SOLD! " + text, 3.0, PlayerId.slot_of(player_id))
 
 
 ## The holder used up the item in this paw (catnip). Host only.

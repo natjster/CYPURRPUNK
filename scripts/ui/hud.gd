@@ -26,6 +26,7 @@ extends CanvasLayer
 ##       │                   Held (bottom-left: the guns in your paws + quick-use slots, in the ocean-blue
 ##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd)
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
+##       ├── Shop         <- THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) }
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
 ##
@@ -237,7 +238,7 @@ static func _targets(seat_number: int) -> Array:
 static func wants_input(seat_number: int = 0) -> bool:
 	var inventory := InventoryScreen.for_seat(seat_number)
 	return NpcDialog.is_open_for(seat_number) or (inventory != null and inventory.visible) \
-		or PlayerPause.is_open_for(seat_number)
+		or PlayerPause.is_open_for(seat_number) or ShopScreen.is_open_for(seat_number)
 
 
 ## True while something covers the whole window: a full-screen game menu (pause, settings, MY CAT)

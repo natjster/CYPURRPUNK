@@ -496,7 +496,15 @@ Events.loot_sold), Shopkeeper `_sell_buttons`. Helpers `take_all_loot` (rob), `t
 (`_update_inventory_camera`, "Inventory Camera" exports, side offset scaled by pane aspect, `inventory_view_amount()`); `inventory_ui.gd`
 lays out ocean-blue boxes on the right (`_layout`), draws callout lines from projected 3D anchors (`_project` via
 `GameScreen.camera_for_seat`), slots = Buttons + `SlotFace` (icon, name, price badge). Hud hides Names/Scoreboard while it's open.
-Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`, `--talk=ComradeWhiskers --choose=0,0` (sell all).
+Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`.
+SHOP (Phase 3): `Shopkeeper.interact` -> `ShopScreen` (`scripts/ui/shop_screen.gd`, HUD `Frame/Shop`, `for_seat/is_open_for`; in
+`Hud.wants_input` + `cat._menu_open`): right half = 3 tabs (exports melee/consumable/firearm_items, filtered by keeper.stock), rows =
+Button + `RowFace` (icon or black silhouette when `!Upgrades.shop_allows`, BUY pill), SELL ALL; it opens the inventory in `shop_mode`
+(`open_for_shop`: left column at `shop_column_start`, SELL badges, click = `request_sell(pid, where, index)`, cat camera `shop_camera_side`)
+and drives ONE SeatFocus over both (inventory `_input` returns while the shop is open). Prices = `ItemManager.sell_price_for` (loot
+100% x gourmet, gear max(1, price/2), scrap 0); `request_sell_all_loot`; `_buy_result`/`_sell_result` -> `ShopScreen.note`. WEAPON CRATES
+moved to the workbench page (`Upgrades.PAGES.workbench`). Test: `--talk=ComradeWhiskers --shop_tab/--shop_buy/--shop_sell/--shop_sell_all/
+--shop_pad/--shop_close` ("DevCapture shop").
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour
 extend `HeldItem`, guns extend `Weapon` (data-driven via exports). Host referees pickup/drop/

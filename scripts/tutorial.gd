@@ -91,7 +91,7 @@ extends Node
 @export_multiline var step1_hint: String = "Walk to Lil' Mittens by the east wall boxes and press [{E}] -> accept MITTENS' FISH (3 fish for +$100)."
 @export_group("Step 2 - Shop")
 @export var step2_title: String = "STEP 2/9: BUY A WEAPON AT THE BLACK MARKITTEN"
-@export_multiline var step2_hint: String = "Talk to Comrade Whiskers [{E}] -> SHOW ME THE GOODS -> buy a PAW-PISTOL ($60) or NEON BAT ($20) with your $100."
+@export_multiline var step2_hint: String = "Press [{E}] on Comrade Whiskers: his shop opens. Buy a PAW-PISTOL ($60, FIREARMS tab) or a NEON BAT ($20, MELEE tab) with your $100."
 @export_group("Step 3 - Stash")
 @export var step3_title: String = "STEP 3/9: CHECK THE LITTERBOX"
 @export_multiline var step3_hint: String = "Walk to the glowing LITTERBOX on the east wall and press [{E}]. Anything buried here is safe if you get knocked out! Press [{TAB}] or [Esc] to close."

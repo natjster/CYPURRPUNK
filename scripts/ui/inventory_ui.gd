@@ -31,6 +31,11 @@ extends Control
 ##   Right-click (X) = drop it on the ground in front of you.
 ##   JOB: ABANDON (press twice) drops your quest, progress lost: only down in the sewers.
 ##
+## SHOP MODE: at THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) the shop screen opens this too, as
+## its LEFT half (open_for_shop): the boxes move left, the camera pushes the cat further left, every
+## slot shows its SELL price ("SELL $50"; scrap shows SCRAP: the shop won't take it) and a click
+## SELLS the item (ItemManager.request_sell). The shop screen then drives the d-pad highlight for both.
+##
 ## SPLIT SCREEN: every player has their own inventory in their own HUD (Hud.seat), with their own
 ## camera glide. InventoryScreen.for_seat(seat) finds it.
 ## The screen only ASKS the item system (ItemManager) to move things; the host decides, and the
@@ -80,6 +85,8 @@ var _focus := SeatFocus.new()
 @export var line_width: float = 2.0
 ## How far the panels slide in from the right as the view opens (HUD units).
 @export var slide_in: float = 40.0
+## SHOP MODE: where our column starts (fraction of the screen width; the cat stands left of it).
+@export_range(0.05, 0.4) var shop_column_start: float = 0.2
 
 ## The JOB strip's colours.
 const JOB_COLOR := Color(1, 0.8, 0.3)
@@ -100,6 +107,8 @@ var _abandon_armed := false
 ## Where things went this frame (HUD units), for _draw.
 var _rects := {}
 var _view := 0.0  # 0..1: how far the camera glide is (the boxes fade + slide in with it)
+## True while the shop screen is open next to us (we're its left half: clicks SELL).
+var shop_mode := false
 
 
 func _enter_tree() -> void:
@@ -161,6 +170,8 @@ func _build() -> void:
 func _input(event: InputEvent) -> void:
 	if Seats.seat_of_event(event) != seat:
 		return  # another player's button (player 1's HUD hears every button first)
+	if ShopScreen.is_open_for(seat):
+		return  # at the shop, the shop screen handles every button (for both halves)
 	if event.is_action_pressed("inventory") and not Hud.menu_open() and not NpcDialog.is_open_for(seat):
 		var cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if visible:
@@ -187,6 +198,16 @@ func open(cat: CatPlayer) -> void:
 		_set_open(true, cat)
 
 
+## The shop screen opened: be its left half (clicks sell; see SHOP MODE at the top).
+func open_for_shop(cat: CatPlayer) -> void:
+	shop_mode = true
+	if visible:
+		_last_key = ""
+		_show_hints()
+	else:
+		_set_open(true, cat)
+
+
 func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 	if not _built:
 		return  # not built yet (the very first frame)
@@ -205,6 +226,7 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 		_show_hints()
 		_refocus()
 	else:
+		shop_mode = false
 		_focus.clear()
 		var first := Game.instance.my_cat() if Game.instance != null else null
 		if seat == 0 and first != null and first.is_controlled:
@@ -225,7 +247,7 @@ func _process(_delta: float) -> void:
 	if cat == null or not is_instance_valid(cat) or not cat.is_inside_tree():
 		_set_open(false)  # (the cat left: knocked out of the game, a new game, the player quit)
 		return
-	var at_stash := UndergroundHub.of(cat).near_stash(cat)
+	var at_stash := UndergroundHub.of(cat).near_stash(cat) and not shop_mode
 	if _match_sizes():
 		_refocus()
 	_view = cat.inventory_view_amount()
@@ -235,7 +257,7 @@ func _process(_delta: float) -> void:
 	var inventory := items.get_inventory(cat.player_id)
 	var quests := QuestManager.instance
 	var key := str(inventory) + str(at_stash) + quests.current_quest(cat.player_id) \
-		+ quests.progress_text(cat.player_id) + str(_abandon_armed) + str(Wallet.instance.cash_of(cat.player_id))
+		+ quests.progress_text(cat.player_id) + str(_abandon_armed) + str(Wallet.instance.cash_of(cat.player_id)) + str(shop_mode)
 	if key == _last_key:
 		return
 	_last_key = key  # only refill the slots when something changed
@@ -268,11 +290,15 @@ func _layout(cat: CatPlayer, at_stash: bool) -> void:
 	var slide := (1.0 - _view) * slide_in
 	var col_w := minf(size.x * (1.0 - column_start) - 24.0, column_max_width)
 	var col_x := size.x - col_w - 24.0 + slide
+	var shop := ShopScreen.for_seat(seat)
+	if shop_mode:  # the shop has the right half: we sit between the cat and it
+		col_x = size.x * shop_column_start - slide
+		col_w = (size.x * shop.panel_start if shop != null else size.x * 0.52) - col_x - 14.0
 	var y := 60.0
-	# JOB strip
-	var job := Rect2(col_x, y, col_w, 40)
+	# JOB strip (not at the shop: the shop shows your cash)
+	var job := Rect2(col_x, y, col_w, 0.0 if shop_mode else 40.0)
 	_rects.job = job
-	_abandon_button.visible = QuestManager.instance.current_quest(cat.player_id) != ""
+	_abandon_button.visible = not shop_mode and QuestManager.instance.current_quest(cat.player_id) != ""
 	_abandon_button.size = Vector2(118, 28)
 	_abandon_button.position = Vector2(job.end.x - 124, job.position.y + 6)
 	y = job.end.y + gap + 22  # (room for the row's titles and the quick-use line)
@@ -353,17 +379,18 @@ func _draw() -> void:
 		return
 	var style := HudStyle.current()
 	var font := get_theme_font("font", "Label")
-	# A soft dark fade behind the right-hand column so the boxes read over a bright street.
-	var fade_from := size.x * (column_start - 0.08)
+	# A soft dark fade behind the boxes so they read over a bright street.
+	var fade_from := size.x * ((shop_column_start - 0.08) if shop_mode else (column_start - 0.08))
 	draw_polygon(PackedVector2Array([Vector2(fade_from, 0), Vector2(size.x, 0), Vector2(size.x, size.y), Vector2(fade_from, size.y)]),
 		PackedColorArray([Color(0, 0.02, 0.05, 0.0), Color(0, 0.02, 0.05, 0.45), Color(0, 0.02, 0.05, 0.45), Color(0, 0.02, 0.05, 0.0)]))
 	# JOB
 	var job: Rect2 = _rects.job
-	HudStyle.draw_panel(self, job)
-	var cash_right := job.end.x - (134.0 if _abandon_button.visible else 10.0)
-	if owner_cat != null and is_instance_valid(owner_cat):
-		_text_right(font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, Color(0.55, 1, 0.6))
-	_text(font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, cash_right - job.position.x - 62.0)
+	if job.size.y > 0.0:
+		HudStyle.draw_panel(self, job)
+		var cash_right := job.end.x - (134.0 if _abandon_button.visible else 10.0)
+		if owner_cat != null and is_instance_valid(owner_cat):
+			_text_right(font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, Color(0.55, 1, 0.6))
+		_text(font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, cash_right - job.position.x - 62.0)
 	# Row titles
 	var paw_rect := _paw_buttons[0].get_rect()
 	_text(font, paw_rect.position + Vector2(2, -5), "PAWS", title_font_size - 3, style.text_color)
@@ -468,7 +495,9 @@ func _show_hints() -> void:
 	var on_pad := owner_cat != null and is_instance_valid(owner_cat) and Seats.uses_pad(owner_cat.slot)
 	var click := "%s:" % Controls.display_name("Pad A") if on_pad else "Click:"
 	var drop := "%s:" % Controls.display_name("Pad X") if on_pad else "Right-click:"
-	if _at_stash:
+	if shop_mode:
+		_info.text = "%s SELL it   %s drop   %s: leave the shop" % [click, drop, Controls.key_text("inventory")]
+	elif _at_stash:
 		_info.text = "%s bury in / dig out of the litterbox   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
 	else:
 		_info.text = "%s equip / put away   %s drop   %s: close" % [click, drop, Controls.key_text("inventory")]
@@ -481,17 +510,25 @@ func _fill(button: Button, label: String, item_id: String, count: int = 1) -> vo
 	face.item_id = item_id
 	face.count = count
 	face.label = label
-	face.price = 0
-	face.price_is_sale = false
+	face.badge = ""
+	face.badge_kind = 0
 	if item_id != "" and owner_cat != null and is_instance_valid(owner_cat):
+		# The PRICE BADGE (every item has one): at the shop what it SELLS for; otherwise loot shows
+		# what it sells for (green) and gear its shop price (blue). SCRAP: the shop won't take it.
 		var items := ItemManager.instance
 		var data: ItemData = items.catalog.get(item_id)
-		var sale := items.sell_price(owner_cat.player_id, item_id)
-		if sale > 0:
-			face.price = sale
-			face.price_is_sale = true
-		elif data != null and data.price > 0:
-			face.price = data.price
+		var sale := items.sell_price_for(owner_cat.player_id, item_id)
+		if sale <= 0:
+			face.badge = "SCRAP" if item_id == Mainframe.SCRAP_ID else ""
+			face.badge_kind = 2
+		elif shop_mode:
+			face.badge = "SELL $%d" % sale
+			face.badge_kind = 1
+		elif data.kind == ItemData.Kind.LOOT:
+			face.badge = "$%d" % sale
+			face.badge_kind = 1
+		elif data.price > 0:
+			face.badge = "$%d" % data.price
 	face.queue_redraw()
 
 
@@ -584,6 +621,14 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		return
 	var data: ItemData = items.catalog.get(button.get_meta("item"))
 	var pack_full := items.pack_free(cat.player_id) <= 0
+	if shop_mode and not drop:
+		# At THE BLACK MARKITTEN: a click SELLS it (the host checks and pays: request_sell).
+		if items.sell_price_for(cat.player_id, button.get_meta("item")) <= 0:
+			Sound.play("error")
+			_info.text = "The shop won't buy %s. Feed SCRAP to THE MAINFRAME or spend it at the workbench." % data.display_name
+		else:
+			items.request_sell.rpc_id(1, cat.player_id, where, index)
+		return
 	if drop and where != "stash":
 		items.request_drop_item.rpc_id(1, cat.player_id, where, index, items.ground_in_front_of(cat))
 	elif drop:
@@ -638,13 +683,13 @@ func _on_slot_hover(button: Button) -> void:
 	var items := ItemManager.instance
 	var data: ItemData = items.catalog[item_id]
 	var worth := ""
-	var sale := items.sell_price(owner_cat.player_id, item_id)
-	if sale > 0:
-		worth = "  SELLS FOR $%d." % sale
-	elif data.kind == ItemData.Kind.LOOT:
+	var sale := items.sell_price_for(owner_cat.player_id, item_id)
+	if sale <= 0:
 		worth = "  The shop won't buy it." + ("  Feed it to THE MAINFRAME." if item_id == Mainframe.SCRAP_ID else "")
-	elif data.price > 0:
-		worth = "  SHOP PRICE $%d." % data.price
+	elif data.kind == ItemData.Kind.LOOT:
+		worth = "  SELLS FOR $%d." % sale
+	else:
+		worth = "  SHOP PRICE $%d, SELLS BACK FOR $%d." % [data.price, sale]
 	_info.text = "%s: %s%s" % [data.display_name, data.description if data.description != "" else "-", worth]
 
 
@@ -657,8 +702,10 @@ class SlotFace extends Control:
 	var item_id := ""
 	var label := ""
 	var count := 1
-	var price := 0
-	var price_is_sale := false
+	## The price badge's words ("$50", "SELL $30", "SCRAP"; "" = none) and look (0 = shop price,
+	## blue; 1 = what it sells for, green; 2 = the shop won't take it, grey).
+	var badge := ""
+	var badge_kind := 0
 
 	func _draw() -> void:
 		var style := HudStyle.current()
@@ -671,7 +718,9 @@ class SlotFace extends Control:
 				title = "LEFT" if index == 1 else "RIGHT"
 			"quick":
 				title = Hud.key_for("quick_%d" % (index + 1), screen.seat)
-		if title != "":
+		var badge_w := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.price_font_size).x + 14.0 if badge != "" and item_id != "" else 0.0
+		var title_w := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size - 1).x
+		if title != "" and title_w + badge_w + 8.0 <= size.x:  # (a narrow box: the price badge wins)
 			_text(font, Vector2(5, name_size + 3), title, name_size - 1, Color(style.text_color, 0.6))
 		if item_id == "":
 			var empty_text := "EMPTY" if where in ["hand", "pack"] and size.y > 50 else "-"
@@ -683,7 +732,7 @@ class SlotFace extends Control:
 		if data == null:
 			return
 		var show_name := size.y > 56
-		var icon_box := Rect2(6, (name_size + 6) if title != "" or price > 0 else 6, size.x - 12, 0)
+		var icon_box := Rect2(6, (name_size + 6) if title != "" or badge != "" else 6, size.x - 12, 0)
 		icon_box.size.y = size.y - icon_box.position.y - ((name_size + 8) if show_name else 6)
 		var tint := style.cool_color
 		if data.kind == ItemData.Kind.LOOT:
@@ -692,14 +741,13 @@ class SlotFace extends Control:
 		if show_name:
 			var shown := label if label != "" else data.display_name
 			_text(font, Vector2(6, size.y - 6), shown, name_size, style.text_color, size.x - 12)
-		if price > 0:
-			var badge_text := "$%d" % price
-			var w := font.get_string_size(badge_text, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.price_font_size).x
-			var badge := Rect2(size.x - w - 10, 3, w + 7, screen.price_font_size + 4)
-			var badge_color := Color(0.1, 0.45, 0.2, 0.85) if price_is_sale else Color(0.05, 0.22, 0.36, 0.85)
-			draw_rect(badge, badge_color)
-			_text(font, badge.position + Vector2(3.5, screen.price_font_size + 1), badge_text, screen.price_font_size,
-				Color(0.6, 1, 0.65) if price_is_sale else style.text_color)
+		if badge != "":
+			var w := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.price_font_size).x
+			var box := Rect2(size.x - w - 10, 3, w + 7, screen.price_font_size + 4)
+			var colors: Array = [[Color(0.05, 0.22, 0.36, 0.85), style.text_color], [Color(0.1, 0.45, 0.2, 0.85), Color(0.6, 1, 0.65)],
+				[Color(0.15, 0.18, 0.22, 0.85), Color(0.7, 0.75, 0.8)]][clampi(badge_kind, 0, 2)]
+			draw_rect(box, colors[0])
+			_text(font, box.position + Vector2(3.5, screen.price_font_size + 1), badge, screen.price_font_size, colors[1])
 		if count > 1:
 			var count_text := "x%d" % count
 			var cw := font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size + 1).x

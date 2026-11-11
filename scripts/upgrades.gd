@@ -5,10 +5,10 @@ extends Node
 ## Attach to the "Upgrades" node in main.tscn (right under Wallet). Reach it with Upgrades.instance.
 ##
 ## WHO SELLS WHAT (each NPC has an "Upgrade Page" in the Inspector; the page lists live here, PAGES):
-##   Comrade Whiskers / Clawd   "shop"      WEAPON CRATES (unlock better guns in the shop)
 ##   Don Catleone / Pawnie      "boss"      BIGGER BACKPACK (6 -> 8 -> 10 -> 12 slots; the old DEEP
 ##                                          POCKETS loot-bag upgrade was merged into it: _merge_old_upgrades)
-##   Tinker Workbench (hub.gd)  "workbench" DELUXE LITTERBOX (stash), MAINFRAME CAPACITOR
+##   Tinker Workbench (hub.gd)  "workbench" WEAPON CRATES (unlock better guns in THE BLACK MARKITTEN),
+##                                          DELUXE LITTERBOX (stash), MAINFRAME CAPACITOR
 ##   Frankie / Jittery Jax      "vehicles"  ESPRESSO BLOODSTREAM (run faster), TWIN-TURBO ENGINE,
 ##                                          NEON ZOOM-BIKE + ARMORED MEOW-VAN (and choosing your ride)
 ##   Paulie / Bumper-Car Benny  "combat"    THICK FUR (max HP), SCRAP MAGNET (bots drop scrap)
@@ -114,9 +114,9 @@ const INFO := {
 
 ## Which upgrades each page sells (an NPC's Upgrade Page picks one of these names).
 const PAGES := {
-	"shop": ["shop_crates"],
+	"shop": ["shop_crates"],  # (not on any NPC any more: the crates are on the workbench page)
 	"boss": ["bigger_pack"],
-	"workbench": ["deluxe_litterbox", "mainframe_capacitor"],
+	"workbench": ["shop_crates", "deluxe_litterbox", "mainframe_capacitor"],
 	"vehicles": ["espresso_zoomies", "turbo_engine", "unlock_cyber_bike", "unlock_fish_van"],
 	"combat": ["thick_fur", "scrap_magnet"],
 	"gourmet": ["gourmet_fence", "stuffed_cheeks"],

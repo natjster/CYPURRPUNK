@@ -84,7 +84,7 @@ extends Node
 ##   --from_stash=N    (at the lockers) take stash slot N into the backpack
 ##   --fresh_profile   start this test's saved cash + stash from scratch (user://test_profiles/)
 ##   --cash=N          (host) set our cash, and every joining player's, to $N (to test the Black Markitten shop:
-##                     --cash=500 --talk=ComradeWhiskers --choose=0,3 buys the 4th item)
+##                     --cash=500 --talk=ComradeWhiskers --shop_buy=pistol; see _shop_test for all the --shop_ flags)
 ##   --grab=ITEM       walk to the nearest ITEM lying around (fish, or something dropped) and press E.
 ##                     Repeat with a comma list: --grab=catnip,catnip (fire/use with --hold=shoot)
 ##   --drop_after=N    drop what's in the paws (G) N frames after the --hold finishes
@@ -1330,6 +1330,84 @@ func _all_psx(node: Node) -> bool:
 	return true
 
 
+## THE BLACK MARKITTEN (scripts/ui/shop_screen.gd): --talk=ComradeWhiskers presses E on him (the shop
+## screen opens), then, in this order:
+##   --shop_tab=N               switch tab (0 MELEE, 1 CONSUMABLES, 2 FIREARMS)
+##   --shop_buy=a,b             click those items' rows (locked ones should refuse)
+##   --shop_sell=pack:0,hand:0  click those backpack / paw / quick slots (sells them)
+##   --shop_sell_all            click SELL ALL LOOT
+##   --shop_pad=right,down,...  move the d-pad highlight (prints what it lands on)
+##   --shop_close=Tab|Esc       a real key press that should close it
+## Prints "DevCapture shop" lines (tab, rows, locked, cash, backpack, highlight, message).
+func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void:
+	var used := Interactable.try_use(player)
+	var shop := ShopScreen.for_seat(player.slot)
+	var items := ItemManager.instance
+	var report := func(when: String) -> void:
+		var rows := shop._rows.filter(func(r): return r.visible).map(func(r): return "%s%s" % [r.get_node("Face").item_id, "(LOCKED)" if r.get_node("Face").locked else ""])
+		var focus: Button = shop._focus.current
+		var focus_name := "-"
+		if focus != null:
+			focus_name = focus.text if focus.text != "" else (focus.get_node("Face").item_id if focus.has_meta("row") else "%s%d:%s" % [focus.get_meta("where", "?"), focus.get_meta("index", 0), focus.get_meta("item", "")])
+		var inventory := InventoryScreen.for_seat(player.slot)
+		print("DevCapture shop (%s): open=%s tab=%d rows=%s cash=$%d pack=%s hands=%s inventory_open=%s shop_mode=%s focus=%s note=\"%s\" sell_all=\"%s\"" % [
+			when, shop.visible, shop.tab, rows, Wallet.instance.cash_of(player.player_id), items.get_inventory(player.player_id).pack,
+			items.get_inventory(player.player_id).hands, inventory.visible, inventory.shop_mode, focus_name, shop._note, shop._sell_all.text])
+	for i in 30:
+		await get_tree().process_frame
+	print("DevCapture shop: %s used=%s menu_blocks_cat=%s wants_input=%s" % [keeper.name, used, player._menu_open(), Hud.wants_input(player.slot)])
+	report.call("open")
+	if args.has("shop_tab"):
+		shop._set_tab(int(args["shop_tab"]))
+		report.call("tab")
+	if args.has("shop_buy"):
+		for item_id in str(args["shop_buy"]).split(","):
+			for tab_index in 3:
+				if item_id in shop._tab_items(tab_index):
+					shop._set_tab(tab_index)
+			for row in shop._rows:
+				if row.visible and row.get_node("Face").item_id == item_id:
+					shop._press_row(row)
+			for i in 20:
+				await get_tree().process_frame
+			report.call("buy " + item_id)
+	if args.has("shop_sell"):
+		var inventory := InventoryScreen.for_seat(player.slot)
+		for slot in str(args["shop_sell"]).split(","):
+			var parts: PackedStringArray = slot.split(":")
+			var list: Array = {"pack": inventory._pack_buttons, "hand": inventory._paw_buttons, "quick": inventory._quick_buttons}[parts[0]]
+			for button in list:
+				if button.get_meta("index") == int(parts[1]):
+					inventory._use_slot(button, parts[0], int(parts[1]), false)
+					break
+			for i in 20:
+				await get_tree().process_frame
+			report.call("sell " + slot)
+	if args.has("shop_sell_all"):
+		shop._sell_all_loot()
+		for i in 20:
+			await get_tree().process_frame
+		report.call("sell all")
+	if args.has("shop_pad"):
+		for direction in str(args["shop_pad"]).split(","):
+			var move := InputEventAction.new()
+			move.action = "ui_" + direction
+			move.pressed = true
+			shop._focus.handle(move)
+			report.call("pad " + direction)
+	if args.has("shop_close"):
+		for pressed in [true, false]:
+			var key := InputEventKey.new()
+			key.physical_keycode = OS.find_keycode_from_string(args["shop_close"])
+			key.keycode = key.physical_keycode
+			key.pressed = pressed
+			Input.parse_input_event(key)
+			await get_tree().process_frame
+		for i in 10:
+			await get_tree().process_frame
+		report.call("after " + str(args["shop_close"]))
+
+
 ## --inventory: after a while, print what each open inventory screen shows ("DevCapture inventory").
 func _inventory_report(seats: Array, frames: int) -> void:
 	for i in mini(60, frames / 2):
@@ -1875,6 +1953,9 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			await get_tree().physics_frame
 		print("DevCapture payphone: revealed=%s typing=\"%s\"" % [FishHeist.instance.is_revealed(player.team), npc.get_node("Readout").text.replace("
 ", " / ")])
+		return
+	if npc is Shopkeeper:
+		await _shop_test(player, npc as Shopkeeper, args)  # (E opens THE BLACK MARKITTEN shop screen, not a talk box)
 		return
 	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):

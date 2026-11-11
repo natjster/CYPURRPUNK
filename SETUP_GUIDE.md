@@ -378,7 +378,7 @@ C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --host --capture=shot
 
 - Useful extras: `--deploy` (go up to the city first — without it you're in the hub),
   `--talk` (open Don's talk box), `--drive` (car view), `--grab=fish`, `--hold=shoot`,
-  `--cash=500 --talk=ComradeWhiskers --choose=0,3` (buy the tommy gun), `--wait=N`,
+  `--cash=500 --talk=ComradeWhiskers --shop_buy=pistol` (the shop screen), `--wait=N`,
   `--goto_dropoff_after=N` (extract), `--menu=settings`, `--scale=2` (smaller image),
   `--mouse_test` (checks mouse-look still reaches the game through the HUD screen),
   `--click_choice=N` (a real mouse click on a talk-box button), `--press_key=Tab` (a real key),
@@ -798,28 +798,57 @@ quests (table under **Quests** below). Move one by selecting them under **Hub** 
 **Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
 counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
 the breach tunnel. It's **the only place to get gear**: nothing but fish lies around the city any more.
-Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** button per item, and
-**BACK**. You pay with the cash you earn extracting fish; the shop stays open so you can keep buying.
+Press **E** on him and **THE BLACK MARKITTEN shop screen** opens straight away (no talk box). It's in
+the ocean-blue style, in your own HUD (split screen: everyone shops on their own screen):
+```
+ [cat + backpack]  PAWS / QUICK USE           ┌ THE BLACK MARKITTEN               $240 ┐
+                   BACKPACK 4/6               │ COMRADE WHISKERS: "Take your pick..."  │
+                   [SELL $50][SELL $400]      │ [ SELL ALL LOOT (+$450) ]              │
+                   [ SCRAP  ][ EMPTY   ]      │ [MELEE] [CONSUMABLES] [FIREARMS]       │
+                   "Click: SELL it ..."       │ [pic] PAW-PISTOL  one shot...  BUY $60 │
+                                              │ [###] HAIRBALL BLASTER  LOCKED — ...    │
+                                              │ what the highlighted thing is          │
+```
+- **Left half:** your backpack view (§9) in **shop mode**: the camera pushes your cat further left,
+  every slot shows its **SELL** price, and **clicking a slot SELLS it** (paws, quick-use and backpack;
+  right-click still drops).
+- **Right half:** three **tabs** (click them, or **LB / RB**): **MELEE** (Neon Bat, Frozen Tuna),
+  **CONSUMABLES** (Catnip, Catdip), **FIREARMS** (Paw-Pistol, Hairball Blaster, Red Dot, Purr-Tommy,
+  Yarn-Zooka, Cucumber Launcher). Each row: the item's side-view picture, name, description and
+  **BUY $XX**; **click a row to buy**. Guns from a WEAPON CRATE you haven't unlocked show as a **solid
+  black silhouette** with "LOCKED — PURCHASE CRATE N AT WORKBENCH"; clicking one only says where to
+  unlock it (the crates are on the **TINKER WORKBENCH** now, §25, not on him).
+- **SELL ALL LOOT (+$XXX)** sells every piece of street loot in your backpack in one click (scrap and gear stay).
+- **Prices** (`ItemManager.sell_price_for`, the host checks every buy and sale):
 
-| Item | Price |
-|---|---|
-| Catnip | $25 |
-| Catdip | $35 |
-| Paw-Pistol | $60 |
-| Purr-Tommy 2099 | $200 |
+| Item | He sells it for | He buys it back for |
+|---|---|---|
+| Sardine / Fish / Gourmet Tuna / Fresh Catch / Catnip Treats / Golden Koi | - | **$20 / $50 / $60 / $75 / $80 / $400** (100%, +20% / +40% with GOURMET FENCE) |
+| Neon Bat / Catnip / Catdip / Paw-Pistol / Frozen Tuna | $20 / $25 / $35 / $60 / $80 | half: $10 / $12 / $17 / $30 / $40 |
+| Hairball Blaster / Red Dot / Yarn-Zooka / Purr-Tommy / Cucumber Launcher | $120 / $140 / $160 / $200 / $280 | half: $60 / $70 / $80 / $100 / $140 |
+| SCRAP | - | never (badge says SCRAP): feed THE MAINFRAME / pay for upgrades |
+
+- **Controller:** the d-pad / stick moves one highlight over BOTH halves (tabs, SELL ALL, rows, your
+  backpack); **A** = click, **X** = drop (backpack), **LB / RB** = tabs, **B / Y / Esc / Tab** = leave.
+  Your cat can't move while the shop is open; it also closes if you walk away or a menu opens.
 
 - **Change a price:** double-click the item card (e.g. `items/pistol.tres`) > **Shop > Price**.
   Price 0 = not for sale.
 - **Change what he sells / the order:** select **Hub > ComradeWhiskers** in `main.tscn` (or open
   `scenes/npcs/comrade_whiskers.tscn`) > Inspector > **Stock** (item ids, top to bottom).
-  **Shop Lines** is what he says on the shop page (`%d` = your cash).
+  **Shop Lines** is what he says at the top of the shop screen (`%d` = your cash). Which TAB an item
+  is on: select **Shop** in `scenes/ui/hud.tscn` > **Melee / Consumable / Firearm Items** (an item
+  must be in his Stock AND on a tab to show). Layout / fonts / the locked silhouette colours: same node.
 - **Move the shop:** drag ComradeWhiskers under **Hub**. The counter, shelves, banner and
   lights are built around him by `_build_shop()` in `scripts/hub.gd`, so they follow (he faces
   his root's blue Z arrow; the counter goes on that side).
-- **How buying works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC with a shop). Any NPC choice
-  whose **Action** is `shop` opens the shop page. Clicking BUY asks the host, which checks the
-  price on the item card and your cash, takes the money and puts the item in your paws (or the
-  backpack). Make another shopkeeper the same way: set an NPC's script to `shopkeeper.gd`.
+- **How it works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC whose E opens
+  `scripts/ui/shop_screen.gd`, `ShopScreen`, at **HUD > Frame > Shop**). BUY asks the host
+  (`ItemManager.request_buy`: price, crate unlock, room, cash); SELL asks `request_sell(player, where,
+  index)` / `request_sell_all_loot(player)` (in the sewers only). Messages ("Bought ...", "Sold ...")
+  show in the shop's bottom box. Make another shopkeeper: set an NPC's script to `shopkeeper.gd`.
+- **Test:** `--cash=500 --give=pistol,fish --talk=ComradeWhiskers --shop_tab=2 --shop_buy=neon_bat
+  --shop_sell=hand:0,pack:0 --shop_sell_all --shop_pad=down,left --shop_close=Tab` ("DevCapture shop" lines).
 
 ### The Mainframe & scrap
 **SCRAP** only comes from a destroyed **MEGA VAC-COP** (it glows cyan on the street, and you grab
@@ -1175,7 +1204,7 @@ new district. In the code that just means a new city seed: the whole city is gen
 5. Walk (or drive) onto the open manhole: you're back in the hub WITH your loot (it stays in your
    backpack: nothing is sold at the exit). The popup says what it's worth ("3 LOOT HOME ($150)");
    finished quests pay their bonus now. **Sell the loot at the Black Markitten** (Comrade Whiskers /
-   Clawd: SHOW ME THE GOODS > SELL ALL LOOT, or SELL 1 <item>), bury it in the litterbox, or keep it
+   Clawd: press E, then SELL ALL LOOT or click single items in your backpack), bury it in the litterbox, or keep it
    for a job. That was your trip for this district.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
    **Everyone home?** Once every cat is back in the hub (extracted or knocked out) and either the
@@ -1623,7 +1652,7 @@ system, so new items need no new networking or pickup code.
   Any item card with **Quick Use** ticked works this way (its script needs a `quick_use(cat)`
   function, like `scripts/items/catnip.gd`). Stack size: **Quick Stack Size** on the Items node.
 - **Loot comes home:** nothing is sold at the exit. Sell loot at the Black Markitten (SELL buttons on
-  the shop page; the GOURMET FENCE upgrade pays more), bury it in the litterbox, or keep it for a job.
+  the shop screen; the GOURMET FENCE upgrade pays more), bury it in the litterbox, or keep it for a job.
 - **E** grabs the nearest item when the HUD says "[E] PICKUP", loot and gear alike. A full backpack
   shows no prompt for loot. **G** drops what's in your paws (right paw first).
 
@@ -3620,7 +3649,7 @@ The TUTORIAL always starts with none, so it's the same for everyone.
 
 | Who (Catleone / Burrow sewer) | Button | Upgrades (tiers) |
 |---|---|---|
-| Comrade Whiskers / Clawd | UNLOCK NEW WEAPON CRATES (also on the shop page) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher. Without crates the shop sells only the Neon Bat, Paw-Pistol, Catnip and Catdip (locked guns show as LOCKED). |
+| The TINKER WORKBENCH (moved from Comrade Whiskers / Clawd in the shop overhaul) | [E] TINKER WORKBENCH | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher. Without crates the shop sells only the Neon Bat, Paw-Pistol, Catnip and Catdip (locked guns show as LOCKED). |
 | Don Catleone / Pawnie | UPGRADE MY RANK | **BIGGER BACKPACK** (3): 6 -> 8 -> 10 -> 12 slots (loot + gear). (The old DEEP POCKETS loot-bag upgrade was merged into it: an old save's DEEP POCKETS tiers become BIGGER BACKPACK tiers.) |
 | The TINKER WORKBENCH (east wall, between the litterbox and the CAT-CAM TV) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
 | Frankie "Espresso" / Jittery Jax | GARAGE & ZOOMIES UPGRADES | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), then SELECT VEHICLE buttons. |
