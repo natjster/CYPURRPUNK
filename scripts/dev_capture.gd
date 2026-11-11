@@ -1467,7 +1467,9 @@ func _inventory_report(seats: Array, frames: int) -> void:
 			continue
 		var cat := screen.owner_cat
 		var shown := func(list: Array) -> String:
-			return ",".join(list.map(func(b): return str(b.get_meta("item")) if b.get_meta("item") != "" else "-"))
+			return ",".join(list.map(func(b):
+				var count: int = (b.get_node("Face") as InventoryScreen.SlotFace).count
+				return (str(b.get_meta("item")) + ("x%d" % count if count > 1 else "")) if b.get_meta("item") != "" else "-"))
 		print("DevCapture inventory seat %d: open=%s view=%.2f at_stash=%s cam_len=%.2f paws=[%s] quick=[%s] pack=[%s] stash=[%s] info=\"%s\"" % [
 			seat, screen.visible, cat.inventory_view_amount(), screen._at_stash, cat.spring_arm.spring_length,
 			shown.call(screen._paw_buttons), shown.call(screen._quick_buttons), shown.call(screen._pack_buttons),

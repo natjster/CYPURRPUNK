@@ -1643,7 +1643,11 @@ system, so new items need no new networking or pickup code.
   so you can hold two at once (dual wield). A **2-paw** item (the tommy gun) takes both.
   **Left Mouse** uses the right-paw item (or the 2-paw item), **Right Mouse** the left-paw item.
 - **BACKPACK (one for everything):** 6 slots (8 / 10 / 12 with BIGGER BACKPACK) for loot (fish,
-  koi, scrap) AND gear you aren't holding. Every item takes one slot. Your cat WEARS it: a chunky
+  koi, scrap) AND gear you aren't holding. Every item takes one slot, EXCEPT consumables (catnip,
+  catdip: anything with **Quick Use** ticked), which stack in the backpack like in a QUICK USE slot
+  (same size: **Quick Stack Size** + STUFFED CHEEKS; the slot shows "x3"). When both quick slots are
+  full, extra catnip goes into the backpack (not your paws). Clicking a stack moves / sells / drops /
+  buries ONE of it. (Code: `ItemManager.pack_stacks` / `pack_has_room`.) Your cat WEARS it: a chunky
   purple backpack (`models/cat_backpack.glb`, recipe `tools/make_backpack_spec.py`) whose light
   strip goes cyan (empty) -> amber -> red (full), so you can see who's carrying a haul.
 - **QUICK USE slots:** two of them, used with **1** and **2** (controller: **d-pad left / right**).

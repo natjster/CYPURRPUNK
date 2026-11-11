@@ -492,7 +492,9 @@ kit's new poly face `"uvs"` = exact per-corner UVs). Groups: Body, `HeatCoil` (t
 
 ## Items framework
 ONE BACKPACK (Phase 2 UI overhaul): inventory = `{"hands", "pack", "stash", "quick"}` (NO "bag" any more). `pack` holds loot AND
-spare gear, 1 slot each, `pack_size_for(pid)` = 6 + 2 per `bigger_pack` tier (3 tiers; old `deep_pockets` merged in
+spare gear, 1 slot each EXCEPT consumables (`quick_use`) which stack per `pack_stack_size_for` (= quick stack size): the list
+stays flat (one entry per item); slots = `pack_stacks(pid)` [{id,count,index}]; room = `pack_has_room(_in)` / `pack_slots_used`, NEVER
+`pack.size()`; inventory buttons carry meta `pack_index` (top item's list index, translated in `_use_slot`). `pack_size_for(pid)` = 6 + 2 per `bigger_pack` tier (3 tiers; old `deep_pockets` merged in
 `Upgrades._merge_old_upgrades`). Full pack = `_can_take` false for loot. NOTHING is sold at the exit: fish_heist reports
 `loot_value`/`loot_in_pack` (`_extracted(pid, worth, quest, chaos, count)`, Events.player_extracted loot_value = worth) and pays only
 quest/chaos; the SHOP buys loot: `ItemManager.request_sell(pid, pack_index | -1)` (`sell_price` incl. gourmet, `pack_sell_value`,

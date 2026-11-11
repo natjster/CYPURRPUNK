@@ -45,7 +45,8 @@ const MAX_REACH_HEIGHT: float = 3.0
 
 @export_group("Rules")
 ## BACKPACK slots: ONE backpack holds everything you aren't holding in your paws (fish, the koi,
-## scrap, spare guns...). Every item takes one slot. Upgrades add more (pack_size_for).
+## scrap, spare guns...). Every item takes one slot, except CONSUMABLES (catnip, catdip), which
+## stack like in a QUICK USE slot (see pack_stacks_of). Upgrades add more (pack_size_for).
 @export var pack_size: int = 6
 ## How many of the same item stack in one QUICK USE slot (3 = up to 3 catnip on key 1).
 @export var quick_stack_size: int = 3
@@ -398,6 +399,8 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 		inventory.pack.append(item_id)                      # loot: into the backpack
 	elif data.quick_use and _add_to_quick(inventory, item_id, quick_stack_size_for(player_id)):
 		pass                                                # catnip etc.: into a QUICK USE slot
+	elif data.quick_use and pack_has_room_in(player_id, inventory.pack, item_id):
+		inventory.pack.append(item_id)                      # quick slots full: stack it in the backpack
 	else:
 		var hands: Array = inventory.hands
 		var pack: Array = inventory.pack
@@ -405,7 +408,7 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 			hands = [item_id, item_id]                      # free paws: hold it
 		elif data.hands == 1 and not _is_two_handed(hands) and "" in hands:
 			hands[hands.find("")] = item_id                 # a free paw: hold it
-		elif pack.size() < pack_size_for(player_id):
+		elif pack_has_room_in(player_id, pack, item_id):
 			pack.append(item_id)                            # paws busy: into the backpack
 		elif data.hands == 2:
 			for old in _held_ids(hands):                    # everything full: swap
@@ -670,11 +673,9 @@ func request_quick_to_pack(player_id: int, slot: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var inventory := get_inventory(player_id).duplicate(true)
-	if inventory.pack.size() >= pack_size_for(player_id):
-		return
 	var item_id := _pop_quick(inventory, slot)
-	if item_id == "":
-		return
+	if item_id == "" or not pack_has_room_in(player_id, inventory.pack, item_id):
+		return  # (nothing there, or no free slot / stack with room in the backpack)
 	inventory.pack.append(item_id)
 	_set_inventory.rpc(player_id, inventory)
 
@@ -709,7 +710,7 @@ func request_equip(player_id: int, pack_index: int) -> void:
 		put_away.append(hands[0])  # both paws full: the right-paw item goes in the backpack
 		hands[0] = item_id
 	for old in put_away:
-		if pack.size() < pack_size_for(player_id):
+		if pack_has_room_in(player_id, pack, old):
 			pack.insert(mini(pack_index, pack.size()), old)
 		else:
 			_spawn_dropped(old, cat.global_position)
@@ -726,7 +727,7 @@ func request_put_away(player_id: int, hand: int) -> void:
 	var inventory := get_inventory(player_id).duplicate(true)
 	var hands: Array = inventory.hands
 	var item_id: String = hands[clampi(hand, 0, 1)]
-	if item_id == "" or inventory.pack.size() >= pack_size_for(player_id):
+	if item_id == "" or not pack_has_room_in(player_id, inventory.pack, item_id):
 		return
 	if _is_two_handed(hands):
 		hands = ["", ""]
@@ -809,7 +810,7 @@ func bag_size_for(player_id: int) -> int:
 
 ## How many backpack slots are free right now.
 func pack_free(player_id: int) -> int:
-	return pack_size_for(player_id) - get_inventory(player_id).pack.size()
+	return pack_size_for(player_id) - pack_slots_used(player_id, get_inventory(player_id).pack)
 
 
 ## Backpack slots: 6, +2 per BIGGER BACKPACK tier (6 -> 8 -> 10 -> 12).
@@ -827,6 +828,74 @@ func stash_size_for(player_id: int) -> int:
 ## How many snacks stack in one QUICK USE slot: 3, +1 per STUFFED CHEEKS tier.
 func quick_stack_size_for(player_id: int) -> int:
 	return quick_stack_size + Upgrades.level(player_id, "stuffed_cheeks")
+
+
+## --- CONSUMABLES STACK IN THE BACKPACK TOO ---
+## Catnip, catdip (any item card with "Quick Use" ticked) stack in the backpack the same way they
+## do in a QUICK USE slot: up to quick_stack_size_for(player) of the same one share ONE backpack
+## slot. Everything else still takes a slot each.
+## The backpack is still stored as a plain list of item ids (one entry per item, so counting,
+## selling, robbing and saving all work as before); these helpers work out how those items fill
+## the slots. ALWAYS check room with pack_has_room / pack_slots_used, never pack.size().
+
+## Does this item stack in the backpack? (= a consumable: ItemData.quick_use)
+func is_stackable(item_id: String) -> bool:
+	return catalog.has(item_id) and (catalog[item_id] as ItemData).quick_use
+
+
+## How many of one consumable share a backpack slot (the same as a QUICK USE slot).
+func pack_stack_size_for(player_id: int) -> int:
+	return maxi(1, quick_stack_size_for(player_id))
+
+
+## The backpack as SLOTS, in order: [{"id", "count", "index"}], where "index" is the place in
+## the item list of the stack's top item (what the inventory screen sends when you click it).
+## A consumable joins the first stack of the same item that has room, else starts a new slot.
+func pack_stacks_of(pack: Array, stack_size: int) -> Array:
+	var stacks: Array = []
+	var open := {}  # item id -> the stacks entry of that item that still has room
+	for i in pack.size():
+		var item_id: String = pack[i]
+		if open.has(item_id):
+			var stack: Dictionary = stacks[open[item_id]]
+			stack.count += 1
+			stack.index = i
+			if stack.count >= stack_size:
+				open.erase(item_id)  # full: the next one starts a new slot
+			continue
+		stacks.append({"id": item_id, "count": 1, "index": i})
+		if is_stackable(item_id) and stack_size > 1:
+			open[item_id] = stacks.size() - 1
+	return stacks
+
+
+## A player's backpack as slots (see pack_stacks_of).
+func pack_stacks(player_id: int) -> Array:
+	return pack_stacks_of(get_inventory(player_id).pack, pack_stack_size_for(player_id))
+
+
+## How many backpack SLOTS this item list fills for this player (stacks count once).
+func pack_slots_used(player_id: int, pack: Array) -> int:
+	return pack_stacks_of(pack, pack_stack_size_for(player_id)).size()
+
+
+## Would one more of this item fit in this backpack item list? (A free slot, or for a consumable
+## a stack of the same one with room.)
+func pack_has_room_in(player_id: int, pack: Array, item_id: String) -> bool:
+	var size := pack_stack_size_for(player_id)
+	var stacks := pack_stacks_of(pack, size)
+	if stacks.size() < pack_size_for(player_id):
+		return true
+	if is_stackable(item_id):
+		for stack in stacks:
+			if stack.id == item_id and stack.count < size:
+				return true
+	return false
+
+
+## Would one more of this item fit in this player's backpack right now?
+func pack_has_room(player_id: int, item_id: String) -> bool:
+	return pack_has_room_in(player_id, get_inventory(player_id).pack, item_id)
 
 
 ## --- SCRAP as money for upgrades ---
@@ -980,7 +1049,7 @@ func request_from_stash(player_id: int, index: int) -> void:
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or index < 0 or index >= stash.size():
 		return
-	if inventory.pack.size() >= pack_size_for(player_id):
+	if not pack_has_room_in(player_id, inventory.pack, stash[index]):
 		return  # backpack full (the screen tells the player)
 	inventory.pack.append(stash.pop_at(index))
 	inventory.stash = stash
@@ -1089,10 +1158,11 @@ func _sync_cat_visuals(cat: CatPlayer) -> void:
 	if cat.get_meta("hands_key", "") != hands_key:
 		cat.set_meta("hands_key", hands_key)
 		_rebuild_paws(cat, inventory.hands)
-	var pack_key := "%d/%d" % [inventory.pack.size(), pack_size_for(cat.player_id)]
+	var used := pack_slots_used(cat.player_id, inventory.pack)  # (a stack of catnip = one slot)
+	var pack_key := "%d/%d" % [used, pack_size_for(cat.player_id)]
 	if cat.get_meta("pack_key", "") != pack_key or cat.cat_model.get_node_or_null("BackPack") == null:
 		cat.set_meta("pack_key", pack_key)
-		_update_backpack(cat, inventory.pack.size(), pack_size_for(cat.player_id))
+		_update_backpack(cat, used, pack_size_for(cat.player_id))
 	# Over-the-shoulder camera if anything held asks for it.
 	var shoulder := false
 	for item_id in _held_ids(inventory.hands):

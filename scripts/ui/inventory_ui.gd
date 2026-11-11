@@ -20,6 +20,8 @@ extends Control
 ##
 ##     Each slot shows the item's side-view picture (ui/icons/items/<id>.png), its name and a
 ##     PRICE BADGE: what the shop pays for loot ($50 fish), or what gear costs to buy.
+##     CONSUMABLES (catnip, catdip) STACK in one backpack slot, like a QUICK USE slot ("x3" in the
+##     corner; ItemManager.pack_stacks). A click uses / moves / sells / drops ONE off the stack.
 ##   - AT THE LITTERBOX (standing at it in the sewers, or pressing E there) a LITTERBOX box opens
 ##     on the left, under your cat, with its own callout line to the litterbox.
 ##
@@ -272,8 +274,14 @@ func _process(_delta: float) -> void:
 	var quick := items.quick_slots(cat.player_id)
 	for i in 2:
 		_fill(_quick_buttons[i], "", quick[i][0] if not quick[i].is_empty() else "", quick[i].size())
+	# The backpack as SLOTS: consumables (catnip, catdip) stack, so one slot can show "x3".
+	# Each button remembers where its top item sits in the real item list ("pack_index"): that's
+	# what a click sends to the host (see _use_slot).
+	var stacks := items.pack_stacks(cat.player_id)
 	for i in _pack_buttons.size():
-		_fill(_pack_buttons[i], "", inventory.pack[i] if i < inventory.pack.size() else "")
+		var stack: Dictionary = stacks[i] if i < stacks.size() else {"id": "", "count": 1, "index": -1}
+		_pack_buttons[i].set_meta("pack_index", stack.index)
+		_fill(_pack_buttons[i], "", stack.id, stack.count)
 	var stash := items.get_stash(cat.player_id)
 	for i in _stash_buttons.size():
 		_fill(_stash_buttons[i], "", stash[i] if i < stash.size() else "")
@@ -401,7 +409,7 @@ func _draw() -> void:
 	var cat := owner_cat
 	var items := ItemManager.instance
 	if cat != null and is_instance_valid(cat):
-		var used: int = items.get_inventory(cat.player_id).pack.size()
+		var used: int = items.pack_slots_used(cat.player_id, items.get_inventory(cat.player_id).pack)
 		var total := items.pack_size_for(cat.player_id)
 		_text(font, pack.position + Vector2(10, 22), "BACKPACK  %d/%d" % [used, total], title_font_size, style.text_color)
 		var worth := items.pack_sell_value(cat.player_id)
@@ -614,13 +622,16 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		return
 	if button.get_meta("item") == "":
 		return
+	if where == "pack":
+		index = button.get_meta("pack_index", index)  # slot number -> where its top item is in the list
 	var items := ItemManager.instance
 	var cat := owner_cat
 	if cat == null or not is_instance_valid(cat) or not cat.is_controlled:
 		_info.text = "Can't do that from inside the car."
 		return
 	var data: ItemData = items.catalog.get(button.get_meta("item"))
-	var pack_full := items.pack_free(cat.player_id) <= 0
+	# "Full" for THIS item: catnip still fits on top of a catnip stack with room.
+	var pack_full := not items.pack_has_room(cat.player_id, button.get_meta("item"))
 	if shop_mode and not drop:
 		# At THE BLACK MARKITTEN: a click SELLS it (the host checks and pays: request_sell).
 		if items.sell_price_for(cat.player_id, button.get_meta("item")) <= 0:
