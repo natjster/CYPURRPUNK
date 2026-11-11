@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/tuna_can.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "gourmet_tuna"
+display_name = "GOURMET TUNA"
+description = "A tin of the good stuff from Meow-Mart's aisles. Worth $60 at the drop-off."
+kind = 0
+cash_value = 60
+bag_space = 1
+scene = ExtResource("2_scene")
+world_scale = 1.6

@@ -399,6 +399,8 @@ func _can_chase(cat: CatPlayer, reach: float) -> bool:
 		return UndergroundHub.hub_at(cat.global_position) == breach_hub
 	if UndergroundHub.is_in_hub(cat.global_position):
 		return false
+	if MeowMartInterior.contains(cat.global_position):
+		return false  # inside Meow-Mart: no bots in there (they wait outside the door in an alarm)
 	reach *= ItemManager.instance.loot_noise(cat.player_id)
 	if heat_scaling:
 		reach *= HeatMeter.instance.sight_multiplier()

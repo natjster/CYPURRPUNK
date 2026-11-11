@@ -47,6 +47,7 @@
 [ext_resource type="Script" path="res://scripts/mess_manager.gd" id="37_mess"]
 [ext_resource type="Script" path="res://scripts/spectator.gd" id="38_spectator"]
 [ext_resource type="Script" path="res://scripts/district_twist.gd" id="38_twist"]
+[ext_resource type="PackedScene" path="res://scenes/interiors/meow_mart_interior.tscn" id="39_mart"]
 
 [sub_resource type="Environment" id="Env_night"]
 background_mode = 1
@@ -206,6 +207,9 @@ script = ExtResource("35_report")
 
 [node name="Mess" type="Node" parent="."]
 script = ExtResource("37_mess")
+
+[node name="MeowMart" parent="." instance=ExtResource("39_mart")]
+position = Vector3(0, -50, 0)
 
 [node name="Spectator" type="Node" parent="."]
 script = ExtResource("38_spectator")

@@ -127,15 +127,16 @@ func extra_roombas() -> int:
 
 
 ## Host: add (or, with a negative number, remove) heat. Added heat is slowed while the district
-## is OVERCLOCKED (scripts/mainframe.gd heat_multiplier).
-func add_heat(amount: float) -> void:
+## is OVERCLOCKED (scripts/mainframe.gd heat_multiplier). instant = it lands on the bar at once
+## instead of trickling in (Meow-Mart's STORE ALARM: a whole heat level in one go).
+func add_heat(amount: float, instant: bool = false) -> void:
 	if not multiplayer.is_server():
 		return
 	if Mainframe.instance != null and Mainframe.instance.breach_busy:
 		return  # a SEWER BREACH is underground: nothing down there touches the city's heat
 	if amount > 0.0:
 		amount *= _mainframe_multiplier()
-		if trouble_heat_per_second_max > 0.0:
+		if trouble_heat_per_second_max > 0.0 and not instant:
 			pending_heat += amount  # trickles in from _physics_process (smoothing)
 			return
 	heat = clampf(heat + amount, 0.0, MAX_HEAT)

@@ -43,6 +43,7 @@ Meow-City/
 │   ├── spectator.gd           <- THE CAT-CAM: watching your crew after a knockout, the radio HECKLE (§24)
 │   ├── mess_prop.gd           <- one knock-over-able bin / cone / box / poster (§23)
 │   ├── district_twist.gd      <- DISTRICT TWISTS: blackout, bin day, clearance, high alert (§26)
+│   ├── interiors/             <- places you can go INSIDE: meow_mart_interior.gd (the Meow-Mart heist, §27), hit_relay.gd
 │   ├── dev_capture.gd         <- autoload "DevCapture": test/screenshot tool (off in normal play)
 │   ├── cat_player.gd          <- cat movement, camera, zoomies, getting in/out of the car
 │   ├── getaway_car.gd         <- driving, drifting, who's driving
@@ -1191,9 +1192,13 @@ new district. In the code that just means a new city seed: the whole city is gen
 |---|---|---|---|---|
 | **Sardine** | $20 | 1 | 8 on random sidewalks | none: small fry |
 | **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
-| **Golden Koi** | **$400** | 2 | ONE, far from Meow-Mart, glowing gold | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it plays a sound for everyone |
+| **Gourmet Tuna** | $60 | 1 | 4 on the shelves **inside Meow-Mart** (§27) | none |
+| **Fresh Catch** | $75 | 1 | 3 on Meow-Mart's iced seafood counter (§27) | none |
+| **Catnip Treats** | $80 | 1 | 2 on Meow-Mart's shelves (§27) | none |
+| **Golden Koi** | **$400** | 2 | ONE, in the tank in **Meow-Mart's back room** (smash it: §27) | **HEAVY** (20% slower), **NOISY** (VAC-COPs spot you from 60% further), grabbing it plays a sound for everyone, and smashing its tank sets off the **STORE ALARM** |
 
-Fish and sardines grow back after 20 seconds, the koi after 2 minutes. If you drove onto the exit,
+Fish and sardines grow back after 20 seconds, the store's goods after 90-120 seconds. The koi tank
+is refilled with the next district. If you drove onto the exit,
 the getaway car goes back to its parking spot.
 
 **HUD (kept simple on purpose):** top-left = your **health bar**; top-middle = the **big green 3D
@@ -1737,18 +1742,22 @@ table (below).
 
 ### The loot table (`loot/city.tres`: what lies around every district)
 Every new district puts down the lines of its loot table, top to bottom. Double-click
-`loot/city.tres` in the FileSystem dock and expand **Spawns**. Today it has four lines:
+`loot/city.tres` in the FileSystem dock and expand **Spawns**. Today it has seven lines:
 
 | Item Id | Count | Where | Respawn Seconds | |
 |---|---|---|---|---|
 | fish | 5 | Outside Meow Mart | 20 | a row by the door |
 | fish | 5 | Sidewalk | 20 | random sidewalks |
 | sardine | 8 | Sidewalk | 20 | |
-| golden_koi | 1 | Sidewalk | 120 | Min Distance From Meow Mart 60 |
+| golden_koi | 1 | Sidewalk | 120 | Min Distance From Meow Mart 60. **Skipped while the Meow-Mart heist is on** (§27): the koi is in the tank instead |
+| fresh_catch | 3 | Meow Mart Counter | 90 | inside the store, on the iced counter |
+| gourmet_tuna | 4 | Meow Mart Shelf | 90 | inside the store, on the aisle ledges |
+| catnip_treats | 2 | Meow Mart Shelf | 120 | |
 
 Each line (a **LootSpawn**, `scripts/items/loot_spawn.gd`) says: **Item Id** (the card's id),
 **Count**, **Where** (Sidewalk = random spots all over town, Outside Meow Mart = a row by its
-door, Fixed Spot = always at **Spot**), **Min Distance From Meow Mart** (Sidewalk only: makes you
+door, Fixed Spot = always at **Spot**, Meow Mart Shelf / Meow Mart Counter = free spots inside the
+store, §27), **Min Distance From Meow Mart** (Sidewalk only: makes you
 travel for it), and **Respawn Seconds** (how long until a taken one grows back; 0 = never).
 **Add a line:** Spawns > **Add Element**, click the new empty slot > **New LootSpawn**, fill it in.
 **Remove one:** the trash-can icon next to it. More players make everything grow back faster
@@ -2232,6 +2241,14 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `extract` | you climb down the exit manhole | just you |
 | `phone_ring` (loops) | payphones while the exit is open and nobody has called Don yet | everyone nearby |
 | `koi_grab` | someone grabs a golden koi | everyone (2D) |
+| `door_slide` | Meow-Mart's sliding doors open (§27) | everyone nearby |
+| `can_clatter` / `shelf_collapse` | a can stack knocked off a shelf / a whole aisle toppling (§27) | everyone nearby |
+| `scanner_beep` | [E] SCAN at a Meow-Mart checkout | everyone nearby |
+| `plate_click` / `security_door` | the security scale pressed / let go; the EMPLOYEES ONLY door rolling | everyone nearby |
+| `tank_shatter` | the golden koi tank breaks | everyone nearby |
+| `store_alarm` (loops) | the STORE ALARM klaxon, inside and over the street door | everyone nearby |
+| `overclean_mart_alarm` | "Aquatic display breach detected..." | players up top |
+| ambience `meow_mart_hum` | fluorescent + fridge hum while player 1 is inside the store | just you |
 | `heat_up` | the HEAT goes up a level | everyone (2D) |
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
 | `overclean_*` | OVERCLEAN's announcements (chime + robot voice, §21) | players up top (the seal: everyone) |
@@ -3497,3 +3514,95 @@ bots, heat multiplier, CRT intel, the boss's lines).
 - High alert scrap: `--solo --twist=high_alert --deploy --kill_roombas=20 --capture=shots/x.png --frames=900`
 - What 1000 districts would roll: add `--twist_rolls` (about 60% twisted, no back-to-back repeats).
 - The real roll on a district change: `--solo --raid_report --report_ready=0 --frames=3000` (look for `[Twist] District 2:`).
+
+
+## 27. INSIDE MEOW-MART: the first real heist (ROADMAP §4 #8)
+
+Meow-Mart's front is now a **glass storefront with sliding doors**. Walk up and they slide open
+(pneumatic `door_slide`); walk through and you're **inside a neon-lit supermarket**. Walk back out
+through the same doors (they're right behind you when you come in) and you're on the sidewalk in
+front of the shop again.
+
+### What's in there
+```
+ north +-------------------------------------------------------------+
+       |  BACK ROOM:  [security monitor]   [GOLDEN KOI TANK]  [crates] |
+       |---------------------------------------[EMPLOYEES ONLY door]---|
+       | [SECURITY SCALE]   [AISLE 1]     [AISLE 2]       [FRESH CATCH] |
+       |                                                    counter    |
+       |  [HEAVY basket]  [CHECKOUT lanes]                              |
+ south +--------------------[ sliding doors -> street ]---------------+
+```
+- **Loot:** Fresh Catch ($75) on the iced seafood counter, Gourmet Tuna ($60) and Catnip Treats
+  ($80) on the shelves. `[E] PICKUP` as usual (loot always wins the E key).
+- **AISLES:** stepped shelves you can hop up like stairs. **Can stacks** sit on the ledges: run
+  into one (or `[E] SWAT`) and it clatters to the floor = **1 mess** (a little heat, counts on the
+  RAID REPORT's MESS column and BIN DAY's chaos bonus). The high ones need a hop. **Run at an aisle's
+  END with zoomies** (or press `[E] TOPPLE` while running) and the whole row falls like dominoes:
+  **10 messes**, cans everywhere.
+- **The SECURITY SCALE** (glowing red pad by the west wall): put weight on it and the **EMPLOYEES
+  ONLY** roller door across the store opens (the pad turns green). Step off and it shuts
+  **1.5 seconds** later — too fast to run over there yourself.
+  - **Co-op:** one cat stands on the scale while the other runs into the back room.
+  - **Solo:** shove the **HEAVY basket** onto it (walk into it to push it, or `[E] DRAG BASKET`
+    to pull it behind you, `[E] LET GO OF BASKET` to drop it).
+  - Inside the back room a green **PUSH TO EXIT** bar (`[E] OPEN DOOR`) opens the door for 4
+    seconds, so nobody gets locked in.
+- **THE GOLDEN KOI TANK** (back room): hit it 3 times (bolts, bat swings, blasts, or `[E] SCRATCH THE
+  GLASS`) or **pounce into it with zoomies** and it **shatters**: glass and water everywhere, and
+  the **Golden Koi** ($400) flops onto the floor for you to grab.
+- **THE STORE ALARM** (the moment the glass breaks): red strobes and a klaxon inside (and a red light
+  + klaxon over the street doors), OVERCLEAN on the speakers, **+25 heat at once** (a whole heat
+  level), and **4 extra VAC-COPs** roll in while every bot within 90 m is called to Meow-Mart's front
+  door for 45 seconds. **No bots come inside** — the gauntlet is the street: get the heavy, jingling
+  koi to your car or the exit through the crowd.
+- Inside the store the rain stops, the light turns fluorescent (and the moon goes off unless someone
+  on your couch is still outdoors). Split screen works: one player shopping, the other driving.
+
+### Tuning (no code)
+Open `scenes/main.tscn`, click **Main > MeowMart**, and look in the Inspector:
+- **Enabled** — off = the doors stay shut and the golden koi goes back to a random sidewalk.
+- **Doors:** *Door Open Distance* (3.2 m), *Door Slide Speed*, *Door Cooldown*.
+- **Look:** *Fog Color / Fog Albedo / Ambient Color / Ambient Energy* (the store's haze), *Ambience*
+  (the hum), *Light Color / Light Energy / Light Range* (the tubes), *Flicker Chance*.
+- **Mess:** *Swat Bump Speed*, *Swat Reach*, *Swat Heat*, *Topple Ram Speed* (6 = zoomies only),
+  *Topple E Speed*, *Topple Mess* (10), *Topple Heat*, *Domino Delay*, *Topple Cans*.
+- **Back Room Puzzle:** *Plate Close Delay* (1.5 s), *Exit Button Seconds*, *Crate Push Speed*,
+  *Crate Drag Distance*.
+- **Golden Koi Tank:** *Tank Item* (`golden_koi`), *Tank Hits To Break* (3), *Pounce Speed*, *Tank Mess*.
+- **Store Alarm:** *Alarm Heat* (25), *Alarm Seconds* (60), *Ambush Bots* (4), *Ambush Call Range*
+  (90 m), *Ambush Call Every* (6 s), *Ambush Seconds* (45), *Alarm Sound* and *Alarm Line*.
+- **The storefront** (the glass front in the city) is on **Main > City**, group **Meow-Mart
+  storefront**: *Storefront Doors* (off = the old solid box), *Recess*, *Width*, *Height*, *Glow Color*.
+- **The new loot** cards: `items/fresh_catch.tres`, `items/gourmet_tuna.tres`, `items/catnip_treats.tres`
+  (models `scenes/items/tuna_can.tscn`, `catnip_treats.tscn`; the Fresh Catch reuses the fish model).
+
+### How it works (for Claude / the curious)
+- The store is NOT behind the doors: it's built once from code, 50 m under the middle of the city
+  (`Main/MeowMart`, `scenes/interiors/meow_mart_interior.tscn` -> `scripts/interiors/meow_mart_interior.gd`,
+  class `MeowMartInterior`, at y = -50). Crossing the city's glass line or the store's front doorway
+  moves the cat with `CatPlayer.teleport_to` (each computer moves its own cats). Above y = -100 still
+  counts as "up top" (`UndergroundHub.is_in_hub` is false): heat ticks, guns fire, the DEEP CLEAN still
+  gets you. `MeowMartInterior.contains(pos)` = "inside the store"; `hub.mood_at` returns `MART_MOOD` there.
+- The city side: `CityGenerator._build_meow_mart_storefront` (no random numbers, so cities are unchanged)
+  fills `city.meow_mart_doors` (the two leaves), `meow_mart_door_spot` and `meow_mart_door_width`; the
+  interior script slides the leaves.
+- Host-decided, everyone shown: `request_swat / request_topple / request_tank_hit / request_drag /
+  request_push / request_exit_button` (first argument = player id, `PlayerId.sender_owns`) ->
+  `_swat / _topple / _set_tank_hits / _shatter / _set_alarm / _set_doors / _set_crate` RPCs.
+  Late joiners: `send_state_to` -> `_receive_state`. New district: `start_district` -> `_reset`.
+- Messes go through `MessManager.count_mess(player_id, amount, heat)` (Events.mess_made). The alarm:
+  `HeatMeter.add_heat(alarm_heat, true)` (instant, not trickled), `RoombaPatrol.ambush(spot, bots, reach)`,
+  `Events.store_alarm_tripped`. Bots never chase a cat inside (`Roomba._can_chase`).
+- Every wall/shelf in the store hands bullet hits to the interior node (`receive_hit`); the tank has
+  its own `HitRelay` (`scripts/interiors/hit_relay.gd`) because bat swings and blasts aim at the
+  target's own position.
+
+### Testing
+- `--host --deploy --test_meow_mart --hold=move_forward` walks you in (`[MeowMart] 1 went inside`).
+- `--inside_meow_mart[=foyer|plate|aisle|tank|backroom|counter|door]` puts you inside.
+- `--shatter_tank[=F]` (host) breaks the tank: prints `DevCapture mart shatter: ... heat 0.7 -> 26.3 ...`.
+- `--mart_swat=N`, `--mart_topple=1|2`, `--mart_plate`, `--mart_drag`, `--mart_tank_hits=N`, `--mart_log[=N]`
+  ("DevCapture mart" lines). Late joiner: host `--deploy --inside_meow_mart --mart_topple=1 --mart_drag
+  --shatter_tank=5 --frames=1500`, client `--join --mart_log=60` 14 s later.
+- Split screen: `--solo --join_pad=1 --deploy --hold_all --inside_meow_mart`.

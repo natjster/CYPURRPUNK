@@ -22,8 +22,9 @@ extends Node3D
 ##   - ONE TRIP PER DISTRICT: once a cat has been up top (went_up), Don won't send it up again
 ##     until the next district, whether it extracted or got knocked out.
 ##   - Loot lies around the city, worth different amounts (each item card's cash_value):
-##       SARDINE $20 (everywhere), FISH $50 (outside Meow-Mart and on some sidewalks), and the
-##       GOLDEN KOI $400: only one in the city, far from Meow-Mart, glowing gold. It's HEAVY
+##       SARDINE $20 (everywhere), FISH $50 (outside Meow-Mart and on some sidewalks), the
+##       store's goods INSIDE Meow-Mart, and the GOLDEN KOI $400: only one, in the tank in
+##       Meow-Mart's back room (scripts/interiors/meow_mart_interior.gd), glowing gold. It's HEAVY
 ##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
 ##       SCRAP isn't on the street: only a destroyed MEGA VAC-COP drops it. It's worth $0 here

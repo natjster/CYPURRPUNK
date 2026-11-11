@@ -249,6 +249,30 @@ func hear_noise(spot: Vector3, reach: float) -> int:
 	return coming
 
 
+## Host: MEOW-MART's STORE ALARM (scripts/interiors/meow_mart_interior.gd): "count" extra VAC-COPs
+## roll in on the sidewalks near "spot" (the store's front door), and every bot in range is called
+## to it from up to "reach" metres away (they INVESTIGATE: drive there and look around, so you come
+## out into a crowd).
+func ambush(spot: Vector3, count: int, reach: float) -> void:
+	if not multiplayer.is_server() or not _patrolling or Mainframe.instance.breach_busy:
+		return
+	for i in count:
+		var roomba := _pick_scene().instantiate() as Roomba
+		roomba.name = "Roomba%d" % _next_number
+		_next_number += 1
+		var where := _spawn_spot()
+		for attempt in 40:  # a sidewalk spot 10-30 m from the door (not right on top of it)
+			var maybe := ItemManager.instance.random_sidewalk_spot(_rng) + Vector3(0, 0.1, 0)
+			var distance := Motion.flat_distance(maybe, spot)
+			if distance > 10.0 and distance < 30.0:
+				where = maybe
+				break
+		roomba.position = where
+		roomba.destroyed.connect(roomba_destroyed)
+		add_child(roomba, true)
+	print("[Roombas] STORE ALARM: %d extra VAC-COPs, %d called to the door" % [count, hear_noise(spot, reach)])
+
+
 func _physics_process(delta: float) -> void:
 	if not multiplayer.is_server() or not _patrolling:
 		return

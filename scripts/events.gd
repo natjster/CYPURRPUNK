@@ -81,6 +81,10 @@ signal loot_vacuumed(player_id: int, item_id: String)
 ## AGENT OF CHAOS award).
 signal mess_made(player_id: int, amount: int)
 
+## EVERY computer: a player smashed MEOW-MART's golden koi tank and set off the STORE ALARM
+## (scripts/interiors/meow_mart_interior.gd).
+signal store_alarm_tripped(player_id: int)
+
 ## EVERY computer: the RAID REPORT for the district that just ended has gone up on every screen
 ## (scripts/raid_report.gd). report = the whole finished report (rows, awards, crew line).
 signal raid_report_shown(report: Dictionary)

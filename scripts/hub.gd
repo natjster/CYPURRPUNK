@@ -57,6 +57,9 @@ static var by_team := {}
 const DEPTH_LINE: float = -100.0
 ## mood_at's answer up in the city (down in a sewer it's that sewer's gang number).
 const CITY_MOOD: int = -1
+## mood_at's answer inside MEOW-MART (scripts/interiors/meow_mart_interior.gd): no rain, the store's
+## fluorescent haze (its Look exports), its hum instead of the rain.
+const MART_MOOD: int = -2
 
 @export_group("Gang")
 ## Which gang lives here (scripts/teams.gd: 0 = Catleone Family, 1 = Burrow Gang).
@@ -434,14 +437,19 @@ func _process(_delta: float) -> void:
 	# Split screen: is ANY of this computer's players up top? Then the moon shines (it lights
 	# the whole world, so it can't be on for one screen only) and the city music plays.
 	var anyone_up := not in_hub
+	var anyone_outdoors := mood == CITY_MOOD  # (not underground and not inside Meow-Mart: under the moon)
 	if GameScreen.instance != null:
 		for view_camera in GameScreen.instance.view_cameras():
 			anyone_up = anyone_up or not is_in_hub(view_camera.global_position)
-	_moonlight.visible = anyone_up
+			anyone_outdoors = anyone_outdoors or mood_at(view_camera.global_position) == CITY_MOOD
+	_moonlight.visible = anyone_outdoors
 	# Music + background sound (sounds/music/hub.wav or city.wav, sounds/ambience/sewer.wav or
 	# rain.wav). Same track as before = nothing happens.
 	Sound.play_music(city_music if anyone_up else hub_music)
-	Sound.play_ambience(city_ambience if anyone_up else hub_ambience)
+	var ambience_now := city_ambience if anyone_up else hub_ambience
+	if mood == MART_MOOD:
+		ambience_now = MeowMartInterior.instance.ambience  # (player 1 is shopping: the fridges' hum)
+	Sound.play_ambience(ambience_now)
 
 
 ## THE MAINFRAME's CRT: sign text, screen tint and light colour follow THIS gang's charge
@@ -471,6 +479,8 @@ func _update_mainframe_crt() -> void:
 
 ## Which mood a camera here gets: CITY_MOOD, or the gang number of the sewer it's in.
 static func mood_at(where: Vector3) -> int:
+	if MeowMartInterior.contains(where):
+		return MART_MOOD
 	if not is_in_hub(where):
 		return CITY_MOOD
 	var hub := hub_at(where)
@@ -506,6 +516,13 @@ func _set_mood(environment: Environment, mood: int) -> void:
 		environment.ambient_light_energy = _city_mood.ambient_light_energy
 		if DistrictTwist.is_blackout():  # the power's out up there: a darker night
 			environment.ambient_light_energy *= DistrictTwist.instance.blackout_ambient_multiplier
+		return
+	if mood == MART_MOOD:
+		var mart := MeowMartInterior.instance
+		environment.fog_light_color = mart.fog_color
+		environment.volumetric_fog_albedo = mart.fog_albedo
+		environment.ambient_light_color = mart.ambient_color
+		environment.ambient_light_energy = mart.ambient_energy
 		return
 	var hub := for_team(mood)
 	environment.fog_light_color = hub.sewer_fog_color

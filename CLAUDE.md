@@ -403,6 +403,21 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   (layout unchanged); chaos bonus = `MessManager.player_messes_this_trip` in fish_heist (`_extracted` 4th arg). Boss news `news_line()`,
   send-off `send_off_line()` (npc.gd), hub CRT `_crt_intel`, report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
 
+- MEOW-MART INTERIOR (SETUP_GUIDE §27): `scripts/interiors/meow_mart_interior.gd` (`MeowMartInterior.instance`, node `Main/MeowMart` at
+  y=-50 (above `DEPTH_LINE`: counts as up top), GameSystems + Interactable (one `_best_action` dispatcher, prio 5)). Code-built, no randomness:
+  aisles (stepped `TIERS`, 4 segments each, `_stacks` can stacks), checkouts, FRESH CATCH counter, security SCALE (`PLATE_SPOT`), HEAVY basket
+  (`crate_pos`, host `_move_crate` cast_motion, drag = leash), EMPLOYEES ONLY roller door (`security_open`), back room KOI TANK (`HitRelay`
+  `scripts/interiors/hit_relay.gd`; other walls hand hits to the interior's `receive_hit`). Walk-through = each computer teleports its own cats
+  (`_check_doorways`: city glass line `city.meow_mart_door_spot` / interior `LEAVE_Z`). City storefront = `CityGenerator._build_meow_mart_storefront`
+  (no `_rng` draws; `meow_mart_doors` leaves with metas home_x/open_x, `storefront_doors` export). `contains(pos)`; hub `mood_at` -> `MART_MOOD` (-2:
+  no rain, store fog/ambient/ambience, moon only if someone's outdoors); `Roomba._can_chase` ignores cats inside; `cat_player` calls
+  `MeowMartInterior.cat_bump` after MessManager's. Host requests `request_swat/topple/tank_hit/drag/push/exit_button` -> RPCs; messes via
+  `MessManager.count_mess`; shatter -> `ItemManager.drop_on_street(tank_item)`, `trip_alarm` = `HeatMeter.add_heat(alarm_heat, true)` (instant),
+  `RoombaPatrol.ambush(spot, bots, reach)` + `hear_noise` every `ambush_call_every`, `Events.store_alarm_tripped`. Late join `_receive_state`,
+  new district `_reset`. Loot: LootSpawn `MEOW_MART_SHELF`/`MEOW_MART_COUNTER` (ItemManager `_free_mart_spots`), sidewalk koi line skipped via
+  `MeowMartInterior.koi_in_tank`. Lambdas capture locals by value: `_best_action`'s `offer` fills the dict in place. Test: `--test_meow_mart[=D]`,
+  `--inside_meow_mart[=W]`, `--shatter_tank[=F]`, `--mart_swat/topple/plate/drag/tank_hits/log`.
+
 CHARACTER + BOT MODELS (Phase 1, 10 Nov 2026): CATS = the ORIGINAL code-built cat (`scenes/cat_model.tscn` primitive meshes;
 each NPC scene builds its own Model with hat/cigar etc.), accessories ON (`CatLook.SLOTS` hat/face/neck). The Blockbench mascot cat
 (`models/blockbench/cat.bbmodel`) was REVERTED (user's call: liked the original cats); don't swap it back unasked.

@@ -115,7 +115,7 @@ a world that hates mess.
 | 5 | **Mess-making** (knock-over props, scratching, bots stop to clean) | Medium | The soul of direction A. |
 | 6 | **Hideout upgrades** bought with scrap and cash (bigger bag, better stash, shop stock, sewer decor) | Medium | Long-term goals. Makes scrap exciting. |
 | 7 | **District twists** picked by the seed (blackout, flood, bin day, sale at Meow-Mart, double bosses) | Medium | Every raid feels different without new maps. |
-| 8 | **Places worth robbing** (go inside Meow-Mart, a fish market, a vacuum factory) | Large | Gives the city landmarks and the koi a proper heist. |
+| 8 | **Places worth robbing** (go inside Meow-Mart, a fish market, a vacuum factory) | Large | Gives the city landmarks and the koi a proper heist. **Meow-Mart: done** (SETUP_GUIDE §27). |
 | 9 | **Steam invites** in place of router codes | Medium | Removes the biggest reason a friend can't join. |
 | 10 | **In-game voice chat** that fades with distance | Large | The reason games like this spread. Do it after Steam. |
 

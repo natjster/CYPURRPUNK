@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_bag"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.25, 0.85, 0.35, 1)
+shader_parameter/emission_color = Color(0.2, 0.8, 0.3, 1)
+shader_parameter/emission_energy = 0.9
+shader_parameter/specular = 0.5
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_top"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(1, 0.2, 0.7, 1)
+shader_parameter/emission_color = Color(1, 0.15, 0.65, 1)
+shader_parameter/emission_energy = 1.4
+
+[sub_resource type="ShaderMaterial" id="Mat_leaf"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.85, 1, 0.5, 1)
+shader_parameter/emission_color = Color(0.8, 1, 0.4, 1)
+shader_parameter/emission_energy = 1.6
+
+[sub_resource type="BoxMesh" id="Mesh_bag"]
+size = Vector3(0.18, 0.24, 0.08)
+
+[sub_resource type="BoxMesh" id="Mesh_top"]
+size = Vector3(0.19, 0.04, 0.085)
+
+[sub_resource type="BoxMesh" id="Mesh_leaf"]
+size = Vector3(0.07, 0.07, 0.01)
+
+[node name="CatnipTreats" type="Node3D"]
+
+[node name="Bag" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_bag")
+surface_material_override/0 = SubResource("Mat_bag")
+
+[node name="Top" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.13, 0)
+mesh = SubResource("Mesh_top")
+surface_material_override/0 = SubResource("Mat_top")
+
+[node name="Leaf" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.01, -0.045)
+rotation = Vector3(0, 0, 0.785)
+mesh = SubResource("Mesh_leaf")
+surface_material_override/0 = SubResource("Mat_leaf")
