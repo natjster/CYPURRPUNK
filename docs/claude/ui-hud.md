@@ -48,3 +48,7 @@
   no "!" any more. MELEE JUICE lives in `melee_weapon.gd` ("Swing Juice" group): Y-sweep slash, hit-stop (tween_interval), lunge
   (owner, velocity), world-space ImmediateMesh trail from the bat ends (`_find_bat_ends`), `show_swing(connected, hit_spots)` ->
   `_impact` sparks + light on every computer. Test: `--give=neon_bat --swing_test[=S] --frames=2`.
+  COMBO ("Combo" group): owner `combo_step` 0 forehand / 1 backhand / 2 SLAM (air swing = slam + dive), `show_swing(connected,
+  spots, step, slam_spot)`; slam = box x`finisher_reach` + sphere at `_ground_below`, `Hit.push_scale` (cat/car shove x), stun,
+  `_shockwave` (open CylinderMesh wall, a flat torus was invisible at 240p). Test: `--deploy --give=neon_bat --bait_roomba=2
+  --combo_test [--air_slam] --frames=2` (DevCapture waits all --frames AFTER the test).

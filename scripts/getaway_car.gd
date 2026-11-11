@@ -629,7 +629,7 @@ func player_left(player_id: int, _last_position: Vector3) -> void:
 func receive_hit(hit: Hit) -> bool:
 	# Car Launch is a speed, so it's multiplied by the car's weight to throw it that fast.
 	var launch := (hit.direction + Vector3.UP) * hit.weapon.car_launch * mass
-	take_hit.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.car_impulse + launch, hit.position)
+	take_hit.rpc_id(get_multiplayer_authority(), (hit.direction * hit.weapon.car_impulse + launch) * hit.push_scale, hit.position)
 	if hit.shooter == null or health == null or health.wrecked or hit.shooter.team == gang() or hit.damage <= 0:
 		return false  # (your own gang's bolts only push it)
 	health.request_shot.rpc_id(1, hit.shooter.player_id, hit.damage)

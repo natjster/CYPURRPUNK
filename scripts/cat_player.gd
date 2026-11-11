@@ -931,7 +931,7 @@ func receive_hit(hit: Hit) -> bool:
 	if hit.shooter != null and hit.shooter.team == team:
 		return false
 	# The other gang (or a test with no shooter): a shove...
-	get_zapped.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.cat_knockback + Vector3.UP * hit.weapon.cat_hop)
+	get_zapped.rpc_id(get_multiplayer_authority(), (hit.direction * hit.weapon.cat_knockback + Vector3.UP * hit.weapon.cat_hop) * hit.push_scale)
 	if hit.shooter == null or CatHealth.instance == null or UndergroundHub.is_in_hub(global_position):
 		return false
 	# ...and real damage: the host checks the shot and takes the HP off (cat_health.gd).

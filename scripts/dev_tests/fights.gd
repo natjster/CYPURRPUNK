@@ -247,3 +247,38 @@ func _swing_test(player: CatPlayer, args: Dictionary) -> void:
 	var wait := str(args["swing_test"])
 	await _seconds(float(wait) if wait.is_valid_float() else 0.09)
 	print("DevCapture swing: trail_points=%d base=%s tip=%s" % [bat._trail_points.size(), bat._trail_base, bat._trail_tip])
+
+
+## --combo_test[=GAP]: (needs --give=neon_bat; add --bait_roomba=2 for something to hit) swing the bat for
+## real 3 times, GAP seconds apart (default 0.5): forehand, backhand, SLAM. Prints a "DevCapture combo"
+## line per swing (step, the nearest VAC-COP's health and stun) and waits a moment so the snap shows the
+## slam's shockwave. --air_slam: jump first, so the first swing is an AIR SLAM.
+func _combo_test(player: CatPlayer, args: Dictionary) -> void:
+	await _seconds(0.8)
+	var bats := player.find_children("*", "MeleeWeapon", true, false)
+	if bats.is_empty():
+		print("DevCapture combo: no melee weapon (add --give=neon_bat)")
+		return
+	var bat := bats[0] as MeleeWeapon
+	var gap_arg := str(args["combo_test"])
+	var gap := float(gap_arg) if gap_arg.is_valid_float() else 0.5
+	var target := _nearest_roomba(Game.instance, player.global_position)
+	if args.has("air_slam"):
+		player.velocity.y = 9.0
+		await _seconds(0.25)
+	for i in 3:
+		var step := 2 if (args.has("air_slam") and not player.is_on_floor()) else bat.combo_step
+		var hp_before: int = target.health if target != null and is_instance_valid(target) else -1
+		bat._fire()
+		await _seconds(0.05)
+		var hp: int = target.health if target != null and is_instance_valid(target) else -1
+		print("DevCapture combo: swing=%d step=%d next=%d vy=%.1f target_hp=%d->%d slam_spot=%s" % [
+			i + 1, step, bat.combo_step, player.velocity.y, hp_before, hp, bat.last_slam_spot])
+		if i < 2:
+			await _seconds(gap)
+	var rings := Game.instance.find_children("SlamShockwave", "MeshInstance3D", false, false)
+	for ring in rings:
+		var r := ring as MeshInstance3D
+		print("DevCapture combo: shockwave at %s scale=%s alpha=%.2f visible=%s" % [r.global_position, r.scale,
+			((r.mesh as PrimitiveMesh).material as StandardMaterial3D).albedo_color.a, r.is_visible_in_tree()])
+	await _seconds(0.06)

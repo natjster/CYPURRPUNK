@@ -50,7 +50,7 @@ owner `_quick_used` calls the scene script's `HeldItem.quick_use(cat)` on a spar
 
 MELEE: `scripts/items/melee_weapon.gd` (`MeleeWeapon extends Weapon`, overrides `_fire` with a forward BoxShape
 query (`swing_radius`/`swing_height`, `max_range` deep, reaches below the feet for flat Roombas), skips own-gang cats,
-rpc `show_swing` tweens `Model`). Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
+rpc `show_swing` tweens `Model`; 3-hit COMBO + slam shockwave: see ui-hud.md MELEE JUICE). `Hit.push_scale` multiplies cat/car shove. Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
 (100) for new saves / once for older ones (`progress/starter` key; `save_now` forces the first save).
 Weapon extras (exports, all `_make_hit` -> `Hit`): `pellets_per_shot`, `blast_radius` (`_blast`: sphere query, outward direction; replaces the
 direct hit), `stun_seconds` -> `Enemy.take_hit(id, amount, stun, push, city_heat)` -> `_on_stunned`/`_on_pushed`, `enemy_knockback` (`knockback_taken`), `car_launch`

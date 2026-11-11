@@ -51,7 +51,37 @@ extends Weapon
 @export var spark_count: int = 16
 @export var impact_light: float = 3.0
 
+@export_group("Combo")
+## THE COMBO: keep swinging and the bat goes FOREHAND -> BACKHAND -> overhead SLAM (the finisher).
+## Wait longer than this between swings (seconds) and the combo starts over at the forehand.
+@export var combo_window: float = 0.9
+## The SLAM (3rd hit): damage x this, shove x this (VAC-COPs, rival cats and cars all fly further).
+@export var finisher_damage: float = 1.75
+@export var finisher_push: float = 2.2
+## The slam reaches this much further / wider than a normal swing (1 = the same).
+@export var finisher_reach: float = 1.3
+## VAC-COPs hit by the slam are dazed this long (seconds; they stop driving). 0 = no daze.
+@export var finisher_stun: float = 0.8
+## Camera jolt and bat freeze when the slam connects (a normal swing uses Hit Shake / Hit Stop).
+@export_range(0.0, 1.0) var finisher_shake: float = 0.65
+@export var finisher_hit_stop: float = 0.15
+## SHOCKWAVE: the slam hits the ground and everything within this radius of the impact gets hit too
+## (metres, 0 = no shockwave). Shows as a neon ring racing out across the street.
+@export var shockwave_radius: float = 2.6
+## The boom the slam makes (res://sounds/sfx/, no .wav; "" = none) and how loud (dB).
+@export var finisher_sound: String = "explode"
+@export var finisher_volume: float = -9.0
+## AIR SLAM: swing while in the air and you DIVE down (metres per second) into a slam finisher.
+## 0 = an air swing is just a normal swing.
+@export var air_slam_speed: float = 16.0
+
 var _model: Node3D
+## The combo: which swing is next (0 forehand, 1 backhand, 2 slam) and until when it carries on.
+var combo_step: int = 0
+var _combo_until: float = 0.0
+## Where the last swing's slam hit the ground (for the test line), and the trail's extra reach now.
+var last_slam_spot := Vector3.ZERO
+var _trail_boost: float = 1.0
 var _model_home: Vector3  # the model's resting rotation (the swing starts and ends there)
 var _swing_tween: Tween
 ## Trail: the bat's handle and tip, in the Model's own space (worked out from the mesh in _ready).
@@ -75,8 +105,20 @@ func _ready() -> void:
 
 ## Owner only: swing! Find everything in the arc in front of where the camera looks.
 func _fire() -> void:
-	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.35  # the cat turns to face the swing
-	Seats.rumble(holder.player_id, 0.5, 0.2, 0.08)
+	var now := Time.get_ticks_msec() / 1000.0
+	holder.aim_until = now + 0.35  # the cat turns to face the swing
+
+	# THE COMBO: which swing is this? (Too long since the last one = back to the forehand.)
+	if now > _combo_until:
+		combo_step = 0
+	var step := combo_step
+	var air_slam := air_slam_speed > 0.0 and not holder.is_on_floor()
+	if air_slam:
+		step = 2  # swinging in mid-air = always the SLAM (and you dive into it)
+	var slam := step == 2
+	combo_step = 0 if slam else step + 1
+	_combo_until = now + combo_window
+	Seats.rumble(holder.player_id, 0.9 if slam else 0.5, 0.35 if slam else 0.2, 0.08)
 
 	# Flat "forward" from the camera (melee doesn't care about looking up or down much).
 	var look := -holder.camera.global_basis.z
@@ -85,15 +127,26 @@ func _fire() -> void:
 		forward = -holder.cat_model.global_basis.z
 	# The swing area: a box in front of us, swing_radius to each side, max_range deep, and tall
 	# enough to reach from below our feet to above our head (VAC-COPs are flat on the ground, and
-	# a swing while bouncing / jumping should still reach them).
-	var centre := holder.global_position + forward * (max_range * 0.5 + 0.1) + Vector3.UP * swing_height_offset
+	# a swing while bouncing / jumping should still reach them). The slam reaches further.
+	var reach := finisher_reach if slam else 1.0
+	var depth := max_range * reach
+	var centre := holder.global_position + forward * (depth * 0.5 + 0.1) + Vector3.UP * swing_height_offset
 	var box := BoxShape3D.new()
-	box.size = Vector3(swing_radius * 2.0, swing_height, max_range)
+	box.size = Vector3(swing_radius * 2.0 * reach, swing_height, depth)
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = box
 	query.transform = Transform3D(Basis.looking_at(forward, Vector3.UP), centre)
 	query.exclude = own_rids()  # don't bonk yourself (or the car you're riding in)
-	var found := get_world_3d().direct_space_state.intersect_shape(query, 16)
+	var space := get_world_3d().direct_space_state
+	var found := space.intersect_shape(query, 16)
+	# The SLAM's SHOCKWAVE: also everything in a circle around where the bat hits the ground.
+	var slam_spot := _ground_below(holder.global_position + forward * depth * 0.6)
+	if slam and shockwave_radius > 0.0:
+		var ring := SphereShape3D.new()
+		ring.radius = shockwave_radius
+		query.shape = ring
+		query.transform = Transform3D(Basis.IDENTITY, slam_spot + Vector3.UP * 0.4)
+		found.append_array(space.intersect_shape(query, 64))  # (64: street tiles and walls count too)
 
 	var hit_anything := false
 	var already := {}
@@ -104,56 +157,99 @@ func _fire() -> void:
 		if target is CatPlayer and (target as CatPlayer).team == holder.team:
 			continue  # our own gang: the bat goes right past them (no hit sound either)
 		already[target] = true
-		var info := _make_hit(forward, (target as Node3D).global_position + Vector3.UP * 0.5 if target is Node3D else centre)
+		var spot: Vector3 = (target as Node3D).global_position if target is Node3D else centre
+		# Shove it forwards, and on a slam also OUT from the impact (the shockwave throws things away).
+		var push_dir := forward
+		if slam:
+			var away := Vector3(spot.x - slam_spot.x, 0, spot.z - slam_spot.z)
+			push_dir = (forward + away.normalized() * 0.8).normalized() if away.length() > 0.2 else forward
+		var info := _make_hit(push_dir, spot + Vector3.UP * 0.5)
 		# HEAVY PAWS (scripts/upgrades.gd): +25% / +50% damage and knockback for this cat.
 		var paws := Upgrades.melee_multiplier(holder.player_id)
-		info.damage = roundi(info.damage * paws)
-		info.enemy_push *= paws
+		info.damage = roundi(info.damage * paws * (finisher_damage if slam else 1.0))
+		info.enemy_push *= paws * (finisher_push if slam else 1.0)
+		if slam:
+			info.push_scale = finisher_push
+			info.stun_seconds = maxf(info.stun_seconds, finisher_stun)
+			info.enemy_push += Vector3.UP * enemy_knockback * 0.6  # pop them up off the ground
 		hit_anything = true
 		if target.receive_hit(info):
-			Hud.damage_number(info.position, info.damage, info.crit, holder.slot)  # on OUR HUD
+			# (The slam's numbers pop big and yellow, like a crit.)
+			Hud.damage_number(info.position, info.damage, info.crit or slam, holder.slot)  # on OUR HUD
 	if hit_anything:
-		Feedback.shake(holder.player_id, hit_shake)  # THWACK (scripts/feedback.gd)
-	# Lurch into the swing (like a zap, but forwards: cat_player.gd get_zapped).
+		Feedback.shake(holder.player_id, finisher_shake if slam else hit_shake)  # THWACK (scripts/feedback.gd)
+	elif slam:
+		Feedback.shake(holder.player_id, finisher_shake * 0.4)  # the ground still shakes
+	# Lurch into the swing (like a zap, but forwards: cat_player.gd get_zapped). The slam lurches harder.
 	if lunge_speed > 0.0 and holder.is_on_floor():
-		holder.velocity.x += forward.x * lunge_speed
-		holder.velocity.z += forward.z * lunge_speed
+		var lunge := lunge_speed * (1.4 if slam else 1.0)
+		holder.velocity.x += forward.x * lunge
+		holder.velocity.z += forward.z * lunge
+	if air_slam:
+		holder.velocity.y = minf(holder.velocity.y, -air_slam_speed)  # DIVE!
 	var hit_spots := PackedVector3Array()
 	for target in already:
 		if target is Node3D:
 			hit_spots.append((target as Node3D).global_position + Vector3.UP * 0.4)
-	show_swing.rpc(hit_anything, hit_spots)
+	show_swing.rpc(hit_anything, hit_spots, step, slam_spot)
+
+
+## Owner only: the ground under "where" (straight down, up to 8 m), or "where" at our feet' height.
+func _ground_below(where: Vector3) -> Vector3:
+	var from := Vector3(where.x, holder.global_position.y + 0.5, where.z)
+	var ray := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 8.0)
+	ray.exclude = own_rids()
+	var hit := get_world_3d().direct_space_state.intersect_ray(ray)
+	return hit.position if hit else Vector3(where.x, holder.global_position.y, where.z)
 
 
 ## Everyone (including the swinger): play the swing, and the hit sound if it connected.
 @rpc("any_peer", "call_local", "unreliable_ordered")
-func show_swing(connected: bool, hit_spots: PackedVector3Array = PackedVector3Array()) -> void:
+## step = which combo swing (0 forehand, 1 backhand, 2 SLAM); slam_spot = where the slam hits the ground.
+func show_swing(connected: bool, hit_spots: PackedVector3Array = PackedVector3Array(), step: int = 0, slam_spot: Vector3 = Vector3.ZERO) -> void:
 	if holder == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(holder.player_id):
 		return  # only the holder may swing
 	shots_seen += 1
+	step = clampi(step, 0, 2)
+	var slam := step == 2
 	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.35
-	Sound.play_at(swing_sound, global_position, -4.0)
+	Sound.play_at(swing_sound, global_position, -4.0 if not slam else -1.0)
 	if connected:
-		Sound.play_at(hit_sound, global_position + (-holder.cat_model.global_basis.z), -2.0)
+		Sound.play_at(hit_sound, global_position + (-holder.cat_model.global_basis.z), -2.0 if not slam else 1.0)
 	for spot in hit_spots:
-		_impact(spot)
+		_impact(spot, slam)
+	if slam:
+		last_slam_spot = slam_spot
+		if finisher_sound != "":
+			Sound.play_at(finisher_sound, slam_spot, finisher_volume)
+		_shockwave(slam_spot)
+		if not holder.is_multiplayer_authority():  # (the swinger's own camera already shook in _fire)
+			Feedback.shake_near(slam_spot, finisher_shake * 0.5, shockwave_radius * 3.0)  # nearby cats feel it
 	if _model == null:
 		return
-	# Raised back and out to the side -> SLASH across -> (freeze a moment if it hit) -> settle home.
+	# Forehand: raised back and out to one side -> SLASH across -> (freeze if it hit) -> settle home.
+	# Backhand: the same slash from the OTHER side. Slam: straight down over the head, extra far.
 	# (Godot turns Y first, then X: so the Y part sweeps the tilted bat across in front of the cat.)
 	if _swing_tween != null and _swing_tween.is_valid():
 		_swing_tween.kill()
-	var start := _model_home + Vector3(swing_angle * 0.45, swing_sweep, 0)
+	var side := -1.0 if step == 1 else 1.0
+	var sweep := 0.0 if slam else swing_sweep * side
+	var raise := swing_angle * (0.75 if slam else 0.45)
+	var follow := swing_angle * (0.8 if slam else 0.55)
+	var start := _model_home + Vector3(raise, sweep, 0)
 	var middle := _model_home + Vector3(-swing_angle * 0.05, 0, 0)
-	var finish := _model_home + Vector3(-swing_angle * 0.55, -swing_sweep, 0)
+	var finish := _model_home + Vector3(-follow, -sweep, 0)
+	var time := swing_time * (1.25 if slam else 1.0)
+	var freeze := (finisher_hit_stop if slam else hit_stop) if connected else 0.0
 	_model.rotation = start
 	_trail_points.clear()
-	_trail_until = Time.get_ticks_msec() / 1000.0 + swing_time + (hit_stop if connected else 0.0)
+	_trail_boost = 1.35 if slam else 1.0
+	_trail_until = Time.get_ticks_msec() / 1000.0 + time + freeze
 	_swing_tween = create_tween()
-	_swing_tween.tween_property(_model, "rotation", middle, swing_time * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	if connected and hit_stop > 0.0:
-		_swing_tween.tween_interval(hit_stop)  # HIT-STOP: the bat sticks in it for a beat
-	_swing_tween.tween_property(_model, "rotation", finish, swing_time * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_swing_tween.tween_property(_model, "rotation", middle, time * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if freeze > 0.0:
+		_swing_tween.tween_interval(freeze)  # HIT-STOP: the bat sticks in it for a beat
+	_swing_tween.tween_property(_model, "rotation", finish, time * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_swing_tween.tween_property(_model, "rotation", _model_home, swing_time * 1.5).set_trans(Tween.TRANS_SINE)
 
 
@@ -215,7 +311,7 @@ func _update_trail(delta: float) -> void:
 	_trail_points = _trail_points.filter(func(p): return p.age < trail_fade)
 	if _model != null and Time.get_ticks_msec() / 1000.0 < _trail_until and _model.is_visible_in_tree():
 		var base := _model.global_transform * _trail_base
-		var tip := _model.global_transform * (_trail_base + (_trail_tip - _trail_base) * trail_reach)
+		var tip := _model.global_transform * (_trail_base + (_trail_tip - _trail_base) * trail_reach * _trail_boost)
 		_trail_points.append({"base": base, "tip": tip, "age": 0.0})
 	_trail_mesh.clear_surfaces()
 	_trail_node.global_transform = Transform3D.IDENTITY
@@ -235,19 +331,20 @@ func _update_trail(delta: float) -> void:
 
 
 ## The bat connected here: a burst of neon sparks and a flash of light (every computer).
-func _impact(where: Vector3) -> void:
+## big = the combo SLAM: twice the sparks, flying further, and a brighter flash.
+func _impact(where: Vector3, big: bool = false) -> void:
 	var world: Node = Game.instance if Game.instance != null else get_tree().root
 	var tint := trail_color if trail_color.a > 0.0 else bolt_color
 	if spark_count > 0:
 		var sparks := CPUParticles3D.new()
 		sparks.one_shot = true
 		sparks.explosiveness = 1.0
-		sparks.amount = spark_count
+		sparks.amount = spark_count * (2 if big else 1)
 		sparks.lifetime = 0.35
 		sparks.direction = Vector3.UP
 		sparks.spread = 180.0
 		sparks.initial_velocity_min = 3.0
-		sparks.initial_velocity_max = 7.5
+		sparks.initial_velocity_max = 11.0 if big else 7.5
 		sparks.gravity = Vector3(0, -14, 0)
 		sparks.scale_amount_min = 0.6
 		sparks.scale_amount_max = 1.2
@@ -269,12 +366,59 @@ func _impact(where: Vector3) -> void:
 	if impact_light > 0.0:
 		var light := OmniLight3D.new()
 		light.light_color = tint.lerp(Color.WHITE, 0.4)
-		light.light_energy = impact_light
+		light.light_energy = impact_light * (2.0 if big else 1.0)
 		light.omni_range = 3.5
 		world.add_child(light)
 		light.global_position = where
 		var fade := light.create_tween()
 		fade.tween_property(light, "light_energy", 0.0, 0.18)
+		fade.tween_callback(light.queue_free)
+
+
+## The SLAM's SHOCKWAVE (every computer): a glowing neon ring wall that races out across the ground from
+## "where" to Shockwave Radius and fades, plus a quick flash of light.
+func _shockwave(where: Vector3) -> void:
+	if shockwave_radius <= 0.0:
+		return
+	var world: Node = Game.instance if Game.instance != null else get_tree().root
+	var tint := trail_color if trail_color.a > 0.0 else bolt_color
+	# A short open tube (no lids) = a glowing wall of light that races outward. (A flat ring vanishes
+	# into the street at 320x240; a wall reads from any angle.)
+	var tube := CylinderMesh.new()
+	tube.top_radius = 1.0
+	tube.bottom_radius = 1.0
+	tube.height = 0.45
+	tube.radial_segments = 20  # chunky, PS1-style
+	tube.rings = 1
+	tube.cap_top = false
+	tube.cap_bottom = false
+	var glow := StandardMaterial3D.new()
+	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glow.blend_mode = BaseMaterial3D.BLEND_MODE_ADD  # glows on the dark street
+	glow.cull_mode = BaseMaterial3D.CULL_DISABLED  # see the inside of the wall too
+	glow.albedo_color = tint.lerp(Color.WHITE, 0.5)
+	tube.material = glow
+	var ring := MeshInstance3D.new()
+	ring.name = "SlamShockwave"
+	ring.mesh = tube
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	world.add_child(ring)
+	ring.global_position = where + Vector3.UP * 0.2
+	ring.scale = Vector3(0.2, 1.0, 0.2)
+	var grow := ring.create_tween().set_parallel(true)
+	grow.tween_property(ring, "scale", Vector3(shockwave_radius, 0.3, shockwave_radius), 0.28).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	grow.tween_property(glow, "albedo_color:a", 0.0, 0.35).set_delay(0.08)
+	grow.chain().tween_callback(ring.queue_free)
+	if impact_light > 0.0:
+		var light := OmniLight3D.new()
+		light.light_color = tint
+		light.light_energy = impact_light * 1.5
+		light.omni_range = shockwave_radius * 2.0
+		world.add_child(light)
+		light.global_position = where + Vector3.UP * 0.5
+		var fade := light.create_tween()
+		fade.tween_property(light, "light_energy", 0.0, 0.3)
 		fade.tween_callback(light.queue_free)
 
 

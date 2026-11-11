@@ -101,6 +101,16 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   **Trail Color** = leave see-through to use the bat's Bolt Color), and on a hit **Spark Count** +
   **Impact Light** (a burst of sparks and a flash where it lands). The Frozen Tuna has the same settings.
   Test: `--host --pos=0,0,6 --give=neon_bat --swing_test --frames=2` (snaps mid-slash).
+- **Combo** (same Inspector, group **Combo**): keep swinging and the bat goes **forehand → backhand →
+  SLAM**. The slam is an overhead chop that hits harder (**Finisher Damage** x1.75), shoves much
+  further (**Finisher Push** x2.2: VAC-COPs, rival cats and cars), reaches further (**Finisher Reach**),
+  dazes VAC-COPs (**Finisher Stun**, 0.8 s), shakes the camera harder (**Finisher Shake**), freezes
+  longer (**Finisher Hit Stop**) and sends out a neon **SHOCKWAVE** ring that hits everything within
+  **Shockwave Radius** (2.6 m) of where the bat lands, with a boom (**Finisher Sound** / **Volume**).
+  Pause longer than **Combo Window** (0.9 s) and it starts over at the forehand.
+  **AIR SLAM**: swing while in the air and you dive down (**Air Slam Speed**, 16 m/s; 0 = off) and it's
+  always a slam. Test: `--host --deploy --give=neon_bat --bait_roomba=2 --combo_test [--air_slam] --frames=2`
+  (prints a "DevCapture combo" line per swing).
 - **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
 - **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, swap the
   model under **Model** (the swing rotates **Model**; see "The weapon models" below), change the

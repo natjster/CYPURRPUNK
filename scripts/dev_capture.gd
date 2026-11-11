@@ -74,6 +74,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##                     prints "DevCapture feedback" lines (shake offset, flash, toasts, hitmarker)
 ##   --swing_test[=S]  (with --give=neon_bat) one connecting bat swing (trail, sparks, hit-stop) + a red hurt
 ##                     number, snap S seconds later (default 0.09: mid-slash). "DevCapture swing" line
+##   --combo_test[=GAP] (with --give=neon_bat [--bait_roomba=2] [--air_slam]) 3 real bat swings GAP s apart:
+##                     forehand, backhand, SLAM + shockwave. "DevCapture combo" lines
 ##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
 ##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
 ##   --rival_volley=N  (with --shoot_rival) land N hits in one frame, like a scattergun's pellets
@@ -754,6 +756,8 @@ func _ready() -> void:
 			await _cars._gunner_test(scene, player)
 		if args.has("swing_test"):
 			await _fights._swing_test(player, args)
+		if args.has("combo_test"):
+			await _fights._combo_test(player, args)
 		if args.has("moves_test"):
 			await _moves._moves_test(player, args)
 		if args.has("deploy_again"):

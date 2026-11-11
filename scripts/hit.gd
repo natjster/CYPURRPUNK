@@ -37,6 +37,8 @@ var stun_seconds: float = 0.0
 var enemy_push: Vector3 = Vector3.ZERO
 ## How much of the usual "gunfire makes the city angry" heat this hit adds (1 = all of it).
 var city_heat: float = 1.0
+## Multiplies the gun's Cat Knockback / Cat Hop / Car Impulse for THIS hit (the bat's combo FINISHER sets it higher).
+var push_scale: float = 1.0
 
 
 ## The player ID of the shooter, or 0.
