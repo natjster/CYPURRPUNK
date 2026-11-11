@@ -57,7 +57,7 @@ join one at a time, in this order, when your gang **recruits** them on the workb
 | Don Catleone / Pawnie (start) | **BIGGER BACKPACK** (3): 6 -> 8 -> 10 -> 12 slots (an old save's DEEP POCKETS became BIGGER BACKPACK tiers). **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
 | Comrade Whiskers / Clawd (start) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher (until then they're black silhouettes in the shop). **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. |
 | Tier 1: Lil' Mittens / Billy the Kitten | **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. **INSIDER TUNNEL** (2, crew): your exit opens 5 / 10 heat earlier. |
-| Tier 2: Paulie "No-Brooms" / Bumper-Car Benny | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): smashed bots +15% / +30% chance to drop SCRAP (not bosses). |
+| Tier 2: Paulie "No-Brooms" / Bumper-Car Benny | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): smashed bots +15% / +30% chance to drop SCRAP (not bosses). **AFTERBURNER** (2, crew): car BOOST with 1 / 2 slowly recharging charges; the exhaust fire sends bots and cats flying (§3). |
 | Tier 3: Sal "The Slapper" / Calamity Clara | **HEAVY PAWS** (2): melee +25% / +50% damage and knockback. |
 | Tier 4: Nonna Catleone / "Gold-Tooth" Gus | **GOURMET FENCE** (2): the shop pays +20% / +40% for street loot. |
 | Tier 5: Frankie "Espresso" / Jittery Jax | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), plus buttons to pick your gang's ride (INTERCEPTOR / ZOOM-BIKE / MEOW-VAN). |

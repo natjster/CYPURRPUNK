@@ -228,7 +228,7 @@ func _fire_bolt() -> Vector3:
 
 	var from := camera.global_position
 	var query := PhysicsRayQueryParameters3D.create(from, from + aim * max_range)
-	query.exclude = [holder.get_rid()]  # don't shoot yourself
+	query.exclude = own_rids()  # don't shoot yourself (or the car you're riding in)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	var end: Vector3 = hit.position if hit else from + aim * max_range
 
@@ -266,12 +266,12 @@ func _blast(centre: Vector3, aim: Vector3) -> void:
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = sphere
 	query.transform = Transform3D(Basis.IDENTITY, centre)
-	query.exclude = [holder.get_rid()]  # your own blast leaves you alone
+	query.exclude = own_rids()  # your own blast leaves you (and the car you ride in) alone
 	var already := {}
 	# (128: the answer also lists every street tile and wall in range, not just what can be hit.)
 	for result in get_world_3d().direct_space_state.intersect_shape(query, 128):
 		var target := Hit.target_of(result.collider)
-		if target == null or already.has(target) or target == holder:
+		if target == null or already.has(target) or target == holder or target == holder.riding_car:
 			continue
 		if target is CatPlayer and (target as CatPlayer).team == holder.team:
 			continue  # our own gang: no hit, no shove

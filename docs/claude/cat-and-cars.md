@@ -24,3 +24,20 @@
   LOOK: `Model/CarModel` = `models/getaway_car.glb` (spec `tools/model_specs/getaway_car.json`, kind "vehicle" <500 tris; model kit
   element `poly` = free-form corner points). `_set_up_model` psx_ifies it, tints `Trim` `Teams.color_of(max(0, team))` + glow,
   `_update_wheels` spins WheelFL/FR/BL/BR (from moved distance, works on frozen copies) + steers the fronts. Test `--car_light`, `DevCapture car_look`.
+- RIDING = `scripts/cat/cat_ride.gd` (`CatRide`, node `Ride` under Player, like Moves): `cat.enter_car/exit_car` just call
+  `ride.enter/exit`. `cat.riding_car` (every computer). Owner: `ride.follow()` every physics frame keeps the hidden body at the
+  car (+`ride_height`) and sync_position, so bots chase cars (roomba.gd `_can_chase` allows `riding_car`, `_clear_line_to` skips the
+  car, `_attack` -> `_bonk_car`). GUNNER = passenger (`cat.is_gunner()`): camera stays in its own spring arm (car RID excluded,
+  `gunner_camera_distance/lift`), mouse/stick look work, `ItemManager._use_held_items`/HUD allow gunners; `HeldItem.own_rids()` =
+  holder + car (weapon/melee rays + blasts). Test `--add_local=1 --drive --ride_along=1 --gunner_test`.
+- CAR HEALTH `scripts/car/car_health.gd` (`car.health`, node Health, GameSystems): host `damage(amount, cause)`, `_set_health` rpc,
+  `wrecked` (empty_car + hop + `_boom`, refuses entry, `repair()` after `wreck_seconds` = park). Crashes detected on the car's
+  authority (`_recent_speed` drop, skips `car.teleport_frame`) -> `report_crash`. Rival gunfire: `car.receive_hit` -> `request_shot`.
+  `car.gang()`, `car.health_bar_info()` (car in HudHealthBars group; friend = same gang). Fx helpers `scripts/car/car_fx.gd`.
+- AFTERBURNER `scripts/car/car_boost.gd` (`car.boost`, node Boost): host owns `charges`/`recharge` (`max_charges` = crew tier of
+  "afterburner"; static `test_charges` for tests, never touch real upgrades in tests: they save to test_profiles), action "boost"
+  (car context, Shift / Pad A) -> `request_boost` -> `_start_boost` rpc (flames, kick impulse on authority, FOV/shake).
+  `_integrate_forces` floors it (`speed_multiplier`). Host `_exhaust_blast`: `Enemy.launch(push)` (is_flying, daze stun; roomba
+  skips steering + spins), `get_zapped` cats, `MessManager.knock`. Ram while boosting = launch, not smash (`Enemy.run_over_by_car`).
+  HUD badges "boost" (`dim` key in HudStatusIcons). Test `--drive --car_test [--boost_snap --frames=20]`, `--car_chase`
+  (module `scripts/dev_tests/cars.gd`). getaway_car.gd is ~800 lines: put new car features in `scripts/car/`.

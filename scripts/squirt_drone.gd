@@ -101,6 +101,11 @@ func _squirt_lands(aim: Vector3) -> void:
 		var push := Motion.flat(cat.global_position - aim).normalized() * squirt_push + Vector3.UP * squirt_hop
 		cat.get_zapped.rpc_id(PlayerId.peer_of(cat.player_id), push)  # the cat's owner moves it
 		CatHealth.instance.damage(cat.player_id, squirt_damage, "A SQUIRT-DRONE")
+	# Cats inside a car: the zap hits the CAR instead (scripts/car_health.gd).
+	for car in Game.instance.cars():
+		if car.health != null and (car.driver_id != 0 or not car.passenger_ids.is_empty()) \
+				and Motion.flat_distance(car.global_position, aim) < squirt_radius + 1.5:
+			car.health.damage(roundi(squirt_damage * car_damage_multiplier), "A SQUIRT-DRONE")
 
 
 ## Host -> everyone: the cyan stream shoots from the drone to the street, with a ring where it lands.

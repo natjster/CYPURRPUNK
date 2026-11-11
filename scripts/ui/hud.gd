@@ -476,6 +476,13 @@ func _update_status() -> void:
 			effects.append({"id": "catnip", "fraction": cat.boost_fraction(), "seconds_left": cat.boost_seconds_left(), "debuff": false})
 		if cat.air_jump_seconds_left() > 0.0:
 			effects.append({"id": "catdip", "fraction": cat.air_jump_fraction(), "seconds_left": cat.air_jump_seconds_left(), "debuff": false})
+		# Driving: one flame badge per AFTERBURNER charge (scripts/car/car_boost.gd); the next one fills
+		# up while it recharges, empty ones wait their turn.
+		var car := cat.riding_car
+		if car != null and car.driver_id == cat.player_id and car.boost != null:
+			for i in car.boost.max_charges():
+				var full := 1.0 if i < car.boost.charges else (car.boost.recharge if i == car.boost.charges else 0.0)
+				effects.append({"id": "boost", "fraction": full, "seconds_left": 99.0, "debuff": false, "dim": i >= car.boost.charges})
 	icons.set_effects(effects)
 	_place_status_icons(icons, effects.size())
 

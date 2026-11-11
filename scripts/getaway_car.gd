@@ -13,6 +13,8 @@ extends RigidBody3D
 ##   ├── GroundRay (RayCast3D)  <- points down; tells us if the wheels are on the ground
 ##   ├── DoorZone (Area3D)      <- "press E" range
 ##   │   └── CollisionShape3D
+##   ├── Health (Node3D)        <- scripts/car/car_health.gd: HP, smoke, fire, WRECKS (+ the health bar)
+##   ├── Boost (Node3D)         <- scripts/car/car_boost.gd: the AFTERBURNER (Shift / pad A), exhaust fire
 ##   └── CameraRig (Node3D, Top Level ON)  <- follows the car with a slight lag
 ##       └── SpringArm3D        <- the cat's camera gets moved here while driving
 ##
@@ -152,6 +154,9 @@ const MAX_ENTER_DISTANCE: float = 5.0
 @onready var camera_rig: Node3D = $CameraRig
 @onready var camera_arm: SpringArm3D = $CameraRig/SpringArm3D
 @onready var door_zone: Area3D = $DoorZone
+## The car's HP + wrecking (scripts/car/car_health.gd) and its AFTERBURNER (scripts/car/car_boost.gd).
+@onready var health: CarHealth = get_node_or_null("Health")
+@onready var boost: CarBoost = get_node_or_null("Boost")
 
 ## Player ID of the cat driving (scripts/player_id.gd), or 0 when the car is empty.
 var driver_id: int = 0
@@ -180,6 +185,8 @@ var sync_position: Vector3
 var sync_rotation: Vector3
 ## A move waiting for the next physics step (park): a Transform3D, or null (see _teleport).
 var _pending_teleport: Variant = null
+## The physics frame of the last teleport (car_health.gd: a sudden stop then isn't a crash).
+var teleport_frame: int = -100
 
 ## Driver's look-around: how far the camera is turned away from straight behind the car
 ## (radians, left/right and up/down). 0, 0 = the normal chase view.
@@ -443,6 +450,16 @@ func _driver_paused() -> bool:
 	return PauseMenu.is_open or (driver != null and driver._menu_open())
 
 
+## Which gang this car belongs to right now: the driver's, or (empty) its parking corner's.
+func gang() -> int:
+	return Teams.team_of(driver_id) if driver_id != 0 else maxi(0, team)
+
+
+## The floating health bar over the car (scripts/ui/hud_health_bars.gd; numbers from car_health.gd).
+func health_bar_info() -> Dictionary:
+	return health.bar_info() if health != null else {}
+
+
 ## Is this player in the car at all (driving OR riding along)?
 func has_occupant(player_id: int) -> bool:
 	return player_id != 0 and (driver_id == player_id or passenger_ids.has(player_id))
@@ -459,6 +476,8 @@ func has_free_seat() -> bool:
 func request_enter(player_id: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id) or has_occupant(player_id):
 		return
+	if health != null and health.wrecked:
+		return  # a burning wreck (car_health.gd): nobody gets in until it's towed back
 	var cat := Game.instance.cat_for(player_id)
 	if cat == null or cat.global_position.distance_to(global_position) > MAX_ENTER_DISTANCE:
 		return
@@ -556,6 +575,7 @@ func park() -> void:
 func _teleport(where: Transform3D) -> void:
 	global_transform = where  # (frozen copies on other computers, and anything reading it this frame)
 	_pending_teleport = where
+	teleport_frame = Engine.get_physics_frames()
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	sync_position = where.origin
@@ -605,12 +625,15 @@ func player_left(player_id: int, _last_position: Vector3) -> void:
 
 
 ## The hit framework (scripts/hit.gd): a bolt hit the car. Runs on the SHOOTER's computer;
-## whoever simulates the car applies the push. (No damage number.)
+## whoever simulates the car applies the push. The OTHER gang's bolts also dent it (car_health.gd).
 func receive_hit(hit: Hit) -> bool:
 	# Car Launch is a speed, so it's multiplied by the car's weight to throw it that fast.
 	var launch := (hit.direction + Vector3.UP) * hit.weapon.car_launch * mass
 	take_hit.rpc_id(get_multiplayer_authority(), hit.direction * hit.weapon.car_impulse + launch, hit.position)
-	return false
+	if hit.shooter == null or health == null or health.wrecked or hit.shooter.team == gang() or hit.damage <= 0:
+		return false  # (your own gang's bolts only push it)
+	health.request_shot.rpc_id(1, hit.shooter.player_id, hit.damage)
+	return true  # a damage number
 
 
 ## A tommy gun bolt hit the car. Sent to whoever simulates the car, who applies the push.
@@ -693,13 +716,18 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 	# throttle / steer / handbrake = the drive input (see _read_driver_keys).
 	is_drifting = false
+	# AFTERBURNER (scripts/car/car_boost.gd): floors it and lifts the top speed, even mid-air.
+	var boosting := boost != null and boost.is_boosting()
+	var gas := 1.0 if boosting else throttle
+	if boosting and forward_speed < max_speed * boost.speed_multiplier():
+		velocity += forward * boost.boost_accel * dt
 	if ground_ray.is_colliding():
 		# --- Gas / brake / reverse ---
-		if throttle > 0.0:
+		if gas > 0.0:
 			# TWIN-TURBO ENGINE (scripts/upgrades.gd, a CREW upgrade): +15% / +30% top speed and pickup.
-			var turbo := Upgrades.engine_multiplier(maxi(0, team))
+			var turbo := Upgrades.engine_multiplier(maxi(0, team)) * (boost.speed_multiplier() if boosting else 1.0)
 			if forward_speed < max_speed * turbo:
-				velocity += forward * engine_accel * turbo * throttle * dt
+				velocity += forward * engine_accel * turbo * gas * dt
 		elif throttle < 0.0:
 			if forward_speed > 0.5:
 				velocity -= forward * brake_decel * dt          # still rolling forward: brake
@@ -744,8 +772,8 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 # --- The E key (scripts/interactable.gd): a cat by the door can get in ---
 
 func interact_distance(cat: CatPlayer) -> float:
-	if cat.nearby_car != self or not has_free_seat():
-		return -1.0  # too far, or every seat is taken
+	if cat.nearby_car != self or not has_free_seat() or (health != null and health.wrecked):
+		return -1.0  # too far, every seat is taken, or a burning wreck
 	return global_position.distance_to(cat.global_position)
 
 

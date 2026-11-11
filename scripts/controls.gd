@@ -60,6 +60,7 @@ const ACTIONS: Array = [
 	{"action": "gas", "label": "GAS (TRIGGER)", "context": "car", "keys": [], "pad": "Pad RT"},
 	{"action": "brake", "label": "BRAKE (TRIGGER)", "context": "car", "keys": [], "pad": "Pad LT"},
 	{"action": "handbrake", "label": "HANDBRAKE", "context": "car", "keys": ["Space"], "pad": "Pad RB"},
+	{"action": "boost", "label": "BOOST (AFTERBURNER)", "context": "car", "keys": ["Shift"], "pad": "Pad A"},
 ]
 
 ## Controls that can't be rebound (they work the same in every menu). Godot's own ui_* menu

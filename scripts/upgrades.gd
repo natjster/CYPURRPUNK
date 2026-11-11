@@ -10,7 +10,7 @@ extends Node
 ##   tab 0  Don Catleone / Pawnie (always)        BIGGER BACKPACK, MAINFRAME CAPACITOR
 ##   tab 1  Comrade Whiskers / Clawd (always)     WEAPON CRATES, DELUXE LITTERBOX
 ##   tab 2  REBELLION TIER 1: Lil' Mittens / Billy the Kitten        STUFFED CHEEKS, INSIDER TUNNEL
-##   tab 3  REBELLION TIER 2: Paulie No-Brooms / Bumper-Car Benny    THICK FUR, SCRAP MAGNET
+##   tab 3  REBELLION TIER 2: Paulie No-Brooms / Bumper-Car Benny    THICK FUR, SCRAP MAGNET, AFTERBURNER
 ##   tab 4  REBELLION TIER 3: Sal the Slapper / Calamity Clara       HEAVY PAWS
 ##   tab 5  REBELLION TIER 4: Nonna Catleone / Gold-Tooth Gus        GOURMET FENCE
 ##   tab 6  REBELLION TIER 5: Frankie Espresso / Jittery Jax         ESPRESSO BLOODSTREAM, TWIN-TURBO
@@ -23,8 +23,8 @@ extends Node
 ## everyone up to the best tier anyone in that gang has recruited (rebellion_level), and buying
 ## the next tier continues from there. Saved in your profile like every upgrade.
 ##
-## PERSONAL vs CREW: most upgrades only help the cat who bought them. Three are CREW upgrades
-## (MAINFRAME CAPACITOR, TWIN-TURBO ENGINE, INSIDER TUNNEL): your whole gang gets the BEST tier
+## PERSONAL vs CREW: most upgrades only help the cat who bought them. Four are CREW upgrades
+## (MAINFRAME CAPACITOR, TWIN-TURBO ENGINE, INSIDER TUNNEL, AFTERBURNER): your whole gang gets the BEST tier
 ## anybody in it owns (best_in_team). So in co-op one rich cat upgrades everyone's car.
 ##
 ## How buying works (the HOST is the referee, as always):
@@ -37,6 +37,7 @@ extends Node
 ##   item_manager.gd  pack_size_for / stash_size_for / quick_stack_size_for, sell_price (gourmet)
 ##   shopkeeper.gd    shop_allows (weapon crates)       cat_player.gd   zoomies_multiplier
 ##   getaway_car.gd   engine_multiplier, set_vehicle   cat_health.gd   max_health_for
+##   car/car_boost.gd "afterburner" tier = boost charges
 ##   enemy.gd         scrap_magnet_chance
 ##   melee_weapon.gd  melee_multiplier                 mainframe.gd    charge_per_scrap_for, exit_heat
 ##
@@ -62,6 +63,7 @@ static var instance: Upgrades
 	"mainframe_capacitor": [[130, 1], [260, 2]],
 	"espresso_zoomies": [[100, 1], [200, 2]],
 	"turbo_engine": [[100, 1], [200, 2]],
+	"afterburner": [[120, 1], [240, 2]],
 	"unlock_cyber_bike": [[160, 2]],
 	"unlock_fish_van": [[230, 2]],
 	"thick_fur": [[100, 1], [200, 2]],
@@ -122,6 +124,7 @@ const INFO := {
 	"stuffed_cheeks": {"name": "STUFFED CHEEKS", "about": "Quick-use snack stacks 3 -> 4 -> 5."},
 	"heavy_paws": {"name": "HEAVY PAWS", "about": "Melee hits +25% / +50% damage and knockback."},
 	"insider_tunnel": {"name": "INSIDER TUNNEL", "crew": true, "about": "Your gang's exit opens 5 / 10 heat earlier."},
+	"afterburner": {"name": "AFTERBURNER", "crew": true, "about": "BOOST your ride (Shift / pad A): fire out the exhaust sends bots and cats flying! 1 / 2 charges, slowly recharging."},
 }
 
 ## The TINKER WORKBENCH's 7 tabs (scripts/ui/workbench_screen.gd): which upgrades each sewer NPC's tab
@@ -131,7 +134,7 @@ const WORKBENCH_TABS := [
 	["bigger_pack", "mainframe_capacitor"],
 	["shop_crates", "deluxe_litterbox"],
 	["stuffed_cheeks", "insider_tunnel"],
-	["thick_fur", "scrap_magnet"],
+	["thick_fur", "scrap_magnet", "afterburner"],
 	["heavy_paws"],
 	["gourmet_fence"],
 	["espresso_zoomies", "turbo_engine", "unlock_cyber_bike", "unlock_fish_van"],

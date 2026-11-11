@@ -30,6 +30,8 @@ GetawayCar (RigidBody3D)            script: getaway_car.gd
 ├── GroundRay (RayCast3D)            Target Position (0, -0.8, 0)
 ├── DoorZone (Area3D)                "press E" range
 │   └── CollisionShape3D             BoxShape3D 5 x 2 x 6
+├── Health (Node3D)                  script: car/car_health.gd  <- HP, smoke, fire, wrecks
+├── Boost (Node3D)                   script: car/car_boost.gd   <- the AFTERBURNER (exhaust fire)
 ├── CameraRig (Node3D)               Top Level ON  <- follows the car with lag
 │   └── SpringArm3D                  position y=1.2, rotation x=-0.3, Spring Length 7
 │                                    (the cat's Camera3D gets moved here while driving)
@@ -96,10 +98,47 @@ The E press is marked "handled" so the same key press can't enter and exit in on
 ### Passengers (riding along)
 Once someone is driving, other cats by the door see **"[E] RIDE ALONG"** — online or split screen.
 Up to 3 can ride (**Passenger Seats** in the Inspector, group *Passengers*: click `GetawayCar` in
-`main.tscn`). Passengers can't steer: they get the driver's chase view and press **E** again to hop
+`main.tscn`). Passengers can't steer, but they're the **GUNNERS**: each keeps their OWN camera (floating over the
+car's roof), looks around with the mouse / right stick and **shoots with whatever is in their paws**
+(guns, the bat, even quick-use snacks). Their shots never hit their own car. Press **E** again to hop
 out on the right-hand side (**Passenger Exit Offset**; each next one **Passenger Exit Spacing** further
 back). If the driver gets out, the passengers stay in; one of them can hop out and take the wheel.
 Driving onto the exit beam extracts everyone in the car together. In code: the host keeps
 `passenger_ids` and tells every computer the whole list (`set_passengers`); anything that asks "is this
 player in the car?" uses `has_occupant(id)` (or `Game.car_of(id)`), and `remove_occupant(id)` /
 `empty_car()` take cats out. Test: `--add_local=2 --pos=1,0.5,-10 --drive --ride_along=1,2 --ride_exit=1`.
+
+**The riding code** lives on the cat: `scripts/cat/cat_ride.gd`, the **Ride** node under Player in
+`scenes/player.tscn` (next to Moves). Click it for its knobs: **Ride Height** (where the hidden cat
+sits in the car), **Gunner Camera Distance** and **Gunner Camera Lift** (the passenger's view).
+While in a car the cat is hidden, but its body rides along INSIDE the car every frame, which is why
+the bots keep chasing you when you jump in (they hunt the car). Test: `--add_local=1 --drive
+--ride_along=1 --gunner_test` ("DevCapture gunner_test" lines: the passenger shoots a bot).
+
+### Car health and wrecks (`scripts/car/car_health.gd`)
+The car has **300 HP** (click **Health** in `scenes/getaway_car.tscn` > Inspector > *Toughness*).
+VAC-COPs **still chase you in the car**: they ram it instead of you (a ram = the bot's **Bonk Damage
+x Car Damage Multiplier**, set on each bot scene, e.g. `scenes/roomba.tscn` > *Hunting*), SQUIRT-DRONE
+zaps dent it, **crashes** hurt it (losing more than **Crash Speed Loss** m/s almost at once: a wall at
+full speed, the MEGA VAC-COP), and in TURF WAR the other gang's guns hurt it (your own gang's don't).
+A health bar floats over the car once it's damaged (blue for your gang's car, red for the rival's).
+Under half health it smokes, under a fifth it burns (*Look*: **Smoke Below**, **Fire Below**).
+At 0 HP it **WRECKS**: a fireball, everyone inside is thrown out and loses **Wreck Occupant Damage**
+HP, and nobody can get in. After **Wreck Seconds** it's towed back to its parking spot, fixed.
+A new district fixes it too. Test: `--drive --car_test` ("DevCapture car_test" lines), `--drive
+--car_chase` (a VAC-COP chases the car and rams it).
+
+### The AFTERBURNER boost (`scripts/car/car_boost.gd`)
+Bought at the TINKER WORKBENCH (§25, Paulie No-Brooms / Bumper-Car Benny's tab): **AFTERBURNER**
+tier 1 = 1 charge, tier 2 = 2 charges (a CREW upgrade: the gang's best tier counts, whoever drives).
+While driving press **BOOST** (Shift, or A on a controller; rebind it in SETTINGS > KEYS): the car
+kicks forward and floors it past its top speed for a moment, with **fire roaring out of the exhaust**
+(two flame jets, an orange glow on the street, a trail of fire cubes, a wider + shaking camera).
+**Nothing gets killed by the boost: it all goes FLYING.** Bots in the exhaust fire, or rammed while
+boosting, are launched into the air, spin, land and lie dazed (bosses are too heavy). Cats on foot
+in the fire get launched too (no damage), and bins and cones go over. A used charge comes back after
+**Recharge Seconds** (25). The driver sees one flame badge per charge next to their health bar; a
+dim one is still recharging. Knobs: click **Boost** in `scenes/getaway_car.tscn` (*Boost*, *Sending
+stuff flying*, *Look*); how long a launched bot lies dazed is **Launch Daze Seconds** on the bot.
+The sound and badge come from `python tools/make_boost_assets.py`. Test: `--drive --car_test
+[--boost_snap --frames=20]` (the second takes a picture mid-boost).

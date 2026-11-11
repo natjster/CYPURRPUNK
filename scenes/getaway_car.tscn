@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" path="res://scripts/getaway_car.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://models/getaway_car.glb" id="2_model"]
+[ext_resource type="Script" path="res://scripts/car/car_health.gd" id="3_health"]
+[ext_resource type="Script" path="res://scripts/car/car_boost.gd" id="4_boost"]
 
 [sub_resource type="SceneReplicationConfig" id="Sync_car"]
 properties/0/path = NodePath(".:sync_position")
@@ -53,6 +55,12 @@ target_position = Vector3(0, -0.8, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="DoorZone"]
 shape = SubResource("Shape_door")
+
+[node name="Health" type="Node3D" parent="."]
+script = ExtResource("3_health")
+
+[node name="Boost" type="Node3D" parent="."]
+script = ExtResource("4_boost")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("Sync_car")

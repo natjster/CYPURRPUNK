@@ -23,3 +23,5 @@ Bots: each scene's `Model` = `models/roomba|lint_trapper|squirt_drone.glb`; `Ene
 <= `eye_crit_radius` * model scale, not from behind, never blasts) forces crit + `eye_crit_multiplier`, `eye_flashing()` (roomba.gd tints
 the eye white-hot); `eye_crit_sound` "" = silent (the eye_crit sound was removed on request). Recipes: `tools/make_creature_specs.py` -> tools/model_specs/*.json (re-running REPLACES the
 .bbmodel). Test: `--eye_test [--roomba=vac|boss|drone|trapper]`, `--portrait=bot --roomba=X`.
+CARS: bots chase cats in cars and ram the car (roomba.gd `_bonk_car`, `car_damage_multiplier`, `car_bump_extra_range`; drone
+squirts hit cars too). `Enemy.launch(push)` (host): boost launches (`is_flying`, `launch_daze_seconds`, `_update_flying`).

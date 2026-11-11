@@ -39,6 +39,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --ride_along=S,S  (with --drive --add_local) those couch slots get in as passengers
 ##   --ride_exit=S     (with --ride_along) then that passenger gets out again
 ##   --car_mouse=PX    (with --drive) move the mouse PX screen pixels to the right while driving
+##   --car_test / --car_chase / --gunner_test  (with --drive) car health, boost, chasing, gunner seat
+##                     (scripts/dev_tests/cars.gd has the details)
 ##                     (the car camera turns); prints the camera's look angle
 ##   --car_watch=N     print the car camera's look angle every N frames until the snap
 ##   --talk[=NAME]     walk up to an NPC (node name, e.g. LilMittens; default Don Catleone)
@@ -234,6 +236,7 @@ var _mess: Node
 var _spectate_report: Node
 var _meow_mart: Node
 var _moves: Node
+var _cars: Node
 
 
 func _ready() -> void:
@@ -256,6 +259,7 @@ func _ready() -> void:
 	_spectate_report = _add_module("res://scripts/dev_tests/spectate_report.gd")
 	_meow_mart = _add_module("res://scripts/dev_tests/meow_mart.gd")
 	_moves = _add_module("res://scripts/dev_tests/moves.gd")
+	_cars = _add_module("res://scripts/dev_tests/cars.gd")
 
 	# --window=WxH   open the game window at that size (e.g. 1720x720 = ultrawide shape; never saved)
 	if args.has("window"):
@@ -742,6 +746,12 @@ func _ready() -> void:
 			_fights._blast_probe(player)
 		if args.has("feedback_test"):
 			await _fights._feedback_test(player)
+		if args.has("car_test"):
+			await _cars._car_test(scene, player)
+		if args.has("car_chase"):
+			await _cars._car_chase(scene, player)
+		if args.has("gunner_test"):
+			await _cars._gunner_test(scene, player)
 		if args.has("swing_test"):
 			await _fights._swing_test(player, args)
 		if args.has("moves_test"):

@@ -85,6 +85,8 @@ func _process(delta: float) -> void:
 			# Cats of OUR gang get the cyan friend bar; the other gang's get the red one, and
 			# their DOWNED beacon isn't shown far off / through walls (that's for their friends).
 			var friend: bool = node is CatPlayer and (me == null or (node as CatPlayer).team == me.team)
+			if node is GetawayCar:
+				friend = me == null or (node as GetawayCar).gang() == me.team  # our gang's ride (car_health.gd)
 			if node is CatPlayer and not friend:
 				info = info.duplicate()
 				info.erase("see_from")

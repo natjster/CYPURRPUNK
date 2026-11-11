@@ -326,7 +326,9 @@ func _use_held_items(delta: float) -> void:
 	if Game.instance == null:
 		return
 	for cat in Game.instance.local_cats():
-		if not cat.reads_input() or not cat.is_controlled or cat.knocked_out or cat.is_downed():
+		# (Walking, or a GUNNER in a car's passenger seat: scripts/cat/cat_ride.gd. Drivers keep their
+		# paws on the wheel.)
+		if not cat.reads_input() or not (cat.is_controlled or cat.is_gunner()) or cat.knocked_out or cat.is_downed():
 			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
 		var safe_zone := UndergroundHub.is_safe(cat.global_position)  # (a SEWER BREACH: fight!)
 		var allowed := _can_use_items(cat)
@@ -1241,7 +1243,7 @@ func _update_hud_for(cat: CatPlayer) -> void:
 	var paws: Array = []   # [right paw, left paw]: what each holds (see HudWeaponDisplay.show_loadout)
 	var quick: Array = []  # the two QUICK USE slots
 	var wants_crosshair := false
-	if cat.is_controlled:
+	if cat.is_controlled or cat.is_gunner():
 		var keys := ["shoot", "use_left"]  # right paw fires with LMB / RT, left with RMB / LT (SETTINGS > KEYS)
 		for hand in 2:
 			var held := held_item(cat, hand)

@@ -72,12 +72,16 @@ extends CharacterBody3D
 ## CAT MOVES (scripts/cat/cat_moves.gd): pounce, wall kicks, clamber, snappy jumps, squash & stretch.
 ## Its knobs: click Player > Moves in scenes/player.tscn.
 @onready var moves: CatMoves = $Moves
+## RIDING (scripts/cat/cat_ride.gd): driving, or in a passenger seat as the GUNNER. Knobs: Player > Ride.
+@onready var ride: CatRide = $Ride
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 ## False while driving — the cat ignores input and stays hidden.
 var is_controlled: bool = true
 ## Set by a car's DoorZone when the cat is standing close enough to hop in.
 var nearby_car: GetawayCar = null
+## The car this cat is in right now (driving OR riding along), on every computer. null = on foot.
+var riding_car: GetawayCar = null
 ## Items (see scripts/items/): weapons set this while firing, so the cat turns to face the shot.
 var aim_until: float = 0.0
 ## Set by the item system while a held item wants the over-the-shoulder camera.
@@ -504,8 +508,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if slot == 0 and event is InputEventMouseButton and event.pressed:  # (the mouse is player 1's)
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-	if not is_controlled:
-		return
+	if not is_controlled and not is_gunner():
+		return  # (driving: the car reads the keys. A GUNNER still looks around with the mouse.)
 	if knocked_out and not event is InputEventMouseMotion:
 		return  # seeing stars: you can look around, but not grab, drop or talk
 
@@ -520,6 +524,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(min_pitch_degrees),
 			deg_to_rad(max_pitch_degrees)
 		)
+	elif not is_controlled:
+		return  # a GUNNER only looks around (E = hop out is the car's: getaway_car.gd)
 	elif Seats.event_is(slot, event, "interact") and Interactable.try_use(self):
 		# Used the best thing in reach: grab an item, talk to an NPC or payphone, open the stash,
 		# get in the car... (scripts/interactable.gd). Marking the press as used also stops the
@@ -615,7 +621,7 @@ func _type_taunt(delta: float) -> void:
 ## the camera like the mouse does. Gentle near the middle (for aiming), fast at full tilt.
 ## STICK SPEED and INVERT STICK Y come from SETTINGS > CONTROLS.
 func _stick_look(delta: float) -> void:
-	if not is_controlled or not reads_input() or _menu_open() or inventory_open():
+	if not (is_controlled or is_gunner()) or not reads_input() or _menu_open() or inventory_open():
 		return
 	var stick := Seats.get_vector(slot, "look_left", "look_right", "look_up", "look_down")
 	if stick == Vector2.ZERO:
@@ -633,6 +639,7 @@ func _stick_look(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_controlled:
+		ride.follow()  # in a car: the hidden body rides along inside it (scripts/cat/cat_ride.gd)
 		return
 
 	var on_floor := is_on_floor()
@@ -942,40 +949,17 @@ func get_zapped(push: Vector3) -> void:
 	velocity.y = maxf(velocity.y, push.y)  # a little hop, but never cancel a jump
 
 
-## Called by the car on EVERY computer when this cat gets in.
-## Everyone hides the cat; only the owner's computer hands its camera to the car.
+## Called by the car on EVERY computer when this cat gets in (driver or passenger) / out.
+## The riding itself (hidden body follows the car, driver's chase view, GUNNER seat) lives in
+## scripts/cat/cat_ride.gd = the Ride node under Player.
 func enter_car(car: GetawayCar) -> void:
-	visible = false
-	collision_shape.set_deferred("disabled", true)
-	if not is_multiplayer_authority():
-		return
-
-	is_controlled = false
-	velocity = Vector3.ZERO
-	cat_model.rotation.x = 0.0
-	_lean_x = 0.0
-	_flip_time_left = 0.0
-	camera.fov = _base_fov
-
-	# Move the camera node under the car's camera arm.
-	camera.reparent(car.camera_arm, false)
-	camera.transform = Transform3D.IDENTITY
-	if slot == 0:
-		camera.make_current()  # (players 2-4: game_screen.gd follows this camera wherever it is)
+	ride.enter(car)
 
 
-## Called by the car on EVERY computer when this cat gets out.
 func exit_car(exit_position: Vector3) -> void:
-	visible = true
-	collision_shape.set_deferred("disabled", false)
-	if not is_multiplayer_authority():
-		return  # the owner moves it; the new position arrives via the synchronizer
+	ride.exit(exit_position)
 
-	global_position = exit_position
-	sync_position = position
-	# Take the camera back.
-	camera.reparent(spring_arm, false)
-	camera.transform = Transform3D.IDENTITY
-	if slot == 0:
-		camera.make_current()
-	is_controlled = true
+
+## Riding in a car's passenger seat (may look around and shoot: scripts/cat/cat_ride.gd).
+func is_gunner() -> bool:
+	return ride.is_gunner()

@@ -57,6 +57,9 @@ signal destroyed(enemy: Enemy)
 @export var car_smash_radius: float = 2.8
 ## How much of a gun's Enemy Knockback it feels (1 = all of it, 0 = can't be shoved).
 @export var knockback_taken: float = 1.0
+## A BOOSTING car (scripts/car_boost.gd) doesn't smash it: it sends it FLYING instead, and it
+## lies dazed (stunned) this many seconds after it lands. 0 = never launched (bosses ignore it anyway).
+@export var launch_daze_seconds: float = 2.5
 
 @export_group("Boss")
 ## A boss: destroying it COOLS the heat instead of raising it (and the patrol sends no
@@ -126,6 +129,12 @@ var _flash_time: float = 0.0
 var _eye_flash_time: float = 0.0  # this computer: the eye just got crit (flashes white-hot)
 ## Host: where each car was last time we looked (car instance id -> position), to work out its speed.
 var _last_car_positions := {}
+
+## Host: true while flying through the air after a boost launched us (launch()). The brain
+## (roomba.gd) stops steering until we land, so we sail along instead of braking in mid-air.
+var is_flying: bool = false
+## Host: seconds since the launch (flying only ends once we're back down AND this is > 0.3).
+var _flying_for: float = 0.0
 
 ## Host: the player who last hurt us (or ran us over). Read by the quests when we explode.
 ## 0 = nobody in particular.
@@ -282,9 +291,38 @@ func run_over_by_car(delta: float) -> bool:
 		_last_car_positions[id] = car.global_position
 		if car.driver_id != 0 and car_speed > car_smash_speed * car.smash_speed_factor and car_speed < 60.0 \
 				and Motion.flat_distance(car.global_position, global_position) < car_smash_radius:
+			if car.boost != null and car.boost.is_boosting():
+				# BOOSTING (scripts/car_boost.gd): no smash - YEET. Away from the car and up.
+				if not is_flying and not is_boss:
+					var away := Motion.flat(global_position - last).normalized()
+					launch(away * car.boost.ram_launch_forward + Vector3.UP * car.boost.ram_launch_up)
+				continue
 			hit = true
 			killed_by = car.driver_id
 	return hit
+
+
+## Host: SEND IT FLYING (a boosting car rammed it, or its exhaust fire blasted it: car_boost.gd).
+## No damage: it sails through the air, lands, and lies dazed for launch_daze_seconds.
+## Bosses are too heavy to launch. Safe to call often: a bot already in the air is left alone.
+func launch(push: Vector3) -> void:
+	if not multiplayer.is_server() or is_boss or is_flying or health <= 0 or launch_daze_seconds <= 0.0:
+		return
+	is_flying = true
+	_flying_for = 0.0
+	velocity = push.limit_length(MAX_PUSH)
+	_on_stunned(launch_daze_seconds)
+	Sound.play_everywhere("bonk", global_position)
+
+
+## Host: call from your brain every physics frame (roomba.gd does): counts the flight and
+## notices the landing.
+func _update_flying(delta: float, on_floor: bool) -> void:
+	if not is_flying:
+		return
+	_flying_for += delta
+	if (on_floor and _flying_for > 0.3) or _flying_for > 3.0:  # (3 s: hovering drones never "land")
+		is_flying = false
 
 
 ## Host: boom. Spit out everything inside, tell the spawner, disappear everywhere.

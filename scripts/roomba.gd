@@ -88,6 +88,11 @@ enum State { PATROL, CHASE, STUNNED, TIDY_GO, TIDYING, INVESTIGATE }
 ## HP a bonk takes off the cat (cats have 100, see the Health node; 34 = three bonks). At 0 the
 ## cat is knocked out and drops EVERYTHING it carries (cat_health.gd). 0 = bonks never hurt.
 @export var bonk_damage: int = 34
+## Cats in a CAR get chased too: the bot rams the car instead. Car damage per ram = Bonk Damage x
+## this (cars have 300 HP: scripts/car_health.gd).
+@export var car_damage_multiplier: float = 0.6
+## A car is bigger than a cat: it counts as touching the car this much further out (metres).
+@export var car_bump_extra_range: float = 2.0
 ## How hard a SEWER BREACH bot hops out of the sewage channel (metres per second; it's 1 m deep).
 @export var channel_hop: float = 6.0
 ## Does the HEAT level (scripts/heat_meter.gd) make it faster and sharper-eyed?
@@ -198,6 +203,7 @@ func _physics_process(delta: float) -> void:
 	_skipped_time = 0.0
 	_clock += delta
 	_fall(delta)
+	_update_flying(delta, is_on_floor())  # launched by a boosting car? (enemy.gd launch)
 
 	if run_over_by_car(delta):
 		explode()
@@ -287,6 +293,11 @@ func _physics_process(delta: float) -> void:
 	# Drive: ease toward the wanted velocity and turn to face where we're going.
 	var wanted := move.normalized() * speed
 	var weight := 1.0 - exp(-6.0 * delta)
+	if is_flying:
+		# Launched by a boosting car (enemy.gd launch): no steering in mid-air, just sail along
+		# and spin round and round (the spin is synced, so everyone sees it twirl).
+		weight = 0.0
+		model.rotation.y += delta * 14.0
 	velocity.x = lerpf(velocity.x, wanted.x, weight)
 	velocity.z = lerpf(velocity.z, wanted.z, weight)
 	if wanted.length() > 0.1:
@@ -316,6 +327,11 @@ func ground_height() -> float:
 
 ## Host, every frame of a chase: the VAC-COP bonks whatever it touches.
 func _attack(cat: CatPlayer, _delta: float) -> void:
+	if cat.riding_car != null:
+		# The cat's in a car: ram the CAR (a car is bigger than a cat, so it counts from further off).
+		if Motion.flat_distance(cat.riding_car.global_position, global_position) < bump_range + car_bump_extra_range:
+			_bonk_car(cat.riding_car)
+		return
 	if Motion.flat_distance(cat.global_position, global_position) < bump_range:
 		_bonk(cat)
 
@@ -385,7 +401,10 @@ func _chase_point(cat: CatPlayer) -> Vector3:
 ## True if nothing solid (buildings, crates, the car) is between us and the cat.
 func _clear_line_to(cat: CatPlayer) -> bool:
 	var from := global_position + Vector3(0, 0.5, 0)
-	var query := PhysicsRayQueryParameters3D.create(from, cat.global_position + Vector3(0, 0.5, 0), 1, [get_rid(), cat.get_rid()])
+	var skip: Array[RID] = [get_rid(), cat.get_rid()]
+	if cat.riding_car != null:
+		skip.append(cat.riding_car.get_rid())  # chasing a car: the car itself isn't "in the way"
+	var query := PhysicsRayQueryParameters3D.create(from, cat.global_position + Vector3(0, 0.5, 0), 1, skip)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
@@ -393,7 +412,9 @@ func _clear_line_to(cat: CatPlayer) -> bool:
 ## Noisy loot (the jingling golden koi) and a hot city make "reach" longer.
 ## A bot of the SEWER BREACH instead hunts any cat in its own sewer, however far away.
 func _can_chase(cat: CatPlayer, reach: float) -> bool:
-	if cat == null or not cat.visible or cat.unseen_by_bots or CatHealth.instance.is_down(cat.player_id):
+	# (A cat in a car is hidden but still hunted: its body rides along inside the car, so bots
+	# chase the CAR: scripts/cat/cat_ride.gd.)
+	if cat == null or (not cat.visible and cat.riding_car == null) or cat.unseen_by_bots or CatHealth.instance.is_down(cat.player_id):
 		return false
 	if breach_hub != null:
 		return UndergroundHub.hub_at(cat.global_position) == breach_hub
@@ -426,6 +447,20 @@ func _bonk(cat: CatPlayer) -> void:
 	state = State.STUNNED
 	_stun_left = stun_seconds
 	velocity = -push.normalized() * 3.0  # bounce back a little
+	velocity.y = 0.0
+
+
+## Host: rammed a car with cats in it. Dents it (scripts/car_health.gd), shoves it, and bounces off
+## stunned like after bonking a cat. (No loot stealing through the car door!)
+func _bonk_car(car: GetawayCar) -> void:
+	var away := Motion.flat(car.global_position - global_position).normalized()
+	if car.health != null:
+		car.health.damage(roundi(bonk_damage * car_damage_multiplier), display_name)
+	car.take_hit.rpc_id(car.get_multiplayer_authority(), (away * bump_push + Vector3.UP * bump_hop * 0.3) * car.mass * 0.25, global_position)
+	Sound.play_everywhere("bonk", global_position)
+	state = State.STUNNED
+	_stun_left = stun_seconds
+	velocity = -away * 3.0
 	velocity.y = 0.0
 
 

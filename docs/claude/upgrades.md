@@ -6,7 +6,7 @@
 SEWER UPGRADES (SETUP_GUIDE §25): `scripts/upgrades.gd` (`Upgrades.instance`, node `Upgrades` under Main right below Wallet, GameSystems).
 `player_upgrades` {player_id: {id: tier}} synced (`_set_tier`/`_set_all`), `costs` export (id -> [[cash, scrap] per tier]), `INFO`/`WORKBENCH_TABS`.
 Host `request_buy(player_id, id)` = Wallet.spend + `ItemManager.spend_scrap` (bag first, then stash; `scrap_count_of`). Read with static
-`Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel). Hooks: `ItemManager.bag/pack/stash/
+`Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel, afterburner = car boost charges, tab 3). Hooks: `ItemManager.bag/pack/stash/
 quick_stack_size_for(pid)` (NEVER read pack_size etc. directly; `bag_size_for` = old alias of `pack_size_for`), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
 request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_scrap_for`.
 NO upgrades in NPC chat any more (no upgrade_page / open_page): EVERYTHING is bought at the TINKER WORKBENCH = hub `_build_workbench`

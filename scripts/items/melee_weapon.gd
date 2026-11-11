@@ -92,7 +92,7 @@ func _fire() -> void:
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = box
 	query.transform = Transform3D(Basis.looking_at(forward, Vector3.UP), centre)
-	query.exclude = [holder.get_rid()]  # don't bonk yourself
+	query.exclude = own_rids()  # don't bonk yourself (or the car you're riding in)
 	var found := get_world_3d().direct_space_state.intersect_shape(query, 16)
 
 	var hit_anything := false

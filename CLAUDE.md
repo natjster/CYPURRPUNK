@@ -20,7 +20,7 @@ Before changing or debugging a system, read ONLY the topic file(s) it touches (t
 | `enemies.md` | Enemy + Hit frameworks, VAC-COP Roomba, drones/trappers, bot models, eye weak spot |
 | `mainframe-breach.md` | per-gang Mainframe charge, scrap, SEWER BREACH, NPCs fighting |
 | `health-cash-saves.md` | CatHealth (downed / revive / KO), Wallet, stash (litterbox), profiles |
-| `cat-and-cars.md` | CatPlayer sync, cars, passengers, car model |
+| `cat-and-cars.md` | CatPlayer sync, cars, passengers (GUNNER seat, riding), car model, CAR HEALTH + wrecks, AFTERBURNER boost |
 | `cat-look.md` | cat models (original cats stay!), CatLook, several cats per player, menu flow |
 | `items.md` | items framework, ONE BACKPACK, inventory view, SHOP, quick use, melee, weapon extras + models |
 | `npcs-quests.md` | NPC framework, shopkeepers, loot table, quest framework |

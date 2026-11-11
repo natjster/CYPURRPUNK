@@ -70,6 +70,8 @@ func _draw_badge(style: HudStyle, rect: Rect2, effect: Dictionary) -> void:
 	var height := rect.size.y * clampf(effect.fraction, 0.0, 1.0)
 	draw_rect(Rect2(rect.position.x, rect.end.y - height, rect.size.x, height), fill)
 	var picture := tint.lerp(Color.WHITE, pulse * 0.5)
+	if effect.get("dim", false):
+		picture.a *= 0.3  # not ready yet (a recharging BOOST charge: hud.gd _update_status)
 	HudStyle.draw_icon(self, HudStyle.status_icon(effect.id), rect.grow(-padding), picture)
 	var edge := tint
 	edge.a = lerpf(0.85, 1.0, pulse)
