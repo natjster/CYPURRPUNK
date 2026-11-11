@@ -76,6 +76,7 @@ var inventories := {}
 var _world_nodes := {}   # world item ID -> Node3D on the street
 var _spawns: Array = []  # host: [{"item", "pos", "respawn", "back_at"}], index = world item ID
 var _next_id: int = FIRST_DROPPED_ID
+var _mart_spots_used := {}  # Meow-Mart loot spots already taken while building this city's loot
 var _clock: float = 0.0
 ## Item id -> a spare copy of its scene's script, NOT in the world: quick-use items call its
 ## quick_use(cat) (so catnip's speed/duration still come from its own Inspector numbers).
@@ -118,6 +119,7 @@ func _on_city_generated(city_seed: int) -> void:
 		if id < FIRST_DROPPED_ID or not UndergroundHub.is_in_hub(world[id].pos):
 			_remove_world_local(id)
 	_spawns.clear()
+	_mart_spots_used.clear()
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + LOOT_SEED_SALT)
@@ -141,6 +143,10 @@ func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
 		return
 	var door := city.meow_mart_position
 	var count := line.count
+	# THE MEOW-MART HEIST (scripts/interiors/meow_mart_interior.gd): the golden koi lives in the
+	# tank in Meow-Mart's back room now, so the old "somewhere on a sidewalk" koi isn't placed.
+	if line.where == LootSpawn.Where.SIDEWALK and MeowMartInterior.koi_in_tank(line.item_id):
+		return
 	if line.where == LootSpawn.Where.OUTSIDE_MEOW_MART and line.item_id == "fish" and DistrictTwist.is_clearance():
 		count *= DistrictTwist.instance.clearance_fish_multiplier  # CLEARANCE SALE: more fish (district_twist.gd)
 	for i in count:
@@ -154,6 +160,15 @@ func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
 				spot = door + Vector3((in_row - (line.count - 1) / 2.0) * 1.3, 0, -0.5) + city.meow_mart_outward * 1.3 * row
 			LootSpawn.Where.FIXED_SPOT:
 				spot = line.spot + Vector3(i * 0.8, 0, 0)
+			LootSpawn.Where.MEOW_MART_SHELF, LootSpawn.Where.MEOW_MART_COUNTER:
+				# Inside Meow-Mart: a free spot from the store's own list (the store is the same in
+				# every district, the loot's random numbers pick which spots get something).
+				var free := _free_mart_spots(line.where)
+				if free.is_empty():
+					push_warning("[Items] Meow-Mart has no free spot left for '%s'" % line.item_id)
+					return
+				spot = free[rng.randi_range(0, free.size() - 1)]
+				_mart_spots_used[spot] = true
 			_:  # SIDEWALK
 				spot = random_sidewalk_spot(rng)
 				for attempt in 20:  # far enough from Meow-Mart? (a few tries, then take what we got)
@@ -161,6 +176,18 @@ func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
 						break
 					spot = random_sidewalk_spot(rng)
 		add_spawn_point(line.item_id, spot, line.respawn_seconds)
+
+
+## The Meow-Mart loot spots (shelves or seafood counter) nothing has been put on yet this city.
+func _free_mart_spots(where: LootSpawn.Where) -> Array[Vector3]:
+	var free: Array[Vector3] = []
+	if MeowMartInterior.instance == null:
+		return free
+	var counter := where == LootSpawn.Where.MEOW_MART_COUNTER
+	for spot in MeowMartInterior.instance.loot_spots(counter):
+		if not _mart_spots_used.has(spot):
+			free.append(spot)
+	return free
 
 
 ## Put an item on the street. respawn_seconds > 0 = it grows back that long after it's taken.

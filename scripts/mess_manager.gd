@@ -198,6 +198,18 @@ func request_knock(player_id: int, id: int, fall_yaw: float) -> void:
 	print("[Mess] player %d knocked over prop #%d (%s)" % [player_id, id, MessProp.Kind.keys()[p.kind]])
 
 
+## Host: a mess that isn't one of the street props (MEOW-MART's cans, toppled aisles and smashed
+## koi tank: scripts/interiors/meow_mart_interior.gd). Counts the same way: heat, the RAID REPORT's
+## MESS (amount = how many messes it's worth) and BIN DAY's chaos bonus.
+func count_mess(player_id: int, amount: int, heat: float) -> void:
+	if not multiplayer.is_server() or not enabled or amount <= 0:
+		return
+	_trip_messes[player_id] = int(_trip_messes.get(player_id, 0)) + amount
+	if HeatMeter.instance != null and heat > 0.0:
+		HeatMeter.instance.add_heat(heat)
+	Events.mess_made.emit(player_id, amount)
+
+
 # --- Tidying up (the VAC-COPs, roomba.gd) ---
 
 ## Host: the nearest knocked-over prop within "reach" of "from" that no other bot is already

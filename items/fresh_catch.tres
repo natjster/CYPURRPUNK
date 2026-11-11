@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/fish.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "fresh_catch"
+display_name = "FRESH CATCH"
+description = "Straight off Meow-Mart's iced seafood counter. Worth $75 at the drop-off."
+kind = 0
+cash_value = 75
+bag_space = 1
+scene = ExtResource("2_scene")
+world_scale = 1.1
+glow_color = Color(0.55, 0.9, 1, 1)

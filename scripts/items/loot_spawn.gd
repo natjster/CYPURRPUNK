@@ -9,7 +9,10 @@ enum Where {
 	SIDEWALK,           ## random sidewalk spots all over the city
 	OUTSIDE_MEOW_MART,  ## a neat row on the sidewalk outside Meow-Mart's door
 	FIXED_SPOT,         ## always at "Spot" (the same in every city)
+	MEOW_MART_SHELF,    ## INSIDE Meow-Mart, on the aisle shelves (scripts/interiors/meow_mart_interior.gd)
+	MEOW_MART_COUNTER,  ## INSIDE Meow-Mart, on the iced FRESH CATCH seafood counter
 }
+## (New places always go at the END of this list: the .tres files store the number.)
 
 ## The item card's id (the file name in res://items/, e.g. "fish", "sardine", "golden_koi").
 @export var item_id: String = "sardine"

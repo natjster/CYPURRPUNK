@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LootTable" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="LootTable" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/items/loot_table.gd" id="1_table"]
 [ext_resource type="Script" path="res://scripts/items/loot_spawn.gd" id="2_spawn"]
@@ -29,6 +29,27 @@ count = 1
 min_distance_from_meow_mart = 60.0
 respawn_seconds = 120.0
 
+[sub_resource type="Resource" id="Resource_mart_catch"]
+script = ExtResource("2_spawn")
+item_id = "fresh_catch"
+count = 3
+where = 4
+respawn_seconds = 90.0
+
+[sub_resource type="Resource" id="Resource_mart_tuna"]
+script = ExtResource("2_spawn")
+item_id = "gourmet_tuna"
+count = 4
+where = 3
+respawn_seconds = 90.0
+
+[sub_resource type="Resource" id="Resource_mart_treats"]
+script = ExtResource("2_spawn")
+item_id = "catnip_treats"
+count = 2
+where = 3
+respawn_seconds = 120.0
+
 [resource]
 script = ExtResource("1_table")
-spawns = Array[ExtResource("2_spawn")]([SubResource("Resource_mart_fish"), SubResource("Resource_street_fish"), SubResource("Resource_sardines"), SubResource("Resource_koi")])
+spawns = Array[ExtResource("2_spawn")]([SubResource("Resource_mart_fish"), SubResource("Resource_street_fish"), SubResource("Resource_sardines"), SubResource("Resource_koi"), SubResource("Resource_mart_catch"), SubResource("Resource_mart_tuna"), SubResource("Resource_mart_treats")])

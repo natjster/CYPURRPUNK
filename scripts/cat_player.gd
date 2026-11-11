@@ -639,6 +639,9 @@ func _physics_process(delta: float) -> void:
 	# MESS: ran into a cone, a box, or (with zoomies) a bin? Knock it over (scripts/mess_manager.gd).
 	if MessManager.instance != null:
 		MessManager.instance.cat_bump(self, push)
+	# Inside MEOW-MART: can stacks, aisle ends, the koi tank, the basket (meow_mart_interior.gd).
+	if MeowMartInterior.instance != null:
+		MeowMartInterior.instance.cat_bump(self, push)
 
 	# Smoothly turn the cat model to face where it's going. (Godot's "forward" is -Z.)
 	# While firing a weapon, face where the camera looks instead, so the gun points at the target.

@@ -67,6 +67,18 @@ signal generated(city_seed: int)
 ## never crash into props (MessProp.SOLID_LAYER), and cones, boxes and posters are never solid.
 @export var bins_are_solid: bool = true
 
+@export_group("Meow-Mart storefront (the way INSIDE)")
+## On = Meow-Mart has a glass front with sliding doors you can walk through (into the store:
+## scripts/interiors/meow_mart_interior.gd). Off = the old solid box (nobody can go in).
+@export var storefront_doors: bool = true
+## How far the glass front is stepped in from the shop's front wall (metres).
+@export var storefront_recess: float = 1.2
+## How wide the glass front is (metres, of the shop's 10) and how tall.
+@export var storefront_width: float = 7.0
+@export var storefront_height: float = 3.0
+## The glow of the shop's lights behind the glass.
+@export var storefront_glow_color: Color = Color(0.75, 1.0, 0.9)
+
 @export_group("Loudspeakers (OVERCLEAN's PA poles)")
 ## The loudspeaker pole scene (OVERCLEAN's announcements type out beside its horns).
 @export_file("*.tscn") var loudspeaker_scene: String = "res://scenes/props/loudspeaker.tscn"
@@ -117,6 +129,14 @@ var city_seed: int = 0
 var meow_mart_position: Vector3
 ## Which way is "out into the street" from Meow-Mart's door (a flat unit vector, +z or -z).
 var meow_mart_outward: Vector3 = Vector3.BACK
+## THE MEOW-MART DOORS (made by _build_meow_mart_storefront; empty with Storefront Doors off):
+## the two sliding glass leaves (each has metas "home_x" / "open_x" = its closed / open spot), the
+## middle of the doorway on the glass line (INF = no doors), and how wide the doorway is.
+var meow_mart_doors: Array[Node3D] = []
+var meow_mart_door_spot: Vector3 = Vector3.INF
+var meow_mart_door_width: float = 3.0
+var _glass_material: Material
+var _shop_glow_material: Material
 ## DISTRICT TWISTS (scripts/district_twist.gd), read when the city is built: BIN DAY's prop
 ## multiplier and whether it's a BLACKOUT. (The twist is set before generate() on every computer.)
 var _props_x: float = 1.0
@@ -153,6 +173,8 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 		child.queue_free()
 	mess_props.clear()
 	loudspeakers.clear()
+	meow_mart_doors.clear()
+	meow_mart_door_spot = Vector3.INF
 	_taken_spots.clear()
 	# (Showcase cities = the start menu / tutorial: never twisted.)
 	_props_x = 1.0 if showcase else DistrictTwist.prop_multiplier()
@@ -320,10 +342,13 @@ func _is_meow_mart_lot(lot_center: Vector3) -> bool:
 func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 	var size := Vector3(10, 7, 10)
 	var center := _front_aligned_center(lot_center, block_size / 2.0, street_side, size.x, size.z, size.y)
-	var walls := LevelKit.add_box(self, center, size, building_material, true)
-	walls.set_instance_shader_parameter("instance_tint", Color(1, 0.75, 0.9))
-
 	var front_z := center.z + street_side.y * (size.z * 0.5)
+	var pink_tint := Color(1, 0.75, 0.9)
+	if not storefront_doors:
+		var walls := LevelKit.add_box(self, center, size, building_material, true)
+		walls.set_instance_shader_parameter("instance_tint", pink_tint)
+	else:
+		_build_meow_mart_storefront(center, size, front_z, street_side, pink_tint)
 	var pink := NEON_COLORS[0]
 	var strip := LevelKit.add_box(self, Vector3(center.x, 3.6, front_z + street_side.y * 0.12), Vector3(8, 0.3, 0.2), neon_material, false)
 	strip.set_instance_shader_parameter("instance_tint", pink)
@@ -358,6 +383,95 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 			_add_bin(Vector3(center.x - bin_side * 4.6, 0, further), _bin_rng.randf() * TAU)
 			_add_cone(Vector3(center.x + bin_side * 4.6, 0, further), _bin_rng.randf() * TAU, false)
 			_add_box(Vector3(center.x + bin_side * 4.6, 0, further + street_side.y * 1.1), _bin_rng.randf() * TAU)
+
+
+## THE MEOW-MART HEIST (ROADMAP section 4 #8): the shop's front is a recessed glass STOREFRONT with
+## two sliding glass doors in the middle. Walking through them takes you INSIDE (the store itself is
+## its own place, scripts/interiors/meow_mart_interior.gd: it slides these doors and moves cats
+## through). The building is the same 10 x 7 x 10 box as before, just with the front stepped in:
+##
+##        pillar |  glass  | door | door |  glass  | pillar      <- the front line (front_z)
+##               |__________ lit "inside" ___________|           <- 0.35 m behind the glass
+##               |_____ the rest of the shop (solid) ____|
+##
+## No random numbers are used here (the city must come out the same on every computer).
+func _build_meow_mart_storefront(center: Vector3, size: Vector3, front_z: float, street_side: Vector2, tint: Color) -> void:
+	var side := street_side.y  # +1 = the front faces +z, -1 = it faces -z
+	var depth := storefront_recess
+	var half_front := storefront_width * 0.5
+	# The main building, stepped back by the recess.
+	var shell_size := Vector3(size.x, size.y, size.z - depth)
+	var shell := LevelKit.add_box(self, center - Vector3(0, 0, side * depth * 0.5), shell_size, building_material, true)
+	shell.set_instance_shader_parameter("instance_tint", tint)
+	# Pillars either side of the glass, and the sign wall above it (the neon strip + letters).
+	var pillar_width := (size.x - storefront_width) * 0.5
+	var front_middle_z := front_z - side * depth * 0.5
+	for pillar_side in [-1.0, 1.0]:
+		var pillar := LevelKit.add_box(self, Vector3(center.x + pillar_side * (half_front + pillar_width * 0.5), size.y * 0.5, front_middle_z),
+			Vector3(pillar_width, size.y, depth), building_material, true)
+		pillar.set_instance_shader_parameter("instance_tint", tint)
+	var header_height := size.y - storefront_height
+	var header := LevelKit.add_box(self, Vector3(center.x, storefront_height + header_height * 0.5, front_middle_z),
+		Vector3(storefront_width, header_height, depth), building_material, true)
+	header.set_instance_shader_parameter("instance_tint", tint)
+
+	# The glass line, and a softly glowing "inside of the shop" behind it (cats never reach it: they
+	# go INSIDE as they cross the glass line). It stands 0.35 m in front of the wall, not on it.
+	var glass_z := front_z - side * (depth - 0.35)
+	var lit := LevelKit.add_box(self, Vector3(center.x, storefront_height * 0.5, glass_z - side * 0.2),
+		Vector3(storefront_width, storefront_height, 0.2), _storefront_glow_material(), false)
+	lit.name = "MeowMartLitWindow"
+	var glass := _storefront_glass_material()
+	var door_width := meow_mart_door_width
+	var panel_width := half_front - door_width * 0.5
+	for panel_side in [-1.0, 1.0]:  # the two fixed glass panels
+		LevelKit.add_box(self, Vector3(center.x + panel_side * (door_width * 0.5 + panel_width * 0.5), storefront_height * 0.5, glass_z),
+			Vector3(panel_width, storefront_height, 0.06), glass, false)
+	# A dark metal bar along the top of the doors.
+	LevelKit.add_box(self, Vector3(center.x, storefront_height - 0.1, glass_z + side * 0.2), Vector3(door_width + 0.3, 0.2, 0.12), crate_material, false)
+
+	# The two sliding door leaves, under one node: the interior script slides them apart.
+	var doors := Node3D.new()
+	doors.name = "MeowMartDoors"
+	doors.position = Vector3(center.x, 0, glass_z + side * 0.12)  # (a step in front of the fixed glass, so they slide past it)
+	add_child(doors)
+	meow_mart_doors.clear()
+	for leaf_side in [-1.0, 1.0]:
+		var leaf := Node3D.new()
+		leaf.name = "LeafL" if leaf_side < 0 else "LeafR"
+		leaf.position = Vector3(leaf_side * door_width * 0.25, 0, 0)
+		leaf.set_meta("home_x", leaf.position.x)
+		leaf.set_meta("open_x", leaf.position.x + leaf_side * door_width * 0.47)
+		doors.add_child(leaf)
+		LevelKit.add_box(leaf, Vector3(0, (storefront_height - 0.2) * 0.5, 0), Vector3(door_width * 0.5 - 0.04, storefront_height - 0.2, 0.05), glass, false)
+		# A pink push bar on each leaf, so you can tell they're doors.
+		var bar := LevelKit.add_box(leaf, Vector3(-leaf_side * door_width * 0.18, 1.0, side * 0.045), Vector3(0.06, 0.5, 0.04), neon_material, false)
+		bar.set_instance_shader_parameter("instance_tint", NEON_COLORS[0])
+		meow_mart_doors.append(leaf)
+	# The middle of the doorway, on the glass line, at street level.
+	meow_mart_door_spot = Vector3(center.x, 0, glass_z)
+
+
+## The faint tinted glass of the storefront (a little see-through). Made once, shared.
+func _storefront_glass_material() -> Material:
+	if _glass_material == null:
+		var glass := StandardMaterial3D.new()
+		glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glass.albedo_color = Color(0.55, 0.85, 1.0, 0.35)
+		glass.metallic_specular = 0.9
+		glass.roughness = 0.1
+		glass.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		_glass_material = glass
+	return _glass_material
+
+
+## The glowing "fluorescent shop inside" seen through the glass (the neon grid texture, dimmed).
+func _storefront_glow_material() -> Material:
+	if _shop_glow_material == null:
+		_shop_glow_material = LevelKit.psx_material({"albedo_color": Color(0.1, 0.12, 0.12),
+			"albedo_texture": preload("res://textures/neon_grid.png"), "world_uv": true, "world_uv_scale": 0.6,
+			"emission_color": storefront_glow_color, "emission_energy": 1.2, "emission_textured": true})
+	return _shop_glow_material
 
 
 # --- Empty yards ---

@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_tin"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.75, 0.78, 0.82, 1)
+shader_parameter/specular = 0.8
+shader_parameter/roughness = 0.2
+
+[sub_resource type="ShaderMaterial" id="Mat_label"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.15, 0.45, 1, 1)
+shader_parameter/emission_color = Color(0.1, 0.35, 0.9, 1)
+shader_parameter/emission_energy = 0.8
+
+[sub_resource type="ShaderMaterial" id="Mat_fish"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(1, 0.85, 0.3, 1)
+shader_parameter/emission_color = Color(1, 0.8, 0.2, 1)
+shader_parameter/emission_energy = 1.2
+
+[sub_resource type="CylinderMesh" id="Mesh_can"]
+top_radius = 0.1
+bottom_radius = 0.1
+height = 0.12
+radial_segments = 8
+rings = 0
+
+[sub_resource type="CylinderMesh" id="Mesh_label"]
+top_radius = 0.104
+bottom_radius = 0.104
+height = 0.07
+radial_segments = 8
+rings = 0
+
+[sub_resource type="BoxMesh" id="Mesh_fish"]
+size = Vector3(0.09, 0.035, 0.012)
+
+[node name="TunaCan" type="Node3D"]
+
+[node name="Can" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_can")
+surface_material_override/0 = SubResource("Mat_tin")
+
+[node name="Label" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_label")
+surface_material_override/0 = SubResource("Mat_label")
+
+[node name="FishPicture" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0, -0.11)
+mesh = SubResource("Mesh_fish")
+surface_material_override/0 = SubResource("Mat_fish")
