@@ -6,17 +6,22 @@ extends Node
 ## Teams.CATLEONE in "Hub", Teams.BURROW in "GangHub").
 ##
 ## How it plays:
-##   - A charge goes 0..100%, in 25% steps. A new game starts both gangs at starting_charge (75%),
-##     so the first SCRAP you bring home already has room to top it up.
-##   - Every time a district is SEALED (max heat, the DEEP CLEAN: Events.district_sealed) each
-##     ACTIVE gang (at least 1 player in the game) loses drain_per_district (25%).
-##   - SCRAP (res://items/scrap.tres) only drops from a destroyed MEGA VAC-COP. Bring it home
-##     in your backpack (the shop won't buy it), walk up to your
-##     gang's MAINFRAME on the west wall of your sewer and press E. 1 scrap does one of these:
-##       FEED  (under 100%)  your gang's Mainframe +charge_per_scrap (25%)
-##       HACK  (your gang is at 100%, an active rival above 0%)  the RIVAL's Mainframe
-##             -hack_per_scrap (25%), and everyone sees it in the HUD feed
-##       FULL  (100%, nobody left to hack)  it refuses: keep your scrap in the stash.
+##   - The charge is 4 BATTERY CELLS of 25% each (0..100%). A new game starts both gangs at
+##     starting_charge (75% = 3 full cells). The TIER is how many cells still have ANY juice in
+##     them (tier_of): 60% = 3 cells (the top one part-drained) = SYSTEM ONLINE. So 1 ELECTRONICS
+##     always buys one tier, and the slow drain only costs you a tier once a cell runs dry.
+##   - It SLOWLY DRAINS: drain_per_minute (1%) every minute a district is being raided (somebody up
+##     top), for every active gang. And every time a district is SEALED (max heat, the DEEP CLEAN:
+##     Events.district_sealed) each ACTIVE gang (at least 1 player in the game) loses drain_per_district (25%).
+##   - ELECTRONICS (res://items/electronics.tres) only drop from a destroyed MEGA VAC-COP. Bring them
+##     home in your backpack (the shop won't buy them), walk up to your gang's MAINFRAME on the west
+##     wall of your sewer and press E: its window opens (scripts/ui/mainframe_screen.gd), explains what
+##     it does, and has the FEED button. 1 electronics does one of these:
+##       FEED  (under full_at, 90%)  your gang's Mainframe +charge_per_electronics (25%)
+##       HACK  (your gang is full, an active rival above 0%)  the RIVAL's Mainframe
+##             -hack_per_electronics (25%), and everyone sees it in the HUD feed
+##       FULL  (full, nobody left to hack)  it refuses: keep your electronics in the stash.
+##   - SCRAP is NOT Mainframe food any more: it only pays for SEWER UPGRADES (upgrades.gd).
 ##   - Each gang's OWN charge decides when ITS exit opens, live (exit_heat):
 ##       100% OVERCLOCK ACTIVE (cyan)   exit at 60 heat
 ##        75% SYSTEM ONLINE (green)     exit at 75 heat
@@ -29,11 +34,11 @@ extends Node
 ##        50%  15 heat (heat_at_50)
 ##        25%  30 heat (heat_at_25: heat level 2)
 ##         0%  50 heat (heat_at_0: heat level 3) + 1 MEGA VAC-COP already up top
-##                                (roomba_patrol.gd), so you can hunt it for scrap.
+##                                (roomba_patrol.gd), so you can hunt it for electronics.
 ##   - A gang that hits 0% (hacked or drained) gets ONE LAST RAID first: the next district runs at 0%
-##     CRITICAL, with its MEGA VAC-COP up top to hunt for scrap. If that district is sealed with the
+##     CRITICAL, with its MEGA VAC-COP up top to hunt for electronics. If that district is sealed with the
 ##     gang still at 0%, then once no cat is left up top and the knocked-out ones are home a siren
-##     counts down breach_warning_seconds in the sewers. Feeding scrap in time stops it. If not,
+##     counts down breach_warning_seconds in the sewers. Feeding electronics in time stops it. If not,
 ##     the SEWER BREACH starts:
 ##       * The gate of its sewer's north tunnel slides up and a horde pours in (roomba_patrol.gd).
 ##         That sewer stops being a safe zone: guns work, nobody heals, and a cat at 0 HP stays
@@ -64,8 +69,12 @@ extends Node
 ## The one Mainframe node (Mainframe.instance).
 static var instance: Mainframe
 
-## The item id of scrap (its card is res://items/scrap.tres).
+## The item id of ELECTRONICS, the only thing the Mainframe eats (res://items/electronics.tres).
+const FUEL_ID: String = "electronics"
+## The item id of scrap (res://items/scrap.tres): upgrade money now, NOT Mainframe food.
 const SCRAP_ID: String = "scrap"
+## One battery cell = one tier step.
+const CELL: float = 25.0
 const MAX_CHARGE: float = 100.0
 
 ## Fired on every computer when a charge (or overclock) changes.
@@ -76,13 +85,19 @@ signal charge_changed
 @export_range(0.0, 100.0, 25.0) var starting_charge: float = 75.0
 ## Charge each active gang loses every time a district is sealed (the DEEP CLEAN).
 @export var drain_per_district: float = 25.0
-## Charge added by each scrap fed in.
-@export var charge_per_scrap: float = 25.0
-## Charge a rival loses for each scrap used to HACK them (only possible at 100%).
-@export var hack_per_scrap: float = 25.0
+## Charge lost per MINUTE while a district is being raided (anybody up top). 0 = no slow drain.
+@export var drain_per_minute: float = 1.0
+## On: the slow drain only runs while somebody is up top. Off: it never stops (even in the hub).
+@export var drain_only_while_raiding: bool = true
+## At or above this charge the Mainframe counts as FULL: E hacks the rival (or refuses).
+@export_range(50.0, 100.0, 1.0) var full_at: float = 90.0
+## Charge added by each ELECTRONICS fed in.
+@export var charge_per_electronics: float = 25.0
+## Charge a rival loses for each ELECTRONICS used to HACK them (only possible when full).
+@export var hack_per_electronics: float = 25.0
 
 @export_group("Sewer Breach (0%)")
-## The siren in the sewers before a breach: this many seconds to get scrap to the Mainframe.
+## The siren in the sewers before a breach: this many seconds to get electronics to the Mainframe.
 @export var breach_warning_seconds: float = 15.0
 ## How long a breached gang must last (seconds). One cat on its feet at the end = THE 1% MIRACLE.
 @export var breach_seconds: float = 30.0
@@ -129,8 +144,8 @@ const TIER_COLORS: Array[Color] = [
 	Color(0.2, 0.9, 1.0),    # OVERCLOCK: cyan
 ]
 
-## What 1 scrap would do at a gang's Mainframe right now (use_for).
-enum ScrapUse { FEED, HACK, FULL }
+## What 1 electronics would do at a gang's Mainframe right now (use_for).
+enum FeedUse { FEED, HACK, FULL }
 
 ## Each gang's charge right now, 0..100, by team number (everyone has a copy; the host's is real).
 var charges: Array[float] = []
@@ -157,6 +172,10 @@ var _survived: bool = false
 var _district_running: bool = false
 var _district_lowest: float = 0.0
 var _refresh_timer: float = 0.0
+## Host: the slow drain owed since the last tick, and the whole-% numbers everyone last heard
+## (the drain is only sent when one of them changes: not 60 messages a minute).
+var _drain_owed: float = 0.0
+var _sent_percents: Array[int] = []
 
 
 func _enter_tree() -> void:
@@ -179,16 +198,25 @@ func charge_of(team: int) -> float:
 
 
 ## Which tier a charge number is in (Tier.CRITICAL .. Tier.OVERCLOCK).
+## = how many of the 4 battery cells still have juice: 0% CRITICAL, 0.1-25% WARNING,
+## 25.1-50% POWER LOW, 50.1-75% ONLINE, over 75% OVERCLOCK.
 static func tier_of(charge: float) -> Tier:
-	if charge >= 100.0:
-		return Tier.OVERCLOCK
-	if charge >= 75.0:
-		return Tier.ONLINE
-	if charge >= 50.0:
-		return Tier.POWER_LOW
-	if charge >= 25.0:
-		return Tier.WARNING
-	return Tier.CRITICAL
+	return clampi(cells_of(charge), 0, Tier.OVERCLOCK) as Tier
+
+
+## How many battery cells have juice in them (0..4). (The 0.0001 keeps 75.0000001 at 3 cells.)
+static func cells_of(charge: float) -> int:
+	return clampi(ceili(charge / CELL - 0.0001), 0, 4)
+
+
+## This gang's charge as a whole percent for the screens (rounded UP: 0.4% left still says 1%).
+func percent(team: int) -> int:
+	return ceili(charge_of(team) - 0.001)
+
+
+## This gang's cells with juice (0..4) (the gauge on the model, the window).
+func cells(team: int) -> int:
+	return cells_of(charge_of(team))
 
 
 ## This gang's tier.
@@ -212,9 +240,9 @@ func exit_heat(team: int) -> float:
 	return maxf(_tier_exit_heat(team) - Upgrades.exit_heat_discount(team), 0.0)
 
 
-## Charge 1 scrap gives this gang: charge_per_scrap (25%), or more with a MAINFRAME CAPACITOR.
-func charge_per_scrap_for(team: int) -> float:
-	return Upgrades.charge_per_scrap_for(team, charge_per_scrap)
+## Charge 1 electronics gives this gang: charge_per_electronics (25%), or more with a MAINFRAME CAPACITOR.
+func charge_per_electronics_for(team: int) -> float:
+	return Upgrades.charge_per_electronics_for(team, charge_per_electronics)
 
 
 func _tier_exit_heat(team: int) -> float:
@@ -262,11 +290,11 @@ func hack_target(team: int) -> int:
 	return target
 
 
-## What 1 scrap would do at this gang's Mainframe right now.
-func use_for(team: int) -> ScrapUse:
-	if charge_of(team) < MAX_CHARGE:
-		return ScrapUse.FEED
-	return ScrapUse.HACK if hack_target(team) >= 0 else ScrapUse.FULL
+## What 1 electronics would do at this gang's Mainframe right now.
+func use_for(team: int) -> FeedUse:
+	if charge_of(team) < full_at:
+		return FeedUse.FEED
+	return FeedUse.HACK if hack_target(team) >= 0 else FeedUse.FULL
 
 
 ## Heat a district should start with right now.
@@ -345,7 +373,7 @@ func breach_text(cat: CatPlayer) -> String:
 func start_district() -> void:
 	_district_running = true
 	_district_lowest = lowest_charge()
-	_set_charges.rpc(charges, _district_lowest >= MAX_CHARGE)
+	_set_charges.rpc(charges, tier_of(_district_lowest) == Tier.OVERCLOCK)
 	_note_last_raids()
 	print("[Mainframe] District starts: charges %s, lowest active %d%%" % [charges, int(_district_lowest)])
 
@@ -362,6 +390,37 @@ func _physics_process(delta: float) -> void:
 	if _refresh_timer <= 0.0:
 		_refresh_timer = 1.0
 		_refresh_district()
+	_slow_drain(delta)
+
+
+## Host: THE SLOW DRAIN. While a district is being raided (or always, with
+## drain_only_while_raiding off), every active gang's Mainframe loses drain_per_minute.
+## Everyone hears about it once a whole percent is gone.
+func _slow_drain(delta: float) -> void:
+	var heist := FishHeist.instance
+	if drain_per_minute <= 0.0 or not _district_running or heist == null or heist.sealed or Game.instance == null:
+		return
+	if drain_only_while_raiding and Game.instance.players_up_top() == 0:
+		return
+	_drain_owed += drain_per_minute / 60.0 * delta
+	if _drain_owed < 0.05:
+		return  # (save it up: no need to touch the numbers every frame)
+	var dropped: Array[int] = []  # gangs whose top cell just ran dry (a tier lower now)
+	for team in active_gangs():
+		var before := tier(team)
+		charges[team] = maxf(charges[team] - _drain_owed, 0.0)
+		if tier(team) < before:
+			dropped.append(team)
+	_drain_owed = 0.0
+	var percents: Array[int] = []
+	for value in charges:
+		percents.append(ceili(value - 0.001))
+	if percents != _sent_percents or not dropped.is_empty():
+		_sent_percents = percents
+		_set_charges.rpc(charges, overclock_active)
+	if not dropped.is_empty():
+		print("[Mainframe] Slow drain: a cell ran dry for gangs %s -> %s" % [dropped, charges])
+		_cell_ran_dry.rpc(dropped)  # (after the charges, so its line reads the new tier)
 
 
 ## Host, every physics frame: start a breach when one is due, then watch how it ends.
@@ -383,7 +442,7 @@ func _run_breach(delta: float) -> void:
 
 
 ## Host: the siren. It starts when a doomed gang's last district is over and every cat is home, and
-## counts down while scrap can still save them. Time up = the breach.
+## counts down while electronics can still save them. Time up = the breach.
 func _run_warning(delta: float) -> void:
 	var doomed := doomed_gangs()
 	if warning_teams.is_empty():
@@ -393,7 +452,7 @@ func _run_warning(delta: float) -> void:
 		return
 	warning_left -= delta
 	if doomed.is_empty():
-		_set_warning.rpc([], 0.0)  # scrap got there in time: on to the next district
+		_set_warning.rpc([], 0.0)  # electronics got there in time: on to the next district
 	elif warning_left <= 0.0:
 		_start_breach.rpc(doomed, breach_seconds)
 	elif doomed != warning_teams:
@@ -414,7 +473,7 @@ func _set_warning(teams: Array, seconds: float) -> void:
 		Sound.play("boss_siren")
 		for cat in Game.instance.playing_cats():
 			if cat.team in warning_teams:
-				Hud.banner("YOUR MAINFRAME IS DYING!\nFEED IT SCRAP OR THEY BREAK IN", 3.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
+				Hud.banner("YOUR MAINFRAME IS DYING!\nFEED IT ELECTRONICS OR THEY BREAK IN", 3.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
 
 
 ## Host: note which gangs are on their last raid (at 0% as this district starts), and tell them.
@@ -434,7 +493,7 @@ func _note_last_raids() -> void:
 func _last_raid_warning(teams: Array) -> void:
 	for cat in Game.instance.playing_cats():
 		if cat.team in teams:
-			Hud.banner("MAINFRAME CRITICAL: LAST CHANCE!\nBRING HOME SCRAP OR THE SEWER FALLS", 5.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
+			Hud.banner("MAINFRAME CRITICAL: LAST CHANCE!\nBRING HOME ELECTRONICS OR THE SEWER FALLS", 5.0, TIER_COLORS[Tier.CRITICAL], cat.slot)
 
 
 ## Host: the breached gangs with nobody left on their feet.
@@ -548,10 +607,10 @@ func _refresh_district() -> void:
 		return
 	_note_last_raids()  # (nobody has gone up, so a hack down to 0% makes THIS their last raid)
 	var lowest := lowest_charge()
-	if lowest == _district_lowest:
-		return
+	if tier_of(lowest) == tier_of(_district_lowest):
+		return  # (same tier = same starting heat, overclock and boss: nothing to redo)
 	_district_lowest = lowest
-	_set_charges.rpc(charges, lowest >= MAX_CHARGE)
+	_set_charges.rpc(charges, tier_of(lowest) == Tier.OVERCLOCK)
 	HeatMeter.instance.restart_district_heat()  # (reads starting_heat() at the new charge)
 	RoombaPatrol.instance.restart_heat_levels()  # level bosses follow the new starting heat
 	print("[Mainframe] District restarts on lowest active %d%%: heat %d" % [int(lowest), int(starting_heat())])
@@ -568,8 +627,9 @@ func _on_district_sealed() -> void:
 	print("[Mainframe] District sealed: drained to %s" % [charges])
 
 
-## A player pressed E at their gang's MAINFRAME (hub.gd). Host only: takes 1 scrap from their loot
-## bag, then feeds their gang or hacks the rival (use_for). Refuses when there's nothing to do.
+## A player pressed FEED in their gang's MAINFRAME window (scripts/ui/mainframe_screen.gd). Host
+## only: takes 1 ELECTRONICS from their backpack, then feeds their gang or hacks the rival
+## (use_for). Refuses when there's nothing to do.
 @rpc("any_peer", "call_local", "reliable")
 func request_feed(player_id: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -581,31 +641,31 @@ func request_feed(player_id: int) -> void:
 		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "TOO LATE: THE MAINFRAMES ARE LOCKED DOWN UNTIL THE BREACH IS OVER.")
 		return
 	var items := ItemManager.instance
-	if items.count_in_bag(player_id, SCRAP_ID) <= 0:
-		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No SCRAP in your backpack. Smash a MEGA VAC-COP for some.")
+	if items.count_in_bag(player_id, FUEL_ID) <= 0:
+		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No ELECTRONICS in your backpack. Smash a MEGA VAC-COP for some.")
 		return
 	var team := cat.team
 	var use := use_for(team)
-	if use == ScrapUse.FULL:
-		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "MAINFRAME FULL (100%). Stash your scrap for later.")
+	if use == FeedUse.FULL:
+		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "MAINFRAME FULL. Stash your electronics for later.")
 		return
-	if not items.take_from_bag(player_id, SCRAP_ID):
+	if not items.take_from_bag(player_id, FUEL_ID):
 		return
 	var changed := charges.duplicate()
-	var target := team if use == ScrapUse.FEED else hack_target(team)
-	if use == ScrapUse.FEED:
-		changed[team] = minf(charge_of(team) + charge_per_scrap_for(team), MAX_CHARGE)
+	var target := team if use == FeedUse.FEED else hack_target(team)
+	if use == FeedUse.FEED:
+		changed[team] = minf(charge_of(team) + charge_per_electronics_for(team), MAX_CHARGE)
 	else:
-		changed[target] = maxf(charge_of(target) - hack_per_scrap, 0.0)
+		changed[target] = maxf(charge_of(target) - hack_per_electronics, 0.0)
 	_set_charges.rpc(changed, overclock_active)
 	_refresh_district()  # nobody up yet? Then it counts for THIS district straight away
-	print("[Mainframe] Player %d used 1 scrap on gang %d: %s" % [player_id, target, charges])
+	print("[Mainframe] Player %d used 1 electronics on gang %d: %s" % [player_id, target, charges])
 	var text := ""
-	if use == ScrapUse.HACK:
+	if use == FeedUse.HACK:
 		_hacked.rpc(team, target)
-		text = "HACKED! %s MAINFRAME -%d%%  ->  %d%%" % [Teams.SHORT_NAMES[target], int(hack_per_scrap), int(charge_of(target))]
+		text = "HACKED! %s MAINFRAME -%d%%  ->  %d%%" % [Teams.SHORT_NAMES[target], int(hack_per_electronics), percent(target)]
 	else:
-		text = "MAINFRAME +%d%%  ->  %d%%  %s\nYour exit opens at %d heat." % [int(charge_per_scrap_for(team)), int(charge_of(team)), tier_name(team), int(exit_heat(team))]
+		text = "MAINFRAME +%d%%  ->  %d%%  %s\nYour exit opens at %d heat." % [int(charge_per_electronics_for(team)), percent(team), tier_name(team), int(exit_heat(team))]
 	if FishHeist.instance != null and FishHeist.instance.went_up.is_empty():
 		text += "\nThis district starts with %d heat%s." % [int(starting_heat()), " - OVERCLOCKED" if overclock_active else ""]
 	_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, text)
@@ -620,17 +680,35 @@ func _set_charges(values: Array, overclock: bool) -> void:
 	charge_changed.emit()
 
 
-## Host -> the feeder's computer: how it went (a message on their screen + a sound).
+## Host -> everyone: a battery cell ran dry in these gangs' Mainframes (THE SLOW DRAIN), so they
+## dropped a tier. Their cats get a line in the HUD feed (their exit opens later now).
+@rpc("authority", "call_local", "reliable")
+func _cell_ran_dry(teams: Array) -> void:
+	if Game.instance == null:
+		return
+	for cat in Game.instance.local_cats():
+		if cat.team in teams:
+			Hud.feed("MAINFRAME DRAINED: %s (EXIT AT %d HEAT)" % [tier_name(cat.team), int(exit_heat(cat.team))], tier_color(cat.team))
+			return  # (one line per computer is plenty)
+
+
+## Host -> the feeder's computer: how it went (a sound + a message: in the MAINFRAME window when
+## it's open, else on the screen).
 @rpc("authority", "call_local", "reliable")
 func _feed_result(player_id: int, ok: bool, text: String) -> void:
 	Sound.play("buy" if ok else "error")
-	Hud.show_message(text, 4.0, PlayerId.slot_of(player_id))
+	var slot := PlayerId.slot_of(player_id)
+	var window := MainframeScreen.for_seat(slot)
+	if window != null and window.is_open():
+		window.note(text, ok)
+	else:
+		Hud.show_message(text, 4.0, slot)
 
 
 ## Host -> everyone: a gang hacked a rival. A line in the HUD feed, in the hacker's colour.
 @rpc("authority", "call_local", "reliable")
 func _hacked(team: int, target: int) -> void:
-	Hud.feed("%s HACKED THE %s MAINFRAME (-%d%%)" % [Teams.name_of(team), Teams.SHORT_NAMES[target], int(hack_per_scrap)], Teams.color_of(team))
+	Hud.feed("%s HACKED THE %s MAINFRAME (-%d%%)" % [Teams.name_of(team), Teams.SHORT_NAMES[target], int(hack_per_electronics)], Teams.color_of(team))
 
 
 ## Host -> a computer that just joined.

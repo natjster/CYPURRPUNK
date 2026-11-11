@@ -68,9 +68,12 @@ signal destroyed(enemy: Enemy)
 ## Item dropped on the street when it's destroyed, on top of whatever it vacuumed
 ## (e.g. "golden_koi" for the boss). "" = nothing extra.
 @export var drop_on_destroy: String = ""
-## On: drop_on_destroy comes out ONCE PER CAT UP TOP (at least 1), so a crew of 4 gets 4 scrap
+## On: drop_on_destroy comes out ONCE PER CAT UP TOP (at least 1), so a crew of 4 gets 4 ELECTRONICS
 ## from a MEGA VAC-COP instead of fighting over 1. (Ticked on roomba_boss.tscn.)
 @export var drop_once_per_cat: bool = false
+## A second item dropped next to drop_on_destroy, as many times (once per cat up top with
+## drop_once_per_cat): the MEGA VAC-COP drops "scrap" too, for SEWER UPGRADES. "" = nothing.
+@export var drop_also: String = ""
 ## Chance (0.05 = 5%) that a regular bot smashed by a player drops a SCRAP. The SCRAP MAGNET
 ## upgrade adds its chance on top. More kills = more scrap, but also more heat.
 @export_range(0.0, 1.0) var scrap_chance: float = 0.05
@@ -343,6 +346,8 @@ func explode() -> void:
 			# (spread out in a little ring so they don't stack into one pickup spot)
 			var ring := Vector3(cos(i * 1.7), 0, sin(i * 1.7)) * (0.0 if i == 0 else 1.0)
 			ItemManager.instance.drop_on_street(drop_on_destroy, global_position + ring)
+			if drop_also != "":  # (the same number again, in a wider ring)
+				ItemManager.instance.drop_on_street(drop_also, global_position + Vector3(cos(i * 1.7 + 0.8), 0, sin(i * 1.7 + 0.8)) * 1.6)
 	elif not is_boss and killed_by != 0:
 		if DistrictTwist.roll_scrap_drop():
 			# HIGH ALERT (scripts/district_twist.gd): even the little ones carry SCRAP, sometimes.
@@ -370,6 +375,7 @@ func explode() -> void:
 func self_destruct() -> void:
 	killed_by = 0
 	drop_on_destroy = ""
+	drop_also = ""
 	explode()
 
 

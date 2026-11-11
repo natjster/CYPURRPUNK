@@ -52,14 +52,14 @@ func _tutorial_auto(player: CatPlayer) -> void:
 		await _grab_nearest(player, "fish")
 	if not await _until_step(7): return
 	print("DevCapture tutorial fish in bag: %d, heat=%.1f (frozen)" % [items.count_in_bag(me, "fish"), HeatMeter.instance.heat])
-	# 7. Wait for a VAC-COP to be brought over, smash it, grab the scrap.
+	# 7. Wait for a VAC-COP to be brought over, smash it, grab the electronics.
 	await _seconds(1.0)
 	var bot := tutorial._nearest_bot(player)
 	print("DevCapture tutorial bot %s at %.1fm" % [bot.name if bot != null else "none", bot.global_position.distance_to(player.global_position) if bot != null else -1.0])
 	if bot != null:
 		bot.take_hit(me, 500)
 	await _seconds(0.5)
-	await _grab_nearest(player, "scrap")
+	await _grab_nearest(player, Mainframe.FUEL_ID)
 	if not await _until_step(8): return
 	# 8. A payphone (E), then the exit.
 	await _seconds(0.5)
@@ -80,13 +80,15 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
 	if not await _until_step(9): return
 	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).pack, UndergroundHub.is_in_hub(player.global_position)])
-	# 9. Feed the scrap.
+	# 9. Feed the electronics: E opens the Mainframe window, then its FEED button.
 	await _seconds(1.0)
 	await _tutorial_arrow("step9 back in sewer", "tutorial_step9_sewer.png")
 	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)
 	for i in 15:
 		await get_tree().physics_frame
-	print("DevCapture tutorial mainframe E: %s" % Interactable.try_use(player))
+	print("DevCapture tutorial mainframe E: %s window open=%s" % [Interactable.try_use(player), MainframeScreen.is_open_for(player.slot)])
+	await get_tree().process_frame
+	MainframeScreen.for_seat(player.slot)._press_feed()
 	if not await _until_step(Tutorial.DONE): return
 	await _tutorial_arrow("done", "tutorial_done.png")
 	print("DevCapture tutorial done: mainframe=%d%% banner=\"%s\"" % [int(Mainframe.instance.charge_of(player.team)), (Hud.element("Banner") as Label).text.replace("\n", " ")])

@@ -21,7 +21,7 @@ extends Control
 ##
 ## PRICES (ItemManager.sell_price_for, the host checks everything):
 ##   buying = the item card's Price. Selling: street loot 100% of its Cash Value (+GOURMET FENCE),
-##   gear half its Price, SCRAP not at all (it's for THE MAINFRAME and the workbench).
+##   gear half its Price, SCRAP / ELECTRONICS not at all (they're for the workbench / THE MAINFRAME).
 ## CONTROLLER: the d-pad / stick moves one highlight over BOTH halves (tabs, rows, SELL ALL, your
 ##   backpack), A = click, X = drop (backpack), LB / RB = tabs, B / Y / Esc / Tab = leave.
 ## SPLIT SCREEN: every player has their own (ShopScreen.for_seat(seat)).
@@ -351,7 +351,7 @@ func _sell_all_loot() -> void:
 		return
 	if ItemManager.instance.pack_sell_value(owner_cat.player_id) <= 0:
 		Sound.play("error")
-		note("No street loot to sell. (Scrap feeds THE MAINFRAME.)", false)
+		note("No street loot to sell. (Scrap = upgrades, electronics = THE MAINFRAME.)", false)
 		return
 	ItemManager.instance.request_sell_all_loot.rpc_id(1, owner_cat.player_id)
 

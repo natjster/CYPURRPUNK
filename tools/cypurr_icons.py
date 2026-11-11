@@ -70,6 +70,7 @@ ITEMS = {
     "catnip_treats":     {"source": "res://scenes/items/catnip_treats.tscn", "view": "high", "yaw": 55},
     "golden_koi":        {"source": "res://scenes/items/golden_koi.tscn", "view": "side", "badge": "crown"},
     "scrap":             {"source": "res://scenes/items/scrap.tscn", "view": "high"},
+    "electronics":       {"source": "res://scenes/items/electronics.tscn", "view": "high"},
 }
 
 NPCS = {

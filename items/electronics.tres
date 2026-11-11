@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_data"]
+[ext_resource type="PackedScene" path="res://scenes/items/electronics.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_data")
+id = "electronics"
+display_name = "ELECTRONICS"
+description = "A fried circuit board ripped out of a MEGA VAC-COP. The shop won't buy it, but your gang's MAINFRAME in the sewers runs on it: +25% charge each. At 100% it hacks the rival's for -25%. Spares can go in your litterbox."
+kind = 0
+cash_value = 0
+bag_space = 1
+carry_speed = 1.0
+noise = 1.0
+scene = ExtResource("2_scene")
+world_scale = 1.4
+glow_color = Color(0.8, 0.4, 1, 1)

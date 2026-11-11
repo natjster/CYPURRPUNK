@@ -208,5 +208,5 @@ levels, the HUD bar); `scripts/roomba_patrol.gd` on **Roombas** (extra Roombas a
   Roombas, Swarm Min/Max Distance, Swarm Sight Multiplier, Swarm Spawns Per Frame.
 - The boss itself: open `scenes/roomba_boss.tscn` and select the root. It's the normal Roomba
   with bigger numbers, so it has the same settings, plus the **Boss** group: Is Boss, **Drop On
-  Destroy** (`scrap`), Heat Scaling (off: the boss doesn't get faster with heat).
+  Destroy** (`electronics`, one per cat up top) + **Drop Also** (`scrap`, one per cat too), Heat Scaling (off: the boss doesn't get faster with heat).
 - How much heat an item adds when grabbed: **Heat On Pickup** on its card.

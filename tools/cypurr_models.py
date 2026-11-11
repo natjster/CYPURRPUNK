@@ -38,7 +38,7 @@ GLB_DIR = os.path.join(PROJECT_ROOT, "models")
 PIXELS_PER_METRE = 16.0
 
 # ROADMAP.md style rules.
-TRIANGLE_LIMITS = {"prop": 150, "character": 600, "vehicle": 500}
+TRIANGLE_LIMITS = {"prop": 150, "character": 600, "vehicle": 500, "set_piece": 500}  # set_piece = a big room centrepiece (the Mainframe)
 TEXTURE_SIZES = (64, 128)
 
 

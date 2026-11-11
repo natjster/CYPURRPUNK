@@ -519,10 +519,11 @@ func _buy_result(player_id: int, ok: bool, text: String) -> void:
 ## host all use this, so they always agree):
 ##   street LOOT (fish, koi, treats...)  = 100% of its card's Cash Value, x the GOURMET FENCE upgrade
 ##   HELD gear (guns, catnip...)         = half its shop Price (at least $1)
-##   SCRAP (and anything else with no value) = 0: the shop won't take it (feed THE MAINFRAME instead)
+##   SCRAP, ELECTRONICS (and anything else with no value) = 0: the shop won't take them (scrap pays for
+##   upgrades at the workbench, electronics feed THE MAINFRAME)
 func sell_price_for(player_id: int, item_id: String) -> int:
 	var data: ItemData = catalog.get(item_id)
-	if data == null or item_id == Mainframe.SCRAP_ID:
+	if data == null or item_id == Mainframe.SCRAP_ID or item_id == Mainframe.FUEL_ID:
 		return 0
 	if data.kind == ItemData.Kind.LOOT:
 		return roundi(data.cash_value * Upgrades.gourmet_multiplier(player_id)) if data.cash_value > 0 else 0
@@ -937,13 +938,13 @@ func spend_scrap(player_id: int, count: int) -> bool:
 	return true
 
 
-## How many of this item are in a player's backpack (e.g. scrap for THE MAINFRAME, fish for a quest).
+## How many of this item are in a player's backpack (e.g. electronics for THE MAINFRAME, fish for a quest).
 func count_in_bag(player_id: int, item_id: String) -> int:
 	return get_inventory(player_id).pack.count(item_id)
 
 
 ## Host: take ONE of this item out of a player's backpack. False = they had none.
-## (THE MAINFRAME calls this when scrap is fed in: scripts/mainframe.gd.)
+## (THE MAINFRAME calls this when electronics are fed in: scripts/mainframe.gd.)
 func take_from_bag(player_id: int, item_id: String) -> bool:
 	var inventory := get_inventory(player_id).duplicate(true)
 	var bag: Array = inventory.pack

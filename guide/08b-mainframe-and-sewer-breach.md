@@ -1,41 +1,58 @@
-# 8. The extraction loop — The Mainframe, scrap & the Sewer Breach
+# 8. The extraction loop — The Mainframe, electronics & the Sewer Breach
 
 [Back to the contents page](../SETUP_GUIDE.md) · [Start of §8](08-the-extraction-loop-the-sewers.md)
 
-### The Mainframe & scrap
-**SCRAP** only comes from a destroyed **MEGA VAC-COP** (it glows cyan on the street, and you grab
-it with E). It takes 1 backpack slot and the shop won't buy it: it comes home in your backpack
-like all loot. A knockout loses it, like any loot.
+### The Mainframe & electronics
+**ELECTRONICS** only come from a destroyed **MEGA VAC-COP** (a fried circuit board that glows
+purple on the street; grab it with E). A MEGA VAC-COP drops **one per cat up top** (and one SCRAP per cat too).
+Electronics take 1 backpack slot and the shop won't buy them: they come home in your backpack like
+all loot. A knockout loses them, like any loot. Spares can go in your litterbox.
 
-**THE MAINFRAME** is the giant CRT on the west wall of your sewer. **Each gang has its own**, with
-a charge of 0-100% in 25% steps. A new game starts both at **75%** (charges are not saved between
-games). Each sealed district drains **25%** from every gang with at least one player in the game.
+**SCRAP is not Mainframe food any more**: it only pays for SEWER UPGRADES at the Tinker Workbench (§25).
 
-With scrap in your bag, walk up to your gang's Mainframe and press E. 1 scrap does one of these:
+**THE MAINFRAME** is the rebels' home-made computer on the west wall of your sewer: a big old CRT on
+a pallet, crates, car batteries, a desk fan and a wok for a satellite dish, with a **FEED ME
+ELECTRONICS** chute at cat height. **Each gang has its own**. Its charge is **4 battery cells** of 25%
+(0-100%); the rack on its right shows them glowing, and the desk fan spins faster the more cells are lit.
+A new game starts both at **75%** (3 cells; charges are not saved between games).
 
-- **[E] FEED SCRAP (+25%)** when your Mainframe is under 100%.
-- **[E] HACK RIVAL MAINFRAME (-25%)** when yours is at 100% and a rival gang in the game is above
+It **drains**:
+- **slowly**: -1% a minute while anyone is up top (each cell lasts 25 minutes of raiding),
+- **and** -25% every time a district is sealed, for every gang with at least one player in the game.
+
+The **tier** is how many cells still have juice: 63% = 3 cells = SYSTEM ONLINE. So 1 electronics always
+buys a whole tier, and the slow drain only costs you a tier when a cell runs dry (a line in the feed
+tells you: `MAINFRAME DRAINED: POWER LOW (EXIT AT 82 HEAT)`).
+
+Walk up to it and press **E** (`[E] THE MAINFRAME (63%)`): its **window** opens, like the shop. It
+explains what it does and shows the cells, your exit heat, the city's starting heat, the slow drain and
+how long until the next cell runs dry, plus a tier table. Its button, with electronics in your pack:
+
+- **FEED 1 ELECTRONICS (+25%)** when your Mainframe is under 90%.
+- **HACK RIVAL MAINFRAME (-25%)** when yours is full (90%+) and a rival gang in the game is above
   0%. Everyone sees it in the HUD feed.
-- **MAINFRAME FULL** at 100% with nobody to hack (solo, one gang, or the rival is at 0%): it refuses,
-  so put spare scrap in your stash for later.
+- **MAINFRAME FULL** at 90%+ with nobody to hack (solo, one gang, or the rival is at 0%): keep your
+  electronics in the litterbox for when it drains.
+
+Esc / Tab / B closes it; walking away closes it too.
 
 Your gang's charge sets when **your** exit opens. The **lowest** charge of any gang in the game sets
 how the shared city starts:
 
-| Charge | CRT says | Your exit opens at | City start (lowest gang) |
+| Cells (charge) | CRT says | Your exit opens at | City start (lowest gang) |
 |---|---|---|---|
-| 100% | OVERCLOCK ACTIVE (cyan) | 60 heat | 0 heat, and heat rises 20% slower |
-| 75% | SYSTEM ONLINE (green) | 75 heat | 0 heat |
-| 50% | POWER LOW (yellow) | 82 heat | 15 heat |
-| 25% | WARNING (orange) | 90 heat | 30 heat |
-| 0% | CRITICAL (flashing red) | 95 heat | 50 heat, with 1 MEGA VAC-COP already up top |
+| 4 (75.1-100%) | OVERCLOCK ACTIVE (cyan) | 60 heat | 0 heat, and heat rises 20% slower |
+| 3 (50.1-75%) | SYSTEM ONLINE (green) | 75 heat | 0 heat |
+| 2 (25.1-50%) | POWER LOW (yellow) | 82 heat | 15 heat |
+| 1 (0.1-25%) | WARNING (orange) | 90 heat | 30 heat |
+| 0 (empty) | CRITICAL (flashing red) | 95 heat | 50 heat, with 1 MEGA VAC-COP already up top |
 
 - Exit timing follows your charge live, so feeding mid-district can open your exit sooner. Once an
   exit has opened it **stays open** for that district, even if a rival hacks you.
 - Anything that changes the lowest charge **before anyone goes up** (feeding, hacking) changes the
   current district's start straight away.
-- The seal drains just **before** the next district starts, so 100% only reaches OVERCLOCK if you
-  top up in the sewers before anyone goes up. Every gang in the game must be at 100% for it.
+- The seal drains just **before** the next district starts, so a district only starts OVERCLOCKED if you
+  top up in the sewers before anyone goes up. Every gang in the game must have 4 cells for it.
 - If everyone's home, heat only races to the DEEP CLEAN once **every** gang's exit has opened (or
   everyone has used their trip), so an early exit can't rob the other gang of its turn.
 - The payphones ring for any gang with an open exit that hasn't called. If it's not your exit yet,
@@ -48,27 +65,37 @@ with a white **EXIT** tick where your gang's exit opens.
 gangs' charges).
 
 **Tuning:** select **Mainframe** in `main.tscn`: **Charge** (Starting Charge, Drain Per District,
-Charge Per Scrap, Hack Per Scrap), **Exit Opens At Heat**, **Starting Heat Per Tier**, **Overclock**
-(Overclock Heat Multiplier). The scrap card is `items/scrap.tres`. The CRT's feeding spot: **Hub**
-and **GangHub** > **Mainframe**. The EXIT tag's size: `hud.tscn` > **Heat** > Exit Tag Size.
+**Drain Per Minute** (the slow drain, 0 = off), **Drain Only While Raiding** (off = it drains in the
+hub too), **Full At** (90), Charge Per Electronics, Hack Per Electronics), **Exit Opens At Heat**,
+**Starting Heat Per Tier**, **Overclock** (Overclock Heat Multiplier). The item card is
+`items/electronics.tres` (model `scenes/items/electronics.tscn`); the MEGA VAC-COP's drops are on
+`scenes/roomba_boss.tscn` (Drop On Destroy = electronics, Drop Also = scrap). The spot you stand on:
+**Hub** and **GangHub** > **Mainframe** > Mainframe Spot (the model follows its Z, always on the west wall).
+The window's words and sizes: `hud.tscn` > **Frame** > **Mainframe** (About Text, Default Info...).
+The model: `models/mainframe.glb`, made by `python tools/make_mainframe_spec.py` then
+`python tools/cypurr_models.py all tools/model_specs/mainframe.json` (or open
+`models/blockbench/mainframe.bbmodel` in Blockbench, repaint, and export over the .glb).
+The EXIT tag's size: `hud.tscn` > **Heat** > Exit Tag Size.
 
 **Test it without playing:** `--mainframe=N` sets every gang's charge, `--mainframe=100,50` sets them
 per gang (Catleone, Burrow), and the district restarts on it.
-`--mainframe=25 --give=scrap --pos=-11,-199.5,0 --press_key=E` feeds one.
-`--teams=0,1 --add_local=1 --mainframe=100,75 --give=scrap --pos=-11,-199.5,0 --press_key=E` hacks.
+`--give=electronics,electronics --mainframe_window=2` walks to it, opens the window and presses FEED twice.
+`--teams=0,1 --add_local=1 --mainframe=100,75 --give=electronics --mainframe_window=1` hacks.
+`--deploy --mainframe_drain=600` drains 10% a second (watch the cells run dry).
+`--mainframe=0 --deploy --kill_roombas=40 --kill_bosses` counts the electronics + scrap the bosses drop.
 `--teams=0,1 --add_local=1 --mainframe=100,75 --deploy --heat=70` shows one exit open and one shut.
-`--to_stash=bag:0` stashes scrap. On a client, add `--wait=120` first.
+`--to_stash=pack:0` stashes electronics. On a client, add `--wait=120` first.
 
 ### The Sewer Breach (a Mainframe at 0%)
 When a gang's Mainframe hits **0%** (hacked from 25%, or drained by a sealed district), it gets a
 warning and two chances before OVERCLEAN comes for that gang's sewer:
 
 1. **One last raid:** the next district runs at **0% CRITICAL** (50 heat, a MEGA VAC-COP already up
-   top to hunt for scrap, exit at 95 heat), and the gang's cats get a `LAST CHANCE` banner.
+   top to hunt for electronics, exit at 95 heat), and the gang's cats get a `LAST CHANCE` banner.
 2. **The siren:** if that district is sealed with the gang still at 0%, then once no cat is left up top
    and knocked-out cats are home, a siren counts down **15 seconds**
    (`FEED THE MAINFRAME! BREACH IN 12s`). The next district waits for it. Run to the stash and the
-   Mainframe: feeding scrap in time stops it.
+   Mainframe: feeding electronics in time stops it.
 3. **Otherwise, the breach starts:**
 
 - **The tunnel:** the iron **Blast Gate** at the north end of the west walkway slides up, the tunnel
@@ -76,7 +103,7 @@ warning and two chances before OVERCLEAN comes for that gang's sewer:
 - **No safe zone** in that sewer: guns and melee work, nobody heals, and a cat at 0 HP stays where it
   fell. Gang-mates can still revive you. A knockout here **keeps your gear**.
 - **Your loot is safe from the horde:** breach bots hit you but don't vacuum your bag, and nothing
-  a breach bot does adds to the city's heat. Anything dropped on a sewer floor (a boss's scrap too)
+  a breach bot does adds to the city's heat. Anything dropped on a sewer floor (a boss's electronics too)
   stays there through new districts.
 - **The sewer fights back:** all 7 NPCs in that sewer grab a gun, hop on the spot and spray the room,
   yelling battle cries over their heads. They're terrible shots and do little damage: they thin the
@@ -94,12 +121,12 @@ warning and two chances before OVERCLEAN comes for that gang's sewer:
 - **The 1% Miracle** (someone still standing after 30 seconds): the gate slams, every bot freezes and
   they blow up one after another over 2.5 seconds, the gang's Mainframe reboots to **25%**, everyone
   heals, and a new district follows the banner. (Only a MEGA VAC-COP you actually destroy drops
-  scrap, and only a bot you finish yourself counts for quests: the self-destruct pays nothing.)
+  electronics and scrap, and only a bot you finish yourself counts for quests: the self-destruct pays nothing.)
 
 **Test it without playing:** `--mainframe=25 --heat=100 --heat_hold=30` drains to 0% (a last raid, no
 breach). `--mainframe=0 --heat=100 --heat_hold=30 --breach_warning=2 --breach_seconds=3 --breach_log=60`
-runs the siren, the breach and the Miracle. Add `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`
-to feed scrap in time.
+runs the siren, the breach and the Miracle. Add `--wait=120 --give=electronics --mainframe_window=1`
+to feed electronics in time.
 
 **Where it lives:** the rules in `scripts/mainframe.gd`, the tunnel, gate and camera in `scripts/hub.gd`
 (`_build_breach_tunnel`), the horde in `scripts/roomba_patrol.gd`, the bots' behaviour in

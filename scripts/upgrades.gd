@@ -39,7 +39,7 @@ extends Node
 ##   getaway_car.gd   engine_multiplier, set_vehicle   cat_health.gd   max_health_for
 ##   car/car_boost.gd "afterburner" tier = extra boost charges (1 + tier)
 ##   enemy.gd         scrap_magnet_chance
-##   melee_weapon.gd  melee_multiplier                 mainframe.gd    charge_per_scrap_for, exit_heat
+##   melee_weapon.gd  melee_multiplier                 mainframe.gd    charge_per_electronics_for, exit_heat
 ##
 ## Prices: select the Upgrades node in main.tscn > Inspector > Costs. Each upgrade has one
 ## [cash, scrap] pair per tier, e.g. "thick_fur": [[150, 1], [350, 2]] = tier 1 costs $150 +
@@ -103,7 +103,7 @@ static var instance: Upgrades
 @export var heavy_paws_per_tier: float = 0.25
 ## Heat the exit opens earlier per INSIDER TUNNEL tier.
 @export var insider_heat_per_tier: float = 5.0
-## Mainframe charge for 1 scrap at MAINFRAME CAPACITOR tier 0, 1, 2.
+## Mainframe charge for 1 ELECTRONICS at MAINFRAME CAPACITOR tier 0, 1, 2.
 @export var capacitor_charge: Array[float] = [25.0, 35.0, 50.0]
 
 ## Names, what they do, and which page sells them. ("crew" = shared by the whole gang.)
@@ -113,7 +113,7 @@ const INFO := {
 		"about": "Unlocks better guns in the shop: 1 = HAIRBALL BLASTER + RED DOT, 2 = TOMMY GUN + FROZEN TUNA, 3 = YARN-ZOOKA + CUCUMBER LAUNCHER."},
 	"bigger_pack": {"name": "BIGGER BACKPACK", "about": "Backpack (loot + gear) 6 -> 8 -> 10 -> 12 slots."},
 	"deluxe_litterbox": {"name": "DELUXE LITTERBOX", "about": "Litterbox 9 -> 15 -> 21 slots."},
-	"mainframe_capacitor": {"name": "MAINFRAME CAPACITOR", "crew": true, "about": "1 scrap charges the Mainframe +35% / +50% (not +25%)."},
+	"mainframe_capacitor": {"name": "MAINFRAME CAPACITOR", "crew": true, "about": "1 ELECTRONICS charges the Mainframe +35% / +50% (not +25%)."},
 	"espresso_zoomies": {"name": "ESPRESSO BLOODSTREAM", "about": "You walk and zoom +12% / +24% faster."},
 	"turbo_engine": {"name": "TWIN-TURBO ENGINE", "crew": true, "about": "Your gang's ride: +15% / +30% top speed and pickup."},
 	"unlock_cyber_bike": {"name": "NEON ZOOM-BIKE", "about": "Fast, twitchy, 1 passenger."},
@@ -255,7 +255,7 @@ static func exit_heat_discount(team: int) -> float:
 	return instance.insider_heat_per_tier * best_in_team(team, "insider_tunnel") if instance != null else 0.0
 
 
-static func charge_per_scrap_for(team: int, base: float) -> float:
+static func charge_per_electronics_for(team: int, base: float) -> float:
 	if instance == null or instance.capacitor_charge.is_empty():
 		return base
 	var tier := best_in_team(team, "mainframe_capacitor")

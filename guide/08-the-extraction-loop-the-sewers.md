@@ -137,8 +137,8 @@ P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture 
 
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
-middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a giant CRT on the
-west wall: feed it SCRAP, see **The Mainframe** in §8) and, at the north end of the west
+middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a scrounged-together
+computer on the west wall: press E for its window and feed it ELECTRONICS, see **The Mainframe** in §8) and, at the north end of the west
 walkway, the barred **North Breach Tunnel** (see **The Sewer Breach** in §8). The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
 sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work), except during a **Sewer Breach** (§8).
 
@@ -187,7 +187,8 @@ the ocean-blue style, in your own HUD (split screen: everyone shops on their own
 | Sardine / Fish / Gourmet Tuna / Fresh Catch / Catnip Treats / Golden Koi | - | **$20 / $50 / $60 / $75 / $80 / $400** (100%, +20% / +40% with GOURMET FENCE) |
 | Neon Bat / Catnip / Catdip / Paw-Pistol / Frozen Tuna | $20 / $25 / $35 / $60 / $80 | half: $10 / $12 / $17 / $30 / $40 |
 | Hairball Blaster / Red Dot / Yarn-Zooka / Purr-Tommy / Cucumber Launcher | $120 / $140 / $160 / $200 / $280 | half: $60 / $70 / $80 / $100 / $140 |
-| SCRAP | - | never (badge says SCRAP): feed THE MAINFRAME / pay for upgrades |
+| SCRAP | - | never (badge says SCRAP): pays for upgrades at the Tinker Workbench |
+| ELECTRONICS | - | never (badge says POWER): feed THE MAINFRAME |
 
 - **Controller:** the d-pad / stick moves one highlight over BOTH halves (tabs, SELL ALL, rows, your
   backpack); **A** = click, **X** = drop (backpack), **LB / RB** = tabs, **B / Y / Esc / Tab** = leave.

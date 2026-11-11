@@ -18,9 +18,9 @@ extends Node
 ##   PART 1 - THE SEWERS     1 take MITTENS' FISH from Lil' Mittens   2 buy a weapon at the shop
 ##                           3 open + close the stash lockers         4 visit the Mainframe
 ##                           5 talk to Don: SEND ME UP TOP
-##   PART 2 - THE CITY       6 grab 3 fish   7 smash a VAC-COP, pick up its SCRAP
+##   PART 2 - THE CITY       6 grab 3 fish   7 smash a VAC-COP, pick up its ELECTRONICS
 ##                           8 answer a payphone, then extract at the exit manhole
-##   PART 3 - BACK HOME      9 feed the scrap to the Mainframe  -> TUTORIAL COMPLETE, back to the menu
+##   PART 3 - BACK HOME      9 feed the electronics to the Mainframe (E opens its window: FEED)  -> TUTORIAL COMPLETE, back to the menu
 ##
 ## How it keeps a beginner from getting stuck (only while Game.is_tutorial()):
 ##   - A training save: $100, an empty stash, nothing read from or written to the real save
@@ -28,10 +28,10 @@ extends Node
 ##   - The heat is FROZEN (no surprise Deep Clean). At step 8 it jumps to exit_heat so the exit
 ##     opens and the payphones ring at once.
 ##   - Your HP never drops below Min Health (cat_health.gd asks health_floor()).
-##   - The 6-slot backpack has room for the 3 fish AND the scrap (they come home in it).
+##   - The 6-slot backpack has room for the 3 fish AND the electronics (they come home in it).
 ##   - Don won't send you up before step 5 (hub.gd asks allows_deploy()).
 ##   - Spare fish appear at the centre crossroads if there aren't enough nearby.
-##   - A VAC-COP is moved near you at step 7 if none is close, and the one you smash drops SCRAP
+##   - A VAC-COP is moved near you at step 7 if none is close, and the one you smash drops ELECTRONICS
 ##     (normally only the MEGA VAC-COP boss does).
 ##
 ## It joins the GAME SYSTEMS (scripts/game_systems.gd): start_district() starts step 1.
@@ -43,7 +43,7 @@ extends Node
 ## The city number for the tutorial (always the same city). Meow-Mart is built right by the
 ## centre crossroads, next to the manhole you come up from.
 @export var city_seed: int = 1999
-## Your gang's MAINFRAME charge at the start (%). Feeding the scrap at the end adds 25%.
+## Your gang's MAINFRAME charge at the start (%). Feeding the electronics at the end adds 25%.
 @export_range(0.0, 100.0, 25.0) var mainframe_charge: float = 75.0
 ## Your HP never goes below this in the tutorial (so a beginner can't get knocked out).
 @export var min_health: int = 25
@@ -100,7 +100,7 @@ extends Node
 @export_multiline var step3_take_back: String = "Take your weapon back: [{E}] the LITTERBOX, click it"
 @export_group("Step 4 - Mainframe")
 @export var step4_title: String = "STEP 4/9: CHECK THE MAINFRAME"
-@export_multiline var step4_hint: String = "Walk to the giant CRT. SCRAP keeps it charged"
+@export_multiline var step4_hint: String = "Walk to the junk-pile computer. ELECTRONICS keep it charged"
 @export_group("Step 5 - Deploy")
 @export var step5_title: String = "STEP 5/9: DEPLOY TO THE CITY"
 @export_multiline var step5_hint: String = "[{E}] Don Catleone (north end) -> SEND ME UP TOP"
@@ -109,10 +109,10 @@ extends Node
 @export_group("Step 6 - Fish")
 @export var step6_title: String = "STEP 6/9: GRAB 3 FISH"
 @export_multiline var step6_hint: String = "Follow the beacon to Meow-Mart, [{E}] fish ({fish}/{need})"
-@export_group("Step 7 - Scrap")
+@export_group("Step 7 - Electronics")
 @export var step7_title: String = "STEP 7/9: DESTROY A VAC-COP"
-@export_multiline var step7_hint: String = "Shoot or smash the VAC-COP: it drops SCRAP"
-@export_multiline var step7_pickup: String = "PICK UP THE CYAN SCRAP [{E}]!"
+@export_multiline var step7_hint: String = "Shoot or smash the VAC-COP: it drops ELECTRONICS"
+@export_multiline var step7_pickup: String = "PICK UP THE PURPLE ELECTRONICS [{E}]!"
 ## Shown if a VAC-COP bonked a fish out of your bag.
 @export_multiline var step7_fish_back: String = "A bot knocked a fish loose! [{E}] it ({fish}/{need})"
 @export_group("Step 8 - Payphone + Extract")
@@ -123,12 +123,12 @@ extends Node
 @export var step8_exit_title: String = "STEP 8/9: FOLLOW THE ARROW TO THE EXIT"
 @export_multiline var step8_exit: String = "The arrow points at your EXIT manhole now. Go!"
 @export_group("Step 9 - Feed")
-@export var step9_title: String = "STEP 9/9: FEED SCRAP TO THE MAINFRAME"
-@export_multiline var step9_hint: String = "Home! [{E}] the Mainframe to feed it SCRAP (+25%)"
+@export var step9_title: String = "STEP 9/9: FEED THE MAINFRAME"
+@export_multiline var step9_hint: String = "Home! [{E}] the Mainframe, then FEED (+25%)"
 
 const STEPS := 9
 const DONE := 10
-const SCRAP_ID := "scrap"
+const POWER_ID := Mainframe.FUEL_ID  # (step 7: the bot drops ELECTRONICS, step 9 feeds them)
 const FISH_ID := "fish"
 
 ## The one tutorial node (Tutorial.instance).
@@ -136,7 +136,7 @@ static var instance: Tutorial
 
 ## The step we're on: 0 = not started, 1..9, DONE (10) = finished.
 var step: int = 0
-## A part of the step: step 3 (1 = weapon left in the stash), 7 (1 = pick up scrap,
+## A part of the step: step 3 (1 = weapon left in the stash), 7 (1 = pick up the electronics,
 ## 2 = get your fish back), 8 (1 = the exit is revealed, go there).
 var phase: int = 0
 
@@ -146,7 +146,7 @@ var _clock: float = 0.0
 var _stash_was_open: bool = false
 var _visit_time: float = 0.0
 var _charge_before: float = 0.0
-var _scrap_dropped: bool = false
+var _power_dropped: bool = false
 var _spare_fish_left: float = 0.0
 var _bot_check_left: float = 0.0
 var _finale_left: float = -1.0
@@ -203,7 +203,7 @@ func _go_to(new_step: int) -> void:
 	phase = 0
 	_stash_was_open = false
 	_visit_time = 0.0
-	_scrap_dropped = false
+	_power_dropped = false
 	if step == 8:
 		Sound.play("heat_up")  # the exit just opened
 	if step == 9:
@@ -276,9 +276,9 @@ func _check_step(cat: CatPlayer, delta: float) -> void:
 			if items.count_in_bag(me, FISH_ID) >= fish_needed:
 				_go_to(7)
 		7:
-			if _scrap_dropped or items.count_in_bag(me, SCRAP_ID) > 0:
+			if _power_dropped or items.count_in_bag(me, POWER_ID) > 0:
 				phase = 1
-				if items.count_in_bag(me, SCRAP_ID) > 0:
+				if items.count_in_bag(me, POWER_ID) > 0:
 					if items.count_in_bag(me, FISH_ID) >= fish_needed:
 						_go_to(8)
 					else:
@@ -352,19 +352,19 @@ func _bring_a_bot(cat: CatPlayer, delta: float) -> void:
 	print("[Tutorial] Moved %s near the player" % bot.name)
 
 
-## Host: step 7's bot is smashed -> it drops SCRAP where it stood.
+## Host: step 7's bot is smashed -> it drops ELECTRONICS where it stood.
 func _on_enemy_destroyed(enemy: Enemy) -> void:
-	if not active() or step != 7 or _scrap_dropped:
+	if not active() or step != 7 or _power_dropped:
 		return
 	var cat := Game.instance.my_cat()
 	if cat == null or (enemy.killed_by != cat.player_id and enemy.killed_by != 0):
 		return
-	if enemy.is_boss and enemy.drop_on_destroy == SCRAP_ID:
-		_scrap_dropped = true  # a boss drops its own scrap
+	if enemy.is_boss and enemy.drop_on_destroy == POWER_ID:
+		_power_dropped = true  # a boss drops its own electronics
 		return
-	ItemManager.instance.drop_on_street(SCRAP_ID, enemy.global_position)
-	_scrap_dropped = true
-	print("[Tutorial] The smashed VAC-COP dropped SCRAP")
+	ItemManager.instance.drop_on_street(POWER_ID, enemy.global_position)
+	_power_dropped = true
+	print("[Tutorial] The smashed VAC-COP dropped ELECTRONICS")
 
 
 func _on_player_extracted(player_id: int, _loot_value: int, _quest_bonus: int) -> void:
@@ -392,7 +392,7 @@ func _target(cat: CatPlayer) -> Vector3:
 			return _nearest_item(cat, FISH_ID)
 		7:
 			if phase == 1:
-				return _nearest_item(cat, SCRAP_ID)
+				return _nearest_item(cat, POWER_ID)
 			if phase == 2:
 				return _nearest_item(cat, FISH_ID)
 			var bot := _nearest_bot(cat)
@@ -544,7 +544,7 @@ func _compass_name() -> String:
 		6:
 			return "FISH"
 		7:
-			return ["VAC-COP", "SCRAP", "FISH"][clampi(phase, 0, 2)]
+			return ["VAC-COP", "ELECTRONICS", "FISH"][clampi(phase, 0, 2)]
 	return ""
 
 

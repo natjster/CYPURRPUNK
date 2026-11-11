@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scripts/ui/hud_status_icons.gd" id="14_status"]
 [ext_resource type="Script" path="res://scripts/ui/shop_screen.gd" id="15_shop"]
 [ext_resource type="Script" path="res://scripts/ui/workbench_screen.gd" id="16_bench"]
+[ext_resource type="Script" path="res://scripts/ui/mainframe_screen.gd" id="16_mainframe"]
 [ext_resource type="Script" path="res://scripts/ui/hud_hurt_flash.gd" id="17_hurt"]
 [ext_resource type="Script" path="res://scripts/ui/hud_hitmarker.gd" id="18_hitmarker"]
 [ext_resource type="Script" path="res://scripts/ui/hud_loot_toast.gd" id="19_toast"]
@@ -427,6 +428,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("16_bench")
+
+[node name="Mainframe" type="Control" parent="Frame"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("16_mainframe")
 
 [node name="NpcDialog" type="Control" parent="Frame"]
 visible = false

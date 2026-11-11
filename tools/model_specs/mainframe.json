@@ -1,0 +1,1720 @@
+{
+ "name": "mainframe",
+ "kind": "set_piece",
+ "texture_size": 64,
+ "seed": 1999,
+ "background": "#202228",
+ "about": "THE MAINFRAME (scripts/mainframe.gd, built by hub.gd _build_mainframe). The rebels' scrounged-together computer: a big CRT on a pallet, crates, batteries, a fan, a wok dish. Front = -Z, back (z 0) on the wall. Groups: Body, Glow (glows), Fan (spins), Dish.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "64x64, 16x16 swatches:\n  row 0:  wood | dark metal | old beige plastic | rust\n  row 1:  duct tape | green screen (glows) | amber lamp (glows) | spray-paw board\n  row 2:  cable (red/black) | black | copper | hazard stripes\n  row 3:  vent grille | stencilled crate | cyan LED (glows) | dark glass"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": "#7a5530",
+   "bottom": "#4e3420"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "amount": 0.35,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "color": "#2a1a10"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    5
+   ],
+   "to": [
+    15,
+    5
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    10
+   ],
+   "to": [
+    15,
+    10
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": "#4a505a",
+   "bottom": "#2c3038"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     2,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     18,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     29,
+     13,
+     "#9aa3b0"
+    ]
+   ]
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": "#c8bc98",
+   "bottom": "#9a8e6c"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#5a5240"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#7a6e50",
+   "count": 4,
+   "size": 1
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": "#8a5530",
+   "bottom": "#5a3018"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "amount": 0.4,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#2a1408"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#a86a38",
+   "count": 6,
+   "size": 1
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "colors": [
+    "#a0a4a8",
+    "#8a8e92"
+   ],
+   "width": 2,
+   "direction": "horizontal"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "amount": 0.15,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "color": "#2aff70"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    16,
+    16,
+    32,
+    32
+   ],
+   "colors": [
+    "#2aff70",
+    "#12a040"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "color": "#ffc04a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    20,
+    44,
+    28
+   ],
+   "color": "#fff0b8"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#15151b"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    52,
+    24,
+    60,
+    30
+   ],
+   "color": "#ff3ad0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    50,
+    20,
+    52,
+    23
+   ],
+   "color": "#ff3ad0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    53,
+    18,
+    55,
+    21
+   ],
+   "color": "#ff3ad0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    57,
+    18,
+    59,
+    21
+   ],
+   "color": "#ff3ad0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    60,
+    20,
+    62,
+    23
+   ],
+   "color": "#ff3ad0"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     55,
+     31,
+     "#c02aa0"
+    ],
+    [
+     56,
+     31,
+     "#c02aa0"
+    ],
+    [
+     57,
+     31,
+     "#c02aa0"
+    ]
+   ]
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "colors": [
+    "#b02020",
+    "#1a1a1e"
+   ],
+   "width": 3
+  },
+  {
+   "op": "fill",
+   "rect": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "color": "#121216"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top": "#d08848",
+   "bottom": "#8a4a20"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "amount": 0.2,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "color": "#4a2410"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "colors": [
+    "#f0c020",
+    "#141414"
+   ],
+   "width": 3
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    48,
+    16,
+    64
+   ],
+   "colors": [
+    "#2a2e34",
+    "#0e1014"
+   ],
+   "width": 2,
+   "direction": "horizontal"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "top": "#6e4c2a",
+   "bottom": "#46301a"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "amount": 0.3,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    48,
+    32,
+    64
+   ],
+   "color": "#24160c"
+  },
+  {
+   "op": "text",
+   "text": "ELX",
+   "pos": [
+    19,
+    55
+   ],
+   "color": "#1a120a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    48,
+    48,
+    64
+   ],
+   "color": "#30e8ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    38,
+    50,
+    42,
+    54
+   ],
+   "color": "#e0ffff"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    48,
+    48,
+    64,
+    64
+   ],
+   "top": "#203038",
+   "bottom": "#080e12"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    48,
+    64,
+    64
+   ],
+   "amount": 0.05,
+   "spread": 0.12
+  },
+  {
+   "op": "edge",
+   "rect": [
+    48,
+    48,
+    64,
+    64
+   ],
+   "color": "#05080a"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body"
+  },
+  {
+   "name": "Glow"
+  },
+  {
+   "name": "Fan",
+   "origin": [
+    -15,
+    62,
+    -7
+   ]
+  },
+  {
+   "name": "Dish",
+   "origin": [
+    18,
+    65,
+    -5
+   ]
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "pallet",
+   "group": "Body",
+   "from": [
+    -32,
+    0,
+    -18
+   ],
+   "to": [
+    32,
+    4,
+    0
+   ],
+   "sides": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": [
+    0,
+    0,
+    16,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "crate_left",
+   "group": "Body",
+   "from": [
+    -48,
+    0,
+    -17
+   ],
+   "to": [
+    -32,
+    14,
+    -1
+   ],
+   "faces": {
+    "north": [
+     16,
+     48,
+     32,
+     64
+    ],
+    "east": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "west": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "south": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "up": [
+     0,
+     0,
+     16,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crate_right",
+   "group": "Body",
+   "from": [
+    32,
+    0,
+    -16
+   ],
+   "to": [
+    48,
+    12,
+    -1
+   ],
+   "faces": {
+    "north": [
+     16,
+     48,
+     32,
+     64
+    ],
+    "east": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "west": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "south": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "up": [
+     0,
+     0,
+     16,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crate_top_left",
+   "group": "Body",
+   "from": [
+    -46,
+    14,
+    -14
+   ],
+   "to": [
+    -34,
+    20,
+    -2
+   ],
+   "faces": {
+    "north": [
+     16,
+     48,
+     32,
+     64
+    ],
+    "east": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "west": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "south": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "up": [
+     0,
+     0,
+     16,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crt_case",
+   "group": "Body",
+   "from": [
+    -30,
+    4,
+    -16
+   ],
+   "to": [
+    30,
+    56,
+    0
+   ],
+   "faces": {
+    "north": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "east": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "west": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "south": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crt_bezel",
+   "group": "Body",
+   "from": [
+    -28,
+    10,
+    -16.3
+   ],
+   "to": [
+    28,
+    52,
+    -16
+   ],
+   "faces": {
+    "north": [
+     16,
+     32,
+     32,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crt_chin",
+   "group": "Body",
+   "from": [
+    -30,
+    4,
+    -18
+   ],
+   "to": [
+    30,
+    9,
+    -16
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     16,
+     64
+    ],
+    "east": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "west": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "south": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "tape_1",
+   "group": "Body",
+   "from": [
+    -31,
+    44,
+    -16.6
+   ],
+   "to": [
+    -19,
+    46,
+    -15.8
+   ],
+   "faces": {
+    "north": [
+     0,
+     16,
+     16,
+     32
+    ]
+   },
+   "rotation": [
+    0,
+    0,
+    35
+   ],
+   "origin": [
+    -25,
+    45,
+    -16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "tape_2",
+   "group": "Body",
+   "from": [
+    20,
+    6,
+    -18.6
+   ],
+   "to": [
+    31,
+    8,
+    -17.8
+   ],
+   "faces": {
+    "north": [
+     0,
+     16,
+     16,
+     32
+    ]
+   },
+   "rotation": [
+    0,
+    0,
+    -25
+   ],
+   "origin": [
+    25,
+    7,
+    -18
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "chute",
+   "group": "Body",
+   "from": [
+    -8,
+    4,
+    -24
+   ],
+   "to": [
+    8,
+    11,
+    -18
+   ],
+   "faces": {
+    "north": [
+     48,
+     32,
+     64,
+     48
+    ],
+    "east": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "west": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "south": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "up": [
+     48,
+     0,
+     64,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "chute_slot",
+   "group": "Glow",
+   "from": [
+    -6,
+    6.5,
+    -24.3
+   ],
+   "to": [
+    6,
+    8.5,
+    -24
+   ],
+   "faces": {
+    "north": [
+     32,
+     16,
+     48,
+     32
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "mini_crt",
+   "group": "Body",
+   "from": [
+    -47,
+    20,
+    -13
+   ],
+   "to": [
+    -33,
+    32,
+    -2
+   ],
+   "faces": {
+    "north": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "east": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "west": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "south": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "mini_screen",
+   "group": "Glow",
+   "from": [
+    -45,
+    22,
+    -13.3
+   ],
+   "to": [
+    -35,
+    30,
+    -13
+   ],
+   "faces": {
+    "north": [
+     16,
+     16,
+     32,
+     32
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "battery_1",
+   "group": "Body",
+   "from": [
+    -47,
+    32,
+    -10
+   ],
+   "to": [
+    -39,
+    37,
+    -3
+   ],
+   "sides": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "top": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "battery_2",
+   "group": "Body",
+   "from": [
+    -38,
+    32,
+    -10
+   ],
+   "to": [
+    -33,
+    36,
+    -4
+   ],
+   "sides": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "top": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "terminal_1",
+   "group": "Body",
+   "from": [
+    -46,
+    37,
+    -8
+   ],
+   "to": [
+    -44,
+    38.5,
+    -6
+   ],
+   "sides": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top": [
+    32,
+    32,
+    48,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "terminal_2",
+   "group": "Body",
+   "from": [
+    -42,
+    37,
+    -8
+   ],
+   "to": [
+    -40,
+    38.5,
+    -6
+   ],
+   "sides": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top": [
+    32,
+    32,
+    48,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "paw_board",
+   "group": "Body",
+   "from": [
+    -46,
+    2,
+    -17.3
+   ],
+   "to": [
+    -34,
+    12,
+    -17
+   ],
+   "faces": {
+    "north": [
+     48,
+     16,
+     64,
+     32
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "rack_back",
+   "group": "Body",
+   "from": [
+    33,
+    12,
+    -3
+   ],
+   "to": [
+    47,
+    50,
+    -1
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "rack_post_l",
+   "group": "Body",
+   "from": [
+    33,
+    12,
+    -15
+   ],
+   "to": [
+    34.5,
+    50,
+    -3
+   ],
+   "sides": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": [
+    48,
+    0,
+    64,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "rack_post_r",
+   "group": "Body",
+   "from": [
+    45.5,
+    12,
+    -15
+   ],
+   "to": [
+    47,
+    50,
+    -3
+   ],
+   "sides": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": [
+    48,
+    0,
+    64,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "rack_top",
+   "group": "Body",
+   "from": [
+    33,
+    50,
+    -15
+   ],
+   "to": [
+    47,
+    52,
+    -1
+   ],
+   "sides": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top": [
+    48,
+    0,
+    64,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "rack_hazard",
+   "group": "Body",
+   "from": [
+    33,
+    12.5,
+    -16.3
+   ],
+   "to": [
+    47,
+    14.5,
+    -16
+   ],
+   "faces": {
+    "north": [
+     48,
+     32,
+     64,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "radio",
+   "group": "Body",
+   "from": [
+    -24,
+    56,
+    -12
+   ],
+   "to": [
+    -6,
+    62,
+    -2
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     16,
+     64
+    ],
+    "east": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "west": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "south": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "up": [
+     16,
+     0,
+     32,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "leds",
+   "group": "Glow",
+   "from": [
+    -22,
+    59,
+    -12.3
+   ],
+   "to": [
+    -16,
+    61,
+    -12
+   ],
+   "faces": {
+    "north": [
+     32,
+     48,
+     48,
+     64
+    ]
+   }
+  },
+  {
+   "type": "prism",
+   "name": "fan_hub",
+   "group": "Fan",
+   "sides": 6,
+   "center": [
+    -15,
+    62,
+    -7
+   ],
+   "height": 2.5,
+   "radius": 1.5,
+   "side_uv": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top_uv": [
+    32,
+    32,
+    48,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "fan_blade_1",
+   "group": "Fan",
+   "from": [
+    -21,
+    63,
+    -8
+   ],
+   "to": [
+    -9,
+    63.6,
+    -6
+   ],
+   "sides": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "fan_blade_2",
+   "group": "Fan",
+   "from": [
+    -16,
+    63,
+    -13
+   ],
+   "to": [
+    -14,
+    63.6,
+    -1
+   ],
+   "sides": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "dish_pole",
+   "group": "Body",
+   "from": [
+    17,
+    56,
+    -6
+   ],
+   "to": [
+    19,
+    66,
+    -4
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "dish",
+   "group": "Dish",
+   "sides": 8,
+   "center": [
+    18,
+    64,
+    -5
+   ],
+   "height": 2.5,
+   "radius": 7,
+   "side_uv": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "top_uv": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "radius_bottom": 2,
+   "radius_top": 8,
+   "origin": [
+    18,
+    65,
+    -5
+   ],
+   "rotation": [
+    -35,
+    0,
+    0
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "fish_can_1",
+   "group": "Body",
+   "sides": 6,
+   "center": [
+    6,
+    56,
+    -10
+   ],
+   "height": 4,
+   "radius": 2.6,
+   "side_uv": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top_uv": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "fish_can_2",
+   "group": "Body",
+   "sides": 6,
+   "center": [
+    11,
+    56,
+    -9
+   ],
+   "height": 4,
+   "radius": 2.6,
+   "side_uv": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "top_uv": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "cable_up_1",
+   "group": "Body",
+   "from": [
+    -28,
+    56,
+    -3
+   ],
+   "to": [
+    -26.5,
+    112,
+    -1.5
+   ],
+   "sides": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "top": [
+    0,
+    32,
+    16,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "cable_up_2",
+   "group": "Body",
+   "from": [
+    26,
+    52,
+    -2.5
+   ],
+   "to": [
+    27.5,
+    112,
+    -1
+   ],
+   "sides": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "top": [
+    0,
+    32,
+    16,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "cable_up_3",
+   "group": "Body",
+   "from": [
+    44,
+    52,
+    -2.5
+   ],
+   "to": [
+    45.5,
+    112,
+    -1
+   ],
+   "sides": [
+    16,
+    32,
+    32,
+    48
+   ],
+   "top": [
+    16,
+    32,
+    32,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "cable_floor",
+   "group": "Body",
+   "from": [
+    -48,
+    0,
+    -10
+   ],
+   "to": [
+    -32,
+    1,
+    -8.5
+   ],
+   "sides": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "top": [
+    0,
+    32,
+    16,
+    48
+   ]
+  }
+ ]
+}

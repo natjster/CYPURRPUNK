@@ -41,7 +41,7 @@ func _print_upgrades(player: CatPlayer, when: String) -> void:
 		inv.pack.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
 		items.stash_size_for(me), items.quick_stack_size_for(me), CatHealth.instance.max_health_for(me), CatHealth.instance.get_health(me),
 		Upgrades.zoomies_multiplier(me), Upgrades.gourmet_multiplier(me), Upgrades.melee_multiplier(me), Upgrades.scrap_magnet_chance(me),
-		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_scrap_for(player.team),
+		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_electronics_for(player.team),
 		Upgrades.instance.vehicle_of(player.team), ",".join(shop)])
 
 
@@ -121,6 +121,28 @@ func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void
 		for i in 10:
 			await get_tree().process_frame
 		report.call("after " + str(args["shop_close"]))
+
+
+## --mainframe_window[=N] (after walking there and pressing E): print THE MAINFRAME window, then
+## press FEED N times ("DevCapture mainframe_window" lines).
+func _mainframe_window_test(player: CatPlayer, args: Dictionary) -> void:
+	var window := MainframeScreen.for_seat(player.slot)
+	var mainframe := Mainframe.instance
+	var report := func(when: String) -> void:
+		print("DevCapture mainframe_window (%s): open=%s charge=%.2f%% cells=%d tier=%s exit=%.0f electronics=%d scrap=%d button=\"%s\" note=\"%s\" gauge=%s" % [
+			when, window.visible, mainframe.charge_of(player.team), mainframe.cells(player.team), mainframe.tier_name(player.team),
+			mainframe.exit_heat(player.team), ItemManager.instance.count_in_bag(player.player_id, Mainframe.FUEL_ID),
+			ItemManager.instance.scrap_count_of(player.player_id), window._feed.text if window._feed != null else "-", window._note.replace("\n", " / "),
+			UndergroundHub.of(player)._gauge_cells.map(func(c): return "%.2f" % c.scale.y if c.visible else "off")])
+	for i in 10:
+		await get_tree().process_frame
+	report.call("open")
+	var feeds := int(args["mainframe_window"]) if str(args["mainframe_window"]).is_valid_int() else 0
+	for n in feeds:
+		window._press_feed()
+		for i in 20:
+			await get_tree().process_frame
+		report.call("feed %d" % (n + 1))
 
 
 ## --workbench (after walking there and pressing E): print the TINKER WORKBENCH screen, then

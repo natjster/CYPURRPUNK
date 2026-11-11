@@ -1,0 +1,88 @@
+[gd_scene format=3]
+
+[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="1_psx"]
+
+[sub_resource type="ShaderMaterial" id="Mat_board"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.12, 0.42, 0.22, 1)
+shader_parameter/specular = 0.4
+shader_parameter/roughness = 0.5
+
+[sub_resource type="ShaderMaterial" id="Mat_dark"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.1, 0.1, 0.12, 1)
+shader_parameter/specular = 0.6
+shader_parameter/roughness = 0.3
+
+[sub_resource type="ShaderMaterial" id="Mat_copper"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.85, 0.55, 0.28, 1)
+shader_parameter/specular = 0.9
+shader_parameter/roughness = 0.25
+
+[sub_resource type="ShaderMaterial" id="Mat_glow"]
+render_priority = 0
+shader = ExtResource("1_psx")
+shader_parameter/albedo_color = Color(0.8, 0.4, 1, 1)
+shader_parameter/emission_color = Color(0.8, 0.4, 1, 1)
+shader_parameter/emission_energy = 3.0
+
+[sub_resource type="BoxMesh" id="Mesh_board"]
+size = Vector3(0.3, 0.025, 0.2)
+
+[sub_resource type="BoxMesh" id="Mesh_chip"]
+size = Vector3(0.09, 0.03, 0.09)
+
+[sub_resource type="BoxMesh" id="Mesh_cap"]
+size = Vector3(0.03, 0.06, 0.03)
+
+[sub_resource type="CylinderMesh" id="Mesh_tube"]
+top_radius = 0.025
+bottom_radius = 0.035
+height = 0.12
+radial_segments = 6
+rings = 0
+
+[sub_resource type="BoxMesh" id="Mesh_pin"]
+size = Vector3(0.3, 0.01, 0.015)
+
+[node name="Electronics" type="Node3D"]
+
+[node name="Board" type="MeshInstance3D" parent="."]
+rotation = Vector3(0.1, 0.4, -0.12)
+mesh = SubResource("Mesh_board")
+surface_material_override/0 = SubResource("Mat_board")
+
+[node name="Chip" type="MeshInstance3D" parent="Board"]
+position = Vector3(-0.06, 0.025, 0.02)
+mesh = SubResource("Mesh_chip")
+surface_material_override/0 = SubResource("Mat_dark")
+
+[node name="ChipLight" type="MeshInstance3D" parent="Board/Chip"]
+position = Vector3(0, 0.017, 0)
+scale = Vector3(0.4, 0.2, 0.4)
+mesh = SubResource("Mesh_chip")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Tube" type="MeshInstance3D" parent="Board"]
+position = Vector3(0.08, 0.07, -0.04)
+mesh = SubResource("Mesh_tube")
+surface_material_override/0 = SubResource("Mat_glow")
+
+[node name="Cap1" type="MeshInstance3D" parent="Board"]
+position = Vector3(0.06, 0.04, 0.06)
+mesh = SubResource("Mesh_cap")
+surface_material_override/0 = SubResource("Mat_copper")
+
+[node name="Cap2" type="MeshInstance3D" parent="Board"]
+position = Vector3(0.11, 0.04, 0.05)
+mesh = SubResource("Mesh_cap")
+surface_material_override/0 = SubResource("Mat_copper")
+
+[node name="Pins" type="MeshInstance3D" parent="Board"]
+position = Vector3(0, 0.015, -0.085)
+mesh = SubResource("Mesh_pin")
+surface_material_override/0 = SubResource("Mat_copper")

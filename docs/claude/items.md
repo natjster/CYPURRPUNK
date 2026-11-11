@@ -32,7 +32,7 @@ SHOP (Phase 3): `Shopkeeper.interact` -> `ShopScreen` (`scripts/ui/shop_screen.g
 Button + `RowFace` (icon or black silhouette when `!Upgrades.shop_allows`, BUY pill), SELL ALL; it opens the inventory in `shop_mode`
 (`open_for_shop`: left column at `shop_column_start`, SELL badges, click = `request_sell(pid, where, index)`, cat camera `shop_camera_side`)
 and drives ONE SeatFocus over both (inventory `_input` returns while the shop is open). Prices = `ItemManager.sell_price_for` (loot
-100% x gourmet, gear max(1, price/2), scrap 0); `request_sell_all_loot`; `_buy_result`/`_sell_result` -> `ShopScreen.note`. WEAPON CRATES
+100% x gourmet, gear max(1, price/2), scrap + electronics 0); `request_sell_all_loot`; `_buy_result`/`_sell_result` -> `ShopScreen.note`. WEAPON CRATES
 moved to the workbench page (`Upgrades.PAGES.workbench`). Test: `--talk=ComradeWhiskers --shop_tab/--shop_buy/--shop_sell/--shop_sell_all/
 --shop_pad/--shop_close` ("DevCapture shop").
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):

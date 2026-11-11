@@ -527,7 +527,7 @@ func _fill(button: Button, label: String, item_id: String, count: int = 1) -> vo
 		var data: ItemData = items.catalog.get(item_id)
 		var sale := items.sell_price_for(owner_cat.player_id, item_id)
 		if sale <= 0:
-			face.badge = "SCRAP" if item_id == Mainframe.SCRAP_ID else ""
+			face.badge = "SCRAP" if item_id == Mainframe.SCRAP_ID else ("POWER" if item_id == Mainframe.FUEL_ID else "")
 			face.badge_kind = 2
 		elif shop_mode:
 			face.badge = "SELL $%d" % sale
@@ -636,7 +636,7 @@ func _use_slot(button: Button, where: String, index: int, drop: bool) -> void:
 		# At THE BLACK MARKITTEN: a click SELLS it (the host checks and pays: request_sell).
 		if items.sell_price_for(cat.player_id, button.get_meta("item")) <= 0:
 			Sound.play("error")
-			_info.text = "The shop won't buy %s. Feed SCRAP to THE MAINFRAME or spend it at the workbench." % data.display_name
+			_info.text = "The shop won't buy %s. SCRAP pays for upgrades at the workbench; ELECTRONICS feed THE MAINFRAME." % data.display_name
 		else:
 			items.request_sell.rpc_id(1, cat.player_id, where, index)
 		return
@@ -696,7 +696,7 @@ func _on_slot_hover(button: Button) -> void:
 	var worth := ""
 	var sale := items.sell_price_for(owner_cat.player_id, item_id)
 	if sale <= 0:
-		worth = "  The shop won't buy it." + ("  Feed it to THE MAINFRAME." if item_id == Mainframe.SCRAP_ID else "")
+		worth = "  The shop won't buy it." + ("  Spend it at the TINKER WORKBENCH." if item_id == Mainframe.SCRAP_ID else ("  Feed it to THE MAINFRAME." if item_id == Mainframe.FUEL_ID else ""))
 	elif data.kind == ItemData.Kind.LOOT:
 		worth = "  SELLS FOR $%d." % sale
 	else:

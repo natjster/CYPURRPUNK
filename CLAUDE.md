@@ -116,7 +116,8 @@ low-poly, dithering, CRT.
 ## Direction
 Extraction game. Story: OVERCLEAN (the AI) runs the city; the cat rebellion hides in the sewers. Spawn in
 the hub, go up the entry manhole, loot, find the exit via a payphone, extract. Heat 100 = hatch sealed +
-DEEP CLEAN, then a new district (new seed). Scrap + per-gang MAINFRAMES + the SEWER BREACH (0%) are in.
+DEEP CLEAN, then a new district (new seed). Per-gang MAINFRAMES (fed ELECTRONICS from bosses, slow drain) + the SEWER BREACH (0%)
+are in; SCRAP only pays for upgrades.
 
 ## Patch notes (Discord) — in chat, NO file
 There is no PATCH_NOTES.md any more (user's call, 10 Nov 2026: it was deleted; old drafts are in git history before

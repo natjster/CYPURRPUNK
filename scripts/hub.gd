@@ -15,10 +15,11 @@ extends Node3D
 ##     gear (guns, catnip, catdip). He also BUYS the fish you bring home
 ##     (SELL buttons on his shop page): that's where cash comes from.
 ##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
-##   - THE MAINFRAME, the big CRT in the middle of the west wall (scripts/mainframe.gd): its
-##     screen shows THIS gang's charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
-##     CRITICAL). Bring SCRAP home in your backpack and press E there to feed it (+25%), or at
-##     100% to hack the rival gang's (-25%).
+##   - THE MAINFRAME, the scrounged-together computer in the middle of the west wall
+##     (scripts/mainframe.gd, _build_mainframe): its screen shows THIS gang's charge (OVERCLOCK
+##     ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING / CRITICAL), its rack 4 battery cells. Press E
+##     there for its window (scripts/ui/mainframe_screen.gd): FEED it ELECTRONICS (+25%), or when
+##     it's full HACK the rival gang's (-25%).
 ##   - THE CAT-CAM TV on the east wall, across the water from the Mainframe (_build_catcam): press E
 ##     to watch your crew up top over their shoulder (scripts/spectator.gd).
 ##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): you're
@@ -139,7 +140,7 @@ const MART_MOOD: int = -2
 @export var workbench_light: Color = Color(1.0, 0.8, 0.45)
 
 @export_group("Mainframe")
-## Where you stand to feed THE MAINFRAME scrap (the big CRT on the west wall), relative to the Hub node.
+## Where you stand to use THE MAINFRAME (the junk-pile computer on the west wall), relative to the Hub node.
 @export var mainframe_spot: Vector3 = Vector3(-11.0, 0, 0)
 ## How close (metres) you must be to the mainframe spot.
 @export var mainframe_radius: float = 2.5
@@ -255,28 +256,33 @@ var _crt_intel: Label3D
 ## The moonlight's normal brightness (a BLACKOUT dims it).
 var _moon_energy: float = 1.0
 var _crt_key := ""  # what the CRT shows now, so it's only rewritten when that changes
+## THE MAINFRAME's model (models/mainframe.glb), its spinning desk fan, and the 4 glowing battery
+## cells in its rack (the CHARGE GAUGE: they go dark one by one as the charge drains).
+var _mainframe_model: Node3D
+var _mainframe_fan: Node3D
+var _gauge_cells: Array[MeshInstance3D] = []
+var _gauge_cell_height: float = 0.5
 
 
-## THE MAINFRAME's E spot, only while you have scrap in your backpack: "[E] FEED SCRAP (+25%)", or
-## at 100% "[E] HACK RIVAL MAINFRAME (-25%)" (or a FULL reminder when there's nobody to hack).
-## Pressing it asks the host (Mainframe.request_feed), which checks and does it.
+## THE MAINFRAME's E spot: "[E] THE MAINFRAME (63%)". Pressing it opens its window
+## (scripts/ui/mainframe_screen.gd): what it does, its battery cells, and the FEED button.
 class MainframeTerminal extends Interactable:
+	var hub: UndergroundHub
+
 	func interact_distance(cat: CatPlayer) -> float:
-		if Mainframe.instance == null or ItemManager.instance.count_in_bag(cat.player_id, Mainframe.SCRAP_ID) <= 0:
-			return -1.0  # no scrap: nothing to do here
+		if Mainframe.instance == null:
+			return -1.0
 		return super(cat)
 
 	func interact_prompt(cat: CatPlayer) -> String:
 		var mainframe := Mainframe.instance
-		match mainframe.use_for(cat.team):
-			Mainframe.ScrapUse.FEED:
-				return "FEED SCRAP (+%d%%)" % int(mainframe.charge_per_scrap_for(cat.team))
-			Mainframe.ScrapUse.HACK:
-				return "HACK RIVAL MAINFRAME (-%d%%)" % int(mainframe.hack_per_scrap)
-		return "MAINFRAME FULL"
+		var have := ItemManager.instance.count_in_bag(cat.player_id, Mainframe.FUEL_ID)
+		return "THE MAINFRAME (%d%%)%s" % [mainframe.percent(cat.team), "  - FEED ELECTRONICS" if have > 0 else ""]
 
 	func interact(cat: CatPlayer) -> void:
-		Mainframe.instance.request_feed.rpc_id(1, cat.player_id)
+		var window := MainframeScreen.for_seat(cat.slot)
+		if window != null:
+			window.open(cat, hub)
 
 
 func _enter_tree() -> void:
@@ -357,7 +363,7 @@ func near_stash(cat: CatPlayer) -> bool:
 	return cat != null and cat.global_position.distance_to(to_global(stash_spot)) < stash_radius
 
 
-## True if this cat is standing at THE MAINFRAME (where scrap can be fed in: mainframe.gd).
+## True if this cat is standing at THE MAINFRAME (where electronics can be fed in: mainframe.gd).
 func near_mainframe(cat: CatPlayer) -> bool:
 	return cat != null and cat.global_position.distance_to(to_global(mainframe_spot)) < mainframe_radius + 0.5
 
@@ -422,8 +428,9 @@ func return_cat(cat: CatPlayer) -> void:
 
 # --- Every frame: THE MAINFRAME's CRT (every hub), then the mood (this computer only) ---
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_update_mainframe_crt()
+	_update_mainframe_model(delta)
 	if breached:
 		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * TAU * tunnel_light_pulse)
 		_tunnel_light.light_energy = lerpf(tunnel_light_idle, tunnel_light_breach, pulse)
@@ -463,19 +470,19 @@ func _update_mainframe_crt() -> void:
 	var critical := mainframe.tier(team) == Mainframe.Tier.CRITICAL
 	var flash_on := not critical or fmod(Time.get_ticks_msec() / 1000.0 * 2.0, 1.0) < 0.5
 	var intel := DistrictTwist.intel_line()
-	var key := "%d %s %s %s" % [int(mainframe.charge_of(team)), mainframe.tier_name(team), flash_on, intel]
+	var key := "%d %s %s %s" % [mainframe.percent(team), mainframe.tier_name(team), flash_on, intel]
 	if key == _crt_key:
 		return
 	_crt_key = key
-	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(team), int(mainframe.charge_of(team))]
+	_crt_sign.text = "THE MAINFRAME\n%s\n%d%%" % [mainframe.tier_name(team), mainframe.percent(team)]
 	# Under it: what the crew's heard about this district (a DISTRICT TWIST in amber, else green).
 	_crt_intel.text = intel.replace(" (", "\n(")  # (the bracket part on its own line: readable at 240p)
 	var twisted := DistrictTwist.current_kind() != DistrictTwist.Kind.NONE
 	_crt_intel.modulate = Color((Color(1, 0.7, 0.15) if twisted else Color(0.25, 1, 0.45)) * 2.5, 1)
-	var shown := colour if flash_on else colour * 0.25
+	var shown := colour * 0.5 if flash_on else colour * 0.15  # (dimmer than a plain neon box: the junk around it should read)
 	_crt_screen.set_instance_shader_parameter("instance_tint", Color(shown, 1.0))
 	_crt_light.light_color = colour
-	_crt_light.light_energy = 2.5 if flash_on else 0.6
+	_crt_light.light_energy = 1.8 if flash_on else 0.5
 
 
 ## Which mood a camera here gets: CITY_MOOD, or the gang number of the sewer it's in.
@@ -723,24 +730,7 @@ func _build_props() -> void:
 	_build_stash()
 	_build_workbench()
 
-	# THE MAINFRAME: a giant CRT computer on the west wall (scripts/mainframe.gd). Its sign, screen
-	# and light show this gang's tier, live (_update_mainframe_crt); walk up with SCRAP in your
-	# backpack and press E to feed it (+25%) or, at 100%, hack the rival's (-25%).
-	var frame_x := -w + 1.0
-	LevelKit.add_box(self, Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
-	_crt_screen = LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)
-	_crt_screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
-	_crt_light = LevelKit.add_light(self, Vector3(frame_x + 2.5, 2.8, 0), Color(0.2, 1, 0.45), 2.5, 8.0)
-	_crt_sign = LevelKit.add_sign(self, "THE MAINFRAME\nSYSTEM ONLINE\n75%", Vector3(frame_x + 1.35, 2.8, 0), Color(0.0, 0.06, 0.02), 22, PI / 2)
-	# The INTEL line on the frame below the screen: this district's DISTRICT TWIST (district_twist.gd).
-	_crt_intel = LevelKit.add_sign(self, "SECTOR: STANDARD PATROL", Vector3(frame_x + 1.05, 1.2, 0), Color(0.25, 1, 0.45), 16, PI / 2)
-	var terminal := MainframeTerminal.new()
-	terminal.name = "MainframeTerminal"
-	terminal.position = mainframe_spot
-	terminal.radius = mainframe_radius
-	terminal.priority = 10
-	add_child(terminal)
-
+	_build_mainframe()
 	_build_catcam()
 
 	# Cardboard-box shanties along the east wall (the "homes" of sewer cats).
@@ -751,6 +741,84 @@ func _build_props() -> void:
 	# wall is the TINKER WORKBENCH's spot now.)
 	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -17.5), Vector3(-4, 0.5, -17)]:
 		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
+
+
+## THE MAINFRAME (scripts/mainframe.gd): the rebels' home-made computer on the west wall, scrounged
+## together from junk: a big old CRT on a pallet, crates, car batteries, a desk fan, a wok for a dish
+## (models/mainframe.glb, made by tools/make_mainframe_spec.py; open models/blockbench/mainframe.bbmodel
+## in Blockbench to repaint it). This adds the live parts on top of it:
+##   - the big glowing SCREEN + its text (tier + %) and the INTEL line (this district's twist),
+##   - the CHARGE GAUGE: 4 glowing battery cells in the rack on its right (they drain one by one),
+##   - the light, a solid body, and the E spot (MainframeTerminal: opens its window).
+## Everything follows Mainframe Spot's Z (Hub > Mainframe in the Inspector); it always stands on the west wall.
+func _build_mainframe() -> void:
+	var wall_x := -half_width  # the west wall's inside face
+	var z := mainframe_spot.z
+	# The model's front (-Z) faces east, into the room: a quarter turn the other way.
+	_mainframe_model = LevelKit.instantiate_model("mainframe", self, Vector3(wall_x, 0, z), -PI / 2)
+	if _mainframe_model != null:
+		_mainframe_model.name = "MainframeModel"
+		LevelKit.make_neon_paint_glow(_mainframe_model, {"Glow": 3.0})  # little screens, LEDs, the chute's slot
+		_mainframe_fan = _mainframe_model.find_child("Fan", true, false) as Node3D
+	# The big screen (in front of the CRT's black bezel), its light, its words.
+	_crt_screen = LevelKit.add_box(self, Vector3(wall_x + 1.04, 1.94, z), Vector3(0.04, 2.45, 3.3), _neon, false)
+	_crt_screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.45))
+	_crt_light = LevelKit.add_light(self, Vector3(wall_x + 2.5, 2.3, z), Color(0.2, 1, 0.45), 2.5, 8.0)
+	_crt_sign = LevelKit.add_sign(self, "THE MAINFRAME\nSYSTEM ONLINE\n75%", Vector3(wall_x + 1.09, 2.35, z), Color(0.0, 0.06, 0.02), 22, PI / 2)
+	# The INTEL line at the bottom of the screen: this district's DISTRICT TWIST (district_twist.gd).
+	_crt_intel = LevelKit.add_sign(self, "SECTOR: STANDARD PATROL", Vector3(wall_x + 1.09, 1.05, z), Color(0.25, 1, 0.45), 13, PI / 2)
+	LevelKit.add_sign(self, "FEED ME\nELECTRONICS", Vector3(wall_x + 1.55, 0.95, z), Color(0.8, 0.4, 1.0) * 0.5, 12, PI / 2)
+	# THE CHARGE GAUGE: 4 battery cells stacked in the rack (the model's rack is 2.06..2.94 m along Z).
+	var cell_gap := 0.08
+	_gauge_cell_height = (3.1 - 0.9 - cell_gap * 3.0) / 4.0
+	for i in 4:
+		var bottom := 0.9 + i * (_gauge_cell_height + cell_gap)
+		LevelKit.add_box(self, Vector3(wall_x + 0.55, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height, 0.66), _pitch_black, false)
+		var cell := LevelKit.add_box(self, Vector3(wall_x + 0.57, bottom + _gauge_cell_height / 2.0, z + 2.5), Vector3(0.62, _gauge_cell_height - 0.04, 0.58), _neon, false)
+		cell.set_meta("bottom", bottom)
+		_gauge_cells.append(cell)
+	# Solid, so cats bump into it: the whole pile, plus the chute sticking out at the bottom.
+	var body := StaticBody3D.new()
+	body.name = "MainframeBody"
+	for part in [[Vector3(wall_x + 0.6, 2.0, z), Vector3(1.2, 4.0, 6.0)], [Vector3(wall_x + 1.3, 0.35, z), Vector3(0.4, 0.7, 1.0)]]:
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = part[1]
+		shape.shape = box
+		shape.position = part[0]
+		body.add_child(shape)
+	add_child(body)
+	var terminal := MainframeTerminal.new()
+	terminal.name = "MainframeTerminal"
+	terminal.hub = self
+	terminal.position = mainframe_spot
+	terminal.radius = mainframe_radius
+	terminal.priority = 10
+	add_child(terminal)
+
+
+## Every frame: the gauge cells fill / drain with THIS gang's charge (the top one shrinks as it
+## drains), and the desk fan spins faster the more cells are lit (it sputters when it's empty).
+func _update_mainframe_model(delta: float) -> void:
+	var mainframe := Mainframe.instance
+	if mainframe == null or _gauge_cells.is_empty():
+		return
+	var charge := mainframe.charge_of(team)
+	var colour := mainframe.tier_color(team)
+	for i in _gauge_cells.size():
+		var cell := _gauge_cells[i]
+		var fill := clampf((charge - i * Mainframe.CELL) / Mainframe.CELL, 0.0, 1.0)
+		cell.visible = fill > 0.0
+		if fill > 0.0:
+			cell.scale.y = fill
+			cell.position.y = float(cell.get_meta("bottom")) + 0.02 + (_gauge_cell_height - 0.04) * fill / 2.0
+			cell.set_instance_shader_parameter("instance_tint", Color(colour * (0.6 + 0.4 * fill), 1.0))
+	if _mainframe_fan != null:
+		var cells := mainframe.cells(team)
+		var speed := 2.0 + 3.0 * cells
+		if cells == 0:
+			speed = 1.5 if fmod(Time.get_ticks_msec() / 1000.0, 1.3) < 0.3 else 0.0  # sputtering
+		_mainframe_fan.rotate_y(speed * delta)
 
 
 ## THE CAT-CAM: a chunky old TV on a crate against the east wall. Press E in front of it to watch a

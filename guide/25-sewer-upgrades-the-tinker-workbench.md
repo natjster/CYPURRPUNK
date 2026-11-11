@@ -3,8 +3,8 @@
 [Back to the contents page](../SETUP_GUIDE.md)
 
 
-Upgrades make **your** cat better for good. You pay with **cash AND SCRAP** (the loot the MEGA VAC-COPs
-drop). Scrap is counted from your **backpack and your litterbox together** (the backpack is used up first).
+Upgrades make **your** cat better for good. You pay with **cash AND SCRAP** (MEGA VAC-COPs drop one per cat,
+regular bots sometimes, dumpsters too). Scrap is ONLY for upgrades: THE MAINFRAME eats ELECTRONICS (§8). Scrap is counted from your **backpack and your litterbox together** (the backpack is used up first).
 Upgrades are saved in your cat's save file (with your cash and litterbox), so they're there next game.
 The TUTORIAL always starts with none, so it's the same for everyone (but it has every NPC: see below).
 
@@ -54,7 +54,7 @@ join one at a time, in this order, when your gang **recruits** them on the workb
 
 | Tab (Catleone / Burrow) | Upgrades (tiers) |
 |---|---|
-| Don Catleone / Pawnie (start) | **BIGGER BACKPACK** (3): 6 -> 8 -> 10 -> 12 slots (an old save's DEEP POCKETS became BIGGER BACKPACK tiers). **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
+| Don Catleone / Pawnie (start) | **BIGGER BACKPACK** (3): 6 -> 8 -> 10 -> 12 slots (an old save's DEEP POCKETS became BIGGER BACKPACK tiers). **MAINFRAME CAPACITOR** (2, crew): 1 ELECTRONICS feeds +35% / +50% instead of +25%. |
 | Comrade Whiskers / Clawd (start) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher (until then they're black silhouettes in the shop). **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. |
 | Tier 1: Lil' Mittens / Billy the Kitten | **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. **INSIDER TUNNEL** (2, crew): your exit opens 5 / 10 heat earlier. |
 | Tier 2: Paulie "No-Brooms" / Bumper-Car Benny | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): smashed bots +15% / +30% chance to drop SCRAP (not bosses). **AFTERBURNER** (2, crew): car BOOST goes from 1 charge (everyone starts with it) to 2 / 3 slowly recharging charges; the exhaust fire sends bots and cats flying (§3). |

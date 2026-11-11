@@ -56,7 +56,8 @@ Markitten in the sewers (§8).
 | **Sardine** | loot | sidewalks | $20 at the drop-off (§8) |
 | **Fish** | loot | Meow-Mart + sidewalks | $50 each at the drop-off (§8) |
 | **Golden Koi** | loot (2 spaces) | one hidden far away | $400, but heavy and noisy (§8) |
-| **Scrap** | loot | dropped by a destroyed MEGA VAC-COP | $0, stays in your bag at the exit; feed it to The Mainframe (§8) |
+| **Scrap** | loot | MEGA VAC-COPs (1 per cat), regular bots (5%), dumpsters | $0, stays in your bag at the exit; pays for SEWER UPGRADES (§25) |
+| **Electronics** | loot | ONLY a destroyed MEGA VAC-COP (1 per cat up top) | $0, stays in your bag at the exit; feed it to The Mainframe (§8) |
 
 **The Purr-Tommy:** the drum coil goes from cyan to red as you fire, and the bar bottom-left shows
 it (`HEAT [####------]`). About 3 s of non-stop fire overheats it: it blinks and won't fire until

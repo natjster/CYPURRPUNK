@@ -204,6 +204,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##                     spare:D = A on unclaimed controller D (must do nothing), S:pause = Esc / START.
 ##                     Prints who is ready, and whether the report / pause menu are up.
 ##   --mainframe=N     (host) every gang's MAINFRAME charge is N (or =A,B per gang) and the district restarts on it
+##   --mainframe_drain=N (host) THE SLOW DRAIN runs at N% a minute (600 = 10%/s, to watch cells run dry)
+##   --mainframe_window[=N] walk to THE MAINFRAME, press E (its window), then FEED N times (--give=electronics first)
 ##   --rebind=A,S,KEY  (with --menu=settings) set key slot S (0/1) of control A to KEY, as if
 ##                     the player clicked the box and pressed it, e.g. --rebind=drop,0,Space
 ##                     (slot 2 = the PAD box: --rebind=jump,2,Pad_B  - use _ for spaces)
@@ -419,6 +421,9 @@ func _ready() -> void:
 			HeatMeter.instance.start_district()
 			RoombaPatrol.instance.start_district()
 			print("DevCapture mainframe: %s active=%s exits at %s heat=%.0f overclock=%s heat speed x%.1f boss at start=%s" % [Mainframe.instance.charges, Mainframe.instance.active_gangs(), [Mainframe.instance.exit_heat(0), Mainframe.instance.exit_heat(1)], HeatMeter.instance.heat, Mainframe.instance.overclock_active, Mainframe.instance.heat_multiplier(), Mainframe.instance.boss_at_start()])
+		if args.has("mainframe_drain") and multiplayer.is_server():
+			# (host) --mainframe_drain=N: THE SLOW DRAIN is N% a minute (try 600 = 10% a second).
+			Mainframe.instance.drain_per_minute = float(args["mainframe_drain"])
 		if args.has("quest"):
 			QuestManager.instance.start_quest(player.player_id, args["quest"])
 			if args.has("abandon_quest"):
@@ -493,6 +498,16 @@ func _ready() -> void:
 			for i in 5:
 				await get_tree().process_frame
 			await _menus._workbench_test(player, args)
+		#   --mainframe_window[=N]        (walk to THE MAINFRAME, press E: its window opens; then press FEED N times.
+		#                                  Give electronics first: --give=electronics,electronics)
+		if args.has("mainframe_window"):
+			var hub := UndergroundHub.of(player)
+			player.teleport_to(hub.to_global(hub.mainframe_spot + Vector3(0.8, 0, 0)), 0.0)
+			player.camera_pivot.rotation.y = PI / 2  # face west, at the Mainframe
+			for i in 20:
+				await get_tree().physics_frame
+			print("DevCapture mainframe_window: prompt=\"%s\" used=%s" % [Interactable.prompt_for(player), Interactable.try_use(player)])
+			await _menus._mainframe_window_test(player, args)
 		if args.has("vehicles_lineup"):
 			await _lineups._vehicles_lineup(player)
 		if args.has("weapons_lineup"):
@@ -729,6 +744,10 @@ func _ready() -> void:
 						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
 						break
 				await get_tree().physics_frame
+			if args.has("kill_bosses"):
+				for i in 5:
+					await get_tree().physics_frame
+				print("DevCapture kill_bosses: ELECTRONICS on the street=%d SCRAP=%d" % [_count_world_items(Mainframe.FUEL_ID), _count_world_items("scrap")])
 			if args.has("twist"):
 				for i in 5:
 					await get_tree().physics_frame

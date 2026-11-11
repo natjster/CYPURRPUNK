@@ -213,7 +213,7 @@ func start_district() -> void:
 		_spawn_boss("MAINFRAME CRITICAL")
 
 
-## Host: scrap was fed into THE MAINFRAME before anyone went up, so the district's starting heat
+## Host: electronics were fed into THE MAINFRAME before anyone went up, so the district's starting heat
 ## changed (heat_meter.gd restart_district_heat): level bosses count from the new heat level.
 func restart_heat_levels() -> void:
 	var lvl := HeatMeter.instance.level()

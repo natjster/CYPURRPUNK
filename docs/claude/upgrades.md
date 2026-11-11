@@ -8,7 +8,7 @@ SEWER UPGRADES (SETUP_GUIDE §25): `scripts/upgrades.gd` (`Upgrades.instance`, n
 Host `request_buy(player_id, id)` = Wallet.spend + `ItemManager.spend_scrap` (bag first, then stash; `scrap_count_of`). Read with static
 `Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel, afterburner = car boost charges, tab 3). Hooks: `ItemManager.bag/pack/stash/
 quick_stack_size_for(pid)` (NEVER read pack_size etc. directly; `bag_size_for` = old alias of `pack_size_for`), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
-request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_scrap_for`.
+request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_electronics_for`.
 NO upgrades in NPC chat any more (no upgrade_page / open_page): EVERYTHING is bought at the TINKER WORKBENCH = hub `_build_workbench`
 (`models/workbench.glb`) -> `WorkbenchScreen` (`scripts/ui/workbench_screen.gd`, HUD `Frame/Workbench`, in `Hud.wants_input` + `cat._menu_open`;
 7 portrait tabs = `Upgrades.WORKBENCH_TABS` [boss, shopkeeper, rebellion tiers 1-5] via `npc_for_tab` (hub.npc / hub.shopkeeper / child Npc

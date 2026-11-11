@@ -32,9 +32,9 @@ the same city (#1999, Meow-Mart right next to the manhole you come up from).
 | 4 | Walk up to **the Mainframe** (west wall CRT) | you stood within 3.5 m for 1.5 s |
 | 5 | Talk to **Don Catleone**: SEND ME UP TOP | you're up in the city |
 | 6 | Grab **3 fish** (the line counts 0/3, 1/3...) | 3 fish in your backpack |
-| 7 | Smash a **VAC-COP**, then pick up the **SCRAP** it drops | scrap (and still 3 fish) in your bag |
+| 7 | Smash a **VAC-COP**, then pick up the **ELECTRONICS** it drops | electronics (and still 3 fish) in your bag |
 | 8 | The heat jumps to **75**: follow the blue arrow to a ringing **payphone** (E), then follow it again to the **exit manhole** | you extracted |
-| 9 | Feed the scrap to **the Mainframe** (E) | it charged (+25%) |
+| 9 | Press E at **the Mainframe**, then **FEED** in its window | it charged (+25%) |
 
 ### The training rules (only in a tutorial)
 - **Your real save is never touched.** You get a training save every time: **$100**, an **empty stash**.
@@ -42,13 +42,13 @@ the same city (#1999, Meow-Mart right next to the manhole you come up from).
 - **The heat is frozen** (no surprise DEEP CLEAN). At step 8 it jumps to the exit heat (75) so the
   exit opens and the payphones ring straight away.
 - **You can't be knocked out:** your HP never drops below 25.
-- **The 6-slot backpack** has room for the 3 fish AND the scrap; they come home in it.
+- **The 6-slot backpack** has room for the 3 fish AND the electronics; they come home in it.
 - **Don won't send you up** before step 5 ("Finish your prep down here first").
 - **Spare fish:** if there aren't enough fish near you, one appears at the centre crossroads every 3 s.
 - **Step 7:** if no VAC-COP is within 25 m, one is moved 12 m in front of you, and the one you smash
-  drops scrap (normally only MEGA VAC-COP bosses do). If a bot bonks a fish out of your bag, the
+  drops electronics (normally only MEGA VAC-COP bosses do). If a bot bonks a fish out of your bag, the
   line tells you to grab it back.
-- Your Mainframe starts at 75%, so the scrap at the end takes it to 100% (OVERCLOCK).
+- Your Mainframe starts at 75%, so the electronics at the end take it to about 100% (OVERCLOCK; it drains 1% a minute while you're up top).
 
 ### Changing it (no code)
 Select **Tutorial** in `scenes/main.tscn` (Scene dock: **Main > Tutorial**). In the Inspector:
