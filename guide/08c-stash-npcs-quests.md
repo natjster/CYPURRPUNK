@@ -3,8 +3,9 @@
 [Back to the contents page](../SETUP_GUIDE.md) · [Start of §8](08-the-extraction-loop-the-sewers.md)
 
 ### The stash (THE LITTERBOX) & saved progress
-**THE STASH is a giant glowing LITTERBOX** (purple tray, sand pile, scoop, a cyan neon
-**LITTERBOX** sign) on the **east wall**, across from the Black Markitten (north of Lil' Mittens).
+**THE STASH is a giant glowing LITTERBOX** (a 3D model: purple plastic tray with a dip in the
+front rim to hop in, sand mounds, a torn KITTY LITTER sack, buried loot poking out of the sand,
+a glowing cyan scoop, and a cyan neon **LITTERBOX** sign) on the **east wall**, across from the Black Markitten (north of Lil' Mittens).
 Walk up to it: the prompt says **[E] STORE YOUR SHIT**. Press E (or open the inventory with Tab
 while standing there) and the inventory opens with your **LITTERBOX** (9 slots) in a box at the
 bottom-left, with a callout line to the litterbox.
@@ -39,8 +40,13 @@ Neon Bat is $20, a Paw-Pistol $60). A cat that already existed with less is topp
   **GangHub**) > Inspector > **Stash** > **Stash Spot** (where you stand; the litterbox is built
   against the east wall next to it) and **Stash Radius** (how close you must be). Same group:
   **Stash Prompt** (the "[E] STORE YOUR SHIT" text), **Litterbox Color**, **Litterbox Glow** (sign,
-  neon strip and light) and **Sand Color**. The model is built in code (`_build_stash()` in
-  `scripts/hub.gd`).
+  neon strip and light) and **Sand Color** (the model's plastic and sand are painted grey, so these
+  two colours still recolour them). The model is `models/litterbox.glb`: to repaint it, open
+  `models/blockbench/litterbox.bbmodel` in Blockbench and export it over the .glb; to rebuild it from
+  its recipe run `python tools/make_litterbox_spec.py` then
+  `python tools/cypurr_models.py all tools/model_specs/litterbox.json` (this replaces Blockbench
+  edits). The code that places it, plus its invisible solid walls/sand, is `_build_stash()` in
+  `scripts/hub.gd`.
 
 **Test it without playing:** `--fresh_profile --cash=500 --give=pistol --to_stash=hand:0
 --inventory` stashes the pistol (and shows the screen); run again without `--fresh_profile` and

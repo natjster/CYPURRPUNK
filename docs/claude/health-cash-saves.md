@@ -25,7 +25,8 @@
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
   Players see it as THE LITTERBOX (code names stay "stash"; prompt `hub.stash_prompt` "STORE YOUR SHIT").
   Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (litterbox on the east wall,
-  `hub._build_stash`); the inventory screen (`InventoryScreen`) opens a LITTERBOX box there. ANY item is stashable (fish too).
+  `hub._build_stash`: model `models/litterbox.glb` from `tools/make_litterbox_spec.py`, groups Tray/Sand painted grey and
+  tinted via `LevelKit.tint_part` with `litterbox_color`/`sand_color`; collision = invisible boxes in `LitterboxSolid`); the inventory screen (`InventoryScreen`) opens a LITTERBOX box there. ANY item is stashable (fish too).
   (`request_put_away` = paw -> backpack.) `scripts/player_profile.gd` (`Profile` node): each player saves
   their OWN cash + stash to `user://profiles/<name>.cfg`, sends it to the host on start/join
   (`_request_restore`, host validates), and saves only after `_restore_done`. Test runs use

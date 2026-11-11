@@ -115,6 +115,14 @@ static func make_neon_paint_glow(root: Node, parts: Dictionary) -> void:
 				mesh.set_surface_override_material(surface, neon)
 
 
+## Recolours one part of a psx_ify'd model: its painted pixels are multiplied by "color" (paint the
+## part in greys/white in Blockbench, then the Inspector colour decides its real colour).
+## Used by the litterbox (hub.gd _build_stash: Litterbox Color, Sand Color).
+static func tint_part(root: Node, part_name: String, color: Color) -> void:
+	for mesh in _part_meshes(root, part_name):
+		mesh.set_instance_shader_parameter("instance_tint", color)
+
+
 ## The meshes of one part: the node with that name (a path from root, or found anywhere below it)
 ## plus every mesh under it. Only meshes that already have the PS1 material (psx_ify first).
 static func _part_meshes(root: Node, part_name: String) -> Array[MeshInstance3D]:

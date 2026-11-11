@@ -89,7 +89,7 @@ in reach, the higher **priority** wins (items 30, NPCs 20, stash 10, car 0), the
 3. Node dock (next to the Inspector) > **Signals** > double-click **used** > connect it to the
    script that should react. That function gets the cat that pressed E.
 
-The stash (the litterbox) is made exactly like that, in code (`_build_stash()` in `scripts/hub.gd`).
+The stash (the litterbox) uses exactly that, in code (`_build_stash()` in `scripts/hub.gd`).
 **A thing with its own idea of "in reach"** (like the car's door zone or the street items) can
 instead join the group `interactables` and write the answers itself:
 `interact_distance(cat)` (metres, or -1 = not now), `interact_prompt(cat)` (the line, "" = none),
@@ -167,4 +167,4 @@ textures shear and "swim"), and boxes of the same shape share one mesh (a city h
 Give one box its own colour with `box.set_instance_shader_parameter("instance_tint", Color(...))`
 instead of making a new material.
 **The rule you keep:** never put two visible surfaces a few cm apart (a floor on a floor): they
-flicker. Examples: `_build_shop()` and `_build_stash()` in `scripts/hub.gd`.
+flicker. Example: `_build_shop()` in `scripts/hub.gd`.

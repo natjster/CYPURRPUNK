@@ -935,33 +935,33 @@ func _build_stash() -> void:
 	var box := Interactable.make(self, stash_spot, stash_prompt, stash_radius, 10)
 	box.used.connect(func(cat: CatPlayer): InventoryScreen.for_seat(cat.slot).open(cat))
 	var wall_x := half_width  # inside face of the east wall
-	var plastic := LevelKit.psx_material({"albedo_color": litterbox_color, "specular": 0.6, "roughness": 0.3})
-	var sand := LevelKit.psx_material({"albedo_color": sand_color, "world_uv": true})
-	# The tray: 2 m deep (out from the wall) x 4 m long, rim 0.5 m high, 0.12 m thick walls.
+	# THE MODEL: models/litterbox.glb (made by tools/make_litterbox_spec.py; open
+	# models/blockbench/litterbox.bbmodel in Blockbench to repaint it). Its front (-Z) faces west,
+	# into the room: a quarter turn. The plastic + sand are painted GREY in the model, so the two
+	# Inspector colours (Litterbox Color, Sand Color) still recolour them here.
+	var model := LevelKit.instantiate_model("litterbox", self, Vector3(wall_x, 0, at.z), PI / 2)
+	if model != null:
+		model.name = "LitterboxModel"
+		LevelKit.tint_part(model, "Tray", litterbox_color * 1.5)
+		LevelKit.tint_part(model, "Sand", sand_color * 1.45)
+		LevelKit.make_neon_paint_glow(model, {"Scoop": 1.2})  # the cyan scoop glows a little
+	# The SOLID parts (invisible: the model is what you see). Same size as the model's tray:
+	# 2 m deep (out from the wall) x 4 m long, rim 0.5 m high, 0.12 m thick walls.
 	var depth := 2.0
 	var length := 4.0
 	var rim := 0.5
 	var t := 0.12
 	var cx := wall_x - depth * 0.5  # middle of the tray
-	LevelKit.add_box(self, Vector3(cx, rim * 0.5, at.z - length * 0.5 + t * 0.5), Vector3(depth, rim, t), plastic, true)  # north side
-	LevelKit.add_box(self, Vector3(cx, rim * 0.5, at.z + length * 0.5 - t * 0.5), Vector3(depth, rim, t), plastic, true)  # south side
-	LevelKit.add_box(self, Vector3(wall_x - depth + t * 0.5, rim * 0.5, at.z), Vector3(t, rim, length - t * 2), plastic, true)  # front lip
-	# The sand: fills the tray up to 0.15 m under the rim (its sides hide inside the tray walls,
-	# so no two faces touch: they'd flicker). Solid, so cats can hop in and stand on it.
-	LevelKit.add_box(self, Vector3(cx + t * 0.5, (rim - 0.15) * 0.5, at.z), Vector3(depth - t, rim - 0.15, length - t * 2), sand, true)
-	# A sand pile in the back corner (three stacked steps = a lumpy PS1 mound).
-	for step in 3:
-		var s := 0.9 - step * 0.28
-		LevelKit.add_box(self, Vector3(wall_x - 0.6, rim - 0.15 + 0.1 + step * 0.2, at.z + 1.0), Vector3(s, 0.2, s), sand, false)
-	# The scoop, leaning on the front lip: a flat head with a handle sticking up and out.
-	var scoop_head := LevelKit.add_box(self, Vector3(wall_x - depth + 0.35, rim - 0.05, at.z - 1.1), Vector3(0.4, 0.04, 0.32), plastic, false)
-	scoop_head.rotation.z = -0.35
-	scoop_head.set_instance_shader_parameter("instance_tint", Color(0.6, 1.4, 1.6))
-	var handle := LevelKit.add_box(self, Vector3(wall_x - depth - 0.05, rim + 0.25, at.z - 1.1), Vector3(0.06, 0.6, 0.08), plastic, false)
-	handle.rotation.z = 0.6
-	handle.set_instance_shader_parameter("instance_tint", Color(0.6, 1.4, 1.6))
+	var solid := StaticBody3D.new()
+	solid.name = "LitterboxSolid"
+	add_child(solid)
+	LevelKit.add_collision(solid, Vector3(cx, rim * 0.5, at.z - length * 0.5 + t * 0.5), Vector3(depth, rim, t))  # north end
+	LevelKit.add_collision(solid, Vector3(cx, rim * 0.5, at.z + length * 0.5 - t * 0.5), Vector3(depth, rim, t))  # south end
+	LevelKit.add_collision(solid, Vector3(wall_x - depth + t * 0.5, rim * 0.5, at.z), Vector3(t, rim, length - t * 2))  # front lip
+	# The sand: cats can hop in and stand on it (0.35 m up, like the model's sand).
+	LevelKit.add_collision(solid, Vector3(cx + t * 0.5, (rim - 0.15) * 0.5, at.z), Vector3(depth - t, rim - 0.15, length - t * 2))
 	# A neon strip along the top of the front lip, and a glowing sign on the wall above.
-	var strip := LevelKit.add_box(self, Vector3(wall_x - depth + t * 0.5, rim + 0.02, at.z), Vector3(t + 0.02, 0.04, length - t * 2), _neon, false)
+	var strip := LevelKit.add_box(self, Vector3(wall_x - depth + t * 0.5, rim + 0.045, at.z), Vector3(t + 0.04, 0.04, length - t * 2), _neon, false)
 	strip.set_instance_shader_parameter("instance_tint", litterbox_glow)
 	LevelKit.add_sign(self, "LITTERBOX", Vector3(wall_x - 0.05, 2.4, at.z), litterbox_glow * 0.4, 32, -PI / 2)
 	LevelKit.add_light(self, Vector3(wall_x - 1.6, 2.6, at.z), litterbox_glow, 2.5, 6.0)
