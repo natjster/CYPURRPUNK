@@ -220,8 +220,6 @@ var npc: Npc
 @onready var _moonlight: Light3D = $"../Moonlight"
 @onready var _rain: GPUParticles3D = $"../Rain"
 
-## Glow colours of the boxes on the Black Markitten's shelves.
-const SHOP_GOODS_COLORS: Array[Color] = [Color(1, 0.35, 0.7), Color(0.3, 1, 0.35), Color(0.3, 0.8, 1), Color(1, 0.8, 0.2)]
 ## The mood the world's look is on now (mood_at).
 var _view_mood: int = CITY_MOOD
 var _city_mood := {}  # the night-city fog/ambient values, to put back when you go up
@@ -233,7 +231,6 @@ var _concrete: ShaderMaterial
 var _wall: ShaderMaterial
 var _water: ShaderMaterial
 var _metal: ShaderMaterial
-var _cardboard: ShaderMaterial
 var _crate: ShaderMaterial
 var _timber: ShaderMaterial
 var _neon: ShaderMaterial
@@ -547,7 +544,6 @@ func _make_materials() -> void:
 	_wall = LevelKit.psx_material({"albedo_texture": asphalt, "albedo_color": wall_tint, "world_uv": true, "world_uv_scale": 0.3})
 	_water = LevelKit.psx_material({"albedo_color": water_tint, "specular": 0.7, "roughness": 0.15, "emission_color": water_glow_color, "emission_energy": 0.04})
 	_metal = LevelKit.psx_material({"albedo_color": Color(0.26, 0.28, 0.3), "specular": 0.5, "roughness": 0.4})
-	_cardboard = LevelKit.psx_material({"albedo_color": Color(0.55, 0.4, 0.22)})
 	_crate = LevelKit.psx_material({"albedo_texture": preload("res://textures/neon_grid.png"), "albedo_color": crate_tint})
 	_timber = LevelKit.psx_material({"albedo_color": Color(0.3, 0.19, 0.1)})
 	_neon = LevelKit.psx_material({"emission_color": Color.WHITE, "emission_energy": 5.0})
@@ -733,10 +729,7 @@ func _build_props() -> void:
 	_build_mainframe()
 	_build_catcam()
 
-	# Cardboard-box shanties along the east wall (the "homes" of sewer cats).
-	for z in [4.0, 9.0, 14.0]:
-		LevelKit.add_box(self, Vector3(w - 1.4, 0.6, z), Vector3(2.0, 1.2, 2.6), _cardboard, true)
-		LevelKit.add_box(self, Vector3(w - 1.4, 1.45, z - 0.3), Vector3(1.4, 0.5, 1.6), _cardboard, false)
+	_build_shanties()
 	# Crates, trash and junk. (The east-wall crate sits in the corner past the litterbox: z -4 on that
 	# wall is the TINKER WORKBENCH's spot now.)
 	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -17.5), Vector3(-4, 0.5, -17)]:
@@ -847,29 +840,54 @@ func _build_catcam() -> void:
 ## THE BLACK MARKITTEN: Comrade Whiskers' rebel shop on the west wall. Everything is placed
 ## around wherever he stands (move ComradeWhiskers under Hub in main.tscn and it follows).
 ## He faces east (+X); the counter is in front of him, the shelves behind him on the wall.
+##
+## The whole stall is ONE 3D model: models/black_markitten.glb (made by tools/model_specs/black_markitten.json;
+## open models/blockbench/black_markitten.bbmodel in Blockbench to repaint it). It holds the counter (with the
+## till and a NO BOTS sign), the wall shelves of dodgy goods, the crates either side, a tin awning and the
+## BLACK MARKITTEN banner. The model is made for him standing 2 m out from the wall (his spot in main.tscn).
 func _build_shop() -> void:
 	var at := shopkeeper.position
-	var wall_x := -half_width  # inside face of the west wall
-	# The counter: a slab of metal on crates, between him and the customers.
-	LevelKit.add_box(self, Vector3(at.x + 1.3, 0.45, at.z), Vector3(0.7, 0.9, 3.2), _crate, true)
-	LevelKit.add_box(self, Vector3(at.x + 1.3, 0.95, at.z), Vector3(0.9, 0.1, 3.4), _metal, false)
-	var strip := LevelKit.add_box(self, Vector3(at.x + 1.76, 0.86, at.z), Vector3(0.04, 0.06, 3.4), _neon, false)  # glowing edge
-	strip.set_instance_shader_parameter("instance_tint", Color(1, 0.15, 0.1))
-	# Shelves on the wall behind him, stocked with glowing "goods".
-	for shelf_y in [1.2, 2.0, 2.8]:
-		LevelKit.add_box(self, Vector3(wall_x + 0.35, shelf_y, at.z), Vector3(0.6, 0.08, 4.0), _metal, false)
-		for i in 5:
-			var goods := LevelKit.add_box(self, Vector3(wall_x + 0.35, shelf_y + 0.17, at.z - 1.6 + i * 0.8), Vector3(0.3, 0.26, 0.3), _neon, false)
-			goods.set_instance_shader_parameter("instance_tint", SHOP_GOODS_COLORS[(i + int(shelf_y * 10)) % SHOP_GOODS_COLORS.size()] * 0.5)
-	# Crates of "merchandise that fell off a truck" stacked either side.
-	for spot in [Vector3(at.x, 0.5, at.z - 2.6), Vector3(at.x, 0.5, at.z + 2.6), Vector3(at.x, 1.5, at.z + 2.6)]:
-		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
-	# A red rebel banner hanging over the shelves.
-	var banner := LevelKit.add_box(self, Vector3(wall_x + 0.06, 4.0, at.z), Vector3(0.05, 1.3, 4.6), _neon, false)
-	banner.set_instance_shader_parameter("instance_tint", banner_color)
+	# The model's front (-Z) is the customers' side: a quarter turn makes it face east, into the room.
+	var stall := LevelKit.instantiate_model("black_markitten", self, Vector3(at.x, 0, at.z), -PI / 2)
+	if stall != null:
+		stall.name = "BlackMarkitten"
+		LevelKit.make_neon_paint_glow(stall, {"Goods": 2.0, "Screen": 3.0})  # the shelf stock + the till's digits
+		LevelKit.make_parts_glow(stall, {"Strip": Color(1, 0.15, 0.1)}, 3.0)  # the counter's red neon edge
+		LevelKit.make_parts_glow(stall, {"Banner": banner_color}, 5.0)  # Hub > Banner Color
+	# Solid bits (no look, just bumping): the counter and the crates either side. The model is
+	# turned a quarter, so "along the wall" is Z here and "out into the room" is +X.
+	var body := StaticBody3D.new()
+	body.name = "BlackMarkittenBody"
+	body.position = Vector3(at.x, 0, at.z)
+	add_child(body)
+	LevelKit.add_collision(body, Vector3(1.3, 0.5, 0), Vector3(0.9, 1.0, 3.4))  # the counter
+	LevelKit.add_collision(body, Vector3(0, 0.5, -2.6), Vector3.ONE)  # crate (north side)
+	LevelKit.add_collision(body, Vector3(0, 0.95, 2.6), Vector3(1.0, 1.9, 1.0))  # crate stack (south side)
 	# A coloured light over the shop, and a warm one so you can see his face.
 	LevelKit.add_light(self, Vector3(at.x + 1.0, 3.2, at.z), shop_light_color, 3.0, 8.0)
 	LevelKit.add_light(self, Vector3(at.x + 2.0, 1.8, at.z), Color(1, 0.8, 0.55), 2.5, 4.5)
+
+
+## CARDBOARD-BOX SHANTIES along the east wall: the "homes" of sewer cats. Each is one 3D model,
+## models/box_shanty.glb (made by tools/model_specs/box_shanty.json; open models/blockbench/box_shanty.bbmodel
+## in Blockbench to repaint it): a big box with a cat-sized doorway, a blanket curtain, a lit window,
+## a box on the roof and a tin-can chimney. Add/move homes by changing SHANTY_SPOTS (along the wall, metres).
+const SHANTY_SPOTS: Array[float] = [4.0, 9.0, 14.0]
+func _build_shanties() -> void:
+	var x := half_width - 1.4  # 2 m deep, backed against the east wall
+	for i in SHANTY_SPOTS.size():
+		var z := SHANTY_SPOTS[i]
+		# The doorway (-Z in the model) faces west, into the room; a tiny skew so they don't look stamped out.
+		var home := LevelKit.instantiate_model("box_shanty", self, Vector3(x, 0, z), PI / 2 + [0.0, 0.06, -0.05][i % 3])
+		if home != null:
+			home.name = "BoxShanty%d" % (i + 1)
+			LevelKit.make_neon_paint_glow(home, {"Window": 2.5})  # someone's home: the window's lit
+		# Solid, so cats bump into it (same size as the old plain box).
+		var body := StaticBody3D.new()
+		body.name = "BoxShantyBody%d" % (i + 1)
+		body.position = Vector3(x, 0, z)
+		add_child(body)
+		LevelKit.add_collision(body, Vector3(0, 0.6, 0), Vector3(2.0, 1.2, 2.6))
 
 
 ## THE TINKER WORKBENCH (SEWER UPGRADES): a greasy bench of vacuum parts against the east wall.

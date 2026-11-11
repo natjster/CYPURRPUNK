@@ -1,0 +1,1769 @@
+{
+ "name": "black_markitten",
+ "kind": "set_piece",
+ "texture_size": 128,
+ "seed": 31,
+ "background": "#24272e",
+ "about": "THE BLACK MARKITTEN: Comrade Whiskers' stall in the sewer hub (built by hub.gd _build_shop). Origin = his feet; front (-Z) = the customers, +Z = the wall behind him (1.95 m back). Groups: Body, Goods (shelf stock: bright pixels glow), Banner (tinted Hub > Banner Color), Strip (red neon counter edge), Screen (the till's green digits). 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "row 0 (16x16): crate wood | dark metal | steel | corrugated tin | red neon | dark"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "top": "#7a5530",
+   "bottom": "#4e3420"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "amount": 0.35,
+   "spread": 0.12
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    5
+   ],
+   "to": [
+    15,
+    5
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    10
+   ],
+   "to": [
+    15,
+    10
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "color": "#2a1a10"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": "#3e434c",
+   "bottom": "#24272e"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "spots",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "color": "#6a3a1a",
+   "count": 4,
+   "size": 1.2
+  },
+  {
+   "op": "edge",
+   "rect": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "color": "#111318"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "top": "#a8b0bc",
+   "bottom": "#6c7480"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.25,
+   "spread": 0.12
+  },
+  {
+   "op": "line",
+   "from": [
+    34,
+    4
+   ],
+   "to": [
+    44,
+    9
+   ],
+   "color": "#c8d0dc"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "colors": [
+    "#7a7f86",
+    "#555a61",
+    "#43474d"
+   ],
+   "width": 1
+  },
+  {
+   "op": "spots",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#8a4a20c0",
+   "count": 5,
+   "size": 1.5
+  },
+  {
+   "op": "noise",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    0,
+    80,
+    16
+   ],
+   "color": "#ff2a20"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    6,
+    80,
+    10
+   ],
+   "color": "#ffb0a0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    0,
+    96,
+    16
+   ],
+   "color": "#0c0a0e"
+  },
+  {
+   "op": "comment",
+   "note": "[0,16,32,48] crate face: slats + FRAGILE stencil"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "top": "#8a6038",
+   "bottom": "#5a3c22"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "amount": 0.35,
+   "spread": 0.12
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    26
+   ],
+   "to": [
+    31,
+    26
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    37
+   ],
+   "to": [
+    31,
+    37
+   ],
+   "color": "#3d2817"
+  },
+  {
+   "op": "line",
+   "from": [
+    1,
+    17
+   ],
+   "to": [
+    30,
+    46
+   ],
+   "color": "#4a3018"
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    29
+   ],
+   "text": "FRAGILE",
+   "color": "#1a0e08d0",
+   "worn": 0.2
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "color": "#2a1a10"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    1,
+    17,
+    31,
+    47
+   ],
+   "color": "#6e4a2a"
+  },
+  {
+   "op": "comment",
+   "note": "[32,16,64,48] spare: a red paw stamp on dark metal"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    64,
+    48
+   ],
+   "color": "#24272e"
+  },
+  {
+   "op": "comment",
+   "note": "[0,64,128,96] the BANNER (near white: the game tints it Hub > Banner Color)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    64,
+    128,
+    96
+   ],
+   "color": "#f0f0f0"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    64,
+    128,
+    96
+   ],
+   "amount": 0.3,
+   "spread": 0.08
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    64,
+    128,
+    96
+   ],
+   "color": "#404040"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    2,
+    66,
+    126,
+    94
+   ],
+   "color": "#909090"
+  },
+  {
+   "op": "text",
+   "pos": [
+    44,
+    68
+   ],
+   "text": "BLACK",
+   "color": "#202020",
+   "scale": 2
+  },
+  {
+   "op": "text",
+   "pos": [
+    28,
+    81
+   ],
+   "text": "MARKITTEN",
+   "color": "#202020",
+   "scale": 2
+  },
+  {
+   "op": "comment",
+   "note": "paw prints either side of the words"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    10,
+    80,
+    16,
+    86
+   ],
+   "color": "#202020"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     9,
+     77,
+     "#202020"
+    ],
+    [
+     10,
+     77,
+     "#202020"
+    ],
+    [
+     12,
+     76,
+     "#202020"
+    ],
+    [
+     13,
+     76,
+     "#202020"
+    ],
+    [
+     15,
+     77,
+     "#202020"
+    ],
+    [
+     16,
+     77,
+     "#202020"
+    ]
+   ]
+  },
+  {
+   "op": "fill",
+   "rect": [
+    112,
+    80,
+    118,
+    86
+   ],
+   "color": "#202020"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     111,
+     77,
+     "#202020"
+    ],
+    [
+     112,
+     77,
+     "#202020"
+    ],
+    [
+     114,
+     76,
+     "#202020"
+    ],
+    [
+     115,
+     76,
+     "#202020"
+    ],
+    [
+     117,
+     77,
+     "#202020"
+    ],
+    [
+     118,
+     77,
+     "#202020"
+    ]
+   ]
+  },
+  {
+   "op": "dither",
+   "rect": [
+    0,
+    88,
+    128,
+    96
+   ],
+   "color": "#000000",
+   "top": 0.0,
+   "bottom": 0.4
+  },
+  {
+   "op": "comment",
+   "note": "[0,96,64,128] counter front: plywood + NO REFUNDS spray paint"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    96,
+    64,
+    128
+   ],
+   "top": "#9a7448",
+   "bottom": "#6a4a2a"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    96,
+    64,
+    128
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "line",
+   "from": [
+    21,
+    96
+   ],
+   "to": [
+    21,
+    127
+   ],
+   "color": "#4a3018"
+  },
+  {
+   "op": "line",
+   "from": [
+    42,
+    96
+   ],
+   "to": [
+    42,
+    127
+   ],
+   "color": "#4a3018"
+  },
+  {
+   "op": "text",
+   "pos": [
+    12,
+    104
+   ],
+   "text": "NO REFUNDS",
+   "color": "#e8e8e8e0",
+   "worn": 0.15
+  },
+  {
+   "op": "line",
+   "from": [
+    11,
+    111
+   ],
+   "to": [
+    52,
+    112
+   ],
+   "color": "#ff3a6ad0"
+  },
+  {
+   "op": "dither",
+   "rect": [
+    0,
+    118,
+    64,
+    128
+   ],
+   "color": "#1a1008",
+   "top": 0.0,
+   "bottom": 0.7
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    96,
+    64,
+    128
+   ],
+   "color": "#3a2412"
+  },
+  {
+   "op": "comment",
+   "note": "[64,96,80,112] till body  [80,96,96,112] till screen (glows)  [96,96,128,112] NO BOTS sign"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    64,
+    96,
+    80,
+    112
+   ],
+   "top": "#5a5f68",
+   "bottom": "#30333a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    66,
+    104,
+    78,
+    110
+   ],
+   "colors": [
+    "#c8c8c8",
+    "#30333a"
+   ],
+   "width": 1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    64,
+    96,
+    80,
+    112
+   ],
+   "color": "#16181c"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    96,
+    96,
+    112
+   ],
+   "color": "#041a08"
+  },
+  {
+   "op": "text",
+   "pos": [
+    81,
+    101
+   ],
+   "text": "99",
+   "color": "#4cff60"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     89,
+     105,
+     "#4cff60"
+    ]
+   ]
+  },
+  {
+   "op": "text",
+   "pos": [
+    90,
+    101
+   ],
+   "text": "9",
+   "color": "#4cff60"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    96,
+    96,
+    128,
+    112
+   ],
+   "color": "#b88a55"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    96,
+    96,
+    128,
+    112
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "text",
+   "pos": [
+    99,
+    101
+   ],
+   "text": "NO BOTS",
+   "color": "#1a1008"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    96,
+    96,
+    128,
+    112
+   ],
+   "color": "#6a4826"
+  },
+  {
+   "op": "comment",
+   "note": "[0,48,128,64] the shelf goods: a row of dodgy cans, boxes and bottles (bright pixels glow)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    48,
+    128,
+    64
+   ],
+   "color": "#141018"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    1,
+    54,
+    4,
+    63
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    2,
+    50,
+    3,
+    54
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    6,
+    51,
+    13,
+    63
+   ],
+   "color": "#ff4fb0"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    6,
+    51,
+    13,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    8,
+    53,
+    11,
+    55
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    15,
+    55,
+    24,
+    63
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    15,
+    55,
+    24,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    17,
+    57,
+    22,
+    59
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    25,
+    54,
+    32,
+    63
+   ],
+   "color": "#ff4fb0"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    25,
+    54,
+    32,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    27,
+    56,
+    30,
+    58
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    34,
+    51,
+    41,
+    63
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    34,
+    51,
+    41,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    53,
+    39,
+    55
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    42,
+    51,
+    49,
+    63
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    42,
+    51,
+    49,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    44,
+    53,
+    47,
+    55
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    50,
+    52,
+    57,
+    63
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    50,
+    52,
+    57,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    52,
+    54,
+    55,
+    56
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    59,
+    55,
+    62,
+    63
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    60,
+    51,
+    61,
+    55
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    63,
+    51,
+    71,
+    63
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    63,
+    51,
+    71,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    65,
+    53,
+    69,
+    55
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    73,
+    53,
+    80,
+    63
+   ],
+   "color": "#4cff60"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    73,
+    53,
+    80,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    75,
+    55,
+    78,
+    57
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    81,
+    54,
+    84,
+    63
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    82,
+    50,
+    83,
+    54
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    86,
+    57,
+    90,
+    63
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "line",
+   "from": [
+    86,
+    59
+   ],
+   "to": [
+    89,
+    59
+   ],
+   "color": "#ffffff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    92,
+    54,
+    99,
+    63
+   ],
+   "color": "#3ad0ff"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    92,
+    54,
+    99,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    94,
+    56,
+    97,
+    58
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    101,
+    51,
+    109,
+    63
+   ],
+   "color": "#ff4fb0"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    101,
+    51,
+    109,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    103,
+    53,
+    107,
+    55
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    111,
+    53,
+    120,
+    63
+   ],
+   "color": "#ff4fb0"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    111,
+    53,
+    120,
+    63
+   ],
+   "color": "#00000080"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    113,
+    55,
+    118,
+    57
+   ],
+   "color": "#ffffffc0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    122,
+    55,
+    126,
+    63
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "line",
+   "from": [
+    122,
+    57
+   ],
+   "to": [
+    125,
+    57
+   ],
+   "color": "#ffffff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    63,
+    128,
+    64
+   ],
+   "color": "#000000"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body"
+  },
+  {
+   "name": "Goods"
+  },
+  {
+   "name": "Banner"
+  },
+  {
+   "name": "Strip"
+  },
+  {
+   "name": "Screen"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "counter_base",
+   "group": "Body",
+   "from": [
+    -25.6,
+    0,
+    -26.4
+   ],
+   "to": [
+    25.6,
+    14.4,
+    -15.2
+   ],
+   "faces": {
+    "north": [
+     0,
+     96,
+     64,
+     128
+    ],
+    "south": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "east": [
+     0,
+     0,
+     16,
+     16
+    ],
+    "west": [
+     0,
+     0,
+     16,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "counter_top",
+   "group": "Body",
+   "from": [
+    -27.2,
+    14.4,
+    -28
+   ],
+   "to": [
+    27.2,
+    16,
+    -13.6
+   ],
+   "all": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "neon_strip",
+   "group": "Strip",
+   "from": [
+    -27.2,
+    12.8,
+    -27.6
+   ],
+   "to": [
+    27.2,
+    14.2,
+    -26.4
+   ],
+   "all": [
+    64,
+    0,
+    80,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "till",
+   "group": "Body",
+   "from": [
+    12,
+    16,
+    -24
+   ],
+   "to": [
+    20,
+    21,
+    -17
+   ],
+   "sides": [
+    64,
+    96,
+    80,
+    112
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "till_screen",
+   "group": "Screen",
+   "from": [
+    13,
+    21,
+    -22.5
+   ],
+   "to": [
+    19,
+    25,
+    -21.5
+   ],
+   "faces": {
+    "north": [
+     80,
+     96,
+     96,
+     112
+    ],
+    "south": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "up": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "east": [
+     16,
+     0,
+     32,
+     16
+    ],
+    "west": [
+     16,
+     0,
+     32,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "no_bots_sign",
+   "group": "Body",
+   "from": [
+    -21,
+    16,
+    -22.5
+   ],
+   "to": [
+    -9,
+    22,
+    -22
+   ],
+   "faces": {
+    "north": [
+     96,
+     96,
+     128,
+     112
+    ],
+    "south": [
+     96,
+     96,
+     128,
+     112
+    ]
+   },
+   "rotation": [
+    -10,
+    0,
+    0
+   ],
+   "origin": [
+    -15,
+    16,
+    -22.2
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "upright_l",
+   "group": "Body",
+   "from": [
+    -34,
+    0,
+    21.6
+   ],
+   "to": [
+    -32,
+    48,
+    31.2
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "upright_r",
+   "group": "Body",
+   "from": [
+    32,
+    0,
+    21.6
+   ],
+   "to": [
+    34,
+    48,
+    31.2
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ],
+   "top": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "shelf1",
+   "group": "Body",
+   "from": [
+    -32,
+    18.55,
+    21.6
+   ],
+   "to": [
+    32,
+    19.849999999999998,
+    31.2
+   ],
+   "all": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "goods1",
+   "group": "Goods",
+   "from": [
+    -30,
+    19.849999999999998,
+    23.5
+   ],
+   "to": [
+    30,
+    24.799999999999997,
+    29.5
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     80,
+     0,
+     96,
+     16
+    ],
+    "east": [
+     0,
+     48,
+     8,
+     64
+    ],
+    "west": [
+     120,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "shelf2",
+   "group": "Body",
+   "from": [
+    -32,
+    31.35,
+    21.6
+   ],
+   "to": [
+    32,
+    32.65,
+    31.2
+   ],
+   "all": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "goods2",
+   "group": "Goods",
+   "from": [
+    -30,
+    32.65,
+    23.5
+   ],
+   "to": [
+    30,
+    37.6,
+    29.5
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     80,
+     0,
+     96,
+     16
+    ],
+    "east": [
+     0,
+     48,
+     8,
+     64
+    ],
+    "west": [
+     120,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "shelf3",
+   "group": "Body",
+   "from": [
+    -32,
+    44.15,
+    21.6
+   ],
+   "to": [
+    32,
+    45.449999999999996,
+    31.2
+   ],
+   "all": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "goods3",
+   "group": "Goods",
+   "from": [
+    -30,
+    45.449999999999996,
+    23.5
+   ],
+   "to": [
+    30,
+    50.4,
+    29.5
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     128,
+     64
+    ],
+    "up": [
+     80,
+     0,
+     96,
+     16
+    ],
+    "east": [
+     0,
+     48,
+     8,
+     64
+    ],
+    "west": [
+     120,
+     48,
+     128,
+     64
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "crate_l",
+   "group": "Body",
+   "from": [
+    -49.6,
+    0,
+    -8
+   ],
+   "to": [
+    -33.6,
+    16,
+    8
+   ],
+   "sides": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "top": [
+    0,
+    0,
+    16,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "crate_r",
+   "group": "Body",
+   "from": [
+    33.6,
+    0,
+    -8
+   ],
+   "to": [
+    49.6,
+    16,
+    8
+   ],
+   "sides": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "top": [
+    0,
+    0,
+    16,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "crate_r_top",
+   "group": "Body",
+   "from": [
+    34.6,
+    16,
+    -7
+   ],
+   "to": [
+    48.6,
+    30,
+    7
+   ],
+   "sides": [
+    0,
+    16,
+    32,
+    48
+   ],
+   "top": [
+    0,
+    0,
+    16,
+    16
+   ],
+   "rotation": [
+    0,
+    12,
+    0
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "awning",
+   "group": "Body",
+   "from": [
+    -37,
+    48.5,
+    -6
+   ],
+   "to": [
+    37,
+    49.5,
+    31
+   ],
+   "origin": [
+    0,
+    49,
+    12.5
+   ],
+   "rotation": [
+    -9,
+    0,
+    0
+   ],
+   "top": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "bottom": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "sides": [
+    16,
+    0,
+    32,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "banner",
+   "group": "Banner",
+   "from": [
+    -36.8,
+    53.6,
+    30.4
+   ],
+   "to": [
+    36.8,
+    74.4,
+    31.2
+   ],
+   "faces": {
+    "north": [
+     0,
+     64,
+     128,
+     96
+    ]
+   }
+  }
+ ]
+}

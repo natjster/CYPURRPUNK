@@ -1,0 +1,845 @@
+{
+ "name": "box_shanty",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 44,
+ "background": "#a8794a",
+ "about": "A sewer cat's cardboard home on the hub's east wall (built by hub.gd _build_shanties). Front (-Z) = the doorway, faces the room. 2.6 m wide (X) x 2.0 m deep (Z) x 1.2 m tall, plus a box on top and a tin-can chimney. Groups: Box, Window (warm lit window: glows). 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,24] wall cardboard (HOME scrawl on the right half)  [32,0,48,16] plain card  [48,0,64,16] dark inside"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "color": "#b0824f"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "colors": [
+    "#ffffff10",
+    "#00000000",
+    "#00000012"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    4,
+    0,
+    8,
+    24
+   ],
+   "color": "#d9c08a"
+  },
+  {
+   "op": "text",
+   "pos": [
+    17,
+    4
+   ],
+   "text": "HOME",
+   "color": "#20202ad0",
+   "worn": 0.1
+  },
+  {
+   "op": "line",
+   "from": [
+    16,
+    10
+   ],
+   "to": [
+    31,
+    11
+   ],
+   "color": "#20202ad0"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    16,
+    32,
+    24
+   ],
+   "top": "#4a301800",
+   "bottom": "#4a3018c0"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "color": "#6a4826a0",
+   "count": 6,
+   "size": 1.5
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#a87a48"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    48,
+    16
+   ],
+   "color": "#7a5430"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#140c08"
+  },
+  {
+   "op": "dither",
+   "rect": [
+    48,
+    0,
+    64,
+    16
+   ],
+   "color": "#3a2412",
+   "top": 0.0,
+   "bottom": 0.5
+  },
+  {
+   "op": "comment",
+   "note": "[0,24,32,32] flap  [32,16,48,32] patchwork blanket curtain  [48,16,64,32] tin can"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "color": "#b88a55"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "color": "#7a5430"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    16,
+    40,
+    24
+   ],
+   "color": "#a8323a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    40,
+    16,
+    48,
+    24
+   ],
+   "color": "#2a4a8a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    24,
+    40,
+    32
+   ],
+   "color": "#3a7a4a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    40,
+    24,
+    48,
+    32
+   ],
+   "color": "#c89a3a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "colors": [
+    "#00000000",
+    "#00000030"
+   ],
+   "width": 1
+  },
+  {
+   "op": "line",
+   "from": [
+    32,
+    24
+   ],
+   "to": [
+    47,
+    24
+   ],
+   "color": "#e8e0d0"
+  },
+  {
+   "op": "line",
+   "from": [
+    40,
+    16
+   ],
+   "to": [
+    40,
+    31
+   ],
+   "color": "#e8e0d0"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "colors": [
+    "#b8c0c8",
+    "#7a828c",
+    "#5a6068"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "color": "#8a4a20c0",
+   "count": 3,
+   "size": 1.2
+  },
+  {
+   "op": "comment",
+   "note": "[0,32,32,48] top box side (MEOW MART stamp)  [32,32,48,48] doormat  [48,32,64,48] lit window (glows)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    32,
+    32,
+    48
+   ],
+   "color": "#a87a48"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    32,
+    32,
+    48
+   ],
+   "amount": 0.3,
+   "spread": 0.1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    38,
+    32,
+    41
+   ],
+   "color": "#d9c08a"
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    33
+   ],
+   "text": "MEOW",
+   "color": "#3a2412d0",
+   "worn": 0.1
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    42
+   ],
+   "text": "MART",
+   "color": "#3a2412d0",
+   "worn": 0.1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    32,
+    32,
+    48
+   ],
+   "color": "#7a5430"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "color": "#6a2a2a"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    32,
+    48,
+    48
+   ],
+   "colors": [
+    "#00000000",
+    "#00000040"
+   ],
+   "width": 2
+  },
+  {
+   "op": "text",
+   "pos": [
+    34,
+    37
+   ],
+   "text": "HI",
+   "color": "#d8c8a0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    32,
+    64,
+    48
+   ],
+   "color": "#7a5430"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    50,
+    34,
+    62,
+    46
+   ],
+   "color": "#ffc860"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    52,
+    36,
+    60,
+    44
+   ],
+   "color": "#fff0b0"
+  },
+  {
+   "op": "line",
+   "from": [
+    56,
+    34
+   ],
+   "to": [
+    56,
+    45
+   ],
+   "color": "#3a2412"
+  },
+  {
+   "op": "line",
+   "from": [
+    50,
+    40
+   ],
+   "to": [
+    61,
+    40
+   ],
+   "color": "#3a2412"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     53,
+     41,
+     "#3a2412"
+    ],
+    [
+     54,
+     42,
+     "#3a2412"
+    ],
+    [
+     53,
+     43,
+     "#3a2412"
+    ]
+   ]
+  },
+  {
+   "op": "edge",
+   "rect": [
+    49,
+    33,
+    63,
+    47
+   ],
+   "color": "#4a301a"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Box"
+  },
+  {
+   "name": "Window"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "back",
+   "group": "Box",
+   "from": [
+    -20.8,
+    0,
+    -10
+   ],
+   "to": [
+    20.8,
+    19.2,
+    16
+   ],
+   "faces": {
+    "north": [
+     48,
+     0,
+     64,
+     16
+    ],
+    "south": [
+     0,
+     0,
+     32,
+     24
+    ],
+    "east": [
+     0,
+     0,
+     32,
+     24
+    ],
+    "west": [
+     0,
+     0,
+     32,
+     24
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "front_left",
+   "group": "Box",
+   "from": [
+    -20.8,
+    0,
+    -16
+   ],
+   "to": [
+    -5,
+    19.2,
+    -10
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     16,
+     24
+    ],
+    "west": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "east": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "front_right",
+   "group": "Box",
+   "from": [
+    5,
+    0,
+    -16
+   ],
+   "to": [
+    20.8,
+    19.2,
+    -10
+   ],
+   "faces": {
+    "north": [
+     16,
+     0,
+     32,
+     24
+    ],
+    "west": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "east": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "lintel",
+   "group": "Box",
+   "from": [
+    -5,
+    12,
+    -16
+   ],
+   "to": [
+    5,
+    19.2,
+    -10
+   ],
+   "faces": {
+    "north": [
+     32,
+     0,
+     48,
+     16
+    ],
+    "down": [
+     48,
+     0,
+     64,
+     16
+    ],
+    "up": [
+     32,
+     0,
+     48,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "curtain",
+   "group": "Box",
+   "from": [
+    -5,
+    3,
+    -15.6
+   ],
+   "to": [
+    0.6,
+    12,
+    -15.2
+   ],
+   "all": [
+    32,
+    16,
+    48,
+    32
+   ],
+   "origin": [
+    -5,
+    12,
+    -15.4
+   ],
+   "rotation": [
+    0,
+    0,
+    -5
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "window",
+   "group": "Window",
+   "from": [
+    9,
+    6,
+    -16.3
+   ],
+   "to": [
+    16,
+    12,
+    -16
+   ],
+   "faces": {
+    "north": [
+     48,
+     32,
+     64,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "porch_flap",
+   "group": "Box",
+   "from": [
+    -8,
+    19.2,
+    -22
+   ],
+   "to": [
+    8,
+    19.7,
+    -16
+   ],
+   "all": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "origin": [
+    0,
+    19.2,
+    -16
+   ],
+   "rotation": [
+    -20,
+    0,
+    0
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "doormat",
+   "group": "Box",
+   "from": [
+    -6,
+    0,
+    -22
+   ],
+   "to": [
+    6,
+    0.3,
+    -16
+   ],
+   "top": [
+    32,
+    32,
+    48,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "top_box",
+   "group": "Box",
+   "from": [
+    -8,
+    19.2,
+    -11.2
+   ],
+   "to": [
+    17.6,
+    27.2,
+    11.2
+   ],
+   "sides": [
+    0,
+    32,
+    32,
+    48
+   ],
+   "top": [
+    32,
+    0,
+    48,
+    16
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "top_flap",
+   "group": "Box",
+   "from": [
+    -8,
+    27.2,
+    -11.2
+   ],
+   "to": [
+    17.6,
+    27.6,
+    -5
+   ],
+   "all": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "origin": [
+    4.8,
+    27.2,
+    -11.2
+   ],
+   "rotation": [
+    -30,
+    0,
+    0
+   ]
+  },
+  {
+   "type": "prism",
+   "name": "chimney",
+   "group": "Box",
+   "sides": 6,
+   "center": [
+    12,
+    27.2,
+    4
+   ],
+   "height": 6,
+   "radius": 1.6,
+   "side_uv": [
+    48,
+    16,
+    64,
+    32
+   ],
+   "top_uv": [
+    48,
+    0,
+    64,
+    16
+   ]
+  }
+ ]
+}

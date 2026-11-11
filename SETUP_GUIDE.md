@@ -25,7 +25,7 @@ Meow-City/
 ├── quests/                    <- QUEST CARDS (.tres), one per quest, loaded automatically (§8)
 ├── cat_parts/                 <- MY CAT: accessory cards (.tres) + palette.tres (colours) (§11)
 ├── sounds/                    <- SOUND FILES: sfx/, ambience/, music/ — drop files in, no code (§12)
-├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster, loudspeaker, workbench, cyber_bike, fish_van (§20, §21, §23, §25)
+├── models/                    <- REAL 3D MODELS (.glb): trash_bin, traffic_cone, cardboard_box, overclean_poster, loudspeaker, workbench, black_markitten (shop), box_shanty, cyber_bike, fish_van (§20, §21, §23, §25)
 │   └── blockbench/            <- their Blockbench projects (.bbmodel): double-click to edit (§20)
 ├── tools/                     <- Claude's helpers: the Model Shop + Sound Lab (Python, §20)
 ├── .mcp.json                  <- tells Claude Code to start those helpers in this project (§20)

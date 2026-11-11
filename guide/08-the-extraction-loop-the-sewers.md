@@ -201,9 +201,18 @@ the ocean-blue style, in your own HUD (split screen: everyone shops on their own
   **Shop Lines** is what he says at the top of the shop screen (`%d` = your cash). Which TAB an item
   is on: select **Shop** in `scenes/ui/hud.tscn` > **Melee / Consumable / Firearm Items** (an item
   must be in his Stock AND on a tab to show). Layout / fonts / the locked silhouette colours: same node.
-- **Move the shop:** drag ComradeWhiskers under **Hub**. The counter, shelves, banner and
-  lights are built around him by `_build_shop()` in `scripts/hub.gd`, so they follow (he faces
-  his root's blue Z arrow; the counter goes on that side).
+- **Move the shop:** drag ComradeWhiskers under **Hub**. The stall and its lights are placed around
+  him by `_build_shop()` in `scripts/hub.gd`, so they follow. The stall is ONE 3D model,
+  `models/black_markitten.glb` (counter with a till + NO BOTS sign, wall shelves of glowing goods,
+  crates, a tin awning, the BLACK MARKITTEN banner). It's made for him standing **2 m out from the
+  west wall**, facing east, so move him along that wall (change Z), not away from it.
+  **Banner colour:** select **Hub** > Inspector > **Banner Color**.
+  **Repaint / reshape it:** open `models/blockbench/black_markitten.bbmodel` in Blockbench, then
+  File > Export > Export glTF Model over `models/black_markitten.glb` (or edit the recipe
+  `tools/model_specs/black_markitten.json` and run `python tools/cypurr_models.py all tools/model_specs/black_markitten.json`).
+- **The cardboard-box homes** on the east wall are the model `models/box_shanty.glb` (doorway,
+  blanket curtain, lit window, tin-can chimney; recipe `tools/model_specs/box_shanty.json`), placed by
+  `_build_shanties()` in `scripts/hub.gd`. Add or move homes: edit `SHANTY_SPOTS` there (metres along the wall).
 - **How it works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC whose E opens
   `scripts/ui/shop_screen.gd`, `ShopScreen`, at **HUD > Frame > Shop**). BUY asks the host
   (`ItemManager.request_buy`: price, crate unlock, room, cash); SELL asks `request_sell(player, where,

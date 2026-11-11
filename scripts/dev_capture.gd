@@ -488,6 +488,14 @@ func _ready() -> void:
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
 		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
 			await _menus._upgrades_test(player, args)
+		#   --hub_pos=X,Y,Z [--hub_yaw=DEG]  (stand at that spot INSIDE our sewer hub (hub-local metres), camera turned DEG)
+		if args.has("hub_pos"):
+			var hub := UndergroundHub.of(player)
+			var p: PackedStringArray = str(args["hub_pos"]).split(",")
+			player.teleport_to(hub.to_global(Vector3(float(p[0]), float(p[1]), float(p[2]))), 0.0)
+			player.camera_pivot.rotation.y = deg_to_rad(float(args.get("hub_yaw", "0")))
+			for i in 20:
+				await get_tree().physics_frame
 		if args.has("workbench"):
 			var hub := UndergroundHub.of(player)
 			player.teleport_to(hub.to_global(hub.workbench_spot + Vector3(-1.6, 0, 0)), 0.0)
