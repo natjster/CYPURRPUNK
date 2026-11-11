@@ -45,7 +45,7 @@ short; detail goes in topic files. When notes in a topic file go stale, fix them
 - `.claude/worktrees/` holds old copies of the whole project: never search inside it.
 - The art/sound tool servers (`.mcp.json`) are off by default; see `docs/claude/tools-pipeline.md` to turn them on.
 - Files over ~800 lines (`meow_mart_interior.gd`, `item_manager.gd`, `hub.gd`, `cat_player.gd`, `city_generator.gd`,
-  `guide/08-*.md`): when a task already touches one, split a self-contained chunk into its own file (like
+  guide sections over ~25 KB): when a task already touches one, split a self-contained chunk into its own file (like
   `scripts/dev_tests/`), so later sessions read less. Don't split files just for the sake of it.
 - This file must stay under ~10 KB: new detail goes in a topic file, with at most a one-line pointer here.
 
