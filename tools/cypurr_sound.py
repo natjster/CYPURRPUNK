@@ -380,10 +380,74 @@ def _preset(name: str, p: dict, rng: np.random.Generator) -> dict:
         # A little robot vacuum tidying up: a motor hum that revs up and down + suction hiss.
         seconds = p.get("seconds", 1.6)
         return {"duration": seconds, "raw": "vacuum", "seconds": seconds, "pitch": pitch}
+    if name == "vending_smash":
+        # A cat kicks the FISH 2 GO machine: a heavy metal thump, the glass cracking, an electric
+        # zap fizzing out, then a coin rattle and a can dropping into the tray.
+        hits = [{"time": 0.0, "gain": 1.0, "seconds": 0.9, "modes": _metal_modes(105 * pitch, rng, 0.45),
+                 "noise": {"gain": 0.9, "decay": 0.05, "low": 80, "high": 1500}},
+                {"time": 0.03, "gain": 0.55, "seconds": 0.25, "modes": [[rng.uniform(3200, 4200) * pitch, 0.03, 0.6], [5600 * pitch, 0.02, 0.4]],
+                 "noise": {"gain": 0.9, "decay": 0.025, "low": 3000, "high": 9000}}]
+        for i in range(4):  # little glass tinkles
+            hits.append({"time": 0.09 + i * rng.uniform(0.04, 0.07), "gain": 0.25, "seconds": 0.15,
+                         "modes": [[rng.uniform(2800, 5000) * pitch, 0.04, 1.0]]})
+        t = 0.55
+        for i in range(3):  # coins bouncing
+            hits.append({"time": t, "gain": 0.4 - i * 0.1, "seconds": 0.3, "modes": _metal_modes(rng.uniform(1100, 1400) * pitch, rng, 0.12, 3)})
+            t += 0.07 - i * 0.015
+        hits.append({"time": 0.8, "gain": 0.7, "seconds": 0.4, "modes": [[290 * pitch, 0.08, 1.0], [610 * pitch, 0.05, 0.5]],
+                     "noise": {"gain": 0.4, "decay": 0.02, "low": 200, "high": 2500}})
+        zaps = [{"time": 0.12, "seconds": 0.32, "low": 1500 * pitch, "high": 7000}, {"time": 0.46, "seconds": 0.12, "low": 2500 * pitch, "high": 8000}]
+        return {"duration": 1.25, "hits": hits, "scratch": zaps}
+    if name == "hydrant_burst":
+        # The cap clangs off and a high-pressure jet roars out: a clang + two layers of water hiss.
+        hits = [{"time": 0.0, "gain": 1.0, "seconds": 1.2, "modes": _metal_modes(330 * pitch, rng, 0.6),
+                 "noise": {"gain": 0.6, "decay": 0.03, "low": 1200, "high": 6000}},
+                {"time": 0.42, "gain": 0.45, "seconds": 0.6, "modes": _metal_modes(410 * pitch, rng, 0.3, 4)}]  # the cap landing
+        seconds = p.get("seconds", 2.2)
+        beds = [{"gain": 0.75, "low": 300, "high": 2500, "from": 0.02, "to": seconds},
+                {"gain": 0.45, "low": 2500, "high": 9000, "from": 0.05, "to": seconds - 0.2}]
+        return {"duration": seconds + 0.1, "hits": hits, "noise_beds": beds}
+    if name == "cart_roll":
+        # A shopping cart rattling away down the pavement: lots of tiny wire rattles over a rumble,
+        # then a crash as it tips over at the end.
+        seconds = p.get("seconds", 1.3)
+        hits, t = [], 0.0
+        while t < seconds - 0.25:
+            hits.append({"time": t, "gain": rng.uniform(0.15, 0.4), "seconds": 0.12,
+                         "modes": _metal_modes(rng.uniform(700, 1500) * pitch, rng, 0.05, 3),
+                         "noise": {"gain": 0.2, "decay": 0.006, "low": 2000, "high": 8000}})
+            t += rng.uniform(0.025, 0.06)
+        hits.append({"time": seconds - 0.25, "gain": 0.9, "seconds": 0.6, "modes": _metal_modes(260 * pitch, rng, 0.35),
+                     "noise": {"gain": 0.7, "decay": 0.04, "low": 800, "high": 6000}})
+        return {"duration": seconds + 0.4, "hits": hits, "noise_beds": [{"gain": 0.35, "low": 60, "high": 500, "from": 0.0, "to": seconds - 0.15}]}
+    if name == "sign_spark":
+        # A sheet-metal sandwich board slapping down, the neon tube popping and buzzing out.
+        hits = [{"time": 0.0, "gain": 0.9, "seconds": 0.5, "modes": _metal_modes(280 * pitch, rng, 0.25, 5),
+                 "noise": {"gain": 0.6, "decay": 0.03, "low": 600, "high": 5000}},
+                {"time": 0.06, "gain": 0.8, "seconds": 0.2, "modes": [[1900 * pitch, 0.02, 0.6]],
+                 "noise": {"gain": 1.0, "decay": 0.012, "low": 400, "high": 9000}},  # the tube popping
+                {"time": 0.16, "gain": 0.45, "seconds": 0.4, "modes": _metal_modes(330 * pitch, rng, 0.15, 4)},
+                {"time": 0.27, "gain": 0.25, "seconds": 0.3, "modes": _metal_modes(360 * pitch, rng, 0.1, 3)},
+                {"time": 0.1, "gain": 0.5, "seconds": 0.8,  # the mains buzz dying away
+                 "modes": [[120 * pitch, 0.35, 0.5], [240 * pitch, 0.3, 0.6], [360 * pitch, 0.25, 0.4], [600 * pitch, 0.2, 0.3]]}]
+        zaps = [{"time": 0.09, "seconds": 0.14, "low": 2500, "high": 9000}, {"time": 0.33, "seconds": 0.08, "low": 3000, "high": 9000},
+                {"time": 0.52, "seconds": 0.05, "low": 3000, "high": 9000}]
+        return {"duration": 1.0, "hits": hits, "scratch": zaps}
+    if name == "dumpster_rummage":
+        # A heavy hollow lid BANG as it flies open, a second clang as it hits the back, then the
+        # rustle of a cat digging through trash bags.
+        hits = [{"time": 0.0, "gain": 1.0, "seconds": 1.4, "modes": _metal_modes(78 * pitch, rng, 0.9),
+                 "noise": {"gain": 0.9, "decay": 0.06, "low": 60, "high": 1200}},
+                {"time": 0.28, "gain": 0.6, "seconds": 0.9, "modes": _metal_modes(96 * pitch, rng, 0.6, 5),
+                 "noise": {"gain": 0.5, "decay": 0.04, "low": 80, "high": 1500}}]
+        rustle = [{"time": 0.5 + i * rng.uniform(0.17, 0.24), "seconds": rng.uniform(0.12, 0.2), "low": 700 * pitch, "high": 4500}
+                  for i in range(int(p.get("strokes", 4)))]
+        return {"duration": 1.6, "hits": hits, "scratch": rustle}
     raise ValueError("unknown preset '%s' (try: %s)" % (name, ", ".join(PRESETS)))
 
 
-PRESETS = ["metal_bin_clatter", "metal_clang", "cone_bounce", "plastic_tap", "scratch", "pa_chime", "cardboard_thump", "vacuum"]
+PRESETS = ["metal_bin_clatter", "metal_clang", "cone_bounce", "plastic_tap", "scratch", "pa_chime", "cardboard_thump", "vacuum",
+           "vending_smash", "hydrant_burst", "cart_roll", "sign_spark", "dumpster_rummage"]
 
 
 def ps1_sfx(sound_id: str, preset_or_params, folder: str = "sfx") -> dict:
@@ -418,8 +482,7 @@ def ps1_sfx(sound_id: str, preset_or_params, folder: str = "sfx") -> dict:
         end = min(n, start + len(h))
         if start < n:
             out[start:end] += h[:end - start]
-    bed = recipe.get("noise_bed")
-    if bed:
+    for bed in ([recipe["noise_bed"]] if recipe.get("noise_bed") else []) + recipe.get("noise_beds", []):  # (one or a list)
         a, b = int(bed.get("from", 0) * RATE), int(bed.get("to", recipe["duration"]) * RATE)
         a, b = max(0, a), min(n, b)
         if b > a:

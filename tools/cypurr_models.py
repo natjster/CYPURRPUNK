@@ -110,6 +110,7 @@ def paint_texture(img: Image.Image, ops: list, seed: int = 1) -> Image.Image:
       line     from [x,y], to [x,y], color
       pixels   list of [x, y, color]
       edge     rect, color -> 1 px border (outlines panels)
+      dither   rect, color, top/bottom (or density) 0..1 -> 4x4 Bayer ordered dither (PS1 fades)
       comment  note -> does nothing (labels which part of the texture is which)
     """
     rng = random.Random(seed)
@@ -202,6 +203,21 @@ def paint_texture(img: Image.Image, ops: list, seed: int = 1) -> Image.Image:
         elif kind == "pixels":
             for x, y, c in op["list"]:
                 put(int(x), int(y), _color(c), blend=True)
+        elif kind == "dither":
+            # PS1-style ordered dithering: "color" is laid over the rect in a 4x4 Bayer pattern.
+            # "top" / "bottom" = how much of the rect it covers (0..1) at its top and bottom rows,
+            # so 0 -> 1 is a dithered fade (grime creeping up a wall, a glow fading out).
+            x1, y1, x2, y2 = rect_of(op)
+            c = _color(op["color"])
+            top = op.get("top", op.get("density", 0.5))
+            bottom = op.get("bottom", top)
+            bayer = (0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5)
+            for y in range(y1, y2):
+                t = (y - y1) / max(1, y2 - y1 - 1)
+                density = top + (bottom - top) * t
+                for x in range(x1, x2):
+                    if (bayer[(y % 4) * 4 + (x % 4)] + 0.5) / 16.0 < density:
+                        put(x, y, c, blend=True)
         elif kind == "edge":
             x1, y1, x2, y2 = rect_of(op)
             c = _color(op["color"])

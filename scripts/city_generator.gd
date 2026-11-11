@@ -12,7 +12,9 @@ extends Node3D
 ## glowing neon signs, and every crossroads gets a street lamp. One random lot is MEOW-MART
 ## (a "point of interest": it's somewhere different in every district).
 ## Trash bins and traffic cones (real low-poly models made in Blockbench, res://models/) stand on
-## some sidewalk corners, in the yards' junk piles and by Meow-Mart's door.
+## some sidewalk corners, in the yards' junk piles and by Meow-Mart's door. THE STREET PROPS PACK
+## adds fish vending machines (shopfronts + Meow-Mart), fire hydrants and neon A-frame signs (corners),
+## shopping carts (Meow-Mart, yards, corners) and dumpsters (yards + Meow-Mart's side): all MESS props.
 ## The manholes and payphones (the other points of interest) are placed by fish_heist.gd.
 ##
 ## All tuning knobs are in the Inspector when you select the City node in main.tscn.
@@ -56,6 +58,20 @@ signal generated(city_seed: int)
 ## Empty yards: how many cardboard boxes in the junk pile.
 @export_range(0, 6) var yard_boxes_min: int = 1
 @export_range(0, 6) var yard_boxes_max: int = 2
+## STREET PROPS PACK models (tools/make_street_prop_specs.py builds them):
+@export_file("*.glb") var vending_machine_model: String = "res://models/vending_machine.glb"
+@export_file("*.glb") var fire_hydrant_model: String = "res://models/fire_hydrant.glb"
+@export_file("*.glb") var shopping_cart_model: String = "res://models/shopping_cart.glb"
+@export_file("*.glb") var neon_sign_model: String = "res://models/neon_sign_prop.glb"
+@export_file("*.glb") var dumpster_model: String = "res://models/dumpster.glb"
+## Chance (0-1) that a building gets a FISH VENDING MACHINE against one of its street-facing walls.
+@export_range(0.0, 1.0) var vending_chance: float = 0.18
+## Chance (0-1) that an empty yard has a DUMPSTER, and how many SHOPPING CARTS its junk pile gets.
+@export_range(0.0, 1.0) var yard_dumpster_chance: float = 0.6
+@export_range(0, 4) var yard_carts_min: int = 0
+@export_range(0, 4) var yard_carts_max: int = 1
+## Vending machines, hydrants and dumpsters are solid for cats (like bins). Off = walk through them.
+@export var heavy_props_are_solid: bool = true
 ## Chance (0-1) that a building gets an OVERCLEAN poster on its street-facing wall (cats scratch them).
 @export_range(0.0, 1.0) var poster_chance: float = 0.35
 ## Chance (0-1) that a sidewalk corner gets a bin, a cone, or both. There are 4 corners per block
@@ -77,7 +93,8 @@ signal generated(city_seed: int)
 ## the middle of the side, loot and payphones stay within 9 m of it).
 @export var loudspeaker_along: float = 10.8
 
-## Every MESS prop (bins, standing cones, boxes, posters) in the order they were built: a prop's
+## Every MESS prop (bins, standing cones, boxes, posters, vending machines, hydrants, carts, neon
+## signs, dumpsters) in the order they were built: a prop's
 ## place in this list is its id, the same on every computer (scripts/mess_manager.gd).
 var mess_props: Array[MessProp] = []
 ## Every loudspeaker pole built for this city (scripts/loudspeaker.gd).
@@ -263,11 +280,57 @@ func _build_building(lot_center: Vector3, lot_size: float, street_side: Vector2)
 
 	if _rng.randf() < neon_chance:
 		_add_neon_sign(center, size, street_side)
+	var poster_face := -1  # (0 = the x face, 1 = the z face, -1 = no poster)
 	if _rng.randf() < poster_chance:
 		# An OVERCLEAN poster at cat height on one of the two street-facing walls.
 		var on_x_face := _rng.randf() < 0.5
 		var slide := _rng.randf_range(-1, 1)
 		_add_poster(center, size, street_side, on_x_face, slide)
+		poster_face = 0 if on_x_face else 1
+	if _rng.randf() < vending_chance:
+		# A FISH VENDING MACHINE snug against a street-facing wall (the one without a poster).
+		var on_x := _rng.randf() < 0.5
+		if poster_face != -1:
+			on_x = poster_face == 1
+		_add_shopfront_vending(lot_center, lot_size, street_side, center, size, on_x, _rng.randf())
+
+
+## A vending machine against a building's street-facing wall (on_x = the wall facing along x),
+## its back to the wall, facing the street. "t" 0..1 = where along the wall. It stays between 1.2 m
+## and 8.6 m from the middle of the block's side: clear of the mid-block lamp post (at 0) and of
+## the corner props / loudspeakers (9.6 m and further out).
+func _add_shopfront_vending(lot_center: Vector3, lot_size: float, street_side: Vector2, center: Vector3, size: Vector3, on_x: bool, t: float) -> void:
+	if not ResourceLoader.exists(vending_machine_model):
+		return
+	var block_center := lot_center - Vector3(street_side.x, 0, street_side.y) * lot_size * 0.5
+	var outward: Vector3
+	var wall_mid: float   # the wall's middle, along the wall (world z for the x face, x for the z face)
+	var wall_half: float  # half the wall's length
+	var block_mid: float  # the block's middle along that same line
+	if on_x:
+		outward = Vector3(street_side.x, 0, 0)
+		wall_mid = center.z
+		wall_half = size.z * 0.5
+		block_mid = block_center.z
+	else:
+		outward = Vector3(0, 0, street_side.y)
+		wall_mid = center.x
+		wall_half = size.x * 0.5
+		block_mid = block_center.x
+	# The allowed stretch: on the wall (0.7 m in from its ends) AND 1.2..8.6 m from the block's
+	# middle, on this lot's side of it.
+	var lot_sign := 1.0 if wall_mid > block_mid else -1.0
+	var near := block_mid + lot_sign * 1.2
+	var far := block_mid + lot_sign * 8.6
+	var low := maxf(wall_mid - wall_half + 0.7, minf(near, far))
+	var high := minf(wall_mid + wall_half - 0.7, maxf(near, far))
+	if high <= low:
+		return
+	var along := lerpf(low, high, t)
+	var face := center + outward * ((size.x if on_x else size.z) * 0.5)
+	var spot := Vector3(face.x, 0, along) if on_x else Vector3(along, 0, face.z)
+	spot += outward * 0.4  # (its back 2 cm off the wall: it's 0.75 m deep)
+	_add_mess_prop(MessProp.Kind.VENDING, vending_machine_model, spot, atan2(-outward.x, -outward.z), heavy_props_are_solid)
 
 
 ## Building centre so its street-facing walls sit 1 m back from the sidewalk edge,
@@ -342,22 +405,34 @@ func _build_meow_mart(lot_center: Vector3, street_side: Vector2) -> void:
 	meow_mart_position = Vector3(center.x, 0, front_z + street_side.y * 1.0)
 	meow_mart_outward = Vector3(0, 0, street_side.y)
 
-	# A bin on one side of the door, cones on the other (the loot lines up in the middle, about
-	# 2.6 m either side of the door, so these stand 4.4 m out, by the corners of the shop).
+	# Meow-Mart's props (the loot lines up by the door, up to 2.6 m either side of it, so all of
+	# these stand 3.2+ m from the door or round the side). The front pavement is only ~1 m deep, so
+	# the bigger things go down the STREET-SIDE wall of the shop:
+	#   front, inner half:  a FISH VENDING MACHINE against the wall + a bin at the corner
+	#   front, street half: a NEON A-FRAME sign + a cone at the corner
+	#   street-side wall (front to back): 1-2 SHOPPING CARTS, a box, a DUMPSTER
 	if props_at_meow_mart:
-		var bin_side := 1.0 if _rng.randf() < 0.5 else -1.0
-		var by_wall := front_z + street_side.y * 0.45
-		_add_bin(Vector3(center.x + bin_side * 4.4, 0, by_wall), _rng.randf() * TAU)
-		_add_cone(Vector3(center.x - bin_side * 4.4, 0, by_wall), _rng.randf() * TAU, false)
-		_add_cone(Vector3(center.x - bin_side * 3.7, 0, by_wall), _rng.randf() * TAU, _rng.randf() < 0.3)
-		_add_box(Vector3(center.x + bin_side * 3.6, 0, by_wall), _rng.randf() * TAU)
+		var sx := street_side.x          # +1 / -1: which side of the shop faces the street
+		var o := street_side.y           # +1 / -1: which way is out of the front door
+		var by_wall := front_z + o * 0.45
+		var side_x := center.x + sx * 5.5  # down the street-side wall (1 m of pavement there)
+		var facing_out := atan2(0.0, -o)   # a model's front (-Z) pointing out of the door
+		_add_vending(Vector3(center.x - sx * 3.6, 0, front_z + o * 0.4), facing_out)
+		_add_bin(Vector3(center.x - sx * 4.6, 0, by_wall), _rng.randf() * TAU)
+		_add_aframe_sign(Vector3(center.x + sx * 3.5, 0, front_z + o * 0.5), facing_out + _rng.randf_range(-0.2, 0.2))
+		_add_cone(Vector3(center.x + sx * 4.6, 0, by_wall), _rng.randf() * TAU, false)
+		_add_cart(Vector3(side_x, 0, front_z - o * 1.2), facing_out + _rng.randf_range(-0.25, 0.25))
+		if _rng.randf() < 0.5:
+			_add_cart(Vector3(side_x, 0, front_z - o * 2.4), facing_out + PI + _rng.randf_range(-0.25, 0.25))
+		_add_box(Vector3(side_x, 0, front_z - o * 5.4), _rng.randf() * TAU)
+		# The dumpster: its back against the side wall, its front (and lid) facing the street.
+		_add_dumpster(Vector3(center.x + sx * 5.66, 0, front_z - o * 7.0), atan2(-sx, 0.0))
 		if _props_x > 1.0:
-			# BIN DAY: a second bin, cone and box by each corner, a step further out (still clear
-			# of the fish lined up by the door: they stop 2.6 m out, these are 4.4+ m out).
-			var further := by_wall + street_side.y * 1.3
-			_add_bin(Vector3(center.x - bin_side * 4.6, 0, further), _bin_rng.randf() * TAU)
-			_add_cone(Vector3(center.x + bin_side * 4.6, 0, further), _bin_rng.randf() * TAU, false)
-			_add_box(Vector3(center.x + bin_side * 4.6, 0, further + street_side.y * 1.1), _bin_rng.randf() * TAU)
+			# BIN DAY: more junk down the side (still clear of the fish by the door), from _bin_rng.
+			_add_cone(Vector3(side_x, 0, front_z - o * 3.4), _bin_rng.randf() * TAU, false)
+			_add_box(Vector3(side_x, 0, front_z - o * 4.4), _bin_rng.randf() * TAU)
+			_add_bin(Vector3(side_x, 0, front_z - o * 8.7), _bin_rng.randf() * TAU)
+			_add_cart(Vector3(side_x, 0, front_z - o * 9.8), facing_out + PI + _bin_rng.randf_range(-0.25, 0.25))
 
 
 # --- Empty yards ---
@@ -369,10 +444,10 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 		LevelKit.add_box(self, spot, Vector3.ONE, crate_material, true)
 		if _rng.randf() < 0.35:  # stack one on top
 			LevelKit.add_box(self, spot + Vector3(0, 1, 0), Vector3.ONE, crate_material, true)
-	if _rng.randf() < 0.6:  # dumpster
-		var spot := lot_center + Vector3(_rng.randf_range(-spread, spread), 0.65, _rng.randf_range(-spread, spread))
-		var dumpster := LevelKit.add_box(self, spot, Vector3(2.2, 1.3, 1.2), building_material, true)
-		dumpster.set_instance_shader_parameter("instance_tint", Color(0.3, 0.6, 0.45))
+	var dumpster_at := Vector3.INF
+	if _rng.randf() < yard_dumpster_chance:  # a DUMPSTER (a MESS prop: rummage it)
+		dumpster_at = lot_center + Vector3(_rng.randf_range(-spread, spread), 0, _rng.randf_range(-spread, spread))
+		_add_dumpster(dumpster_at, _rng.randi_range(0, 3) * PI * 0.5)
 	# The junk pile: a cluster of trash bins and traffic cones (Blockbench models) around one spot,
 	# some cones knocked over. (Every random number comes from _rng, in a fixed order: the city
 	# must come out the same on every computer.)
@@ -387,6 +462,10 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 		var swap := spots[i]
 		spots[i] = spots[j]
 		spots[j] = swap
+	# Nothing in the pile may stand inside or right in front of the dumpster (2.1 m long: keep 2.3 m
+	# from its middle, so a cat can get at it without a bin stealing the E).
+	if dumpster_at != Vector3.INF:
+		spots = spots.filter(func(spot: Vector3) -> bool: return Vector2(spot.x - dumpster_at.x, spot.z - dumpster_at.z).length() > 2.3)
 	var bins := _rng.randi_range(yard_bins_min, maxi(yard_bins_min, yard_bins_max))
 	for i in bins:
 		if not spots.is_empty():
@@ -399,6 +478,10 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 	for i in boxes:
 		if not spots.is_empty():
 			_add_box(spots.pop_back() + _jiggle(_rng), _rng.randf() * TAU)
+	var carts := _rng.randi_range(yard_carts_min, maxi(yard_carts_min, yard_carts_max))
+	for i in carts:
+		if not spots.is_empty():
+			_add_cart(spots.pop_back() + _jiggle(_rng), _rng.randf() * TAU)
 	# BIN DAY (scripts/district_twist.gd): the pile grows (2x = as many again), in the spots left over.
 	if _props_x > 1.0:
 		for i in _extra(bins):
@@ -410,6 +493,9 @@ func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 		for i in _extra(boxes):
 			if not spots.is_empty():
 				_add_box(spots.pop_back() + _jiggle(_bin_rng), _bin_rng.randf() * TAU)
+		for i in _extra(carts):
+			if not spots.is_empty():
+				_add_cart(spots.pop_back() + _jiggle(_bin_rng), _bin_rng.randf() * TAU)
 
 
 ## BIN DAY: how many EXTRA props to add to a normal count (2x multiplier: as many again).
@@ -424,7 +510,8 @@ func _jiggle(rng: RandomNumberGenerator) -> Vector3:
 
 # --- Street props: trash bins and traffic cones (real models, made in Blockbench) ---
 
-## Some sidewalk corners get a bin, a cone, or a bin AND a cone. They stand 1.6-2 m along the
+## Some sidewalk corners get a bin, a cone, a box, a bin AND a cone, a fire hydrant, a neon A-frame
+## sign or a stray shopping cart. They stand 1.6-2 m along the
 ## kerb from the very corner: clear of the corner lamp posts, and outside the middle stretch of
 ## each sidewalk where loot and payphones go (ItemManager.random_sidewalk_spot: up to 9 m from
 ## the middle of a side; corners are 11.5 m out).
@@ -453,23 +540,32 @@ func _corner_prop(block_center: Vector3, corner: Vector2, rng: RandomNumberGener
 	# "back" = the way along that kerb towards the middle of the sidewalk.
 	var spot: Vector3
 	var back: Vector3
+	var to_street: Vector3  # from this kerb out into the road
 	if rng.randf() < 0.5:
 		spot = block_center + Vector3(corner.x * in_from_edge, 0, corner.y * along)
 		back = Vector3(0, 0, -corner.y)
+		to_street = Vector3(corner.x, 0, 0)
 	else:
 		spot = block_center + Vector3(corner.x * along, 0, corner.y * in_from_edge)
 		back = Vector3(-corner.x, 0, 0)
+		to_street = Vector3(0, 0, corner.y)
 	_taken_spots.append(spot)
 	var roll := rng.randf()
-	if roll < 0.42:
+	if roll < 0.24:
 		_add_bin(spot, rng.randf() * TAU)
-	elif roll < 0.72:
+	elif roll < 0.42:
 		_add_cone(spot, rng.randf() * TAU, rng.randf() < 0.25)
-	elif roll < 0.85:
+	elif roll < 0.50:
 		_add_box(spot, rng.randf() * TAU)
-	else:  # a bin with a cone next to it (towards the corner, away from the loot)
+	elif roll < 0.58:  # a bin with a cone next to it (towards the corner, away from the loot)
 		_add_bin(spot, rng.randf() * TAU)
 		_add_cone(spot - back * 0.8, rng.randf() * TAU, false)
+	elif roll < 0.78:  # a FIRE HYDRANT right by the kerb, its front nozzle to the road
+		_add_hydrant(spot + to_street * 0.15, atan2(-to_street.x, -to_street.z))
+	elif roll < 0.90:  # a NEON A-FRAME SIGN facing along the pavement
+		_add_aframe_sign(spot, atan2(-back.x, -back.z) + rng.randf_range(-0.3, 0.3))
+	else:  # a stray SHOPPING CART somebody dumped on the corner
+		_add_cart(spot, rng.randf() * TAU)
 
 
 ## OVERCLEAN's loudspeaker poles: each block may get one (Loudspeaker Chance), on a random corner,
@@ -552,6 +648,40 @@ func _add_box(at: Vector3, yaw: float) -> void:
 		_add_mess_prop(MessProp.Kind.BOX, cardboard_box_model, at, yaw, false)
 
 
+## STREET PROPS PACK adders: each is a MESS prop (scripts/mess_prop.gd). "yaw" turns the model's
+## front (-Z) to face that way. A missing model file = nothing placed (no random numbers are drawn
+## in here, so the rest of the city comes out the same either way).
+
+## A FISH VENDING MACHINE (solid for cats; kick it and a fish drops out once a district).
+func _add_vending(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(vending_machine_model):
+		_add_mess_prop(MessProp.Kind.VENDING, vending_machine_model, at, yaw, heavy_props_are_solid)
+
+
+## A FIRE HYDRANT (solid for cats; wrench it open for a water geyser).
+func _add_hydrant(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(fire_hydrant_model):
+		_add_mess_prop(MessProp.Kind.HYDRANT, fire_hydrant_model, at, yaw, heavy_props_are_solid)
+
+
+## A MEOW-MART SHOPPING CART (never solid: shove it and it rolls).
+func _add_cart(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(shopping_cart_model):
+		_add_mess_prop(MessProp.Kind.CART, shopping_cart_model, at, yaw, false)
+
+
+## A NEON A-FRAME sandwich-board sign (never solid: a walk knocks it flat).
+func _add_aframe_sign(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(neon_sign_model):
+		_add_mess_prop(MessProp.Kind.NEON_SIGN, neon_sign_model, at, yaw, false)
+
+
+## A DUMPSTER (solid for cats; rummage it: the lid flies open, maybe there's scrap).
+func _add_dumpster(at: Vector3, yaw: float) -> void:
+	if ResourceLoader.exists(dumpster_model):
+		_add_mess_prop(MessProp.Kind.DUMPSTER, dumpster_model, at, yaw, heavy_props_are_solid)
+
+
 ## An OVERCLEAN poster on a building's street-facing wall, its bottom 0.55 m up (cat height).
 ## on_x_face = the wall facing along x (else along z); slide -1..1 = where along that wall.
 func _add_poster(building_center: Vector3, building_size: Vector3, street_side: Vector2, on_x_face: bool, slide: float) -> void:
@@ -576,6 +706,7 @@ func _add_mess_prop(kind: MessProp.Kind, model_path: String, at: Vector3, yaw: f
 	var mess := MessProp.new()
 	mess.position = at
 	mess.rotation.y = yaw
+	mess.powered = not _blackout  # (BLACKOUT: vending screens and neon signs stay dark)
 	add_child(mess)
 	mess.setup(mess_props.size(), kind, model_path, solid)
 	mess_props.append(mess)

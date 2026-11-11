@@ -245,7 +245,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				_busy_left -= delta
 				# Turn to face it while tidying (it looks like it's sucking the mess up).
-				var face := Motion.flat(_mess.global_position - global_position)
+				var face := Motion.flat((_mess.tidy_spot() if _mess.kind == MessProp.Kind.CART else _mess.global_position) - global_position)  # (a cart: where it rolled to)
 				if face.length() > 0.1:
 					model.rotation.y = lerp_angle(model.rotation.y, atan2(-face.x, -face.z), 1.0 - exp(-turn_speed * delta))
 				if _busy_left <= 0.0:

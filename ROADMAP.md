@@ -157,7 +157,9 @@ a world that hates mess.
    NPCs use it. Accessories (hat / face / neck) are switched off for now (`CatLook.SLOTS`).
 2. **The VAC-COP.** DONE (10 Nov 2026): armoured police-enforcer disc (`roomba.bbmodel`), and the
    LINT-TRAPPER and SQUIRT-DRONE too. Their glowing Eye is a weak spot: a shot into it always crits.
-3. **Street props.** Bins, cones, vending machines, signs. These are also the things you knock over.
+3. **Street props.** DONE (10 Nov 2026): bins, cones, boxes, posters, and the INTERACTIVE STREET PROPS
+   PACK: fish vending machines (drop a fish), fire hydrants (water-geyser jump pads), Meow-Mart carts
+   (roll and bowl things over), neon A-frame signs and dumpsters (scrap). All knock-over-able (SETUP_GUIDE §23).
 4. **The car.** DONE (Nov 2026): the WEDGE CYBER-INTERCEPTOR, gang-coloured neon trim, spinning
    and steering wheels (`models/blockbench/getaway_car.bbmodel`).
 5. **NPCs.** Rebuilt from the new cat model plus outfits, so one good cat fixes fifteen characters.
