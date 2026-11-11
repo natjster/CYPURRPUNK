@@ -4,10 +4,13 @@ extends HeldItem
 ## script on its root, set the numbers below in the Inspector, and make an item card.
 ##
 ## The scene needs:
-##   Model (Node3D)              <- the gun's meshes
-##   Model/Muzzle (Marker3D)     <- tip of the barrel; bolts start here
+##   Model (Node3D)              <- the gun's look: usually a Blockbench model (models/<gun>.glb,
+##                                  made by tools/make_weapon_specs.py) dropped in as a child
+##   Model/Muzzle (Marker3D)     <- tip of the barrel; bolts start here. If the model has its own
+##                                  "Muzzle" marker, this one is moved onto it when the gun appears.
 ##   Model/Muzzle/MuzzleFlash    <- optional OmniLight3D that flashes on each shot
-##   Model/HeatCoil              <- optional MeshInstance3D that glows hotter as you fire
+##   HeatCoil                    <- optional part anywhere under Model that glows hotter as you fire
+## The model gets the PS1 look automatically; Glow Parts / Neon Parts (Look) say which parts glow.
 ##
 ## How a shot works: the owner aims from its camera through the screen centre, finds what
 ## it hits, rolls the damage and hands it a Hit (the hit framework, scripts/hit.gd: the target
@@ -98,6 +101,13 @@ extends HeldItem
 @export var bolt_width: float = 0.12
 ## The name shown on the heat bar.
 @export var hud_name: String = "GUN"
+## Parts of the model (Blockbench group names, e.g. "Laser") that GLOW as a whole, in this colour.
+@export var glow_parts: Dictionary = {}
+## How bright the Glow Parts are (0 = no glow, 3 = neon).
+@export var glow_energy: float = 3.0
+## Parts whose BRIGHT painted pixels glow in their own colour (neon tubes, frost, lit slits), and
+## how strongly: part name -> 1 (soft) .. 4 (blazing). The dark paint around them stays dark.
+@export var neon_parts: Dictionary = {}
 ## The sound each shot makes: a file name in res://sounds/sfx/ (without .wav), e.g. "shoot".
 @export var shot_sound: String = "shoot"
 ## Play the sound on every Nth shot only (for very fast guns: 25 sounds a second is just noise).
@@ -122,12 +132,21 @@ var _rng := RandomNumberGenerator.new()  # spread only — NOT the city's RNG
 
 
 func _ready() -> void:
+	var model := get_node_or_null("Model")
+	if model != null:
+		# The Blockbench model -> the game's PS1 look (keeps its painted texture, crisp pixels),
+		# then the glowing bits.
+		LevelKit.psx_ify(model)
+		LevelKit.make_parts_glow(model, glow_parts, glow_energy)
+		LevelKit.make_neon_paint_glow(model, neon_parts)
 	_muzzle = get_node_or_null("Model/Muzzle")
 	_muzzle_flash = get_node_or_null("Model/Muzzle/MuzzleFlash")
-	_coil = get_node_or_null("Model/HeatCoil")
-	if _coil != null:
+	_snap_muzzle_to_model(model)
+	_coil = model.find_child("HeatCoil", true, false) as MeshInstance3D if model != null else null
+	if _coil != null and _coil.get_active_material(0) is ShaderMaterial:
 		# Own copy of the coil material so its glow can change without touching other guns.
-		_coil_material = (_coil.get_surface_override_material(0) as ShaderMaterial).duplicate()
+		_coil_material = (_coil.get_active_material(0) as ShaderMaterial).duplicate()
+		_coil_material.set_shader_parameter("emission_textured", true)  # the painted windings show in the glow
 		_coil.set_surface_override_material(0, _coil_material)
 	# Bolts: one shared thin box, stretched per shot. White glow; colour comes from instance_tint.
 	_bolt_mesh.size = Vector3(bolt_width, bolt_width, 1.0)
@@ -136,6 +155,26 @@ func _ready() -> void:
 	if _muzzle_flash != null:
 		_muzzle_flash.light_energy = 0.0
 	_update_heat_look()
+
+
+## If the Blockbench model has its own "Muzzle" marker (the @Muzzle locator), put Model/Muzzle
+## exactly there, so bolts and the flash start at the painted barrel tip even after the model is
+## reshaped in Blockbench. (No marker: Model/Muzzle stays where the scene put it.)
+func _snap_muzzle_to_model(model: Node) -> void:
+	if model == null or _muzzle == null:
+		return
+	for marker in model.find_children("Muzzle", "", true, false):
+		if marker == _muzzle:
+			continue
+		# Add up the positions from the marker back to Model (works before the gun is in the world).
+		var offset := Transform3D.IDENTITY
+		var node: Node = marker
+		while node != null and node != model:
+			if node is Node3D:
+				offset = (node as Node3D).transform * offset
+			node = node.get_parent()
+		_muzzle.position = offset.origin
+		return
 
 
 func _process(delta: float) -> void:

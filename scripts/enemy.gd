@@ -167,23 +167,7 @@ func _set_up_model() -> void:
 	if model == null:
 		return
 	LevelKit.psx_ify(model)
-	for part_name in glow_parts:
-		var part := model.get_node_or_null(NodePath(str(part_name)))
-		if part == null:
-			continue
-		var meshes: Array[Node] = part.find_children("*", "MeshInstance3D", true, false)
-		if part is MeshInstance3D:
-			meshes.append(part)
-		for node in meshes:
-			var mesh := node as MeshInstance3D
-			if mesh.mesh == null or not mesh.get_active_material(0) is ShaderMaterial:
-				continue
-			var glow := (mesh.get_active_material(0) as ShaderMaterial).duplicate() as ShaderMaterial
-			glow.set_shader_parameter("albedo_color", Color(0.2, 0.2, 0.2))
-			glow.set_shader_parameter("emission_color", glow_parts[part_name])
-			glow.set_shader_parameter("emission_energy", glow_energy)
-			glow.set_shader_parameter("emission_textured", true)  # the pixel-art scanlines show in the glow
-			mesh.set_surface_override_material(0, glow)
+	LevelKit.make_parts_glow(model, glow_parts, glow_energy)
 
 
 # --- Getting hurt ---

@@ -1647,7 +1647,8 @@ TommyGun (Node3D)                    script: weapon.gd (all the numbers are set 
 ```
 items/                       <- ITEM CARDS (one .tres per item). Loaded automatically.
   fish.tres  tommy_gun.tres  pistol.tres  catnip.tres  catdip.tres
-scenes/items/                <- the item models (the same scene lies on the street and sits in a paw)
+scenes/items/                <- the item scenes (the same scene lies on the street and sits in a paw)
+models/<weapon>.glb          <- the 8 weapons' Blockbench models (see "The weapon models" below)
 scripts/items/
   item_data.gd               <- what an item card can say (name, paws, loot value, shop price, model...)
   item_manager.gd            <- the system ("Items" node in main.tscn): pickup, drop, paws,
@@ -1676,9 +1677,10 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   **Swing Angle** (the animation), **Swing Sound** (`sounds/sfx/swing.wav`, a placeholder whoosh)
   and **Hit Sound** (`bonk`).
 - **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
-- **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, reshape
-  the meshes under **Model** (the swing rotates **Model**), change the numbers, give the card a
-  new **Id**, and add that id to the shopkeeper's **Stock** (`scripts/npcs/shopkeeper.gd`).
+- **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, swap the
+  model under **Model** (the swing rotates **Model**; see "The weapon models" below), change the
+  numbers, give the card a new **Id**, and add that id to the shopkeeper's **Stock**
+  (`scripts/npcs/shopkeeper.gd`).
 - Test: `--give=neon_bat --deploy --bait_roomba=1.6 --hold=shoot --hold_frames=8` (one swing at
   a VAC-COP; the `DevCapture roombas` line shows its health).
 
@@ -1718,8 +1720,9 @@ The settings that make them work, usable on any gun:
 The **Paw-Pistol** was made exactly this way (`scenes/items/pistol.tscn` + `items/pistol.tres`).
 Steps for your next one (e.g. a shotgun):
 1. In the FileSystem panel, right-click `scenes/items/pistol.tscn` (or `tommy_gun.tscn`) >
-   **Duplicate** > `shotgun.tscn`. Open it and reshape the meshes under **Model** (keep
-   **Model/Muzzle** at the barrel tip). Delete `HeatCoil` if it shouldn't overheat.
+   **Duplicate** > `shotgun.tscn`. Open it, delete **Model/Mesh** and drag your own model
+   (`models/shotgun.glb`, see "The weapon models" below) onto **Model**. Put **Model/Muzzle** at
+   the barrel tip (or give the model a **Muzzle** marker in Blockbench: the gun snaps to it).
 2. Select the root node. In the Inspector set e.g. **Automatic** off (one shot per click),
    **Fire Rate** 2, **Damage** 60, **Crit Chance** 0.1, **Heat Per Shot** 0, **Cat Knockback** 14,
    **Bolt Color**, **Hud Name** "SHOTGUN".
@@ -1729,6 +1732,53 @@ Steps for your next one (e.g. a shotgun):
 4. Sell it: on `shotgun.tres` set **Shop > Price** (e.g. 120), then select **Hub >
    ComradeWhiskers** in `main.tscn` and add `shotgun` to his **Stock**. Done.
    (Or make it lie in the city instead: add a line for it to the loot table, below.)
+
+### The weapon models (Blockbench, since 10 Nov 2026)
+All eight weapons are painted low-poly **Blockbench** models (§20) instead of grey boxes: the
+PAW-PISTOL (cat-ear iron sights, paw-print grip, pink laser rail), the PURR-TOMMY (finned barrel,
+a TUNA-TIN drum magazine, a copper **HeatCoil** on top that glows hotter as you fire), the FROZEN
+TUNA (a whole frozen bluefin, taped tail handle, icicles), the HAIRBALL BLASTER (sawed-off double
+barrel, brass hinge, pink-lit vents), the YARN-ZOOKA (PVC tube, launch bell, a glowing yarn ball
+in the mouth, cyan capacitor), the CUCUMBER LAUNCHER (pneumatic mortar, cucumber hopper, a pickle
+in the muzzle, red CO2 tank, pressure dial), the NEON BAT (spiralling neon tubes, studded ring)
+and THE RED DOT (keychain laser pointer, knurled grip, brass split-ring, DANGER LASER sticker).
+Each is under 150 triangles.
+
+**Node tree of a weapon scene** (e.g. `scenes/items/pistol.tscn`):
+```
+Pistol (Node3D, script weapon.gd / melee_weapon.gd)  <- every number in the Inspector
+  Model (Node3D)          <- the swing / tilt rotates this
+    Mesh                  <- an instance of models/pistol.glb (the Blockbench model)
+    Muzzle (Marker3D)     <- bolts start here (guns only)
+      MuzzleFlash (OmniLight3D)
+```
+- **The PS1 look is automatic**: `weapon.gd` runs `LevelKit.psx_ify` on **Model** when the gun
+  appears, so in the editor the model looks plain and in the game it's PS1 (wobble, crisp pixels).
+- **The muzzle snaps to the model**: each model has a **Muzzle** marker at its barrel tip; when
+  the gun appears, **Model/Muzzle** jumps onto it. Reshape a gun in Blockbench and the bolts still
+  start at the new tip, no scene editing needed.
+- **What glows** (root node > Inspector > **Look**): **Glow Parts** = model parts (Blockbench group
+  names) that glow as a whole, in the colour you pick (Pistol `Laser`; Yarn-Zooka `Yarn`,
+  `Capacitor`, `Ring`; Red Dot `Lens`, `Button`), brightness **Glow Energy**. **Neon Parts** = parts
+  whose *bright painted pixels* glow in their own colour, the dark paint stays dark (Neon Bat
+  `Barrel` = the spiral tubes, Frozen Tuna `Ice`, Hairball `Vents`, Cucumber `Cucumber` + `Gauge`);
+  the number is how strong (1 soft .. 4 blazing). The Tommy's **HeatCoil** part is found by name.
+- **Size in the paw / on the street**: on the card (`items/<weapon>.tres`): **Hold Offset**
+  (where it sits, right paw; the left paw is mirrored), **Hold Scale**, **World Scale**.
+- **One shared texture**: all eight use the same 128x128 pixel-art sheet (gunmetal, chrome, brass,
+  polymer, wood, tape, neon pink/cyan/green, heat coil, hazard stripes, tuna skin/belly/eye/frost,
+  cucumber, yarn, the TUNA tin label, the DANGER LASER sticker, dial, CO2 tank...). The layout is
+  listed at the top of `tools/make_weapon_specs.py`. Repainting a swatch in one weapon's .bbmodel
+  only changes that weapon (each file keeps its own copy of the sheet).
+- **Remaking them**: `python tools/make_weapon_specs.py --build` rewrites all eight from Claude's
+  recipes (sizes in centimetres) and **overwrites** hand edits in their .bbmodel files. To change
+  just one by hand: open `models/blockbench/<weapon>.bbmodel` in Blockbench, edit, Ctrl+S, then
+  `python tools/cypurr_models.py export models/blockbench/<weapon>.bbmodel`.
+- Test: `--weapons_lineup` (a rack of every weapon with its own camera, plus one `DevCapture
+  weapon` line each: muzzle position, coil found, glow parts, triangles, PS1 shader),
+  `--weapons_lineup=pistol --lineup_dist=1.1 --lineup_yaw=35` for one close up;
+  `--deploy --give=tommy_gun --portrait=me --portrait_side=1.3 --portrait_dist=1.5
+  --portrait_height=0.55` to see one in the cat's paw.
 
 ### Adding new loot (example: a silver tuna worth $150)
 Duplicate `items/fish.tres` as `silver_tuna.tres`, change **Id**, **Cash Value** 150 and the
@@ -2949,8 +2999,14 @@ names the game needs: the bots need **Body** (flashes when shot), **Eye**
 (SQUIRT-DRONE). A group's pivot is where it turns (brushes, rotors). (`cat.bbmodel` is a mascot cat
 that was tried for player cats and reverted on 10 Nov 2026: the game uses the original cat, §11.)
 
+**The weapons (since 10 Nov 2026):** all eight (`pistol`, `tommy_gun`, `frozen_tuna`,
+`hairball_blaster`, `yarn_zooka`, `cucumber_launcher`, `neon_bat`, `red_dot` .bbmodel) come from
+recipes in `tools/make_weapon_specs.py` and share one 128x128 texture sheet. How they plug into the
+weapon scenes, and which parts glow: §9 "The weapon models".
+
 **The rules (from ROADMAP.md):** props under **150 triangles**, characters under **600**,
-vehicles under **500**; textures **64x64** (props) or **128x128** (characters, vehicles). In Blockbench 16 pixels = 1 metre, Y is
+vehicles under **500**; textures **64x64** (props) or **128x128** (characters, vehicles, and the
+weapons' shared sheet). In Blockbench 16 pixels = 1 metre, Y is
 up, and the front of a model faces **north**.
 
 ### Changing a model yourself

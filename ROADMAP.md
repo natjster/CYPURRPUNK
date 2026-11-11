@@ -161,7 +161,9 @@ a world that hates mess.
 4. **The car.** DONE (Nov 2026): the WEDGE CYBER-INTERCEPTOR, gang-coloured neon trim, spinning
    and steering wheels (`models/blockbench/getaway_car.bbmodel`).
 5. **NPCs.** Rebuilt from the new cat model plus outfits, so one good cat fixes fifteen characters.
-6. **Weapons.** Last. They are small on screen and already read well.
+6. **Weapons.** DONE (10 Nov 2026): all eight are painted Blockbench models sharing one 128x128
+   texture sheet (`tools/make_weapon_specs.py`, all under 150 triangles): cat-ear sights, a TUNA-TIN
+   drum, a frozen bluefin, a glowing yarn ball, a pickle in a mortar, a DANGER LASER keychain.
 
 ## 6. Getting attention
 

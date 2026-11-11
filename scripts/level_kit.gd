@@ -11,6 +11,8 @@ class_name LevelKit
 ##   LevelKit.subdivided_plane(size)                             - a flat ground piece
 ##   LevelKit.instantiate_model("res://models/trash_bin.glb", parent, pos, yaw) - a Blockbench model
 ##   LevelKit.psx_ify(node)                                      - give a model the PS1 look
+##   LevelKit.make_parts_glow(model, {"Eye": Color.CYAN}, 5.0)   - whole parts of a model glow
+##   LevelKit.make_neon_paint_glow(model, {"Barrel": 3.0})       - only a part's bright painted pixels glow
 ##
 ## THE TWO RULES these keep for you:
 ##   1. Big surfaces are cut into pieces of about PIECE_SIZE metres. The PS1 shader's wobbly
@@ -83,6 +85,53 @@ static func psx_ify(root: Node) -> void:
 		for surface in mesh_instance.mesh.get_surface_count():
 			var original := mesh_instance.get_active_material(surface)
 			mesh_instance.set_surface_override_material(surface, _psx_copy_of(original))
+
+
+## Makes parts of a psx_ify'd model GLOW. "parts" = {part name: Color}: a part is a Blockbench
+## group (= a node in the .glb, found anywhere under "root"). The whole part glows that colour at
+## "energy" brightness and its painted pixels still show inside the glow. Each part gets its own
+## material copy, so a script may change the colour later (the VAC-COP's eye, a gun's laser).
+static func make_parts_glow(root: Node, parts: Dictionary, energy: float) -> void:
+	for part_name in parts:
+		for mesh in _part_meshes(root, str(part_name)):
+			for surface in mesh.mesh.get_surface_count():
+				var glow := (mesh.get_active_material(surface) as ShaderMaterial).duplicate() as ShaderMaterial
+				glow.set_shader_parameter("albedo_color", Color(0.2, 0.2, 0.2))
+				glow.set_shader_parameter("emission_color", parts[part_name])
+				glow.set_shader_parameter("emission_energy", energy)
+				glow.set_shader_parameter("emission_textured", true)  # the pixel-art scanlines show in the glow
+				mesh.set_surface_override_material(surface, glow)
+
+
+## Makes only the BRIGHT pixels painted on some parts glow, each in its own painted colour: neon
+## tubes, frost, lit vent slits. "parts" = {part name: strength} (1 = soft, 4 = blazing). The dark
+## metal around them stays dark.
+static func make_neon_paint_glow(root: Node, parts: Dictionary) -> void:
+	for part_name in parts:
+		for mesh in _part_meshes(root, str(part_name)):
+			for surface in mesh.mesh.get_surface_count():
+				var neon := (mesh.get_active_material(surface) as ShaderMaterial).duplicate() as ShaderMaterial
+				neon.set_shader_parameter("texture_glow", float(parts[part_name]))
+				mesh.set_surface_override_material(surface, neon)
+
+
+## The meshes of one part: the node with that name (a path from root, or found anywhere below it)
+## plus every mesh under it. Only meshes that already have the PS1 material (psx_ify first).
+static func _part_meshes(root: Node, part_name: String) -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	var part := root.get_node_or_null(NodePath(part_name))
+	if part == null:
+		part = root.find_child(part_name, true, false)
+	if part == null:
+		return out
+	var nodes: Array[Node] = part.find_children("*", "MeshInstance3D", true, false)
+	if part is MeshInstance3D:
+		nodes.append(part)
+	for node in nodes:
+		var mesh := node as MeshInstance3D
+		if mesh.mesh != null and mesh.get_active_material(0) is ShaderMaterial:
+			out.append(mesh)
+	return out
 
 
 ## The shared PS1 version of a model's material (made the first time it's asked for).

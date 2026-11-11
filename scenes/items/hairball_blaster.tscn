@@ -1,44 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/items/weapon.gd" id="1_script"]
-[ext_resource type="Shader" path="res://shaders/psx_lit.gdshader" id="2_psx"]
-
-[sub_resource type="ShaderMaterial" id="Mat_metal"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.34, 0.32, 0.42, 1)
-shader_parameter/specular = 0.5
-shader_parameter/roughness = 0.4
-
-[sub_resource type="ShaderMaterial" id="Mat_grip"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(0.5, 0.26, 0.12, 1)
-shader_parameter/specular = 0.5
-shader_parameter/roughness = 0.4
-
-[sub_resource type="ShaderMaterial" id="Mat_glow"]
-render_priority = 0
-shader = ExtResource("2_psx")
-shader_parameter/albedo_color = Color(1, 0.3, 0.65, 1)
-shader_parameter/emission_color = Color(1, 0.3, 0.65, 1)
-shader_parameter/emission_energy = 3.5
-
-[sub_resource type="CylinderMesh" id="Mesh_barrel"]
-top_radius = 0.034
-bottom_radius = 0.034
-height = 0.34
-radial_segments = 7
-rings = 1
-
-[sub_resource type="BoxMesh" id="Mesh_breech"]
-size = Vector3(0.15, 0.09, 0.12)
-
-[sub_resource type="BoxMesh" id="Mesh_grip"]
-size = Vector3(0.07, 0.15, 0.08)
-
-[sub_resource type="BoxMesh" id="Mesh_strip"]
-size = Vector3(0.155, 0.015, 0.08)
+[ext_resource type="PackedScene" path="res://models/hairball_blaster.glb" id="2_model"]
 
 [node name="HairballBlaster" type="Node3D"]
 script = ExtResource("1_script")
@@ -59,39 +22,14 @@ hot_color = Color(1, 0.55, 0.1, 1)
 bolt_time = 0.1
 bolt_width = 0.07
 hud_name = "HAIRBALL BLASTER"
+neon_parts = {"Vents": 3.0}
 
 [node name="Model" type="Node3D" parent="."]
 
-[node name="BarrelL" type="MeshInstance3D" parent="Model"]
-position = Vector3(-0.037, 0, -0.2)
-rotation = Vector3(-1.5708, 0, 0)
-mesh = SubResource("Mesh_barrel")
-surface_material_override/0 = SubResource("Mat_metal")
-
-[node name="BarrelR" type="MeshInstance3D" parent="Model"]
-position = Vector3(0.037, 0, -0.2)
-rotation = Vector3(-1.5708, 0, 0)
-mesh = SubResource("Mesh_barrel")
-surface_material_override/0 = SubResource("Mat_metal")
-
-[node name="Breech" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0, 0)
-mesh = SubResource("Mesh_breech")
-surface_material_override/0 = SubResource("Mat_metal")
-
-[node name="GlowStrip" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, 0.05, 0)
-mesh = SubResource("Mesh_strip")
-surface_material_override/0 = SubResource("Mat_glow")
-
-[node name="Grip" type="MeshInstance3D" parent="Model"]
-position = Vector3(0, -0.1, 0.07)
-rotation = Vector3(0.45, 0, 0)
-mesh = SubResource("Mesh_grip")
-surface_material_override/0 = SubResource("Mat_grip")
+[node name="Mesh" parent="Model" instance=ExtResource("2_model")]
 
 [node name="Muzzle" type="Marker3D" parent="Model"]
-position = Vector3(0, 0, -0.38)
+position = Vector3(0, 0, -0.3)
 
 [node name="MuzzleFlash" type="OmniLight3D" parent="Model/Muzzle"]
 light_color = Color(1, 0.3, 0.65, 1)
