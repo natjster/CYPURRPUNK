@@ -77,8 +77,8 @@ colour of each list is what a brand-new cat starts with in MY CAT.
   `scenes/cat_model.tscn`, right-click a part > **Add Child Node** > MeshInstance3D, name it
   `Fur_Something`, pick a Mesh, and set Surface Material Override to `Mat_fur` (or the matching one).
   TABBY STRIPES: the fur materials carry a grey stripe picture that the FUR colour tints:
-  `Mat_fur` (body, head, ears, cheeks) = `textures/cat_tabby.png` (wavy stripes, thinning towards the
-  tummy / chin), `Mat_fur_rings` (legs, tail) = `textures/cat_tabby_rings.png` (rings). Repaint those PNGs
+  `Mat_fur` (body, head, ears, cheeks) = `textures/cat_tabby.png` (wavy stripes running ACROSS, round
+  the body and head), `Mat_fur_rings` (legs, tail) = `textures/cat_tabby_rings.png` (rings). Repaint those PNGs
   in any paint program (keep them grey: white = plain fur colour, grey = darker stripe). Stripe density:
   `scenes/cat_model.tscn` > select Body > Inspector > Surface Material Override > `Mat_fur` >
   Shader Parameters > **Uv Scale** (x = stripes around, y = along).

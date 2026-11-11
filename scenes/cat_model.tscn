@@ -9,7 +9,7 @@ render_priority = 0
 shader = ExtResource("2_psx")
 shader_parameter/albedo_color = Color(0.95, 0.55, 0.2, 1)
 shader_parameter/albedo_texture = ExtResource("3_tabby")
-shader_parameter/uv_scale = Vector2(2, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
 
 [sub_resource type="ShaderMaterial" id="Mat_fur_rings"]
 render_priority = 0

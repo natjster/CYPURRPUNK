@@ -8,7 +8,7 @@ each NPC scene builds its own Model with hat/cigar etc.), accessories ON (`CatLo
 
 `scripts/cat/cat_look.gd` (`CatLook`, static): a look = Dictionary of colours (`COLOR_KEYS`, painted onto
 `scenes/cat_model.tscn` meshes by name via `COLOR_PARTS`, plus any descendant mesh named `Fur_*`/`Markings_*`/`Eyes_*`/`Nose_*`:
-cheek tufts, inner ears, tail tip (no paws: user removed them); TABBY = `Mat_fur` albedo_texture `textures/cat_tabby.png` (uv_scale 2,1) + `Mat_fur_rings` `cat_tabby_rings.png` on legs/tail, `_paint` keeps one copy per source material; legs stay 0.2 tall + tail 0.45 (walk hinges); test `--cat_lineup[=res://x.tscn]`)
+cheek tufts, inner ears, tail tip (no paws: user removed them); TABBY = `Mat_fur` albedo_texture `textures/cat_tabby.png` (HORIZONTAL wavy bands, user's pick; uv_scale 1,1) + `Mat_fur_rings` `cat_tabby_rings.png` on legs/tail, `_paint` keeps one copy per source material; legs stay 0.2 tall + tail 0.45 (walk hinges); test `--cat_lineup[=res://x.tscn]`)
 + part id per slot (`SLOTS`, at `SLOT_ANCHORS`). Nov 11 2026: user chose to KEEP the original cat and only smooth/detail it
 (8 candidate redesigns, primitive + Blockbench, were rejected and deleted).
 Options are data: `CatPart` .tres cards in `res://cat_parts/` (scenes in `scenes/cat_parts/`) and
