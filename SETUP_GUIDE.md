@@ -3565,8 +3565,16 @@ RPC to everyone (`MessProp.show_knocked`) + heat + `Events.mess_made`. Bots: `ro
 host). Late joiners get the knocked list (`send_state_to`). A new district builds a new city, so
 every mess is gone. Bins are on collision layer 4 (cats bump into them; cars and bots don't),
 other props on layer 5 (only bullets).
-STREET PROPS PACK: the host pays out loot in `MessManager._drop_loot` (`_looted_props`, cleared each
-district) and `host_knock` is the one place a knock happens (a rolling cart calls it directly for
+SCAVENGING (finding items in the street): the first bust / rummage / knock of a VENDING MACHINE,
+DUMPSTER, TRASH BIN or CARDBOARD BOX each district rolls ONE item from that prop's "finds" table and
+drops it in front of it. Every item can turn up: food, snacks, the neon bat and every gun (dumpsters
+are the gun stashes; the tommy gun, yarn-zooka, cucumber launcher and red dot are rare there).
+To change the odds: scenes/main.tscn -> select **Main > Mess** -> Inspector -> **Street Props Pack:
+Loot** -> Vending Finds / Dumpster Finds / Bin Finds / Box Finds. Each line is item id -> weight
+(bigger = more likely; chance = weight / all weights added up). The empty id "" = "nothing in here".
+Ids are the `id` on the item cards in `res://items/`. A typo prints "unknown item id" in the Output.
+STREET PROPS PACK: the host pays out loot in `MessManager._drop_loot` (`finds_for(kind)` + `roll_find`,
+`_looted_props`, cleared each district) and `host_knock` is the one place a knock happens (a rolling cart calls it directly for
 what it bowls over). The geyser and the cart's roll run on every computer from the same `_set_knocked`
 message; where a cart stops comes from a ray against the city's STATIC bodies only, so it's the same
 spot everywhere. Each computer launches its OWN cats / driven car from the geyser; only the host

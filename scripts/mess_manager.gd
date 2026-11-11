@@ -66,13 +66,33 @@ static var instance: MessManager
 @export var dumpster_prompt: String = "RUMMAGE"
 
 @export_group("Street props pack: loot")
-## A FISH VENDING MACHINE's first bust each district drops one item in front of it: a FISH this
-## often (0-1), otherwise a SARDINE.
-@export_range(0.0, 1.0) var vending_fish_chance: float = 0.2
-@export var vending_common_item: String = "sardine"
-@export var vending_rare_item: String = "fish"
-## A DUMPSTER's first rummage each district finds one SCRAP this often (0-1).
-@export_range(0.0, 1.0) var dumpster_scrap_chance: float = 0.35
+## SCAVENGING: the FIRST time each district one of these props is busted / rummaged / knocked over, the
+## host rolls ONE thing from its "finds" table and drops it in front of the prop. Every item in the game
+## (loot, snacks, melee weapons AND guns) can turn up somewhere.
+##
+## HOW THE TABLES WORK: each line is  item id -> weight.  Bigger weight = more likely. The chance of a
+## line = its weight / all the weights added up. The special id "" (empty) means "nothing in here".
+## Item ids are the "id" on the cards in res://items/ (e.g. "pistol", "tommy_gun", "catnip").
+## Editor: select Main/Mess in scenes/main.tscn -> Inspector -> Street Props Pack: Loot -> click a table.
+##
+## FISH VENDING MACHINE (KICK): mostly food, sometimes a power-up snack. Never empty.
+@export var vending_finds: Dictionary[String, int] = {
+	"sardine": 45, "fish": 18, "catnip": 12, "catdip": 10, "catnip_treats": 6, "frozen_tuna": 5, "golden_koi": 1,
+}
+## DUMPSTER (RUMMAGE): the big gun stash of the street. Scrap, weapons, the odd rare gun.
+@export var dumpster_finds: Dictionary[String, int] = {
+	"": 20, "scrap": 25, "neon_bat": 12, "pistol": 12, "catnip": 6, "catdip": 5, "hairball_blaster": 7,
+	"frozen_tuna": 4, "tommy_gun": 3, "yarn_zooka": 2, "cucumber_launcher": 2, "red_dot": 2,
+}
+## TRASH BIN (bump / knock it over): usually just trash, now and then a snack or a cheap weapon.
+@export var bin_finds: Dictionary[String, int] = {
+	"": 70, "sardine": 12, "catnip": 6, "catdip": 4, "neon_bat": 4, "pistol": 3, "scrap": 3,
+}
+## CARDBOARD BOX (shove it): somebody's stash, sometimes.
+@export var box_finds: Dictionary[String, int] = {
+	"": 65, "sardine": 10, "fish": 5, "catnip": 5, "pistol": 5, "neon_bat": 4, "hairball_blaster": 3,
+	"frozen_tuna": 2, "tommy_gun": 1,
+}
 
 @export_group("OVERCLEAN remarks")
 ## OVERCLEAN says something passive-aggressive when this many messes are made within Remark Window
@@ -262,23 +282,48 @@ func count_mess(player_id: int, amount: int, heat: float) -> void:
 	Events.mess_made.emit(player_id, amount)
 
 
-## Host: the first bust of a vending machine / rummage of a dumpster this district pays out once.
+## Host: the first bust / rummage / knock of a vending machine, dumpster, bin or box this district
+## rolls its finds table (above) once and drops what it found in front of the prop.
 func _drop_loot(p: MessProp) -> void:
-	if p.kind != MessProp.Kind.VENDING and p.kind != MessProp.Kind.DUMPSTER:
-		return
-	if _looted_props.has(p.id) or ItemManager.instance == null:
+	var table := finds_for(p.kind)
+	if table.is_empty() or _looted_props.has(p.id) or ItemManager.instance == null:
 		return
 	_looted_props[p.id] = true
+	var item := roll_find(table)
+	var kind_name: String = MessProp.Kind.keys()[p.kind].to_lower()
+	if item == "" or not ItemManager.instance.catalog.has(item):
+		print("[Mess] %s #%d: nothing but trash%s" % [kind_name, p.id, "" if item == "" else " (unknown item id '%s' in its finds table)" % item])
+		return
+	# Out in front of it (a dumpster is deeper, so a bit further out).
 	var front := -p.global_basis.z
-	if p.kind == MessProp.Kind.VENDING:
-		var item := vending_rare_item if randf() < vending_fish_chance else vending_common_item
-		ItemManager.instance.drop_on_street(item, p.global_position + front * 0.9)
-		print("[Mess] vending machine #%d dropped a %s" % [p.id, item])
-	elif randf() < dumpster_scrap_chance:
-		ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, p.global_position + front * 1.1)
-		print("[Mess] dumpster #%d had a scrap in it" % p.id)
-	else:
-		print("[Mess] dumpster #%d: nothing but trash" % p.id)
+	var out := 1.1 if p.kind == MessProp.Kind.DUMPSTER else 0.9
+	ItemManager.instance.drop_on_street(item, p.global_position + front * out)
+	print("[Mess] %s #%d had a %s in it" % [kind_name, p.id, item])
+
+
+## The finds table for a kind of prop ({} = that kind never has anything in it).
+func finds_for(kind: MessProp.Kind) -> Dictionary:
+	match kind:
+		MessProp.Kind.VENDING: return vending_finds
+		MessProp.Kind.DUMPSTER: return dumpster_finds
+		MessProp.Kind.BIN: return bin_finds
+		MessProp.Kind.BOX: return box_finds
+	return {}
+
+
+## Pick one id from a finds table by weight ("" = nothing). Host only (plain randf: only the host rolls).
+static func roll_find(table: Dictionary) -> String:
+	var total := 0
+	for id in table:
+		total += maxi(0, int(table[id]))
+	if total <= 0:
+		return ""
+	var pick := randi() % total
+	for id in table:
+		pick -= maxi(0, int(table[id]))
+		if pick < 0:
+			return str(id)
+	return ""
 
 
 ## Has this vending machine / dumpster already paid out this district? (Host; tests.)

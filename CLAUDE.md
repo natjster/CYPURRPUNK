@@ -381,7 +381,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   Screen/Flap/Cap/Handle/Wheels/SignFace/Lid matter; sounds `tools/sound_specs/street_props.json`). `MessProp.cat_can_bump()` / `cart_can_bowl()` /
   `geyser_active()` (claim_nearest skips it); tuning = plain vars at the top of mess_prop.gd. Host `MessManager.host_knock` = the one knock path
   (request_knock checks, then calls it; a rolling cart's `_bowl_along` calls it with `knocked_by`); `_drop_loot` + `_looted_props` (once per prop
-  per district: vending sardine/fish, dumpster `dumpster_scrap_chance` SCRAP). Geyser: each computer launches its own cats/driven car, host stuns
+  per district, SCAVENGING: weighted `vending/dumpster/bin/box_finds` {id: weight, "" = nothing} via `finds_for`/`roll_find`; every item incl. guns). Geyser: each computer launches its own cats/driven car, host stuns
   `Enemy.GROUP`. Cart stop spot = ray vs city STATIC bodies only (deterministic). Glow parts dim via instance_tint; `powered` false in BLACKOUT.
   City: `_add_vending/_add_hydrant/_add_cart/_add_aframe_sign/_add_dumpster` (`_add_neon_sign` is the BUILDING neon), `_add_shopfront_vending`,
   Meow-Mart side-wall layout, yard dumpster + carts, corner `roll` ladder. Test: `--use_prop=KIND [--prop_twice|--geyser_jump|--geyser_bot|--cart_bowl]`,
@@ -543,7 +543,7 @@ Pages can gate the greeting on quest state (`only_if_quest`/`only_if_state`); ac
 Shops: `Shopkeeper` (`scripts/npcs/shopkeeper.gd`, extends Npc) — choice action `shop` opens BUY buttons for
 its `stock`; prices = `ItemData.price` (0 = not for sale); host `ItemManager.request_buy` -> `Wallet.spend`.
 Comrade Whiskers (`scenes/npcs/comrade_whiskers.tscn`) runs THE BLACK MARKITTEN on the hub's west wall
-(decor in `hub._build_shop`). The city places NO gear: only loot.
+(decor in `hub._build_shop`). The loot table places only loot; gear (guns too) is scavenged from props (`MessManager` finds tables).
 LOOT TABLE: `ItemManager.loot_table` = `res://loot/city.tres` (`LootTable` of `LootSpawn` lines: item_id, count, where
 SIDEWALK/OUTSIDE_MEOW_MART/FIXED_SPOT, min_distance_from_meow_mart, respawn_seconds), placed first in `_on_city_generated`
 (own rng, `LOOT_SEED_SALT`); then `item_placers` (the heist: manholes + payphones). Never hard-code loot spots in code.
