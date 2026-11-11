@@ -366,8 +366,17 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `typed` (visible_characters); `_type_taunt` types it and plays `CatLook.voice_sound(look)`
   blips at `voice_pitch()`; voice = look key `voice` (`CatLook.VOICES` male/female, `voice_of`, MY CAT VOICE row)) -> host `RoombaPatrol.hear_noise(pos, meow_heard_from)` -> `Roomba.hear`. Test-only `CatPlayer.unseen_by_bots`.
   Test: `--mess=N`, `--ram_prop=bin|cone|box [--ram_trace]`, `--scratch`, `--shoot_prop`, `--ghost`, `--face_mess`,
-  `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`
+  `--bait_mess=D`, `--meow[=F]`, `--mess_log=N` ("DevCapture mess" lines, `layout=` hash = same city check). Sounds: `tools/sound_specs/mess.json` (Sound Lab `taunt`
   kind / `generate_cat_taunt`, presets `cardboard_thump`, `vacuum`).
+  STREET PROPS PACK: Kind also VENDING/HYDRANT/CART/NEON_SIGN/DUMPSTER (models from `tools/make_street_prop_specs.py`, group names
+  Screen/Flap/Cap/Handle/Wheels/SignFace/Lid matter; sounds `tools/sound_specs/street_props.json`). `MessProp.cat_can_bump()` / `cart_can_bowl()` /
+  `geyser_active()` (claim_nearest skips it); tuning = plain vars at the top of mess_prop.gd. Host `MessManager.host_knock` = the one knock path
+  (request_knock checks, then calls it; a rolling cart's `_bowl_along` calls it with `knocked_by`); `_drop_loot` + `_looted_props` (once per prop
+  per district: vending sardine/fish, dumpster `dumpster_scrap_chance` SCRAP). Geyser: each computer launches its own cats/driven car, host stuns
+  `Enemy.GROUP`. Cart stop spot = ray vs city STATIC bodies only (deterministic). Glow parts dim via instance_tint; `powered` false in BLACKOUT.
+  City: `_add_vending/_add_hydrant/_add_cart/_add_aframe_sign/_add_dumpster` (`_add_neon_sign` is the BUILDING neon), `_add_shopfront_vending`,
+  Meow-Mart side-wall layout, yard dumpster + carts, corner `roll` ladder. Test: `--use_prop=KIND [--prop_twice|--geyser_jump|--geyser_bot|--cart_bowl]`,
+  `--shoot_prop=KIND`, `--instant_props`, `--look_prop=KIND`. Port 7777 busy (user's Godot running)? use `--solo`.
 - CAT-CAM / SPECTATING (SETUP_GUIDE §24): `scripts/spectator.gd` (`Spectator.instance`, node `Spectator` under Main, GameSystems:
   host `start_district` -> `_stop_everyone` RPC). LOCAL per computer: `watching` {seat: player id}, `Spectator.is_watching(seat)`
   (cat `_menu_open` + `Interactable.best_for` block that seat), `camera_for(cat)` = own Camera3D per seat copying the watched

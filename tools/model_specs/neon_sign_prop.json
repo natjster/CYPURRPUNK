@@ -1,0 +1,620 @@
+{
+ "name": "neon_sign_prop",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 44,
+ "background": "#2a2c34",
+ "about": "A sidewalk A-frame sandwich board (0.75 x 1.05 x 0.65 m): gunmetal frame, a glowing neon fish + noodle bowl SIGNFACE on both sides. A MESS prop (Kind NEON_SIGN): kick it over and the neon dies in a shower of sparks. 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,48] the neon face: black glass with a pink fish + a cyan noodle bowl (glows)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    48
+   ],
+   "color": "#07060c"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    1,
+    1,
+    31,
+    47
+   ],
+   "color": "#5ff2ff"
+  },
+  {
+   "op": "comment",
+   "note": "a big outline fish"
+  },
+  {
+   "op": "line",
+   "from": [
+    6,
+    12
+   ],
+   "to": [
+    12,
+    6
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    12,
+    6
+   ],
+   "to": [
+    20,
+    6
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    20,
+    6
+   ],
+   "to": [
+    24,
+    10
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    24,
+    10
+   ],
+   "to": [
+    28,
+    6
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    28,
+    6
+   ],
+   "to": [
+    28,
+    18
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    28,
+    18
+   ],
+   "to": [
+    24,
+    14
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    24,
+    14
+   ],
+   "to": [
+    20,
+    18
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    20,
+    18
+   ],
+   "to": [
+    12,
+    18
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    12,
+    18
+   ],
+   "to": [
+    6,
+    12
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     11,
+     11,
+     "#ffffff"
+    ],
+    [
+     12,
+     11,
+     "#ffffff"
+    ]
+   ]
+  },
+  {
+   "op": "comment",
+   "note": "a noodle bowl with chopsticks"
+  },
+  {
+   "op": "line",
+   "from": [
+    6,
+    30
+   ],
+   "to": [
+    26,
+    30
+   ],
+   "color": "#5ff2ff"
+  },
+  {
+   "op": "line",
+   "from": [
+    6,
+    30
+   ],
+   "to": [
+    10,
+    37
+   ],
+   "color": "#5ff2ff"
+  },
+  {
+   "op": "line",
+   "from": [
+    26,
+    30
+   ],
+   "to": [
+    22,
+    37
+   ],
+   "color": "#5ff2ff"
+  },
+  {
+   "op": "line",
+   "from": [
+    10,
+    37
+   ],
+   "to": [
+    22,
+    37
+   ],
+   "color": "#5ff2ff"
+  },
+  {
+   "op": "line",
+   "from": [
+    9,
+    28
+   ],
+   "to": [
+    11,
+    25
+   ],
+   "color": "#ffd84a"
+  },
+  {
+   "op": "line",
+   "from": [
+    13,
+    28
+   ],
+   "to": [
+    12,
+    24
+   ],
+   "color": "#ffd84a"
+  },
+  {
+   "op": "line",
+   "from": [
+    17,
+    28
+   ],
+   "to": [
+    19,
+    24
+   ],
+   "color": "#ffd84a"
+  },
+  {
+   "op": "line",
+   "from": [
+    20,
+    29
+   ],
+   "to": [
+    28,
+    21
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "line",
+   "from": [
+    22,
+    29
+   ],
+   "to": [
+    29,
+    23
+   ],
+   "color": "#ff4fc0"
+  },
+  {
+   "op": "text",
+   "pos": [
+    4,
+    40
+   ],
+   "text": "NOODLE",
+   "color": "#5ff2ff",
+   "spacing": 1
+  },
+  {
+   "op": "comment",
+   "note": "[32,0,64,48] the board's frame: dark gunmetal with rivets and grime"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    64,
+    48
+   ],
+   "color": "#2a2c34"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    64,
+    48
+   ],
+   "color": "#14151a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    34,
+    2,
+    62,
+    46
+   ],
+   "color": "#4a4e5a"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     35,
+     3,
+     "#9aa0b0"
+    ],
+    [
+     60,
+     3,
+     "#9aa0b0"
+    ],
+    [
+     35,
+     44,
+     "#9aa0b0"
+    ],
+    [
+     60,
+     44,
+     "#9aa0b0"
+    ]
+   ]
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    0,
+    64,
+    48
+   ],
+   "amount": 0.3,
+   "spread": 0.18
+  },
+  {
+   "op": "dither",
+   "rect": [
+    32,
+    30,
+    64,
+    48
+   ],
+   "color": "#120e0a",
+   "top": 0.0,
+   "bottom": 0.6
+  },
+  {
+   "op": "comment",
+   "note": "[32,48,64,64] the hinge bar: steel with a hazard stripe"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    48,
+    64,
+    64
+   ],
+   "color": "#6a7078"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    52,
+    64,
+    58
+   ],
+   "colors": [
+    "#ffd23a",
+    "#1a1a1a"
+   ],
+   "width": 2
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    48,
+    64,
+    64
+   ],
+   "amount": 0.3,
+   "spread": 0.2
+  }
+ ],
+ "groups": [
+  {
+   "name": "Frame",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "SignFace",
+   "origin": [
+    0,
+    17,
+    0
+   ],
+   "parent": "Frame"
+  }
+ ],
+ "elements": [
+  {
+   "faces": {
+    "north": [
+     32,
+     0,
+     64,
+     48
+    ],
+    "south": [
+     32,
+     0,
+     64,
+     48
+    ],
+    "east": [
+     32,
+     0,
+     34,
+     48
+    ],
+    "west": [
+     32,
+     0,
+     34,
+     48
+    ]
+   },
+   "type": "cube",
+   "name": "board_front",
+   "group": "Frame",
+   "origin": [
+    0,
+    17,
+    0
+   ],
+   "rotation": [
+    17,
+    0,
+    0
+   ],
+   "from": [
+    -6,
+    -0.6,
+    -0.9
+   ],
+   "to": [
+    6,
+    17,
+    -0.1
+   ]
+  },
+  {
+   "faces": {
+    "north": [
+     32,
+     0,
+     64,
+     48
+    ],
+    "south": [
+     32,
+     0,
+     64,
+     48
+    ],
+    "east": [
+     32,
+     0,
+     34,
+     48
+    ],
+    "west": [
+     32,
+     0,
+     34,
+     48
+    ]
+   },
+   "type": "cube",
+   "name": "board_back",
+   "group": "Frame",
+   "origin": [
+    0,
+    17,
+    0
+   ],
+   "rotation": [
+    -17,
+    0,
+    0
+   ],
+   "from": [
+    -6,
+    -0.6,
+    0.1
+   ],
+   "to": [
+    6,
+    17,
+    0.9
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "hinge",
+   "group": "Frame",
+   "from": [
+    -6.4,
+    16.4,
+    -0.9
+   ],
+   "to": [
+    6.4,
+    17.6,
+    0.9
+   ],
+   "sides": [
+    32,
+    48,
+    64,
+    64
+   ],
+   "top": [
+    32,
+    48,
+    64,
+    64
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "face_front",
+   "group": "SignFace",
+   "origin": [
+    0,
+    17,
+    0
+   ],
+   "rotation": [
+    17,
+    0,
+    0
+   ],
+   "from": [
+    -5.2,
+    1.0,
+    -1.05
+   ],
+   "to": [
+    5.2,
+    15.6,
+    -0.9
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     32,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "face_back",
+   "group": "SignFace",
+   "origin": [
+    0,
+    17,
+    0
+   ],
+   "rotation": [
+    -17,
+    0,
+    0
+   ],
+   "from": [
+    -5.2,
+    1.0,
+    0.9
+   ],
+   "to": [
+    5.2,
+    15.6,
+    1.05
+   ],
+   "faces": {
+    "south": [
+     0,
+     0,
+     32,
+     48
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+  "about": "INTERACTIVE STREET PROPS PACK (scripts/mess_prop.gd _knock_sound): one crunchy PS1 effect per new prop. Presets live in tools/cypurr_sound.py _preset. Remake with: python tools/cypurr_sound.py batch tools/sound_specs/street_props.json (no internet needed).",
+  "jobs": [
+    {"kind": "sfx", "sound_id": "vending_smash", "params": {"preset": "vending_smash", "seed": 51}},
+    {"kind": "sfx", "sound_id": "hydrant_burst", "params": {"preset": "hydrant_burst", "seconds": 2.2, "seed": 52}},
+    {"kind": "sfx", "sound_id": "cart_roll", "params": {"preset": "cart_roll", "seconds": 1.3, "seed": 53}},
+    {"kind": "sfx", "sound_id": "sign_spark", "params": {"preset": "sign_spark", "seed": 54}},
+    {"kind": "sfx", "sound_id": "dumpster_rummage", "params": {"preset": "dumpster_rummage", "strokes": 4, "seed": 55}}
+  ]
+}

@@ -6,12 +6,24 @@ extends Node
 ## VAC-COPs: a patrolling bot that spots a mess drives over and tidies it up (roomba.gd TIDY_GO /
 ## TIDYING), half-blind while it does. So one cat trashes a corner while another sneaks the koi past.
 ##
+## THE STREET PROPS PACK (SETUP_GUIDE §23) adds props that DO things (scripts/mess_prop.gd):
+##   FISH VENDING MACHINE  E "KICK" / shoot / ram: sparks, and the FIRST time each district the host
+##                         drops a sardine (or, rarely, a fish) in front of it (Vending Fish Chance)
+##   FIRE HYDRANT          E "WRENCH OPEN" / shoot / ram: a 12 s water geyser = a jump pad for cats and
+##                         cars that also shorts out VAC-COPs (no bot tidies it while it sprays)
+##   SHOPPING CART         E "SHOVE" / run into it / shoot / ram: rolls ~8.5 m, bowling over props
+##                         (host_knock) and bots on the way, then tips over
+##   NEON A-FRAME SIGN     E "KICK OVER" / run into it / shoot / ram: falls flat, neon dies in sparks
+##   DUMPSTER              E "RUMMAGE" / shoot / ram: the lid flies open, trash spills, and the FIRST
+##                         time each district it may hold a SCRAP (Dumpster Scrap Chance)
+##
 ## Node: "Mess" under Main in scenes/main.tscn (in the GameSystems group, like Heat or Wallet).
 ## Select it to tune the numbers below in the Inspector.
 ##
 ## HOW A MESS IS MADE (all of these end in knock() on the computer that noticed it):
 ##   - a cat runs into a prop (cat_player.gd calls cat_bump every frame on the cat's owner's computer):
-##     cones, boxes and posters fall over at a walk; a heavy bin needs ZOOMIES (Bin Knock Speed);
+##     cones, boxes, carts and neon signs fall over at a walk; a heavy bin needs ZOOMIES (Bin Knock
+##     Speed); vending machines, hydrants, dumpsters and posters can't be run over;
 ##   - a car drives into one (getaway_car.gd calls car_bump on the driver's computer);
 ##   - a bolt, blast or bat hits one (MessProp.receive_hit, the Hit framework);
 ##   - a cat presses E next to one: "KNOCK OVER", "TIP OVER", "SHOVE", "SCRATCH" (MessProp.interact).
@@ -47,6 +59,20 @@ static var instance: MessManager
 @export var cone_prompt: String = "KNOCK OVER"
 @export var box_prompt: String = "SHOVE"
 @export var poster_prompt: String = "SCRATCH"
+@export var vending_prompt: String = "KICK"
+@export var hydrant_prompt: String = "WRENCH OPEN"
+@export var cart_prompt: String = "SHOVE"
+@export var neon_sign_prompt: String = "KICK OVER"
+@export var dumpster_prompt: String = "RUMMAGE"
+
+@export_group("Street props pack: loot")
+## A FISH VENDING MACHINE's first bust each district drops one item in front of it: a FISH this
+## often (0-1), otherwise a SARDINE.
+@export_range(0.0, 1.0) var vending_fish_chance: float = 0.2
+@export var vending_common_item: String = "sardine"
+@export var vending_rare_item: String = "fish"
+## A DUMPSTER's first rummage each district finds one SCRAP this often (0-1).
+@export_range(0.0, 1.0) var dumpster_scrap_chance: float = 0.35
 
 @export_group("OVERCLEAN remarks")
 ## OVERCLEAN says something passive-aggressive when this many messes are made within Remark Window
@@ -64,6 +90,9 @@ static var instance: MessManager
 
 ## The plain PS1 material the litter bits use (each bit gets its own colour via instance_tint).
 var debris_material: Material
+## STREET PROPS PACK: the glowing sparks (vending machines, neon signs) and the hydrant geyser's water.
+var spark_material: Material
+var water_material: Material
 
 ## Every computer: how many messes have been made / tidied this district (for tests and the log).
 var messes_made: int = 0
@@ -78,6 +107,9 @@ var _pending: Dictionary = {}        # client: knocked props the host told us ab
 
 ## Host: props knocked over this trip, player id -> count (player_messes_this_trip).
 var _trip_messes := {}
+## Host: vending machines / dumpsters that already paid out this district (prop id -> true), so a
+## machine a VAC-COP repaired doesn't print fish for ever.
+var _looted_props := {}
 
 
 func _enter_tree() -> void:
@@ -92,6 +124,10 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	debris_material = LevelKit.psx_material({"albedo_color": Color.WHITE, "world_uv": false})
+	spark_material = LevelKit.psx_material({"albedo_color": Color(0.3, 0.3, 0.3), "emission_color": Color.WHITE,
+		"emission_energy": 4.0, "world_uv": false})
+	water_material = LevelKit.psx_material({"albedo_color": Color(0.7, 0.9, 1.0), "emission_color": Color(0.45, 0.85, 1.0),
+		"emission_energy": 2.5, "world_uv": false})
 	_hook_city.call_deferred()  # (after Main is ready, so Game.instance.city exists)
 
 
@@ -122,6 +158,11 @@ func prompt_for(kind: MessProp.Kind) -> String:
 		MessProp.Kind.BIN: return bin_prompt
 		MessProp.Kind.CONE: return cone_prompt
 		MessProp.Kind.BOX: return box_prompt
+		MessProp.Kind.VENDING: return vending_prompt
+		MessProp.Kind.HYDRANT: return hydrant_prompt
+		MessProp.Kind.CART: return cart_prompt
+		MessProp.Kind.NEON_SIGN: return neon_sign_prompt
+		MessProp.Kind.DUMPSTER: return dumpster_prompt
 		_: return poster_prompt
 
 
@@ -138,7 +179,7 @@ func cat_bump(cat: CatPlayer, push: Vector3) -> void:
 		return
 	var here := cat.global_position
 	for p in props():
-		if p.knocked or p.kind == MessProp.Kind.POSTER:  # (posters: E or a hit, you can't run into a wall)
+		if p.knocked or not p.cat_can_bump():  # (posters / vending / hydrants / dumpsters: E, a hit or a car)
 			continue
 		var to_prop := Motion.flat(p.global_position - here)
 		var gap := to_prop.length()
@@ -190,7 +231,18 @@ func request_knock(player_id: int, id: int, fall_yaw: float) -> void:
 	var cat := Game.instance.cat_for(player_id)
 	if cat == null or UndergroundHub.is_in_hub(cat.global_position):
 		return
+	host_knock(player_id, id, fall_yaw)
+
+
+## Host: knock prop "id" over, credited to "player_id" (request_knock above, after its checks; and a
+## rolling CART bowling things over, mess_prop.gd _bowl_along). Heat, the RAID REPORT, the loot.
+func host_knock(player_id: int, id: int, fall_yaw: float) -> void:
+	var p := prop(id)
+	if not multiplayer.is_server() or p == null or p.knocked:
+		return
+	p.knocked_by = player_id
 	_set_knocked.rpc(id, true, fall_yaw)
+	_drop_loot(p)
 	_trip_messes[player_id] = int(_trip_messes.get(player_id, 0)) + 1  # (BIN DAY's chaos bonus)
 	if HeatMeter.instance != null:
 		HeatMeter.instance.add_heat(heat_per_mess)
@@ -210,6 +262,30 @@ func count_mess(player_id: int, amount: int, heat: float) -> void:
 	Events.mess_made.emit(player_id, amount)
 
 
+## Host: the first bust of a vending machine / rummage of a dumpster this district pays out once.
+func _drop_loot(p: MessProp) -> void:
+	if p.kind != MessProp.Kind.VENDING and p.kind != MessProp.Kind.DUMPSTER:
+		return
+	if _looted_props.has(p.id) or ItemManager.instance == null:
+		return
+	_looted_props[p.id] = true
+	var front := -p.global_basis.z
+	if p.kind == MessProp.Kind.VENDING:
+		var item := vending_rare_item if randf() < vending_fish_chance else vending_common_item
+		ItemManager.instance.drop_on_street(item, p.global_position + front * 0.9)
+		print("[Mess] vending machine #%d dropped a %s" % [p.id, item])
+	elif randf() < dumpster_scrap_chance:
+		ItemManager.instance.drop_on_street(Mainframe.SCRAP_ID, p.global_position + front * 1.1)
+		print("[Mess] dumpster #%d had a scrap in it" % p.id)
+	else:
+		print("[Mess] dumpster #%d: nothing but trash" % p.id)
+
+
+## Has this vending machine / dumpster already paid out this district? (Host; tests.)
+func was_looted(id: int) -> bool:
+	return _looted_props.has(id)
+
+
 # --- Tidying up (the VAC-COPs, roomba.gd) ---
 
 ## Host: the nearest knocked-over prop within "reach" of "from" that no other bot is already
@@ -218,7 +294,7 @@ func claim_nearest(from: Vector3, reach: float, bot: Node) -> MessProp:
 	var best: MessProp = null
 	var best_distance := reach
 	for p in props():
-		if not p.knocked or _is_claimed(p, bot):
+		if not p.knocked or _is_claimed(p, bot) or p.geyser_active():  # (no bot walks into a spraying hydrant)
 			continue
 		var distance := Motion.flat_distance(p.tidy_spot(), from)
 		if distance < best_distance and absf(p.global_position.y - from.y) < 3.0:
@@ -283,6 +359,7 @@ func _set_all_knocked(ids: PackedInt32Array, yaws: PackedFloat32Array) -> void:
 ## A new city was built (a new district, or a joiner's first city): every prop is new and standing.
 func _on_city_generated(_seed: int) -> void:
 	_asked.clear()
+	_looted_props.clear()
 	_recent.clear()
 	messes_made = 0
 	messes_tidied = 0
@@ -339,3 +416,4 @@ func clear_trip_messes(player_id: int) -> void:
 func start_district() -> void:
 	_trip_messes.clear()
 	_asked.clear()
+	_looted_props.clear()

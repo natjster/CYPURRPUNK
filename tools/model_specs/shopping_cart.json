@@ -1,0 +1,875 @@
+{
+ "name": "shopping_cart",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 43,
+ "background": "#14161c",
+ "about": "A Meow-Mart shopping cart (0.75 x 0.95 x 1.05 m): chrome wire basket, tray, four chunky casters (Wheels) and a glowing hot-pink HANDLE. Front (the basket's nose) faces -Z. A MESS prop (Kind CART): shove it and it rolls. 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,24] basket sides: a chrome wire grid over a dark inside"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "color": "#14161c"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "colors": [
+    "#c8ccd4",
+    "#00000000",
+    "#00000000"
+   ],
+   "width": 1
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "colors": [
+    "#c8ccd4",
+    "#00000000",
+    "#00000000"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "color": "#e8ecf4"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    2
+   ],
+   "color": "#e8ecf4"
+  },
+  {
+   "op": "dither",
+   "rect": [
+    0,
+    12,
+    32,
+    24
+   ],
+   "color": "#7a4420",
+   "top": 0.0,
+   "bottom": 0.25
+  },
+  {
+   "op": "comment",
+   "note": "[32,0,64,24] basket seen from above: wires over a forgotten sardine can and a fish"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    64,
+    24
+   ],
+   "color": "#0e1014"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     40,
+     13,
+     "#5ff2ff"
+    ],
+    [
+     41,
+     13,
+     "#5ff2ff"
+    ],
+    [
+     42,
+     13,
+     "#5ff2ff"
+    ],
+    [
+     40,
+     14,
+     "#5ff2ff"
+    ],
+    [
+     42,
+     14,
+     "#5ff2ff"
+    ],
+    [
+     40,
+     15,
+     "#5ff2ff"
+    ],
+    [
+     41,
+     15,
+     "#5ff2ff"
+    ],
+    [
+     42,
+     15,
+     "#5ff2ff"
+    ]
+   ]
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     51,
+     6,
+     "#e0c070"
+    ],
+    [
+     52,
+     6,
+     "#e0c070"
+    ],
+    [
+     54,
+     6,
+     "#e0c070"
+    ],
+    [
+     50,
+     7,
+     "#e0c070"
+    ],
+    [
+     51,
+     7,
+     "#e0c070"
+    ],
+    [
+     52,
+     7,
+     "#e0c070"
+    ],
+    [
+     53,
+     7,
+     "#e0c070"
+    ],
+    [
+     51,
+     8,
+     "#e0c070"
+    ],
+    [
+     52,
+     8,
+     "#e0c070"
+    ],
+    [
+     54,
+     8,
+     "#e0c070"
+    ],
+    [
+     51,
+     7,
+     "#0e1014"
+    ]
+   ]
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    4,
+    42,
+    8
+   ],
+   "color": "#ff4fb0"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    0,
+    64,
+    24
+   ],
+   "colors": [
+    "#c8ccd4",
+    "#00000000",
+    "#00000000"
+   ],
+   "width": 1
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    0,
+    64,
+    24
+   ],
+   "colors": [
+    "#c8ccd4",
+    "#00000000",
+    "#00000000"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    32,
+    0,
+    64,
+    24
+   ],
+   "color": "#e8ecf4"
+  },
+  {
+   "op": "comment",
+   "note": "[0,24,32,32] the HANDLE: hot pink plastic with MEOW-MART (glows)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    24,
+    32,
+    32
+   ],
+   "color": "#ff2a9a"
+  },
+  {
+   "op": "line",
+   "from": [
+    0,
+    25
+   ],
+   "to": [
+    31,
+    25
+   ],
+   "color": "#ffa8dc"
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    26
+   ],
+   "text": "MEOW",
+   "color": "#ffffff",
+   "spacing": 1
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     19,
+     28,
+     "#ffffff"
+    ],
+    [
+     20,
+     28,
+     "#ffffff"
+    ]
+   ]
+  },
+  {
+   "op": "comment",
+   "note": "[32,24,48,40] chrome tube   [48,24,64,40] tray under the basket   [0,32,16,48] black caster wheel"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    24,
+    48,
+    40
+   ],
+   "color": "#a8b0bc"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    24,
+    48,
+    40
+   ],
+   "colors": [
+    "#e8ecf4",
+    "#a8b0bc",
+    "#7a808c"
+   ],
+   "width": 1
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    24,
+    64,
+    40
+   ],
+   "color": "#1a1c22"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    48,
+    24,
+    64,
+    40
+   ],
+   "colors": [
+    "#c8ccd4",
+    "#00000000",
+    "#00000000"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "color": "#16161a"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    3,
+    35,
+    13,
+    45
+   ],
+   "color": "#3a3a44"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    7,
+    39,
+    9,
+    41
+   ],
+   "color": "#ff2a9a"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    32,
+    16,
+    48
+   ],
+   "amount": 0.3,
+   "spread": 0.2
+  }
+ ],
+ "groups": [
+  {
+   "name": "Cart",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Handle",
+   "origin": [
+    0,
+    15.6,
+    8.2
+   ],
+   "parent": "Cart"
+  },
+  {
+   "name": "Wheels",
+   "origin": [
+    0,
+    1,
+    0
+   ],
+   "parent": "Cart"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "basket",
+   "group": "Cart",
+   "from": [
+    -6,
+    6.5,
+    -8.4
+   ],
+   "to": [
+    6,
+    15,
+    7
+   ],
+   "sides": [
+    0,
+    0,
+    32,
+    24
+   ],
+   "top": [
+    32,
+    0,
+    64,
+    24
+   ],
+   "bottom": [
+    48,
+    24,
+    64,
+    40
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "tray",
+   "group": "Cart",
+   "from": [
+    -5.2,
+    2.6,
+    -7.6
+   ],
+   "to": [
+    5.2,
+    3.3,
+    6.4
+   ],
+   "sides": [
+    48,
+    24,
+    64,
+    26
+   ],
+   "top": [
+    48,
+    24,
+    64,
+    40
+   ]
+  },
+  {
+   "faces": {
+    "north": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "south": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "east": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "west": [
+     32,
+     24,
+     48,
+     40
+    ]
+   },
+   "type": "cube",
+   "name": "leg_fl",
+   "group": "Cart",
+   "from": [
+    -5.6,
+    1.6,
+    -7.8
+   ],
+   "to": [
+    -4.8,
+    6.5,
+    -7.0
+   ]
+  },
+  {
+   "faces": {
+    "north": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "south": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "east": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "west": [
+     32,
+     24,
+     48,
+     40
+    ]
+   },
+   "type": "cube",
+   "name": "leg_fr",
+   "group": "Cart",
+   "from": [
+    4.8,
+    1.6,
+    -7.8
+   ],
+   "to": [
+    5.6,
+    6.5,
+    -7.0
+   ]
+  },
+  {
+   "faces": {
+    "north": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "south": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "east": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "west": [
+     32,
+     24,
+     48,
+     40
+    ]
+   },
+   "type": "cube",
+   "name": "leg_bl",
+   "group": "Cart",
+   "from": [
+    -5.6,
+    1.6,
+    6.2
+   ],
+   "to": [
+    -4.8,
+    15.6,
+    7.0
+   ]
+  },
+  {
+   "faces": {
+    "north": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "south": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "east": [
+     32,
+     24,
+     48,
+     40
+    ],
+    "west": [
+     32,
+     24,
+     48,
+     40
+    ]
+   },
+   "type": "cube",
+   "name": "leg_br",
+   "group": "Cart",
+   "from": [
+    4.8,
+    1.6,
+    6.2
+   ],
+   "to": [
+    5.6,
+    15.6,
+    7.0
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "handle",
+   "group": "Handle",
+   "from": [
+    -6.6,
+    15,
+    7.4
+   ],
+   "to": [
+    6.6,
+    16.4,
+    9
+   ],
+   "faces": {
+    "north": [
+     0,
+     24,
+     32,
+     32
+    ],
+    "south": [
+     0,
+     24,
+     32,
+     32
+    ],
+    "up": [
+     0,
+     24,
+     32,
+     32
+    ],
+    "down": [
+     0,
+     24,
+     32,
+     32
+    ],
+    "east": [
+     0,
+     24,
+     4,
+     32
+    ],
+    "west": [
+     0,
+     24,
+     4,
+     32
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "wheel_fl",
+   "group": "Wheels",
+   "from": [
+    -5.7,
+    0,
+    -8.3
+   ],
+   "to": [
+    -4.7,
+    1.8,
+    -6.5
+   ],
+   "faces": {
+    "east": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "west": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "north": [
+     0,
+     32,
+     4,
+     48
+    ],
+    "south": [
+     0,
+     32,
+     4,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "wheel_fr",
+   "group": "Wheels",
+   "from": [
+    4.7,
+    0,
+    -8.3
+   ],
+   "to": [
+    5.7,
+    1.8,
+    -6.5
+   ],
+   "faces": {
+    "east": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "west": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "north": [
+     0,
+     32,
+     4,
+     48
+    ],
+    "south": [
+     0,
+     32,
+     4,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "wheel_bl",
+   "group": "Wheels",
+   "from": [
+    -5.7,
+    0,
+    5.699999999999999
+   ],
+   "to": [
+    -4.7,
+    1.8,
+    7.5
+   ],
+   "faces": {
+    "east": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "west": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "north": [
+     0,
+     32,
+     4,
+     48
+    ],
+    "south": [
+     0,
+     32,
+     4,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "wheel_br",
+   "group": "Wheels",
+   "from": [
+    4.7,
+    0,
+    5.699999999999999
+   ],
+   "to": [
+    5.7,
+    1.8,
+    7.5
+   ],
+   "faces": {
+    "east": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "west": [
+     0,
+     32,
+     16,
+     48
+    ],
+    "north": [
+     0,
+     32,
+     4,
+     48
+    ],
+    "south": [
+     0,
+     32,
+     4,
+     48
+    ]
+   }
+  }
+ ]
+}

@@ -151,6 +151,16 @@ extends Node
 ##   --face_mess       then stand 4.5 m from the first mess, looking at it (screenshots)
 ##   --bait_mess=D     (host, after the above) put the nearest VAC-COP that tidies D metres from the first mess
 ##   --mess_log=N      every N frames print the props and what the bots are doing (until the snap)
+##   STREET PROPS PACK (KIND = vending, hydrant, cart, neon_sign, dumpster; "DevCapture prop" lines):
+##   --use_prop=KIND   stand by the nearest standing one, facing it, and press E (prints prompt + what happened:
+##                     knocked, geyser, cart rest spot, lid, glow, street drops beside it)
+##   --shoot_prop=KIND hit the nearest standing one of that KIND through the Hit framework (no KIND = any)
+##   --geyser_jump     (after a hydrant burst) step our cat into the geyser: prints how high it flew
+##   --geyser_bot      (host, after a hydrant burst) drop the nearest VAC-COP 1.5 m from it: prints its state
+##   --cart_bowl       (host) before shoving the cart (--use_prop=cart), put a VAC-COP and a cone in its path
+##   --prop_twice      (host, after --use_prop) tidy the prop and bust it again: no second payout
+##   --instant_props   each street-pack kind knocked over the way a LATE JOINER sees it (no animation), then tidied
+##   --look_prop=KIND  stand 3 m in front of the nearest standing one, looking at it (for screenshots)
 ##   --twist=NAME      DISTRICT TWIST for every district, the first included (scripts/district_twist.gd):
 ##                     blackout | bin_day | clearance | high_alert | none. Prints "DevCapture twist" lines
 ##                     (lamps, sight, props, Meow-Mart loot, bots, CRT intel), and after --kill_roombas how
@@ -679,7 +689,7 @@ func _ready() -> void:
 					await get_tree().physics_frame
 				print("DevCapture twist scrap: %d regular kills -> %d SCRAP on the street (twist %s)" % [int(args["kill_roombas"]),
 					_count_world_items("scrap"), DistrictTwist.name_of(DistrictTwist.current_kind()) if DistrictTwist.current_kind() != 0 else "NONE"])
-		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost"):
+		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost") or args.has("use_prop") or args.has("look_prop") or args.has("instant_props"):
 			await _mess_tests(scene, player, args)
 		if args.has("spectate") or args.has("spectate_ko"):
 			await _spectate_tests(scene, args)
@@ -1999,6 +2009,8 @@ func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			first = p if first == null else first
 			# Stand 4 m away along the pavement-facing side, and run straight at it.
 			var away := Motion.flat(player.global_position - p.global_position).normalized()
+			if p.kind == MessProp.Kind.NEON_SIGN:
+				away = -p.global_basis.z  # (signs face along the pavement: run at one from the front)
 			if away == Vector3.ZERO:
 				away = Vector3.BACK
 			var dir := -away
@@ -2036,8 +2048,11 @@ func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			for f in 15:
 				await get_tree().physics_frame
 			print("DevCapture mess scratch: %s prompt=\"%s\" used=%s knocked=%s" % [p.name, prompt, used, p.knocked])
+	if args.has("use_prop"):
+		var used_prop := await _use_prop_test(scene, player, args)
+		first = used_prop if first == null else first
 	if args.has("shoot_prop"):
-		var p := _nearest_prop(player.global_position, "")
+		var p := _nearest_prop(player.global_position, "" if str(args["shoot_prop"]) == "true" else str(args["shoot_prop"]))
 		if p != null:
 			first = p if first == null else first
 			var hit := Hit.new()
@@ -2047,7 +2062,8 @@ func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			(p.get_node("Hitbox").get_parent() as MessProp).receive_hit(hit)
 			for f in 15:
 				await get_tree().physics_frame
-			print("DevCapture mess shoot: %s knocked=%s" % [p.name, p.knocked])
+			print("DevCapture mess shoot: %s %s knocked=%s" % [p.name, MessProp.Kind.keys()[p.kind], p.knocked])
+			_print_prop(p, "after shot")
 	if args.has("bait_mess") and multiplayer.is_server() and first != null:
 		var bot: Roomba = null
 		var best := INF
@@ -2066,6 +2082,24 @@ func _mess_tests(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 			bot.state = Roomba.State.PATROL
 			bot._mess_check_left = 0.0
 			print("DevCapture mess bait: %s placed %.1f m from %s" % [bot.name, float(args["bait_mess"]), first.name])
+	if args.has("instant_props"):
+		# --instant_props: what a LATE JOINER sees (show_knocked instant) for every street-pack kind, then tidied.
+		for k in ["vending", "hydrant", "cart", "neon_sign", "dumpster"]:
+			var p := _nearest_prop(player.global_position, k)
+			if p != null:
+				p.show_knocked(0.7, true)
+				await get_tree().physics_frame
+				_print_prop(p, "instant")
+				p.show_standing(true)
+				await get_tree().physics_frame
+				_print_prop(p, "instant tidied")
+	if args.has("look_prop"):
+		# --look_prop=KIND: stand 3 m in front of the nearest standing one and look at it (screenshots).
+		var p := _nearest_prop(player.global_position, str(args["look_prop"]))
+		if p != null:
+			var front := -p.global_basis.z
+			player.teleport_to(p.global_position + front * 3.0 + p.global_basis.x * 1.2 + Vector3.UP * 0.2, atan2(front.x + 0.4 * p.global_basis.x.x, front.z + 0.4 * p.global_basis.x.z))
+			print("DevCapture prop look: %s %s at %s front %s" % [p.name, MessProp.Kind.keys()[p.kind], p.global_position.snapped(Vector3.ONE * 0.01), front.snapped(Vector3.ONE * 0.01)])
 	if args.has("face_mess") and first != null:
 		# Stand 4.5 m from the first mess and look at it (for screenshots).
 		var away := Motion.flat(player.global_position - first.tidy_spot()).normalized()
@@ -2201,7 +2235,117 @@ func _print_spectate(when: String, seat: int) -> void:
 			watched.camera_pivot.rotation.y, watched.sync_camera_yaw, watched.spring_arm.rotation.x, watched.sync_camera_pitch])
 
 
-## The nearest standing mess prop of a kind ("" = any; "bin", "cone", "box", "poster").
+## --use_prop=KIND (+ --cart_bowl, --geyser_jump, --geyser_bot, --prop_twice): the STREET PROPS PACK.
+func _use_prop_test(scene: Node, player: CatPlayer, args: Dictionary) -> MessProp:
+	var p := _nearest_prop(player.global_position, str(args["use_prop"]))
+	if p == null:
+		print("DevCapture prop: no standing %s in this city" % args["use_prop"])
+		return null
+	# Stand where a cat would: in front of wall-backed props, else on the pavement side we came from.
+	var away := Motion.flat(player.global_position - p.global_position).normalized()
+	if p.kind in [MessProp.Kind.VENDING, MessProp.Kind.DUMPSTER]:
+		away = -p.global_basis.z
+	if away == Vector3.ZERO:
+		away = Vector3.BACK
+	var stand := p.global_position + away * (p.radius() + 0.7)
+	player.teleport_to(stand + Vector3.UP * 0.2, atan2(away.x, away.z))
+	for f in 12:
+		await get_tree().physics_frame
+	var push := Motion.flat(p.global_position - player.global_position).normalized()
+	if args.has("cart_bowl") and multiplayer.is_server() and p.kind == MessProp.Kind.CART:
+		var bot := _nearest_tidy_bot(scene, p.global_position)
+		var cone := _nearest_prop(p.global_position + push * 4.0, "cone")
+		if bot != null:
+			bot.global_position = p.global_position + push * 3.0 + Vector3.UP * 0.1
+			bot.state = Roomba.State.PATROL
+			print("DevCapture prop bowl: %s put 3 m down the cart's path (hp %d)" % [bot.name, bot.health])
+		if cone != null:
+			cone.global_position = p.global_position + push * 5.5
+			print("DevCapture prop bowl: %s moved 5.5 m down the path" % cone.name)
+	var prompt := Interactable.prompt_for(player)
+	var used := Interactable.try_use(player)
+	for f in 20:
+		await get_tree().physics_frame
+	print("DevCapture prop use: %s %s prompt=\"%s\" used=%s knocked=%s" % [p.name, MessProp.Kind.keys()[p.kind], prompt, used, p.knocked])
+	for f in 40:
+		await get_tree().physics_frame
+	_print_prop(p, "after use")
+	if args.has("cart_bowl"):
+		for node in scene.get_node("Roombas").get_children():
+			var r := node as Roomba
+			if r != null and Motion.flat_distance(r.global_position, p.tidy_spot()) < 12.0:
+				print("DevCapture prop bowl: %s state=%s hp=%d %.1f m from the cart's rest spot" % [r.name, Roomba.State.keys()[r.state], r.health,
+					Motion.flat_distance(r.global_position, p.tidy_spot())])
+		_print_mess("after bowl")
+	if args.has("geyser_jump") and p.kind == MessProp.Kind.HYDRANT:
+		player.teleport_to(p.global_position + away * 0.6 + Vector3.UP * 0.2, atan2(away.x, away.z))
+		var top := player.global_position.y
+		for f in 70:
+			await get_tree().physics_frame
+			top = maxf(top, player.global_position.y)
+		print("DevCapture prop geyser_jump: geyser=%s cat flew to %.1f m (from %.1f)" % [p.geyser_active(), top, p.global_position.y])
+	if args.has("geyser_bot") and multiplayer.is_server() and p.kind == MessProp.Kind.HYDRANT:
+		var bot := _nearest_tidy_bot(scene, p.global_position)
+		if bot != null:
+			bot.global_position = p.global_position + Vector3.RIGHT * 1.5 + Vector3.UP * 0.1
+			bot.state = Roomba.State.PATROL
+			for f in 20:
+				await get_tree().physics_frame
+			print("DevCapture prop geyser_bot: %s state=%s %.1f m from the hydrant, could claim it=%s" % [bot.name, Roomba.State.keys()[bot.state],
+				Motion.flat_distance(bot.global_position, p.global_position), MessManager.instance.claim_nearest(p.global_position, 20.0, bot) == p])
+	if args.has("prop_twice") and multiplayer.is_server():
+		MessManager.instance.tidy(p.id)
+		for f in 30:
+			await get_tree().physics_frame
+		_print_prop(p, "tidied")
+		MessManager.instance._asked.clear()
+		MessManager.instance.knock(player.player_id, p.id, push)
+		for f in 30:
+			await get_tree().physics_frame
+		_print_prop(p, "busted again")
+	return p
+
+
+func _nearest_tidy_bot(scene: Node, to: Vector3) -> Roomba:
+	var bot: Roomba = null
+	var best := INF
+	for node in scene.get_node("Roombas").get_children():
+		var r := node as Roomba
+		if r != null and r.tidies_messes and not r.is_boss and r.breach_hub == null and not r.is_queued_for_deletion():
+			var d := Motion.flat_distance(r.global_position, to)
+			if d < best:
+				best = d
+				bot = r
+	return bot
+
+
+## One "DevCapture prop" line: everything a STREET PROPS PACK prop is doing right now.
+func _print_prop(p: MessProp, when: String) -> void:
+	var drops: Array = []
+	for world_id in ItemManager.instance.world:
+		var entry: Dictionary = ItemManager.instance.world[world_id]
+		if Motion.flat_distance(entry.pos, p.global_position) < 3.0 and int(world_id) >= 100000:
+			drops.append(entry.item)
+	var glow := "-"
+	if not p._glow_meshes.is_empty():
+		glow = "%.2f" % (p._glow_meshes[0].get_instance_shader_parameter("instance_tint") as Color).r
+	var lid := "-"
+	if p._lid != null:
+		lid = "%.0f deg" % rad_to_deg(p._lid_home.basis.get_rotation_quaternion().angle_to(p._lid.transform.basis.get_rotation_quaternion()))
+	var cap := "-"
+	if p._cap != null:
+		cap = "%.2f m" % p._cap.position.distance_to(p._cap_home.origin)
+	var flap := "-"
+	if p._flap != null:
+		flap = "%.0f deg" % rad_to_deg(p._flap_home.basis.get_rotation_quaternion().angle_to(p._flap.transform.basis.get_rotation_quaternion()))
+	print("DevCapture prop (%s): %s %s knocked=%s geyser=%s (%.1f s) rest=%s moved=%.1f m lid=%s cap=%s flap=%s glow=%s light=%s looted=%s drops=%s debris=%d layer=%d" % [
+		when, p.name, MessProp.Kind.keys()[p.kind], p.knocked, p.geyser_active(), p._geyser_left, p.tidy_spot().snapped(Vector3.ONE * 0.1),
+		Motion.flat_distance(p.tidy_spot(), p.global_position), lid, cap, flap, glow, str(p._light.visible) if p._light != null else "-",
+		MessManager.instance.was_looted(p.id), drops, p._debris.get_child_count() if p._debris != null else 0, p._body.collision_layer])
+
+
+## The nearest standing mess prop of a kind ("" = any; "bin", "cone", "box", "poster", "vending", "hydrant",
+## "cart", "neon_sign", "dumpster").
 func _nearest_prop(from: Vector3, kind: String) -> MessProp:
 	var best: MessProp = null
 	var best_distance := INF
@@ -2222,9 +2366,11 @@ func _print_mess(when: String) -> void:
 		return
 	var kinds := {}
 	var knocked: Array = []
+	var layout := ""  # (every prop's number, kind and spot: must be the same on every computer)
 	for p in mess.props():
 		var k: String = MessProp.Kind.keys()[p.kind]
 		kinds[k] = int(kinds.get(k, 0)) + 1
+		layout += "%d%s%s;" % [p.id, k, p.global_position.snapped(Vector3.ONE * 0.01)]
 		if p.knocked:
 			knocked.append(p.id)
 	var states := {}
@@ -2234,7 +2380,7 @@ func _print_mess(when: String) -> void:
 			if node is Roomba:
 				var st: String = Roomba.State.keys()[(node as Roomba).state]
 				states[st] = int(states.get(st, 0)) + 1
-	print("DevCapture mess (%s): props=%d %s knocked=%s made=%d tidied=%d heat=%.2f bots=%s (%s)" % [when, mess.props().size(), kinds, knocked,
+	print("DevCapture mess (%s): props=%d layout=%08x %s knocked=%s made=%d tidied=%d heat=%.2f bots=%s (%s)" % [when, mess.props().size(), layout.hash(), kinds, knocked,
 		mess.messes_made, mess.messes_tidied, HeatMeter.instance.heat if HeatMeter.instance != null else 0.0, states,
 		"host" if multiplayer.is_server() else "client"])
 
