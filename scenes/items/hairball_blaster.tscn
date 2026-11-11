@@ -6,6 +6,7 @@
 [node name="HairballBlaster" type="Node3D"]
 script = ExtResource("1_script")
 fire_rate = 1.6
+camera_kick = 0.3
 automatic = false
 max_range = 22.0
 spread_degrees = 7.5

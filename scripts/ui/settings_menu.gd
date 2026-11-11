@@ -78,6 +78,8 @@ const TABS: Array = [
 			"hint": "Curved glass, scanlines and static of an old TV."},
 		{"setting": "modern_ui", "label": "UI STYLE", "choices": [[true, "MODERN"], [false, "PS1"]],
 			"hint": "MODERN = crisp HUD and menus. PS1 = chunky pixels, CRT over everything."},
+		{"setting": "screen_shake", "label": "SCREEN SHAKE", "min": 0.0, "max": 1.0, "step": 0.25, "format": "percent",
+			"hint": "Camera jolts when you get hit, shoot or a bot blows up nearby. 0% = off."},
 		{"setting": "ps1_wobble", "label": "PS1 WOBBLE", "choices": [[true, "ON"], [false, "OFF"]],
 			"hint": "Shaky polygons and warpy textures. Turn OFF if it bothers your eyes."},
 		{"setting": "volumetric_fog", "label": "VOLUMETRIC FOG", "choices": [[true, "ON"], [false, "OFF"]],

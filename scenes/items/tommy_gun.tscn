@@ -6,6 +6,7 @@
 [node name="TommyGun" type="Node3D"]
 script = ExtResource("1_script")
 fire_rate = 12.0
+camera_kick = 0.05
 automatic = true
 max_range = 60.0
 spread_degrees = 1.2

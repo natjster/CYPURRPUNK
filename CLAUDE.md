@@ -10,7 +10,7 @@ Before changing or debugging a system, read ONLY the topic file(s) it touches (t
 
 | Topic file (`docs/claude/`) | Covers |
 |---|---|
-| `ui-hud.md` | UI LOOKS (PS1 / MODERN), the HUD + its statics, top row, HudStyle, menu view / PS1Overlay |
+| `ui-hud.md` | UI LOOKS (PS1 / MODERN), the HUD + its statics, top row, HudStyle, menu view / PS1Overlay, PLAYER FEEDBACK (shake, hitmarker, hurt edges, loot toasts) |
 | `couch-coop.md` | lobby, Seats, Controls + rebinding, SeatFocus, on-screen keyboard, PlayerPause, split screen |
 | `networking.md` | 8-player balance scaling, replication intervals, net stats, Net autoload (ENet, LAN, UPnP room codes) |
 | `interaction.md` | the E-key Interactable framework (prompts, priorities, members) |

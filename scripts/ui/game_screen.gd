@@ -535,6 +535,8 @@ func _follow_cameras() -> void:
 		var camera: Camera3D = pane.camera
 		camera.global_transform = source.global_transform
 		camera.fov = source.fov
+		camera.h_offset = source.h_offset  # screen shake (scripts/feedback.gd)
+		camera.v_offset = source.v_offset
 		camera.near = source.near
 		camera.far = source.far
 		var in_hub := UndergroundHub.is_in_hub(camera.global_position)

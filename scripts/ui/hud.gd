@@ -220,6 +220,7 @@ static func damage_number(where: Vector3, amount: int, crit: bool = false, seat_
 	var numbers := element("Damage", seat_number) as HudDamageNumbers
 	if numbers != null:
 		numbers.spawn(where, amount, crit)
+	Feedback.hit_landed(seat_number, crit)  # the hitmarker "X" + "tik" (scripts/feedback.gd)
 
 
 ## How thick to draw a thin HUD line (in HUD units). In the PS1 UI look one screen pixel is 3 HUD

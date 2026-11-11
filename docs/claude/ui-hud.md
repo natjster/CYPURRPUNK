@@ -36,3 +36,10 @@
   `PS1Overlay` (`scripts/ui/ps1_overlay.gd`) centres every menu child in a 320-wide column (full-rect
   ColorRect backgrounds stretched back out); ColorDepthDither is full width. HUD labels must use
   anchors (the HUD Frame matches the game picture's shape). Test: `--window=1720x720`.
+- PLAYER FEEDBACK: autoload `Feedback` (`scripts/feedback.gd`). `shake(player_id, 0..1)` / `shake_near(pos, amt, radius)` = camera
+  `h_offset/v_offset` trauma (local players only, x `Settings.screen_shake`; game_screen.gd copies the offsets onto couch panes).
+  `hit_landed(seat, crit)` is called by `Hud.damage_number` (hitmarker + throttled "hitmarker" sound). Host: `enemy_smashed(killer, pos,
+  boss)` from `Enemy.explode` -> `_boom` rpc (shake near) + `_kill_confirmed` rpc_id to the killer (red `HudHitmarker`). `hurt(id, amount)`
+  from cat_health `_set_health` -> `HudHurtFlash` (also pulses <30% HP by itself). Host `Events.item_picked_up` -> `_got_item` rpc ->
+  `HudLootToast.add`. Gun `camera_kick` (Feel group), melee `hit_shake`. Sounds from `tools/make_feedback_sfx.py`. Test: `--feedback_test`
+  (fights.gd; the snap waits for the test, so use `--frames=4`).

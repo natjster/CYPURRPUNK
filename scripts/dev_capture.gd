@@ -67,6 +67,9 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##                     1.5 m in front of us and takes 100 damage: DOWNED (or knocked out if nobody could help).
 ##                     --bleed_out=SEC changes how long it waits. Then --hold=interact on slot 0 = give up.
 ##   --down_loot=A,B   (with --down) put this loot in the downed cat's bag first (to test robbing)
+##   --feedback_test   (host, up top: use --pos) PLAYER FEEDBACK: hurt to 20 HP (red edges + low-HP pulse),
+##                     two loot toasts, then hitmarker + kill confirm every 0.3 s (so the snap catches one);
+##                     prints "DevCapture feedback" lines (shake offset, flash, toasts, hitmarker)
 ##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
 ##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
 ##   --rival_volley=N  (with --shoot_rival) land N hits in one frame, like a scattergun's pellets
@@ -731,6 +734,8 @@ func _ready() -> void:
 			await _fights._blast_car(scene, player)
 		if args.has("blast_probe"):
 			_fights._blast_probe(player)
+		if args.has("feedback_test"):
+			await _fights._feedback_test(player)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.

@@ -6,6 +6,7 @@
 [node name="YarnZooka" type="Node3D"]
 script = ExtResource("1_script")
 fire_rate = 1.0
+camera_kick = 0.35
 automatic = false
 damage = 35
 crit_chance = 0.05

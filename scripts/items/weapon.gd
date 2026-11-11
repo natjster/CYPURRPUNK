@@ -27,6 +27,11 @@ extends HeldItem
 ## Random wobble on each shot, in degrees. 0 = laser-perfect.
 @export var spread_degrees: float = 1.2
 
+@export_group("Feel")
+## Camera kick on every shot (0 = none, 1 = huge; shotguns ~0.25, a tommy gun ~0.06).
+## Scaled by SETTINGS > EFFECTS > SCREEN SHAKE. See scripts/feedback.gd.
+@export_range(0.0, 1.0) var camera_kick: float = 0.12
+
 @export_group("Overheat")
 ## Heat added per shot (1.0 = fully overheated). 0 = this gun never overheats.
 @export var heat_per_shot: float = 0.0
@@ -200,6 +205,7 @@ func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
 func _fire() -> void:
 	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.3  # cat turns to face the shot
 	Seats.rumble(holder.player_id, 0.4, 0.1, 0.06)  # a little kick on the shooter's controller with every shot
+	Feedback.shake(holder.player_id, camera_kick)  # ...and on their camera (scripts/feedback.gd)
 
 	var ends := PackedVector3Array()  # where each bolt landed
 	for i in maxi(pellets_per_shot, 1):
@@ -429,6 +435,7 @@ func draw_blast(centre: Vector3) -> void:
 	tween.tween_property(flash, "light_energy", 0.0, blast_time)
 	tween.chain().tween_callback(ball.queue_free)
 	Sound.play_at(blast_sound, centre)
+	Feedback.shake_near(centre, 0.45, blast_radius * 2.5)  # the ground shakes near the boom (scripts/feedback.gd)
 
 
 ## Coil glow: cool colour normally, red-hot as it heats (blinks while overheated).

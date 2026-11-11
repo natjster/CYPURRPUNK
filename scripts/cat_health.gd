@@ -379,9 +379,12 @@ func request_give_up(player_id: int) -> void:
 func _set_health(player_id: int, hp: int) -> void:
 	# One of our players got hurt: thump their controller and say ouch.
 	# (Their health bar flashes and shows the chip by itself: hud_health_bar.gd.)
-	if PlayerId.is_local(player_id) and hp < get_health(player_id) and hp > 0:
-		Seats.rumble(player_id, 0.3, 0.7, 0.25)
-		Sound.play("hurt")  # (0 HP plays "downed" / "knockout" instead, see below)
+	if PlayerId.is_local(player_id) and hp < get_health(player_id):
+		# Red screen edges + a camera jolt, sized to the hit (scripts/feedback.gd).
+		Feedback.hurt(player_id, get_health(player_id) - hp)
+		if hp > 0:
+			Seats.rumble(player_id, 0.3, 0.7, 0.25)
+			Sound.play("hurt")  # (0 HP plays "downed" / "knockout" instead, see below)
 	health[player_id] = hp
 
 
@@ -397,6 +400,7 @@ func _set_downed(player_id: int, seconds: float, cause: String) -> void:
 	var cat := Game.instance.cat_for(player_id)
 	if PlayerId.is_local(player_id):
 		Seats.rumble(player_id, 0.6, 0.9, 0.5)
+		Feedback.shake(player_id, 0.8)  # a big camera jolt as you drop
 		Sound.play("downed")
 	if cat != null:
 		Sound.play_at("meow", cat.global_position)  # a sad little meow everyone nearby hears
@@ -459,6 +463,7 @@ func _knocked_out(player_id: int, cause: String) -> void:
 		return
 	cat.knocked_out = true  # lies on its side and ignores the keyboard (cat_player.gd)
 	Seats.rumble(player_id, 0.8, 1.0, 0.7)  # big shake on their controller
+	Feedback.shake(player_id, 1.0)  # ...and on their screen
 	Sound.play("knockout")
 	if UndergroundHub.is_in_hub(cat.global_position):
 		# A SEWER BREACH: lie where you fell. The end of the breach wakes you (_on_sewer_breach_ended).

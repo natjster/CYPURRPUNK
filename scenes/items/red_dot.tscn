@@ -6,6 +6,7 @@
 [node name="RedDot" type="Node3D"]
 script = ExtResource("1_script")
 fire_rate = 25.0
+camera_kick = 0.0
 automatic = true
 max_range = 25.0
 spread_degrees = 0.0

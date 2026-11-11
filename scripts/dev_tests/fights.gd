@@ -191,3 +191,41 @@ func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		for i in 10:
 			await get_tree().physics_frame
 		report.call("after revive")
+
+
+## --feedback_test: PLAYER FEEDBACK (scripts/feedback.gd). Host only, our cat must be up top.
+func _feedback_test(player: CatPlayer) -> void:
+	var id := player.player_id
+	await _seconds(0.3)
+	CatHealth.instance.damage(id, 80, "TEST")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var flash := Hud.element("HurtFlash", player.slot) as HudHurtFlash
+	print("DevCapture feedback hurt: hp=%d shake_h=%.3f shake_v=%.3f flash=%.2f" % [CatHealth.instance.get_health(id),
+		player.camera.h_offset, player.camera.v_offset, flash._flash if flash != null else -1.0])
+	Events.item_picked_up.emit(id, "golden_koi")
+	Events.item_picked_up.emit(id, "catnip")
+	Events.item_picked_up.emit(id, "catnip")
+	var toast := Hud.element("LootToast", player.slot) as HudLootToast
+	print("DevCapture feedback toasts: %s" % [toast._toasts.map(func(t): return "%s x%d $%d" % [t.name, t.count, t.cash]) if toast != null else "MISSING"])
+	var marker := Hud.element("Hitmarker", player.slot) as HudHitmarker
+	var ahead := player.global_position - player.camera.global_basis.z * 4.0 + Vector3.UP
+	for i in 8:
+		Hud.damage_number(ahead, 30, i % 3 == 1, player.slot)
+		await _seconds(0.1)
+		Feedback.enemy_smashed(id, ahead, i == 5)
+		await get_tree().process_frame
+		if i < 2 or i == 5:
+			print("DevCapture feedback kill %d: marker_kind=%d left=%.2f shake_h=%.3f low_pulse=%.2f" % [i,
+				marker._kind if marker != null else -1, marker._left if marker != null else -1.0,
+				player.camera.h_offset, flash._low if flash != null else -1.0])
+		await _seconds(0.2)
+	# (The snap waits for this test: end with everything on screen for it.)
+	Events.item_picked_up.emit(id, "golden_koi")
+	Events.item_picked_up.emit(id, "fish")
+	CatHealth.instance.damage(id, 5, "TEST")
+	await _seconds(0.25)
+	Feedback.enemy_smashed(id, ahead, false)
+	await get_tree().process_frame
+	print("DevCapture feedback final: marker visible=%s rect=%s left=%.2f, flash=%.2f low=%.2f" % [marker.is_visible_in_tree(),
+		marker.get_global_rect(), marker._left, flash._flash, flash._low])

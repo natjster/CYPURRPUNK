@@ -68,9 +68,11 @@ whole picture so they fit).
 ```
 HUD (CanvasLayer)            script: ui/hud.gd
 └── Frame (Control)          <- resized to cover exactly the game picture; theme: ui/hud_theme.tres
+    ├── HurtFlash (Control)  <- red screen edges: flash when hurt, pulse at low health (ui/hud_hurt_flash.gd)
     ├── Names (Control)      <- names over cats' and NPCs' heads (script ui/hud_name_tags.gd)
     ├── Bars (Control)       <- health bars over VAC-COPs / hurt cats, boss bar (ui/hud_health_bars.gd)
     ├── Damage (Control)     <- damage numbers off things you shoot (ui/hud_damage_numbers.gd)
+    ├── LootToast (Control)  <- bottom-right "+ GOLDEN KOI  $400" when loot goes in your bag (ui/hud_loot_toast.gd)
     ├── Top (Control)        <- stays up while you talk / shop
     │   ├── Cash             <- top-left, big green "$120"
     │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
@@ -83,6 +85,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Popup            <- big "EXTRACTED +$150" that fades out
     │   ├── Banner           <- big wrapped text for long news (Sewer Breach results)
     │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
+    │   ├── Hitmarker        <- "X" flash when your shot/swing lands; RED = you smashed it (ui/hud_hitmarker.gd)
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
     │   └── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
@@ -221,3 +224,23 @@ bigger text), and the talk box and message line get narrower by themselves.
 **Add a new HUD piece:** in `hud.tscn` right-click **Top** (or **Middle**) > **Add Child Node** >
 **Label**, give it a unique name (e.g. `Ammo`), pick an anchor, then in your script call
 `Hud.set_text("Ammo", "...")`.
+
+### Player feedback ("game juice": shakes, hitmarkers, red edges, loot toasts)
+All run by the autoload **Feedback** (`scripts/feedback.gd`), so every player gets the same feel:
+- **Screen shake:** your camera jolts when you get hit (bigger hit = bigger jolt), go down, get
+  knocked out, fire a gun, land a bat swing, smash a bot, or a bot / yarn-zooka blast goes off near
+  you. Players turn it down in **SETTINGS > EFFECTS > SCREEN SHAKE** (0% = off).
+  - Per gun: open its scene (`scenes/items/pistol.tscn` etc.), click the root, **Inspector > Feel >
+    Camera Kick** (0 = none; tommy gun 0.05, pistol 0.12, hairball blaster 0.3). The bat's is
+    **Swing > Hit Shake** in `neon_bat.tscn`.
+  - Overall size / speed / how long it lasts: the numbers at the top of `scripts/feedback.gd`
+    (`max_shake_offset`, `shake_decay`, `kill_shake`, `boom_shake`...).
+- **Hitmarker:** white "X" on a hit, yellow on a crit, big RED "X" + a "ding-DING" when YOU smash a bot
+  (the host tells only the cat who finished it). Colours / sizes: click **Middle > Hitmarker** in `hud.tscn`.
+- **Red edges:** flash when you get hurt, and keep pulsing while your health is under 30%. Tweak in
+  **HurtFlash** (Inspector: Color, Edge Size, Max Flash, Low Health, Low Pulse, Pulse Speed).
+- **Loot toasts:** "+ GOLDEN KOI  $400" slides in bottom-right whenever something lands in your
+  backpack (pickups, shop buys, robbing). The same thing twice in a row counts up ("x2"). Tweak in **LootToast**.
+- **Sounds:** `hitmarker`, `kill_confirm`, `loot_get` in `sounds/sfx/`, made by
+  `python tools/make_feedback_sfx.py` (change the numbers in it and run it again to retune them).
+- **Test:** `--host --pos=0,0,6 --feedback_test --frames=4` (prints "DevCapture feedback" lines).

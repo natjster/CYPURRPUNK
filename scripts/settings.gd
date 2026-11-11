@@ -68,6 +68,8 @@ var crt_strength: float = 1.0
 ## PS1 vertex wobble + texture warping. Off = steadier picture (comfort option).
 var ps1_wobble: bool = true
 var volumetric_fog: bool = true
+## How much the camera shakes when you get hit, shoot or something blows up (0 = off, 1 = full).
+var screen_shake: float = 1.0
 
 ## Which variables get saved: [section in the file, variable name].
 const SAVED: Array = [
@@ -78,7 +80,7 @@ const SAVED: Array = [
 	["controls", "mouse_speed"], ["controls", "invert_y"],
 	["controls", "stick_speed"], ["controls", "invert_stick_y"], ["controls", "rumble"],
 	["effects", "field_of_view"], ["effects", "crt_strength"], ["effects", "modern_ui"], ["effects", "ps1_wobble"],
-	["effects", "volumetric_fog"],
+	["effects", "volumetric_fog"], ["effects", "screen_shake"],
 ]
 
 ## Sound buses. Sounds played through the Sound autoload (scripts/sound.gd) pick the right one

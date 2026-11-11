@@ -317,6 +317,8 @@ func explode() -> void:
 	var heat := HeatMeter.instance
 	heat.add_heat(-heat.cool_when_boss_destroyed if is_boss else heat.heat_per_roomba_destroyed)
 	Sound.play_everywhere(explode_sound, global_position)
+	# Shake cats nearby, and tell whoever smashed it (red hitmarker + ding: scripts/feedback.gd).
+	Feedback.enemy_smashed(killed_by, global_position, is_boss)
 	print("[Enemy] %s exploded" % name)
 	destroyed.emit(self)
 	Events.enemy_destroyed.emit(self)  # host only (scripts/events.gd)

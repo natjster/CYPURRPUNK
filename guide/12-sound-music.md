@@ -46,6 +46,8 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `engine_loop` (loops) | the getaway car; pitch follows the speed | everyone nearby |
 | `car_door` | getting in / out of the car | everyone nearby |
 | `hurt` / `knockout` | you lose HP / you're knocked out for good | just you |
+| `hitmarker` / `kill_confirm` | your shot lands / YOU smashed a bot (`tools/make_feedback_sfx.py`) | just you |
+| `loot_get` | something went into your backpack (`tools/make_feedback_sfx.py`) | just you |
 | `downed` | you hit 0 HP and are waiting for a revive (placeholder "wah-wahh") | just you |
 | `revive` | a downed cat is picked back up (placeholder rising blip) | everyone nearby |
 | `extract` | you climb down the exit manhole | just you |

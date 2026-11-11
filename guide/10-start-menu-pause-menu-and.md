@@ -54,7 +54,7 @@
 | SOUND | Master, music, sound FX volume |
 | CONTROLS | Mouse speed, invert mouse Y, stick speed (right-stick camera), invert stick Y, rumble on/off |
 | KEYS | Every control with two keyboard/mouse boxes + a **PAD** (controller) box (scrolls). **RESET KEYS** = default keys and buttons |
-| EFFECTS | CRT TV look (0-100%), PS1 wobble on/off, volumetric fog on/off |
+| EFFECTS | CRT TV look (0-100%), screen shake (0-100%), PS1 wobble on/off, volumetric fog on/off |
 
 Saved to `%APPDATA%\MeowCity1999\settings.cfg` (with your cats: names and looks) and
 `controls.cfg` (keys). RESET in Settings never touches your cats.

@@ -31,6 +31,8 @@ extends Weapon
 ## The sound of a swing (res://sounds/sfx/, no .wav) and of a swing that connects.
 @export var swing_sound: String = "swing"
 @export var hit_sound: String = "bonk"
+## Camera jolt when the swing CONNECTS (0 = none, 1 = huge). See scripts/feedback.gd.
+@export_range(0.0, 1.0) var hit_shake: float = 0.3
 
 var _model: Node3D
 var _model_home: Vector3  # the model's resting rotation (the swing starts and ends there)
@@ -83,6 +85,8 @@ func _fire() -> void:
 		hit_anything = true
 		if target.receive_hit(info):
 			Hud.damage_number(info.position, info.damage, info.crit, holder.slot)  # on OUR HUD
+	if hit_anything:
+		Feedback.shake(holder.player_id, hit_shake)  # THWACK (scripts/feedback.gd)
 	show_swing.rpc(hit_anything)
 
 
