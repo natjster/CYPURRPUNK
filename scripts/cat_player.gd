@@ -69,6 +69,9 @@ extends CharacterBody3D
 @onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
 @onready var cat_model: Node3D = $CatModel
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
+## CAT MOVES (scripts/cat/cat_moves.gd): pounce, wall kicks, clamber, snappy jumps, squash & stretch.
+## Its knobs: click Player > Moves in scenes/player.tscn.
+@onready var moves: CatMoves = $Moves
 
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 ## False while driving — the cat ignores input and stays hidden.
@@ -632,30 +635,20 @@ func _physics_process(delta: float) -> void:
 	if not is_controlled:
 		return
 
-	# Gravity: fall when not standing on something.
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+	var on_floor := is_on_floor()
+	# Gravity: fall when not standing on something (falling pulls harder than rising: Player > Moves).
+	if not on_floor:
+		velocity.y -= gravity * delta * moves.gravity_multiplier(velocity.y)
 
 	# Catdip wears off over time; landing refills the mid-air jumps.
 	_air_jump_time_left = maxf(_air_jump_time_left - delta, 0.0)
 	if _air_jump_time_left <= 0.0:
 		air_jumps = 0
-	if is_on_floor():
+	if on_floor:
 		_air_jumps_left = air_jumps
 
 	# DOWNED cats can only crawl: no jumping, no zoomies (Downed and Revives on the Health node).
 	var downed := is_downed()
-
-	# Jump (or, with catdip, jump again in mid-air). No keyboard while a menu is open.
-	if Seats.is_just_pressed(slot, "jump") and not _input_blocked() and not downed:
-		if is_on_floor():
-			velocity.y = jump_velocity
-			Sound.play_everywhere("jump", global_position, -6.0)
-		elif _air_jumps_left > 0:
-			velocity.y = jump_velocity
-			_air_jumps_left -= 1
-			_flip_time_left = flip_seconds  # FRONT FLIP! (_update_zoomies_juice spins the model)
-			Sound.play_everywhere("jump", global_position, -6.0)
 
 	# Read WASD (or the controller's left stick) as a 2D direction (x = left/right, y = forward/back).
 	# The stick is analog: push it halfway and the cat walks at half speed.
@@ -684,10 +677,29 @@ func _physics_process(delta: float) -> void:
 	var heavy := ItemManager.instance.carry_speed(player_id) if ItemManager.instance != null else 1.0
 	var target_velocity := direction * minf(input_dir.length(), 1.0) * target_speed * speed_boost * heavy * _sticky_paws(delta)
 
+	# JUMPS (CAT MOVES, scripts/cat/cat_moves.gd = Player > Moves in the Inspector): ground jumps with
+	# coyote time + jump buffer + short hops, POUNCE during zoomies, WALL KICKS in mid-air.
+	# No keyboard while a menu is open.
+	var can_jump := not _input_blocked() and not downed
+	var jump_pressed := can_jump and Seats.is_just_pressed(slot, "jump")
+	var jump_held := can_jump and Seats.is_pressed(slot, "jump")
+	var jumped := moves.jump(delta, on_floor, jump_pressed, jump_held, direction, is_zooming)
+	# Nothing else used the press? With catdip, jump again in mid-air with a FRONT FLIP.
+	if jumped == "" and jump_pressed and not on_floor and _air_jumps_left > 0:
+		velocity.y = jump_velocity
+		_air_jumps_left -= 1
+		_flip_time_left = flip_seconds  # FRONT FLIP! (_update_zoomies_juice spins the model)
+		Sound.play_everywhere("jump", global_position, -6.0)
+
 	# Ease horizontal speed toward the target (smooth start/stop, same feel at any frame rate).
-	var weight := 1.0 - exp(-acceleration * delta)
-	velocity.x = lerp(velocity.x, target_velocity.x, weight)
-	velocity.z = lerp(velocity.z, target_velocity.z, weight)
+	# Less steering in mid-air (keeps momentum), none just after a wall kick, and a pounce keeps its speed.
+	target_velocity = moves.air_target(target_velocity, on_floor)
+	if not moves.steering_locked():
+		var weight := 1.0 - exp(-acceleration * moves.acceleration_scale(on_floor) * delta)
+		velocity.x = lerp(velocity.x, target_velocity.x, weight)
+		velocity.z = lerp(velocity.z, target_velocity.z, weight)
+	# CLAMBER: pushing into a ledge just above our paws in mid-air = scramble up onto it.
+	moves.clamber(on_floor, direction)
 
 	var push := velocity  # (before a bin stops us: how hard we ran into it)
 	move_and_slide()
@@ -703,6 +715,10 @@ func _physics_process(delta: float) -> void:
 	var is_aiming := Time.get_ticks_msec() / 1000.0 < aim_until
 	if is_aiming:
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, camera_pivot.rotation.y, 1.0 - exp(-turn_speed * 2.0 * delta))
+	elif moves.steering_locked() and Vector2(velocity.x, velocity.z).length() > 0.5:
+		# Just kicked off a wall: face where we're flying.
+		var fly_yaw := atan2(-velocity.x, -velocity.z)
+		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, fly_yaw, 1.0 - exp(-turn_speed * 1.5 * delta))
 	elif direction != Vector3.ZERO:
 		var target_yaw := atan2(-direction.x, -direction.z)
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
@@ -738,6 +754,7 @@ func _update_footsteps(delta: float, on_floor: bool) -> void:
 	var speed := Vector2(moved.x, moved.z).length() / maxf(delta, 0.0001)
 	var grounded := on_floor if is_multiplayer_authority() else absf(moved.y / maxf(delta, 0.0001)) < 1.0
 	_animate_legs_and_tail(delta, speed if speed <= 30.0 else 0.0, grounded)
+	moves.animate(delta, moved.y / maxf(delta, 0.0001), grounded)  # squash and stretch (cat_moves.gd)
 	# Standing still, in the air, in the car, or a teleport (a huge one-frame "speed"): no steps.
 	if not grounded or not visible or knocked_out or speed < 1.0 or speed > 30.0:
 		_step_timer = 0.0  # so the first step comes straight away when walking starts
@@ -843,6 +860,8 @@ func teleport_to(where: Vector3, yaw: float) -> void:
 func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> void:
 	var weight := 1.0 - exp(-8.0 * delta)
 	var lean := deg_to_rad(zoomies_lean_degrees) if is_zooming else 0.0
+	if not is_on_floor() and not knocked_out and not is_downed():
+		lean = moves.air_lean(false, velocity.y)  # in the air: nose up rising, nose down falling
 	var tilt := -strafe * deg_to_rad(zoomies_camera_tilt_degrees) if is_zooming else 0.0
 	var fov := _base_fov + zoomies_fov_boost if is_zooming else _base_fov
 

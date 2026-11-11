@@ -104,6 +104,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##                     (--give=catnip --press_key=1 = quick use slot 1; prints the quick slots)
 ##   --jump_test       jump + double jump (needs catdip); prints the height and the front flip's
 ##                     spin. --flip_snap=shots/x.png [--flip_frame=N] saves a picture mid-flip
+##   --moves_test      CAT MOVES (scripts/dev_tests/moves.gd): full jump vs short hop, run jump vs
+##                     POUNCE, WALL KICK, CLAMBER onto a crate, in a test yard high above the city
 ##   --hold=ACTION     hold a control for --hold_frames (default 60), e.g. move_forward,
 ##                     starting after --hold_delay frames (default 30)
 ##   --exit_after=N    get out of the car N frames after the --hold finishes
@@ -231,6 +233,7 @@ var _tutorial: Node
 var _mess: Node
 var _spectate_report: Node
 var _meow_mart: Node
+var _moves: Node
 
 
 func _ready() -> void:
@@ -252,6 +255,7 @@ func _ready() -> void:
 	_mess = _add_module("res://scripts/dev_tests/mess.gd")
 	_spectate_report = _add_module("res://scripts/dev_tests/spectate_report.gd")
 	_meow_mart = _add_module("res://scripts/dev_tests/meow_mart.gd")
+	_moves = _add_module("res://scripts/dev_tests/moves.gd")
 
 	# --window=WxH   open the game window at that size (e.g. 1720x720 = ultrawide shape; never saved)
 	if args.has("window"):
@@ -740,6 +744,8 @@ func _ready() -> void:
 			await _fights._feedback_test(player)
 		if args.has("swing_test"):
 			await _fights._swing_test(player, args)
+		if args.has("moves_test"):
+			await _moves._moves_test(player, args)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.

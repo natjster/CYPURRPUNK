@@ -12,6 +12,8 @@ Player (CharacterBody3D)            script: cat_player.gd
 │   ├── Body, Belly, LegL, LegR, Head, EarL, EarR, Muzzle, Nose, EyeL, EyeR, Tail
 │   │   (upright "villager" style: big round head, no arms; low-poly spheres/cylinders.
 │   │    Colours and hats/shades/collars come from the player's MY CAT look, §11.)
+├── Moves (Node)                     script: scripts/cat/cat_moves.gd — CAT MOVES (pounce, wall
+│                                    kick, clamber, snappy jumps, squash & stretch). Its knobs live here.
 ├── CameraPivot (Node3D)             position y=0.6 — mouse left/right turns this
 │   └── SpringArm3D                  rotation x=-0.35 rad, Spring Length 3.5 — mouse up/down tilts this
 │       └── Camera3D                 (its FOV comes from the FIELD OF VIEW setting)
@@ -28,8 +30,9 @@ camera (its child) would whip around every time the cat turned.
 ### What `scripts/cat_player.gd` does
 - **WASD relative to camera** — reads input, converts it using `CameraPivot`'s facing, flattens it to the ground.
 - **Smooth turning** — `lerp_angle` eases `CatModel` toward the run direction.
-- **Gravity + jump** — Space, only when on the floor (catdip adds mid-air jumps, §9). A catdip
+- **Gravity + jump** — Space, on the floor (catdip adds mid-air jumps, §9). A catdip
   double jump does a **FRONT FLIP** (a Jedi-style somersault, see "Double Jump Flip" below).
+  The fancy cat parkour is the **Moves** node: see "Cat Moves" below.
 - **Zoomies (Shift)** — higher top speed, cat leans nose-forward, camera rolls when strafing, FOV widens.
 - **Mouse look** — speed and invert-Y come from the Settings menu (§10). Esc opens the pause menu
   (which frees the mouse); if the mouse gets freed another way, click the game to grab it again.
@@ -44,7 +47,8 @@ camera (its child) would whip around every time the cat turned.
 
 Every number is an `@export`, so select the Player node and tweak speeds in the **Inspector**
 (groups: Movement / Camera / Zoomies Juice / Running Animation / Double Jump Flip /
-Network Smoothing) — no code editing needed.
+Network Smoothing) — no code editing needed. Jump feel, pounces, wall kicks and clambering are on the
+**Moves** child node instead (see "Cat Moves" below).
 
 **Running Animation**: the cat's `LegL`/`LegR` (in `scenes/cat_model.tscn`) swing back and forth
 while it runs, and its `Tail` sways side to side all the time, faster the faster it runs.
@@ -55,6 +59,24 @@ unit of running speed). Other players' cats animate the same way on your screen 
 **Double Jump Flip**: one front flip on every mid-air (catdip) jump, spinning around the cat's middle
 with its legs tucked. Knobs: Flip Seconds (how long), Flip Turns (1 = one full flip), Flip Pivot
 Height (the spin point, metres above the feet), Flip Leg Tuck.
+
+**Cat Moves** (click **Player > Moves** in `scenes/player.tscn`, script `scripts/cat/cat_moves.gd`):
+- **Snappy Jumps**: Coyote Seconds (you can still jump just after running off an edge), Jump Buffer
+  Seconds (press jump just before landing and it still fires), Short Hop Cut (let go of Space early =
+  small hop; 1 = off), Fall Gravity (falling pulls harder than rising; 1 = floaty old feel), Max Fall
+  Speed, Air Control (steering in mid-air: 1 = like the ground, lower keeps your momentum).
+- **Pounce**: jump during ZOOMIES = a long low leap. Pounce Boost (extra forward speed; 0 = off),
+  Pounce Lift (height compared to a normal jump).
+- **Wall Kick**: press jump in mid-air next to a wall = kick off it (claw scratch sound). Wall Kicks
+  (per jump, landing refills; 0 = off), Wall Kick Push, Wall Kick Lift, Wall Kick Lock (seconds you
+  can't steer after a kick), Wall Kick Reach (how close the wall must be).
+- **Clamber**: in mid-air, push into a ledge just above your paws and the cat scrambles on top.
+  Clamber Reach (highest ledge above the paws, metres; 0 = off), Clamber Clearance.
+- **Squash and Stretch**: Air Stretch, Land Squash, Squash Spring / Squash Damping (the wobble),
+  Air Pitch Degrees (nose up rising, nose down falling), Hard Landing Speed (big drops thump).
+  Every computer works this out from how each cat moves, so it needs no network.
+- Test it: `--host --moves_test` builds a test yard in the sky and prints a `DevCapture moves`
+  line for each move (jump, short hop, run jump vs pounce, wall kick, clamber onto a crate).
 
 Keys are handled by the **Controls** framework (`scripts/controls.gd`) — players rebind them in
 **SETTINGS > KEYS**. See section 10, "Controls & key binding".

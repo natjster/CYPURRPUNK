@@ -6,6 +6,11 @@
   `sync_position` / `sync_model_rotation` / `player_name`; remote copies glide toward them in `_process`.
   Only `CatModel` rotates; body never does (camera is a child). Remote copies start with `sync_position = position`
   (else they snap to (0,0,0) = the city for a moment, and the host marked new joiners `went_up`).
+  CAT MOVES = child node `Moves` (`scripts/cat/cat_moves.gd`, `CatMoves`, all knobs there): `jump()` (coyote, buffer,
+  short hop, POUNCE when zooming, WALL KICK via 8 short rays / is_on_wall), `air_target`/`acceleration_scale`/`steering_locked`,
+  `clamber()` (down ray onto ledge + headroom ray), `gravity_multiplier` (fall faster), `air_lean` (pitch; stays < 0.35 rad so
+  `_spin_around_middle` doesn't think it's a flip). `animate()` = squash/stretch `cat_model.scale` on EVERY computer from motion
+  (nothing else may set CatModel's scale). Catdip air jumps only fire when `jump()` returned "". Test `--moves_test`.
   8-player stress test recipe: SETUP_GUIDE §6 (host `--add_local=3 --heat=95`, clients 2+1+1, `--net_stats`).
 - CARS: one per gang in main.tscn (`GetawayCar` team 0, `GangCar` team 1; car export `team` only picks the parking
   spot `parking_spot()` = `park_distance` up the N-S street from `FishHeist.entry_position(team)`; -1 = `CAR_SPAWN`).
