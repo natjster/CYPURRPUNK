@@ -43,3 +43,7 @@
   from cat_health `_set_health` -> `HudHurtFlash` (also pulses <30% HP by itself). Host `Events.item_picked_up` -> `_got_item` rpc ->
   `HudLootToast.add`. Gun `camera_kick` (Feel group), melee `hit_shake`. Sounds from `tools/make_feedback_sfx.py`. Test: `--feedback_test`
   (fights.gd; the snap waits for the test, so use `--frames=4`).
+  Hurt numbers: `Feedback.hurt` -> `Hud.hurt_number(where, amount, seat)` -> `HudDamageNumbers.spawn(..., hurt=true)` (red). Crits have
+  no "!" any more. MELEE JUICE lives in `melee_weapon.gd` ("Swing Juice" group): Y-sweep slash, hit-stop (tween_interval), lunge
+  (owner, velocity), world-space ImmediateMesh trail from the bat ends (`_find_bat_ends`), `show_swing(connected, hit_spots)` ->
+  `_impact` sparks + light on every computer. Test: `--give=neon_bat --swing_test[=S] --frames=2`.

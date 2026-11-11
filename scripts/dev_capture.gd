@@ -70,6 +70,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --feedback_test   (host, up top: use --pos) PLAYER FEEDBACK: hurt to 20 HP (red edges + low-HP pulse),
 ##                     two loot toasts, then hitmarker + kill confirm every 0.3 s (so the snap catches one);
 ##                     prints "DevCapture feedback" lines (shake offset, flash, toasts, hitmarker)
+##   --swing_test[=S]  (with --give=neon_bat) one connecting bat swing (trail, sparks, hit-stop) + a red hurt
+##                     number, snap S seconds later (default 0.09: mid-slash). "DevCapture swing" line
 ##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
 ##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
 ##   --rival_volley=N  (with --shoot_rival) land N hits in one frame, like a scattergun's pellets
@@ -736,6 +738,8 @@ func _ready() -> void:
 			_fights._blast_probe(player)
 		if args.has("feedback_test"):
 			await _fights._feedback_test(player)
+		if args.has("swing_test"):
+			await _fights._swing_test(player, args)
 		if args.has("deploy_again"):
 			# --deploy_again=N: N frames later ask Don to send us up AGAIN (one trip per district:
 			# he should refuse once we've been up). Prints where we ended up.

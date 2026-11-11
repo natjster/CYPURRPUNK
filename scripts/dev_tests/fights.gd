@@ -229,3 +229,21 @@ func _feedback_test(player: CatPlayer) -> void:
 	await get_tree().process_frame
 	print("DevCapture feedback final: marker visible=%s rect=%s left=%.2f, flash=%.2f low=%.2f" % [marker.is_visible_in_tree(),
 		marker.get_global_rect(), marker._left, flash._flash, flash._low])
+
+
+## --swing_test[=SECONDS]: (needs --give=neon_bat) play one CONNECTING bat swing with sparks in front of
+## us, plus a red "you lost health" number, then wait SECONDS (default 0.09) so the snap lands mid-slash.
+## Prints a "DevCapture swing" line (trail samples, bat ends).
+func _swing_test(player: CatPlayer, args: Dictionary) -> void:
+	await _seconds(0.6)
+	var bats := player.find_children("*", "MeleeWeapon", true, false)
+	if bats.is_empty():
+		print("DevCapture swing: no melee weapon (add --give=neon_bat)")
+		return
+	var bat := bats[0] as MeleeWeapon
+	var ahead := player.global_position - player.cat_model.global_basis.z * 1.4 + Vector3.UP * 0.4
+	bat.show_swing.rpc(true, PackedVector3Array([ahead]))
+	Feedback.hurt(player.player_id, 23)
+	var wait := str(args["swing_test"])
+	await _seconds(float(wait) if wait.is_valid_float() else 0.09)
+	print("DevCapture swing: trail_points=%d base=%s tip=%s" % [bat._trail_points.size(), bat._trail_base, bat._trail_tip])

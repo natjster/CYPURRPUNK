@@ -94,8 +94,10 @@ Everything here is drawn by the HUD layer (§13: chunky with UI STYLE = PS1, cri
   Height, Name Font Size, **Boss Distance / Boss Size**, Chip Delay, Drain
   Speed, Hide Behind Walls, and the **Colours** (Friend Color = other cats' bars).
 - **Damage numbers:** every bolt that hits a VAC-COP pops its damage off the spot you hit
-  (white, e.g. `27`), floating up and fading. **Critical hits** are bigger and yellow with a `!`
-  (`84!`). Only the shooter sees their own numbers (on their own screen in split screen).
+  (white, e.g. `27`), floating up and fading. **Critical hits** are bigger and yellow
+  (`84`). Only the shooter sees their own numbers (on their own screen in split screen).
+  When **you** lose health, a **red** number pops off your own cat's head the same way (Hurt Color /
+  Hurt Font Size; how high it starts = `hurt_number_height` at the top of `scripts/feedback.gd`).
   Tuning: select **Frame > Damage**: Lifetime, Rise, Spread, Font Size, Crit Font Size, Color,
   Crit Color.
 - **How much a gun does** is on the gun scene's root (e.g. `scenes/items/pistol.tscn`) under

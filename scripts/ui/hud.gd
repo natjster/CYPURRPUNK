@@ -223,6 +223,13 @@ static func damage_number(where: Vector3, amount: int, crit: bool = false, seat_
 	Feedback.hit_landed(seat_number, crit)  # the hitmarker "X" + "tik" (scripts/feedback.gd)
 
 
+## A RED number popping off "where": health this seat's player just lost (Feedback.hurt calls it).
+static func hurt_number(where: Vector3, amount: int, seat_number: int = 0) -> void:
+	var numbers := element("Damage", seat_number) as HudDamageNumbers
+	if numbers != null:
+		numbers.spawn(where, amount, false, true)
+
+
 ## How thick to draw a thin HUD line (in HUD units). In the PS1 UI look one screen pixel is 3 HUD
 ## units, and anything thinner vanishes between the pixel rows. Use this for hairlines in _draw.
 static func line(width: float) -> float:

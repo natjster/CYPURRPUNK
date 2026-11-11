@@ -5,7 +5,8 @@ extends Control
 ##
 ## Each number sticks to the spot in the world you hit, pops in, floats up and fades out.
 ##   - normal hit: white, e.g. "38"
-##   - CRITICAL hit: bigger, yellow-orange, with a "!" e.g. "84!"
+##   - CRITICAL hit: bigger and yellow-orange, e.g. "84"
+##   - YOU got hurt: red, popping off your own cat (Feedback.hurt -> Hud.hurt_number)
 ## Only the player who fired sees their numbers (on their own HUD in split screen).
 ##
 ## Other scripts: Hud.damage_number(hit_position, amount, is_crit, cat.slot)
@@ -21,6 +22,9 @@ extends Control
 @export var crit_font_size: int = 34
 @export var color: Color = Color(1, 1, 1)
 @export var crit_color: Color = Color(1, 0.82, 0.2)
+## Numbers for health YOU lose.
+@export var hurt_color: Color = Color(1, 0.18, 0.22)
+@export var hurt_font_size: int = 28
 
 ## [{where (Vector3), text, crit, age, drift (Vector2)}]
 var _numbers: Array = []
@@ -33,9 +37,10 @@ func _ready() -> void:
 
 
 ## Show "amount" popping off the world position "where".
-func spawn(where: Vector3, amount: int, crit: bool) -> void:
+## hurt = it's health WE lost (red).
+func spawn(where: Vector3, amount: int, crit: bool, hurt: bool = false) -> void:
 	_numbers.append({
-		"where": where, "text": str(amount) + ("!" if crit else ""), "crit": crit, "age": 0.0,
+		"where": where, "text": str(amount), "crit": crit, "hurt": hurt, "age": 0.0,
 		"drift": Vector2(randf_range(-spread, spread), randf_range(-spread * 0.3, spread * 0.3))})
 	if _numbers.size() > 40:  # a long tommy-gun burst: forget the oldest
 		_numbers.pop_front()
@@ -56,7 +61,7 @@ func _process(delta: float) -> void:
 				continue
 			var t: float = n.age / lifetime
 			var pos: Vector2 = camera.unproject_position(n.where) * (size / game_size) + n.drift * t - Vector2(0, rise * t)
-			_draw_list.append({"pos": pos, "text": n.text, "crit": n.crit, "t": t})
+			_draw_list.append({"pos": pos, "text": n.text, "crit": n.crit, "hurt": n.hurt, "t": t})
 	queue_redraw()
 
 
@@ -66,9 +71,9 @@ func _draw() -> void:
 		var t: float = n.t
 		# Pop: starts 1.6x big and snaps down in the first 15%; fades in the last 40%.
 		var pop := 1.0 + 0.6 * clampf(1.0 - t / 0.15, 0.0, 1.0)
-		var font_px := roundi((crit_font_size if n.crit else font_size) * pop)
+		var font_px := roundi((hurt_font_size if n.hurt else crit_font_size if n.crit else font_size) * pop)
 		var alpha := clampf((1.0 - t) / 0.4, 0.0, 1.0)
 		var text_w := font.get_string_size(n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px).x
 		var pos: Vector2 = (n.pos - Vector2(text_w * 0.5, 0)).round()
 		draw_string_outline(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, Hud.outline(7), Color(0.04, 0.01, 0.08, alpha))
-		draw_string(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, Color(crit_color if n.crit else color, alpha))
+		draw_string(font, pos, n.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_px, Color(hurt_color if n.hurt else crit_color if n.crit else color, alpha))

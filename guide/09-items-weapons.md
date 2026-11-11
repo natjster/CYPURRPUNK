@@ -94,6 +94,13 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   **Swing**: **Swing Radius** (how wide, to each side), **Swing Height**, **Swing Time** /
   **Swing Angle** (the animation), **Swing Sound** (`sounds/sfx/swing.wav`, a placeholder whoosh)
   and **Hit Sound** (`bonk`).
+- **Swing Juice** (same Inspector, makes it feel heavy): **Swing Sweep** (how far the bat slashes
+  sideways across you), **Hit Stop** (the bat freezes for a split second when it connects, 0.07 s),
+  **Lunge Speed** (you lurch forward with each swing; 0 = stand still), the **neon trail** behind the
+  tip (**Trail Fade** = how long it lingers, **Trail Reach** = how far past the real bat it stretches,
+  **Trail Color** = leave see-through to use the bat's Bolt Color), and on a hit **Spark Count** +
+  **Impact Light** (a burst of sparks and a flash where it lands). The Frozen Tuna has the same settings.
+  Test: `--host --pos=0,0,6 --give=neon_bat --swing_test --frames=2` (snaps mid-slash).
 - **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
 - **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, swap the
   model under **Model** (the swing rotates **Model**; see "The weapon models" below), change the

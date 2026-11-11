@@ -42,6 +42,8 @@ var boom_shake: float = 0.35
 var boom_radius: float = 12.0
 var boss_boom_shake: float = 0.9
 var boss_boom_radius: float = 30.0
+## How high above your cat's feet the red "you lost health" number starts (metres).
+var hurt_number_height: float = 1.1
 ## Shortest gap between two hitmarker "tik" sounds (a shotgun lands 8 pellets at once).
 var hitmarker_sound_gap: float = 0.05
 
@@ -166,6 +168,10 @@ func hurt(player_id: int, amount: int) -> void:
 	var flash := Hud.element("HurtFlash", PlayerId.slot_of(player_id)) as HudHurtFlash
 	if flash != null:
 		flash.flash(amount)
+	# A red number pops off our own cat's head, like the ones off things we shoot.
+	var cat := Game.instance.cat_for(player_id) if Game.instance != null else null
+	if cat != null and amount > 0:
+		Hud.hurt_number(cat.global_position + Vector3.UP * hurt_number_height, amount, cat.slot)
 
 
 # --- Loot toasts ---
