@@ -440,7 +440,7 @@ func _ready() -> void:
 				for i in 10:
 					await get_tree().process_frame
 		# SEWER UPGRADES (scripts/upgrades.gd): print what this cat has, then buy / pick a ride.
-		#   --buy_upgrade=deep_pockets,deep_pockets,thick_fur   (one buy each, like clicking the button)
+		#   --buy_upgrade=bigger_pack,bigger_pack,thick_fur   (one buy each, like clicking the button)
 		#   --select_vehicle=cyber_bike   (our gang's ride; needs the unlock)
 		#   --workbench                   (walk to the TINKER WORKBENCH and press E: its page opens)
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
@@ -820,7 +820,14 @@ func _ready() -> void:
 	if player == null:
 		await _apply_look(args)  # (no game: e.g. the start menu's cat preview)
 	if args.has("inventory"):
-		InventoryScreen.for_seat(0)._set_open(true)  # same as pressing Tab
+		# --inventory = player 1's (same as pressing Tab); --inventory=0,1 = those split-screen seats'.
+		var seats: Array = [0] if args["inventory"] == "true" else Array(args["inventory"].split(",")).map(func(v): return int(v))
+		for seat in seats:
+			var screen := InventoryScreen.for_seat(seat)
+			var seat_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
+			if screen != null:
+				screen._set_open(true, seat_cat)
+		_inventory_report.call_deferred(seats, int(args.get("frames", "90")))
 	if args.has("press_key"):
 		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
 		for i in 10:
@@ -1212,9 +1219,9 @@ func _print_upgrades(player: CatPlayer, when: String) -> void:
 		for item_id in whiskers.stock:
 			if Upgrades.shop_allows(me, item_id):
 				shop.append(item_id)
-	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (bag %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
+	print("DevCapture upgrades (%s): %s cash=$%d scrap=%d (pack %d, litterbox %d) bag=%d pack=%d stash=%d quick=%d max_hp=%d hp=%d zoom=x%.2f gourmet=x%.2f paws=x%.2f magnet=%.2f exit_heat=%.0f feed=+%.0f%% ride=%s shop=%s" % [
 		when, Upgrades.instance.player_upgrades.get(me, {}), Wallet.instance.cash_of(me), items.scrap_count_of(me),
-		inv.bag.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
+		inv.pack.count("scrap"), (inv.get("stash", []) as Array).count("scrap"), items.bag_size_for(me), items.pack_size_for(me),
 		items.stash_size_for(me), items.quick_stack_size_for(me), CatHealth.instance.max_health_for(me), CatHealth.instance.get_health(me),
 		Upgrades.zoomies_multiplier(me), Upgrades.gourmet_multiplier(me), Upgrades.melee_multiplier(me), Upgrades.scrap_magnet_chance(me),
 		Mainframe.instance.exit_heat(player.team), Mainframe.instance.charge_per_scrap_for(player.team),
@@ -1321,6 +1328,24 @@ func _all_psx(node: Node) -> bool:
 		if material == null or material.shader != LevelKit.PSX_SHADER:
 			return false
 	return true
+
+
+## --inventory: after a while, print what each open inventory screen shows ("DevCapture inventory").
+func _inventory_report(seats: Array, frames: int) -> void:
+	for i in mini(60, frames / 2):
+		await get_tree().process_frame
+	for seat in seats:
+		var screen := InventoryScreen.for_seat(seat)
+		if screen == null or screen.owner_cat == null:
+			print("DevCapture inventory seat %d: none" % seat)
+			continue
+		var cat := screen.owner_cat
+		var shown := func(list: Array) -> String:
+			return ",".join(list.map(func(b): return str(b.get_meta("item")) if b.get_meta("item") != "" else "-"))
+		print("DevCapture inventory seat %d: open=%s view=%.2f at_stash=%s cam_len=%.2f paws=[%s] quick=[%s] pack=[%s] stash=[%s] info=\"%s\"" % [
+			seat, screen.visible, cat.inventory_view_amount(), screen._at_stash, cat.spring_arm.spring_length,
+			shown.call(screen._paw_buttons), shown.call(screen._quick_buttons), shown.call(screen._pack_buttons),
+			shown.call(screen._stash_buttons.filter(func(b): return b.visible)), screen._info.text])
 
 
 ## --hud_heat / --hud_buffs: hold the gun heat and buff timers still until the snap, so the new
@@ -1472,7 +1497,7 @@ func _down_and_revive(scene: Node, player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture down %s: %s hp=%d downed=%s bleed_left=%.1f reviver=%d robbed=%s knocked_out=%s their_bag=%s our_bag=%s" % [
 			label, victim.name, health.get_health(victim.player_id), health.is_downed(victim.player_id),
 			health.bleed_out_left(victim.player_id), health.reviver_of(victim.player_id), health.is_being_robbed(victim.player_id),
-			victim.knocked_out, ItemManager.instance.get_inventory(victim.player_id).bag, ItemManager.instance.get_inventory(player.player_id).bag])
+			victim.knocked_out, ItemManager.instance.loot_in_pack(victim.player_id), ItemManager.instance.loot_in_pack(player.player_id)])
 	if multiplayer.is_server():
 		if victim != player:
 			var ahead := -player.camera_pivot.global_basis.z
@@ -1548,8 +1573,8 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	await _seconds(0.5)
 	var profile_file := PlayerProfile.PROFILES_FOLDER + str(Settings.current_cat().get("id", "")).validate_filename() + ".cfg"
 	var profile_time := FileAccess.get_modified_time(profile_file) if FileAccess.file_exists(profile_file) else 0
-	print("DevCapture tutorial start: step=%d cash=$%d stash=%s bag_size=%d mainframe=%d%% in_hub=%s box=%s \"%s\" | \"%s\"" % [
-		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.bag_size,
+	print("DevCapture tutorial start: step=%d cash=$%d stash=%s pack_size=%d mainframe=%d%% in_hub=%s box=%s \"%s\" | \"%s\"" % [
+		tutorial.step, Wallet.instance.cash_of(me), items.get_stash(me), items.pack_size_for(me),
 		int(Mainframe.instance.charge_of(player.team)), UndergroundHub.is_in_hub(player.global_position),
 		Hud.element("TutorialBox").visible, (Hud.element("TutorialStep") as Label).text, (Hud.element("TutorialHint") as Label).text])
 	await _tutorial_arrow("step1", "tutorial_step1_arrow.png")
@@ -1570,7 +1595,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	await _seconds(0.3)
 	print("DevCapture tutorial stash E: %s" % Interactable.try_use(player))
 	await _seconds(0.5)
-	print("DevCapture tutorial stash open=%s bag slots=%d" % [InventoryScreen.for_seat(0).visible, InventoryScreen.for_seat(0)._bag_buttons.size()])
+	print("DevCapture tutorial stash open=%s pack slots=%d" % [InventoryScreen.for_seat(0).visible, InventoryScreen.for_seat(0)._pack_buttons.size()])
 	InventoryScreen.for_seat(0)._set_open(false)
 	if not await _until_step(4): return
 	# 4. Stand at the Mainframe.
@@ -1613,7 +1638,7 @@ func _tutorial_auto(player: CatPlayer) -> void:
 	print("DevCapture tutorial revealed=%s phase=%d hint=\"%s\"" % [FishHeist.instance.is_revealed(player.team), tutorial.phase, (Hud.element("TutorialHint") as Label).text])
 	player.teleport_to(FishHeist.instance.exit_for(player.team) + Vector3(0, 0.2, 0), 0.0)
 	if not await _until_step(9): return
-	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).bag, UndergroundHub.is_in_hub(player.global_position)])
+	print("DevCapture tutorial extracted: cash=$%d bag=%s in_hub=%s" % [Wallet.instance.cash_of(me), items.get_inventory(me).pack, UndergroundHub.is_in_hub(player.global_position)])
 	# 9. Feed the scrap.
 	await _seconds(1.0)
 	player.teleport_to(hub.to_global(hub.mainframe_spot) + Vector3(1.5, 0, 0), 0.0)

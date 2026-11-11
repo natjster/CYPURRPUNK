@@ -22,7 +22,7 @@ extends Resource
 @export_multiline var description: String = ""
 
 ## The kinds of objective a quest can have (what "Kind" means on the card):
-##   CARRY_ITEM       extract with Count of Item in your loot bag
+##   CARRY_ITEM       extract with Count of Item in your backpack
 ##   DESTROY_ROOMBAS  smash Count VAC-COPs yourself (gun, melee or car), then extract
 ##   EXTRACT_AT_HEAT  extract while the city's heat is at least Heat Needed
 ##   DISRESPECT       do Count of: destroy a MEGA VAC-COP, rob a downed rival, or hit a rival

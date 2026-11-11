@@ -7,16 +7,20 @@ extends Node3D
 ##     lying on the street, and makes it grow back (gear is BOUGHT in the sewers, see request_buy)
 ##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
 ##   - pickups (E), drops (G), using up (catnip)
-##   - each cat's PAWS (right + left; a 2-paw item takes both), BACKPACK and LOOT BAG
+##   - each cat's PAWS (right + left; a 2-paw item takes both) and ONE BACKPACK (6 slots, more with
+##     the BIGGER BACKPACK upgrade) that holds EVERYTHING else: fish and other loot, spare gear, scrap.
+##     Full backpack = no more loot. Loot comes home in it (nothing is sold at the exit): sell it at
+##     the Black Markitten (request_sell), bury it in the litterbox, or keep it for a quest.
 ##   - two QUICK USE slots per cat (keys 1 / 2, d-pad left / right): catnip and catdip go
 ##     there when picked up or bought (ItemData.quick_use), stacked, and are used with one press
 ##   - each player's STASH: safe lockers in the sewers, saved between games (player_profile.gd)
-##   - shows held items in paws and loot stacked on the cat, on every computer
+##   - shows held items in paws and the BACKPACK on every cat's back (models/cat_backpack.glb), on
+##     every computer; its light strip shows how full it is
 ##   - Left Mouse uses the right-paw item, Right Mouse the left-paw item
 ##
 ## MULTIPLAYER: the HOST is the referee. Clients ask (request_pickup / request_drop_item /
 ## request_consume / ...); the host checks and then tells everyone the result. Everyone keeps
-## a copy of "world" (items on the street) and "inventories" (paws + bag per player).
+## a copy of "world" (items on the street) and "inventories" (paws + backpack per player).
 ## Players are PLAYER IDs (scripts/player_id.gd): every request_* says which player it's for
 ## (one computer can have several in split screen), and the host checks that player really
 ## belongs to the computer that asked (PlayerId.sender_owns).
@@ -31,25 +35,32 @@ const ITEMS_FOLDER: String = "res://items/"
 const FIRST_DROPPED_ID: int = 100000
 ## Mixed into the city seed so item placement has its own random numbers.
 const LOOT_SEED_SALT: int = 4242
-## Where loot sits on a cat: first in its mouth, then stacked on its head.
-const LOOT_SPOTS: Array[Vector3] = [Vector3(0, 0.66, -0.38), Vector3(0, 1.12, 0), Vector3(0, 1.23, 0), Vector3(0, 1.34, 0), Vector3(0, 1.45, 0)]
+## The backpack model every cat wears (tools/make_backpack_spec.py), and where it sits on the cat
+## (CatModel space: between the shoulders, -Z is the nose). Its "PackAnchor" marker is where the
+## inventory screen's callout line starts (scripts/ui/inventory_ui.gd).
+const BACKPACK_MODEL := "res://models/cat_backpack.glb"
+const BACKPACK_SPOT := Vector3(0, 0.37, 0.12)
 ## A cat can't grab an item more than this many metres above or below it (see _reach_distance).
 const MAX_REACH_HEIGHT: float = 3.0
 
 @export_group("Rules")
-## How much loot one cat can carry.
-@export var bag_size: int = 3
-## Backpack slots for held items you aren't using right now (open the inventory: Tab or I).
+## BACKPACK slots: ONE backpack holds everything you aren't holding in your paws (fish, the koi,
+## scrap, spare guns...). Every item takes one slot. Upgrades add more (pack_size_for).
 @export var pack_size: int = 6
 ## How many of the same item stack in one QUICK USE slot (3 = up to 3 catnip on key 1).
 @export var quick_stack_size: int = 3
-## Slots in each player's STASH, the safe lockers down in the sewers (gear, and SCRAP - no
-## money loot). What's in the stash never drops when you're knocked out, and is saved between games.
+## Slots in each player's STASH (THE LITTERBOX) down in the sewers. Anything can go in it (gear,
+## fish, scrap). What's in it never drops when you're knocked out, and is saved between games.
 @export var stash_size: int = 9
 ## How close (metres) a cat must be to grab an item with E.
 @export var interact_radius: float = 2.5
 ## How close (metres) you must be to see the floating label over a street item.
 @export var item_tag_distance: float = 18.0
+
+## The light strip on a cat's backpack: empty / some room / full.
+@export var pack_light_empty: Color = Color(0.25, 0.95, 1.0)
+@export var pack_light_half: Color = Color(1.0, 0.8, 0.25)
+@export var pack_light_full: Color = Color(1.0, 0.25, 0.3)
 
 @export_group("Placed in every city")
 ## What lies around every district: a list of "N of this item, here, grows back after S
@@ -66,10 +77,10 @@ const MAX_REACH_HEIGHT: float = 3.0
 var catalog := {}
 ## World item ID -> {"item": item id, "pos": Vector3}. Items lying on the street.
 var world := {}
-## Player ID -> {"hands": [right, left], "bag": [loot ids], "pack": [held item ids],
-##                "stash": [held item ids], "quick": [[ids in slot 1], [ids in slot 2]]}.
-## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is the backpack.
-## "stash" is the safe locker in the sewers (see request_to_stash / player_profile.gd).
+## Player ID -> {"hands": [right, left], "pack": [item ids], "stash": [item ids],
+##                "quick": [[ids in slot 1], [ids in slot 2]]}.
+## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is THE BACKPACK: loot AND spare gear.
+## "stash" is the litterbox in the sewers (see request_to_stash / player_profile.gd).
 ## "quick" = the two QUICK USE slots: each a stack of the SAME item, e.g. ["catnip", "catnip"].
 var inventories := {}
 
@@ -346,10 +357,13 @@ func _can_use_items(cat: CatPlayer) -> bool:
 
 # --- Host decisions ---
 
+## Can this player take one more of this item? Loot needs a free BACKPACK slot (full = you can't
+## pick it up: make room first). Held items always fit: paws, then the backpack, else whatever is
+## in the paws gets dropped to make room.
 func _can_take(player_id: int, data: ItemData) -> bool:
 	if data.kind == ItemData.Kind.LOOT:
-		return bag_used(player_id) + data.bag_space <= bag_size_for(player_id)
-	return true  # held items always fit: whatever is in the way gets dropped
+		return pack_free(player_id) > 0
+	return true
 
 
 ## Host: give the item lying at world ID to a player.
@@ -371,7 +385,7 @@ func _give(player_id: int, world_id: int) -> void:
 		_spawns[world_id].back_at = _clock + _spawns[world_id].respawn / crowd
 
 
-## Host: put an item into a player's paws (or backpack, or loot bag) and tell everyone.
+## Host: put an item into a player's paws, quick-use slot or backpack and tell everyone.
 ## If every paw and backpack slot is full, whatever is in the way is dropped at the cat's
 ## feet (or at "fallback_spot" if the cat can't be found).
 func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) -> void:
@@ -381,7 +395,7 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 	var drop_at: Vector3 = cat.global_position if cat != null else fallback_spot
 
 	if data.kind == ItemData.Kind.LOOT:
-		inventory.bag.append(item_id)
+		inventory.pack.append(item_id)                      # loot: into the backpack
 	elif data.quick_use and _add_to_quick(inventory, item_id, quick_stack_size_for(player_id)):
 		pass                                                # catnip etc.: into a QUICK USE slot
 	else:
@@ -482,6 +496,59 @@ func _buy_result(player_id: int, ok: bool, text: String) -> void:
 	print("[Items] Shop says: %s" % text)
 	Sound.play("buy" if ok else "error")
 	Hud.show_message(("SOLD! " if ok else "") + text, 3.0, PlayerId.slot_of(player_id))  # the buyer's screen
+
+
+## What the shop pays this player for one of this item: its card's Cash Value (fish $50...),
+## +20% / +40% with the GOURMET FENCE upgrade. 0 = the shop won't buy it (scrap, gear).
+func sell_price(player_id: int, item_id: String) -> int:
+	var data: ItemData = catalog.get(item_id)
+	if data == null or data.kind != ItemData.Kind.LOOT or data.cash_value <= 0:
+		return 0
+	return roundi(data.cash_value * Upgrades.gourmet_multiplier(player_id))
+
+
+## What all the sellable loot in a player's backpack is worth at the shop right now.
+func pack_sell_value(player_id: int) -> int:
+	var total := 0
+	for item_id in get_inventory(player_id).pack:
+		total += sell_price(player_id, item_id)
+	return total
+
+
+## A player sells loot at the shop (scripts/npcs/shopkeeper.gd SELL buttons). pack_index = that
+## backpack slot, -1 = EVERY piece of loot the shop buys. Host only: checks the player is down in
+## the sewers, pays (Wallet.earn) and empties those slots. The seller gets "_buy_result" back.
+@rpc("any_peer", "call_local", "reliable")
+func request_sell(player_id: int, pack_index: int) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
+		return
+	var cat := _cat(player_id)
+	if cat == null or not UndergroundHub.is_in_hub(cat.global_position):
+		return  # the fence is down in the sewers
+	var inventory := get_inventory(player_id).duplicate(true)
+	var pack: Array = inventory.pack
+	var sold: Array = []
+	var earned := 0
+	for i in range(pack.size() - 1, -1, -1):
+		if (pack_index < 0 or i == pack_index) and sell_price(player_id, pack[i]) > 0:
+			earned += sell_price(player_id, pack[i])
+			sold.append(pack.pop_at(i))
+	if sold.is_empty():
+		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "Nothing I'd buy in there, comrade.")
+		return
+	inventory.pack = pack
+	_set_inventory.rpc(player_id, inventory)
+	Wallet.instance.earn(player_id, earned, "sold %d loot" % sold.size())
+	Events.loot_sold.emit(player_id, sold, earned)  # (host only: scripts/events.gd)
+	print("[Items] Player %d sold %s for $%d" % [player_id, sold, earned])
+	_sell_result.rpc_id(PlayerId.peer_of(player_id), player_id, "Sold %d for $%d." % [sold.size(), earned])
+
+
+## Host -> the seller: the sale went through (shown in the middle of their screen, cash sound).
+@rpc("authority", "call_local", "reliable")
+func _sell_result(player_id: int, text: String) -> void:
+	Sound.play("buy")
+	Hud.show_message("SOLD! " + text, 3.0, PlayerId.slot_of(player_id))
 
 
 ## The holder used up the item in this paw (catnip). Host only.
@@ -601,7 +668,7 @@ func request_put_away(player_id: int, hand: int) -> void:
 
 
 ## Drop one item on the ground in front of the cat (G key, or right-click in the inventory).
-## where = "hand" (index 0 right / 1 left), "pack" or "bag" (index = slot). Host only.
+## where = "hand" (index 0 right / 1 left), "pack" (index = backpack slot) or "quick". Host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_drop_item(player_id: int, where: String, index: int, ground: Vector3) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -619,8 +686,8 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 			inventory.hands = ["", ""]
 		else:
 			inventory.hands[clampi(index, 0, 1)] = ""
-	elif where in ["pack", "bag"] and index >= 0 and index < inventory[where].size():
-		item_id = inventory[where].pop_at(index)
+	elif where == "pack" and index >= 0 and index < inventory.pack.size():
+		item_id = inventory.pack.pop_at(index)
 	elif where == "quick":
 		item_id = _pop_quick(inventory, index)  # one off the top of that stack
 	if item_id == "":
@@ -629,46 +696,53 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 	_set_inventory.rpc(player_id, inventory)
 
 
-## Host: empty a player's loot bag (the heist calls this at the drop-off). Returns what was in it.
-func take_bag(player_id: int) -> Array:
+## Host: take every piece of LOOT (fish, koi, scrap...) out of a player's backpack and return it.
+## Their gear stays. (A rival ROBBING a downed cat: steal_loot.)
+func take_all_loot(player_id: int) -> Array:
 	var inventory := get_inventory(player_id).duplicate(true)
-	var bag: Array = inventory.bag
-	if bag.is_empty():
-		return []
-	inventory.bag = []
-	_set_inventory.rpc(player_id, inventory)
-	return bag
-
-
-## Host: take only the MONEY loot (cash_value > 0) out of a player's loot bag and return it
-## (the heist cashes it in at the exit manhole). Loot worth $0 - SCRAP - stays in the bag, to
-## be fed to THE MAINFRAME (scripts/mainframe.gd) or put in the stash.
-func take_cash_loot(player_id: int) -> Array:
-	var inventory := get_inventory(player_id).duplicate(true)
-	var cash: Array = []
+	var loot: Array = []
 	var kept: Array = []
-	for item_id in inventory.bag:
-		if (catalog[item_id] as ItemData).cash_value > 0:
-			cash.append(item_id)
+	for item_id in inventory.pack:
+		if (catalog[item_id] as ItemData).kind == ItemData.Kind.LOOT:
+			loot.append(item_id)
 		else:
 			kept.append(item_id)
-	if cash.is_empty():
+	if loot.is_empty():
 		return []
-	inventory.bag = kept
+	inventory.pack = kept
 	_set_inventory.rpc(player_id, inventory)
-	return cash
+	return loot
+
+
+## The LOOT (not gear) in a player's backpack, in the order it was picked up.
+func loot_in_pack(player_id: int) -> Array:
+	return get_inventory(player_id).pack.filter(func(item_id): return catalog.has(item_id) and (catalog[item_id] as ItemData).kind == ItemData.Kind.LOOT)
+
+
+## What the loot in a player's backpack is worth (the cards' Cash Value, no upgrades): the
+## heist reports this when they extract (the loot itself stays in the backpack).
+func loot_value(player_id: int) -> int:
+	var total := 0
+	for item_id in loot_in_pack(player_id):
+		total += (catalog[item_id] as ItemData).cash_value
+	return total
 
 
 ## --- Per-player sizes (SEWER UPGRADES, scripts/upgrades.gd) ---
-## The numbers in the Inspector above (Bag Size, Pack Size...) are the BASE sizes; a cat's
-## upgrades add to them. Always ask these instead of reading bag_size etc. directly.
+## The numbers in the Inspector above (Pack Size, Stash Size...) are the BASE sizes; a cat's
+## upgrades add to them. Always ask these instead of reading pack_size etc. directly.
 
-## Loot bag slots for this player: 3, +1 per DEEP POCKETS tier (Don Catleone / Pawnie).
+## (Old name from when loot had its own bag: it's all the backpack now.)
 func bag_size_for(player_id: int) -> int:
-	return bag_size + Upgrades.level(player_id, "deep_pockets")
+	return pack_size_for(player_id)
 
 
-## Backpack slots: 6, +2 per BIGGER BACKPACK tier.
+## How many backpack slots are free right now.
+func pack_free(player_id: int) -> int:
+	return pack_size_for(player_id) - get_inventory(player_id).pack.size()
+
+
+## Backpack slots: 6, +2 per BIGGER BACKPACK tier (6 -> 8 -> 10 -> 12).
 func pack_size_for(player_id: int) -> int:
 	var per_tier: int = Upgrades.instance.pack_slots_per_tier if Upgrades.instance != null else 2
 	return pack_size + per_tier * Upgrades.level(player_id, "bigger_pack")
@@ -687,13 +761,13 @@ func quick_stack_size_for(player_id: int) -> int:
 
 ## --- SCRAP as money for upgrades ---
 
-## All the SCRAP a player owns right now: in their loot bag AND in their litterbox (stash).
+## All the SCRAP a player owns right now: in their backpack AND in their litterbox (stash).
 func scrap_count_of(player_id: int) -> int:
 	var inventory := get_inventory(player_id)
-	return inventory.bag.count(Mainframe.SCRAP_ID) + (inventory.get("stash", []) as Array).count(Mainframe.SCRAP_ID)
+	return inventory.pack.count(Mainframe.SCRAP_ID) + (inventory.get("stash", []) as Array).count(Mainframe.SCRAP_ID)
 
 
-## Host: take "count" SCRAP from a player, from the loot bag first, then the litterbox.
+## Host: take "count" SCRAP from a player, from the backpack first, then the litterbox.
 ## False (and nothing taken) if they don't have that much in total.
 func spend_scrap(player_id: int, count: int) -> bool:
 	if not multiplayer.is_server() or scrap_count_of(player_id) < count:
@@ -701,7 +775,7 @@ func spend_scrap(player_id: int, count: int) -> bool:
 	if count <= 0:
 		return true
 	var inventory := get_inventory(player_id).duplicate(true)
-	var bag: Array = inventory.bag
+	var bag: Array = inventory.pack
 	var stash: Array = inventory.get("stash", [])
 	var left := count
 	while left > 0 and bag.has(Mainframe.SCRAP_ID):
@@ -710,22 +784,22 @@ func spend_scrap(player_id: int, count: int) -> bool:
 	while left > 0 and stash.has(Mainframe.SCRAP_ID):
 		stash.remove_at(stash.rfind(Mainframe.SCRAP_ID))
 		left -= 1
-	inventory.bag = bag
+	inventory.pack = bag
 	inventory.stash = stash
 	_set_inventory.rpc(player_id, inventory)
 	return true
 
 
-## How many of this item are in a player's loot bag (e.g. scrap for THE MAINFRAME).
+## How many of this item are in a player's backpack (e.g. scrap for THE MAINFRAME, fish for a quest).
 func count_in_bag(player_id: int, item_id: String) -> int:
-	return get_inventory(player_id).bag.count(item_id)
+	return get_inventory(player_id).pack.count(item_id)
 
 
-## Host: take ONE of this item out of a player's loot bag. False = they had none.
+## Host: take ONE of this item out of a player's backpack. False = they had none.
 ## (THE MAINFRAME calls this when scrap is fed in: scripts/mainframe.gd.)
 func take_from_bag(player_id: int, item_id: String) -> bool:
 	var inventory := get_inventory(player_id).duplicate(true)
-	var bag: Array = inventory.bag
+	var bag: Array = inventory.pack
 	var index := bag.rfind(item_id)
 	if index < 0:
 		return false
@@ -734,14 +808,14 @@ func take_from_bag(player_id: int, item_id: String) -> bool:
 	return true
 
 
-## Host: a rival ROBS a downed cat (cat_health.gd): the victim's loot bag goes into the robber's,
-## as far as it fits; the rest drops on the street next to the victim. Returns how many pieces
-## the robber got.
+## Host: a rival ROBS a downed cat (cat_health.gd): the LOOT in the victim's backpack goes into
+## the robber's, as far as it fits; the rest drops on the street next to the victim. (Their gear
+## stays.) Returns how many pieces the robber got.
 func steal_bag(victim_id: int, robber_id: int) -> int:
 	var victim := _cat(victim_id)
 	var at: Vector3 = victim.global_position if victim != null else Vector3.ZERO
 	var taken := 0
-	var loot := take_bag(victim_id)
+	var loot := take_all_loot(victim_id)
 	for i in loot.size():
 		var data: ItemData = catalog[loot[i]]
 		if _can_take(robber_id, data):
@@ -754,14 +828,19 @@ func steal_bag(victim_id: int, robber_id: int) -> int:
 	return taken
 
 
-## Host: take ONE piece of loot (the last one picked up) out of a player's bag.
-## Returns its item id, or "" if the bag was empty. (A Roomba bonk calls this.)
+## Host: take ONE piece of loot (the last one picked up) out of a player's backpack (never gear).
+## Returns its item id, or "" if there was no loot. (A Roomba bonk calls this.)
 func take_one_loot(player_id: int) -> String:
 	var inventory := get_inventory(player_id).duplicate(true)
-	var bag: Array = inventory.bag
-	if bag.is_empty():
+	var bag: Array = inventory.pack
+	var index := -1
+	for i in range(bag.size() - 1, -1, -1):
+		if (catalog[bag[i]] as ItemData).kind == ItemData.Kind.LOOT:
+			index = i
+			break
+	if index < 0:
 		return ""
-	var item_id: String = bag.pop_back()
+	var item_id: String = bag.pop_at(index)
 	_set_inventory.rpc(player_id, inventory)
 	Events.loot_vacuumed.emit(player_id, item_id)  # (scripts/events.gd: the RAID REPORT's BUTTERPAWS)
 	return item_id
@@ -772,11 +851,11 @@ func drop_on_street(item_id: String, at: Vector3) -> void:
 	_spawn_dropped(item_id, at)
 
 
-## Host: empty a player's paws, backpack and loot bag onto the ground around "at"
+## Host: empty a player's paws, quick-use slots and backpack onto the ground around "at"
 ## (a knocked-out cat, see cat_health.gd, or a player who quit). The STASH is safe: it stays.
 func drop_everything(player_id: int, at: Vector3) -> void:
 	var inventory := get_inventory(player_id).duplicate(true)
-	var dropped := _held_ids(inventory.hands) + Array(inventory.bag) + Array(inventory.pack)
+	var dropped := _held_ids(inventory.hands) + Array(inventory.pack)
 	for stack in quick_slots_of(inventory):
 		dropped += Array(stack)
 	var ground := _ground_below(at)  # a bonked cat may still be flying through the air
@@ -784,7 +863,6 @@ func drop_everything(player_id: int, at: Vector3) -> void:
 		_spawn_dropped(dropped[i], ground + Vector3(cos(i * 1.3), 0, sin(i * 1.3)) * 0.8)
 	if not dropped.is_empty():
 		inventory.hands = ["", ""]
-		inventory.bag = []
 		inventory.pack = []
 		inventory.quick = [[], []]
 		_set_inventory.rpc(player_id, inventory)
@@ -792,9 +870,9 @@ func drop_everything(player_id: int, at: Vector3) -> void:
 
 # --- The stash: safe lockers in the sewers (host decides, like everything else) ---
 
-## Inventory screen at the stash: put the item in this paw ("hand", 0 right / 1 left),
-## backpack slot ("pack"), quick slot ("quick") or loot bag slot ("bag": SCRAP only, see
-## is_stashable) into the stash. Only while standing at the lockers. Host only.
+## Inventory screen at the litterbox: put the item in this paw ("hand", 0 right / 1 left),
+## backpack slot ("pack") or quick slot ("quick") into the stash. Anything can go in (fish too).
+## Only while standing at the litterbox. Host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_to_stash(player_id: int, where: String, index: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -815,8 +893,6 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 		item_id = inventory.pack.pop_at(index)
 	elif where == "quick":
 		item_id = _pop_quick(inventory, index)
-	elif where == "bag" and index >= 0 and index < inventory.bag.size() and is_stashable(inventory.bag[index]):
-		item_id = inventory.bag.pop_at(index)  # (money loot can't be stashed: only scrap)
 	if item_id == "":
 		return
 	stash.append(item_id)
@@ -824,8 +900,7 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 	_set_inventory.rpc(player_id, inventory)
 
 
-## Inventory screen at the stash: take stash slot "index" out, into the backpack (or, for
-## SCRAP, back into the loot bag). Host only.
+## Inventory screen at the litterbox: take stash slot "index" out, into the backpack. Host only.
 @rpc("any_peer", "call_local", "reliable")
 func request_from_stash(player_id: int, index: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
@@ -835,24 +910,17 @@ func request_from_stash(player_id: int, index: int) -> void:
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or index < 0 or index >= stash.size():
 		return
-	var data: ItemData = catalog.get(stash[index])
-	if data != null and data.kind == ItemData.Kind.LOOT:
-		if not _can_take(player_id, data):
-			return  # loot bag full (the screen tells the player)
-		inventory.bag.append(stash.pop_at(index))
-	elif inventory.pack.size() >= pack_size_for(player_id):
+	if inventory.pack.size() >= pack_size_for(player_id):
 		return  # backpack full (the screen tells the player)
-	else:
-		inventory.pack.append(stash.pop_at(index))
+	inventory.pack.append(stash.pop_at(index))
 	inventory.stash = stash
 	_set_inventory.rpc(player_id, inventory)
 
 
-## May this item go in the stash? Gear (held items) yes; loot only if it's worth $0 at the
-## exit (SCRAP) - fish and koi have to be cashed in. (player_profile.gd checks saves with this.)
+## May this item go in the stash? Anything with an item card can (gear, fish, the koi, scrap).
+## (player_profile.gd checks saves with this.)
 func is_stashable(item_id: String) -> bool:
-	var data: ItemData = catalog.get(item_id)
-	return data != null and (data.kind != ItemData.Kind.LOOT or data.cash_value <= 0)
+	return catalog.has(item_id)
 
 
 ## Host: replace a player's whole stash (their saved one, when they start a game —
@@ -875,7 +943,7 @@ func _forget_player(player_id: int) -> void:
 
 
 ## Host -> a computer that just joined (network ID "peer"): every item on the street and in
-## everyone's paws/bags. (Sent right after the city seed, so the city's items already exist; Items
+## everyone's paws/backpacks. (Sent right after the city seed, so the city's items already exist; Items
 ## sits above the other systems in main.tscn so it goes first.)
 func send_state_to(peer: int) -> void:
 	_receive_state.rpc_id(peer, world, inventories)
@@ -918,7 +986,7 @@ func interact_priority() -> int:
 
 
 ## The world ID of the nearest item this cat could take right now, or -1. Not from inside a car,
-## and loot doesn't count with a full bag: otherwise E would do nothing there (and a fish on the
+## and loot doesn't count with a full backpack: otherwise E would do nothing there (and a fish on the
 ## road would steal the E meant for getting in or out of the car).
 func _nearest_item(cat: CatPlayer) -> int:
 	if Game.instance.car_of(cat.player_id) != null:
@@ -951,10 +1019,10 @@ func _sync_cat_visuals(cat: CatPlayer) -> void:
 	if cat.get_meta("hands_key", "") != hands_key:
 		cat.set_meta("hands_key", hands_key)
 		_rebuild_paws(cat, inventory.hands)
-	var bag_key := str(inventory.bag)
-	if cat.get_meta("bag_key", "") != bag_key:
-		cat.set_meta("bag_key", bag_key)
-		_rebuild_loot_stack(cat, inventory.bag)
+	var pack_key := "%d/%d" % [inventory.pack.size(), pack_size_for(cat.player_id)]
+	if cat.get_meta("pack_key", "") != pack_key or cat.cat_model.get_node_or_null("BackPack") == null:
+		cat.set_meta("pack_key", pack_key)
+		_update_backpack(cat, inventory.pack.size(), pack_size_for(cat.player_id))
 	# Over-the-shoulder camera if anything held asks for it.
 	var shoulder := false
 	for item_id in _held_ids(inventory.hands):
@@ -986,16 +1054,32 @@ func _rebuild_paws(cat: CatPlayer, hands: Array) -> void:
 		cat.cat_model.add_child(node)
 
 
-func _rebuild_loot_stack(cat: CatPlayer, bag: Array) -> void:
-	_free_now(cat.cat_model.get_node_or_null("LootStack"))
-	var stack := Node3D.new()
-	stack.name = "LootStack"
-	cat.cat_model.add_child(stack)
-	for i in bag.size():
-		var model := (catalog[bag[i]] as ItemData).scene.instantiate() as Node3D
-		model.position = LOOT_SPOTS[mini(i, LOOT_SPOTS.size() - 1)] + Vector3(0, 0.11 * maxi(0, i - LOOT_SPOTS.size() + 1), 0)
-		model.rotation.y = PI / 2.0  # sideways, like a cat holding a fish
-		stack.add_child(model)
+## The BACKPACK on a cat's back (made once, kept): its light strip goes cyan (empty) -> amber ->
+## red (full), so anyone can see who's carrying a haul.
+func _update_backpack(cat: CatPlayer, used: int, size: int) -> void:
+	var pack := cat.cat_model.get_node_or_null("BackPack") as Node3D
+	if pack == null:
+		pack = LevelKit.instantiate_model(BACKPACK_MODEL)
+		if pack == null:
+			return
+		pack.name = "BackPack"
+		pack.position = BACKPACK_SPOT
+		cat.cat_model.add_child(pack)
+	var fill := clampf(float(used) / maxf(size, 1), 0.0, 1.0)
+	var light := pack_light_empty.lerp(pack_light_half, fill * 2.0) if fill < 0.5 else pack_light_half.lerp(pack_light_full, (fill - 0.5) * 2.0)
+	LevelKit.make_parts_glow(pack, {"Strip": light}, 1.5 + fill * 2.0)
+
+
+## Where the inventory callout line starts: the PackAnchor marker on a cat's backpack (world
+## space), or a spot on its back if the model isn't there.
+func backpack_anchor(cat: CatPlayer) -> Vector3:
+	var anchor := cat.cat_model.get_node_or_null("BackPack/PackAnchor") as Node3D
+	if anchor == null:
+		var pack := cat.cat_model.get_node_or_null("BackPack")
+		anchor = pack.find_child("PackAnchor", true, false) as Node3D if pack != null else null
+	if anchor != null:
+		return anchor.global_position
+	return cat.cat_model.to_global(BACKPACK_SPOT + Vector3(0, 0.15, 0.15))
 
 
 func _free_now(node: Node) -> void:
@@ -1050,7 +1134,7 @@ func _update_hud_for(cat: CatPlayer) -> void:
 # --- Helpers anyone can use ---
 
 func get_inventory(player_id: int) -> Dictionary:
-	return inventories.get(player_id, {"hands": ["", ""], "bag": [], "pack": [], "stash": [], "quick": [[], []]})
+	return inventories.get(player_id, {"hands": ["", ""], "pack": [], "stash": [], "quick": [[], []]})
 
 
 ## A player's two QUICK USE slots: [[ids in slot 1], [ids in slot 2]] (each a stack of one item).
@@ -1103,11 +1187,11 @@ func _ground_below(at: Vector3) -> Vector3:
 	return hit.position if hit else at
 
 
-## Speed multiplier from HEAVY loot in a player's bag (ItemData.carry_speed): 1.0 = not slowed.
+## Speed multiplier from HEAVY loot in a player's backpack (ItemData.carry_speed): 1.0 = not slowed.
 ## cat_player.gd multiplies its walking and zoomies speed by this.
 func carry_speed(player_id: int) -> float:
 	var slowest := 1.0
-	for item_id in get_inventory(player_id).bag:
+	for item_id in get_inventory(player_id).pack:
 		slowest = minf(slowest, (catalog[item_id] as ItemData).carry_speed)
 	return slowest
 
@@ -1116,7 +1200,7 @@ func carry_speed(player_id: int) -> float:
 ## they can spot that cat by this (roomba.gd).
 func loot_noise(player_id: int) -> float:
 	var loudest := 1.0
-	for item_id in get_inventory(player_id).bag:
+	for item_id in get_inventory(player_id).pack:
 		loudest = maxf(loudest, (catalog[item_id] as ItemData).noise)
 	return loudest
 
@@ -1129,12 +1213,9 @@ func _announce(text: String) -> void:
 	Sound.play("koi_grab")  # sounds/sfx/koi_grab.wav
 
 
-## How much loot-bag room a player is using.
+## How many pieces of LOOT are in a player's backpack (0 = nothing for a rival to rob).
 func bag_used(player_id: int) -> int:
-	var used := 0
-	for item_id in get_inventory(player_id).bag:
-		used += (catalog[item_id] as ItemData).bag_space
-	return used
+	return loot_in_pack(player_id).size()
 
 
 ## The item script in a cat's paw (0 = right, 1 = left), or null.

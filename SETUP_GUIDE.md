@@ -712,7 +712,7 @@ letting OVERCLEAN take over:
   (knocked out: everything they carry spills on the street).
 - **Robbing:** walk up to a downed rival who has loot and **HOLD E** for 2 seconds
   (`HOLD: ROB MITTENS` -> `ROBBING MITTENS...`). Their bar fills **red** ("BEING ROBBED!") and they
-  see "CLAWD IS ROBBING YOU!". Done: their loot bag goes into yours (what doesn't fit drops on the
+  see "CLAWD IS ROBBING YOU!". Done: the loot in their backpack goes into yours (what doesn't fit drops on the
   street next to them); they stay downed, so their gang can still pick them up, empty-pawed.
 - **The feed** (top-left, under your health bar, every player): `CLAWD DOWNED MITTENS`,
   `CLAWD KNOCKED OUT MITTENS`, `WHISKERS REVIVED MITTENS`, `CLAWD ROBBED MITTENS`,
@@ -823,8 +823,8 @@ Talk to him > **SHOW ME THE GOODS** opens the shop: one **BUY ... - $price** but
 
 ### The Mainframe & scrap
 **SCRAP** only comes from a destroyed **MEGA VAC-COP** (it glows cyan on the street, and you grab
-it with E). It's worth $0 and takes 1 loot bag space. At the exit your money loot is
-cashed in and scrap **stays in your bag**. A knockout loses it, like any loot.
+it with E). It takes 1 backpack slot and the shop won't buy it: it comes home in your backpack
+like all loot. A knockout loses it, like any loot.
 
 **THE MAINFRAME** is the giant CRT on the west wall of your sewer. **Each gang has its own**, with
 a charge of 0-100% in 25% steps. A new game starts both at **75%** (charges are not saved between
@@ -961,19 +961,19 @@ in `scripts/npcs/npc.gd`.
 **THE STASH is a giant glowing LITTERBOX** (purple tray, sand pile, scoop, a cyan neon
 **LITTERBOX** sign) on the **east wall**, across from the Black Markitten (north of Lil' Mittens).
 Walk up to it: the prompt says **[E] STORE YOUR SHIT**. Press E (or open the inventory with Tab
-while standing there) and the inventory shows your **LITTERBOX** (9 slots) under the loot bag.
+while standing there) and the inventory opens with your **LITTERBOX** (9 slots) in a box at the
+bottom-left, with a callout line to the litterbox.
 (In the code and this guide it's still called "the stash": same thing.)
 - **Click** something in your paws or backpack = bury it in the litterbox.
 - **Click** something in the litterbox = dig it out into your backpack (equip it from there as usual).
-- **SCRAP** moves between your **loot bag** and the stash the same way.
-- Only gear and scrap go in the stash (no fish: fish are for cashing in at the exit manhole).
+- **Anything** goes in: gear, scrap, and loot too (bury fish now, sell them another day).
 
-Gear in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
+Everything in the stash is **safe**: a knockout never touches it. Everyone has their own stash.
 
 **Saved between games:** each of your cats has its own **cash** and **stash**, saved on your own
 computer. They come back whenever you play that cat again (CHOOSE YOUR CAT), solo or in anyone's
 game.
-What you're **carrying is not saved**: anything in your paws, backpack or loot bag is lost when
+What you're **carrying is not saved**: anything in your paws, quick-use slots or backpack is lost when
 you quit (it drops on the floor in that game). So stash your gear before you leave!
 
 **Starting money:** a new cat starts with **$100**, so it can shop before its first trip up (a
@@ -1093,7 +1093,7 @@ gangs share the same cards, so rewards are identical in either sewer:
 job while you have one, and they refuse: *"You're already on a job for LIL' MITTENS. Finish that
 first."* (lines: **Busy Lines** on any NPC, in the Inspector; `{giver}` = who gave your job).
 **Your job shows at the top of the INVENTORY screen (Tab):** `JOB: MITTENS' FISH (for LIL' MITTENS)`
-then the progress and reward (`FISH in your loot bag: 1/3 +$100`, `DONE! EXTRACT TO GET PAID`
+then the progress and reward (`FISH in your backpack: 1/3 +$100`, `DONE! EXTRACT TO GET PAID`
 when ready). The **ABANDON** button next to it drops the job (press it twice: the first press asks
 "SURE?"; progress is lost). Abandoning only works **down in the sewers**, not mid-raid.
 Test: `--quest=smash_roombas --talk=LilMittens --choose=0,0` (she refuses), `--quest=smash_roombas
@@ -1172,8 +1172,11 @@ new district. In the code that just means a new city seed: the whole city is gen
    text right above the phone** (in their voice, coming out of the phone), and the **green HUD
    arrow switches from PAYPHONE to EXIT for your whole gang** (not the rival's). (Call before 75 and they say there's no
    way down yet: the crew is still digging. No hint where.)
-5. Walk (or drive) onto the open manhole: your loot pays out and you're back in the hub. That was
-   your trip for this district.
+5. Walk (or drive) onto the open manhole: you're back in the hub WITH your loot (it stays in your
+   backpack: nothing is sold at the exit). The popup says what it's worth ("3 LOOT HOME ($150)");
+   finished quests pay their bonus now. **Sell the loot at the Black Markitten** (Comrade Whiskers /
+   Clawd: SHOW ME THE GOODS > SELL ALL LOOT, or SELL 1 <item>), bury it in the litterbox, or keep it
+   for a job. That was your trip for this district.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
    **Everyone home?** Once every cat is back in the hub (extracted or knocked out) and either the
    exit is open or everyone has used their trip, the heat races to 100 (**Heat Per Second When
@@ -1186,9 +1189,10 @@ new district. In the code that just means a new city seed: the whole city is gen
 8. A few seconds later a **new district** is built (new city, heat back to 0, fresh patrol) and
    Don can send you up again.
 
-**Loot** (press E to pick it up; your loot bag holds 3 spaces):
+**Loot** (press E to pick it up; it goes in your **backpack**: 6 slots for loot AND spare gear,
+one slot each. A full backpack can't pick up more loot). "Worth" = what the shop pays:
 
-| Loot | Worth | Bag space | Where | Catch |
+| Loot | Worth | Slots (old "bag space", not used any more) | Where | Catch |
 |---|---|---|---|---|
 | **Sardine** | $20 | 1 | 8 on random sidewalks | none: small fry |
 | **Fish** | $50 | 1 | 5 outside **Meow-Mart** + 5 on sidewalks | none |
@@ -1283,7 +1287,7 @@ sewers. (Before, a cat standing in the hub could pick up fish lying in the city 
 Eight police Roombas patrol the city's sidewalks (more as the HEAT rises, see below). When one spots a cat **on foot** within 14 m,
 its red/blue siren flashes, its eye turns red, and it charges. It's faster than a walking cat but
 slower than **zoomies** (Shift) — so run! If it touches you it **bonks** you flying,
-**vacuums up one fish** from your loot bag and takes **34 HP**.
+**vacuums up one fish** (the last loot you picked up, never your gear) from your backpack and takes **34 HP**.
 Then it backs off for a couple of seconds. Three bonks and you're **knocked out** (see
 **Health & knockouts** below).
 
@@ -1504,7 +1508,7 @@ Every cat has **100 HP**, shown as the **health bar** top-left under your cash a
 
 **KNOCKED OUT**:
 1. **Everything you carry drops on the street where you fell**: the gear in your paws, your
-   backpack, and the fish in your loot bag. Anyone can grab it: you on your next trip up, a
+   quick-use snacks and everything in your backpack (fish included). Anyone can grab it: you on your next trip up, a
    friend, or a rival.
 2. Your cat flops over on its side for 3 seconds ("KNOCKED OUT BY A VAC-COP!"). You can look
    around but not move. Roombas leave knocked-out cats alone, and you can't extract while down.
@@ -1609,16 +1613,19 @@ system, so new items need no new networking or pickup code.
 - **Paws:** a cat has a right and left paw. A **1-paw** item (pistol, catnip, catdip) uses one,
   so you can hold two at once (dual wield). A **2-paw** item (the tommy gun) takes both.
   **Left Mouse** uses the right-paw item (or the 2-paw item), **Right Mouse** the left-paw item.
-- **Backpack:** held items you carry but aren't using (see the inventory screen below).
+- **BACKPACK (one for everything):** 6 slots (8 / 10 / 12 with BIGGER BACKPACK) for loot (fish,
+  koi, scrap) AND gear you aren't holding. Every item takes one slot. Your cat WEARS it: a chunky
+  purple backpack (`models/cat_backpack.glb`, recipe `tools/make_backpack_spec.py`) whose light
+  strip goes cyan (empty) -> amber -> red (full), so you can see who's carrying a haul.
 - **QUICK USE slots:** two of them, used with **1** and **2** (controller: **d-pad left / right**).
   Catnip and catdip go here when you pick them up or buy them (not in your paws), up to 3 of the
   same item stacked per slot; one press uses one. The bottom of the HUD shows them ("1: CATNIP x2").
   Any item card with **Quick Use** ticked works this way (its script needs a `quick_use(cat)`
   function, like `scripts/items/catnip.gd`). Stack size: **Quick Stack Size** on the Items node.
-- **Loot bag:** loot (fish) goes in a bag, not your paws. It shows on your cat (mouth, then head)
-  and pays out at the drop-off.
-- **E** grabs the nearest item when the HUD says "[E] PICKUP", loot and gear alike. A full loot
-  bag shows no prompt for loot. **G** drops what's in your paws (right paw first).
+- **Loot comes home:** nothing is sold at the exit. Sell loot at the Black Markitten (SELL buttons on
+  the shop page; the GOURMET FENCE upgrade pays more), bury it in the litterbox, or keep it for a job.
+- **E** grabs the nearest item when the HUD says "[E] PICKUP", loot and gear alike. A full backpack
+  shows no prompt for loot. **G** drops what's in your paws (right paw first).
 
 ### The items
 Only **fish** lie around the city. All gear is **bought** from Comrade Whiskers at the Black
@@ -1835,35 +1842,48 @@ it on the root of the item's scene, and write what happens in `use_tick()`. Call
 use it up. Anything other players must see goes through an `@rpc` function on that script.
 
 ### Tuning the system (select **Items** in `main.tscn`)
-Bag Size, Pack Size (backpack), Interact Radius (E), Item Tag Distance, **Loot Table**
+Pack Size (the backpack), Pack Light Empty / Half / Full (the strip on the backpack), Interact Radius (E), Item Tag Distance, **Loot Table**
 (what lies in each city, see above), Regrow Faster Per Player.
 
-### Inventory screen (Tab or I)
+### Inventory screen (Tab or I): the BACKPACK VIEW
 Press **Tab** or **I** to open it (Esc or Tab again closes it; the mouse is freed while open).
-On a controller: **Y** opens it, the d-pad moves the highlight, **A** = left-click, **X** = drop,
-**B** / **Y** close (the cat stands still while a controller player has it open).
+On a controller: **Y** opens it, the d-pad / stick moves the highlight, **A** = left-click, **X** = drop,
+**B** / **Y** close.
+
+It's a "No Man's Sky" style screen: the **camera glides in behind your cat** (and back out when you
+close it) so its 3D backpack sits on the left, your cat turns its back to you and stands still, and
+thin **ocean-blue callout lines** run from the real backpack and your paws to translucent boxes on the
+right (the Phase 1 style, `ui/hud_style.tres`):
 ```
-          INVENTORY
-   LEFT PAW      RIGHT PAW        <- what you're holding (a 2-paw item shows BOTH PAWS)
-   QUICK USE 1   QUICK USE 2      <- catnip / catdip stacks (keys 1 / 2)
-   BACKPACK 4/6  [ ][ ][ ]        <- held items you carry but aren't using
-                 [ ][ ][ ]
-   LOOT BAG 1/3  [ ][ ][ ]        <- fish etc., paid out at the drop-off
+      JOB: MITTENS' FISH  FISH 1/3  +$100        $240 [ABANDON]   <- your quest + your cash
+      PAWS                         QUICK USE
+      [LEFT  pic $140] [RIGHT pic $60] [1 pic x2] [2 pic]      <- lines to your paws / belt
+ (o)--BACKPACK 4/6                          LOOT $500         <- line from the backpack
+      [fish  $50] [koi  $400] [tommy $200]
+      [scrap    ] [ EMPTY   ] [ EMPTY    ]
+      what the highlighted item is, what it sells for, the buttons
 ```
+- Every slot shows the item's side-view **picture** (Icon Studio, §20), its **name** and a **price
+  badge**: green = what the shop pays you (loot), blue = what the shop charges (gear).
 - **Click a paw** = put that item in the backpack. **Click a backpack item** = take it into your
   paws (whatever was in the way goes into the backpack). **Right-click anything** = drop it.
+  Clicking loot does nothing (it says where to sell it).
 - **Click a quick-use slot** = put one back in the backpack. **Clicking catnip / catdip in the
   backpack** moves it into a quick-use slot (if one has room) instead of your paws.
-- **Hover** an item to read its description (the **Description** line on its item card).
-- **Picking things up:** a held item goes into a free paw first; if your paws are busy it goes
-  into the backpack; only if the backpack is full too does it swap with what's in your paw.
-- **At the litterbox (the stash)** in the sewers your **LITTERBOX** (9 slots) shows under the LOOT BAG,
-  and clicking moves items between you and the stash instead (see **The stash &
-  saved progress** in §8).
-- The screen builds its own buttons; the HUD scene (`scenes/ui/hud.tscn`, §13) just has an empty
-  `Inventory` node (script `scripts/ui/inventory_ui.gd`, `InventoryScreen`). It's drawn sharp at
-  full resolution. Select **Inventory** in `hud.tscn` to change **Slot Size**, **Slot Font Size**,
-  **Title Font Size** and **Columns**; colours and borders: `ui/hud_theme.tres`.
+- **Hover** (or highlight) an item to read its description and price.
+- **Picking things up:** a held item goes into a quick-use slot (catnip / catdip), else a free paw,
+  else the backpack; only if all are full does it swap with what's in your paw.
+- **At the litterbox** in the sewers a **LITTERBOX** box opens bottom-left (callout line to the
+  litterbox), and clicking moves items between you and it instead (§8, "The stash").
+- **Split screen:** every player gets their own glide and boxes in their own pane (the camera slides
+  less on a narrow pane, and the boxes shrink to fit).
+- Tuning: select **Inventory** in `hud.tscn`: Column Start / Max Width, Columns, Slot Max Size, Paw /
+  Quick Box Size, font sizes, Anchor Dot Radius, Line Width, Slide In. The camera glide: select the
+  cat in `scenes/player.tscn` > **Inventory Camera** (Distance, Side, Lift, Pitch, Speed).
+- Code: `scripts/ui/inventory_ui.gd` (`InventoryScreen`; slots are Buttons with a `SlotFace` that draws
+  the picture), `CatPlayer.inventory_open()` / `inventory_view_amount()`, `ItemManager.backpack_anchor(cat)`.
+- Test: `--give=pistol,fish,golden_koi --inventory` (or `--inventory=0,1` for split-screen seats, with
+  `--join_pad=1`) prints `DevCapture inventory` lines; add `--to_stash=pack:0` for the litterbox.
 
 ---
 
@@ -2551,7 +2571,7 @@ group **hud_name_tags** is made invisible in 3D, and the HUD draws a sharp label
   tree). They only show the item's name: white for gear, and for loot its glow colour (gold koi,
   cyan scrap) or warm white. How close you must be: **Items** node (in `main.tscn`) > **Item Tag
   Distance** (18 m). Standing in reach of any item, the normal HUD prompt says `[E] PICKUP` (each
-  player's own button), like the car's `[E] GET IN`. No prompt = your loot bag is full.
+  player's own button), like the car's `[E] GET IN`. No prompt = your backpack is full.
 
 ### Using it from a script (no node paths needed)
 ```gdscript
@@ -2702,7 +2722,7 @@ says so; anything that cares listens. Nobody has to know who else is listening.
 | `player_extracted(player_id, loot_value, quest_bonus)` | a player climbed down the exit | every computer |
 | `player_downed(player_id, cause)` | a cat hit 0 HP and waits for a revive | every computer |
 | `player_revived(player_id, by)` | a teammate picked a downed cat back up | every computer |
-| `player_robbed(player_id, by)` | a rival robbed a downed cat's loot bag | every computer |
+| `player_robbed(player_id, by)` | a rival robbed the loot in a downed cat's backpack | every computer |
 | `player_knocked_out(player_id, cause)` | a cat is out for good (bled out, gave up, solo, DEEP CLEAN): loot spills | every computer |
 | `heat_level_changed(level)` | the heat went up (or down) a level | every computer |
 | `item_picked_up(player_id, item_id)` | someone grabbed or bought an item | host only |
@@ -2992,7 +3012,7 @@ the same city (#1999, Meow-Mart right next to the manhole you come up from).
 | 3 | Open the **stash lockers** (east wall), then close them | closed again, still carrying a weapon (if you left it inside, it asks you to take it back) |
 | 4 | Walk up to **the Mainframe** (west wall CRT) | you stood within 3.5 m for 1.5 s |
 | 5 | Talk to **Don Catleone**: SEND ME UP TOP | you're up in the city |
-| 6 | Grab **3 fish** (the line counts 0/3, 1/3...) | 3 fish in your loot bag |
+| 6 | Grab **3 fish** (the line counts 0/3, 1/3...) | 3 fish in your backpack |
 | 7 | Smash a **VAC-COP**, then pick up the **SCRAP** it drops | scrap (and still 3 fish) in your bag |
 | 8 | The heat jumps to **75**: follow the green arrow to a ringing **payphone** (E), then follow it again to the **exit manhole** | you extracted |
 | 9 | Feed the scrap to **the Mainframe** (E) | it charged (+25%) |
@@ -3003,7 +3023,7 @@ the same city (#1999, Meow-Mart right next to the manhole you come up from).
 - **The heat is frozen** (no surprise DEEP CLEAN). At step 8 it jumps to the exit heat (75) so the
   exit opens and the payphones ring straight away.
 - **You can't be knocked out:** your HP never drops below 25.
-- **The loot bag has 4 slots** so the 3 fish AND the scrap fit.
+- **The 6-slot backpack** has room for the 3 fish AND the scrap; they come home in it.
 - **Don won't send you up** before step 5 ("Finish your prep down here first").
 - **Spare fish:** if there aren't enough fish near you, one appears at the centre crossroads every 3 s.
 - **Step 7:** if no VAC-COP is within 25 m, one is moved 12 m in front of you, and the one you smash
@@ -3013,7 +3033,7 @@ the same city (#1999, Meow-Mart right next to the manhole you come up from).
 
 ### Changing it (no code)
 Select **Tutorial** in `scenes/main.tscn` (Scene dock: **Main > Tutorial**). In the Inspector:
-- **The Training Run:** City Seed, Mainframe Charge, Loot Bag Slots, Min Health, Quest Id, Fish Needed, Exit Heat.
+- **The Training Run:** City Seed, Mainframe Charge, Min Health, Quest Id, Fish Needed, Exit Heat.
 - **Helping Out:** spare fish search / seconds, how far a VAC-COP is moved, the Mainframe visit distance / time.
 - **Look:** step / hint colours; the beacon's colour, height, bob and spin. (The green arrow's own
   look is on `scenes/ui/hud.tscn` > **Frame > Top > Compass**.)
@@ -3591,8 +3611,8 @@ finish the raid. You can **watch them**, over their shoulder, live.
 ## 25. SEWER UPGRADES (spend cash + SCRAP, keep it forever)
 
 Every cat down in the sewers now sells something that makes **your** cat better for good. You pay with
-**cash AND SCRAP** (the $0 loot the MEGA VAC-COPs drop). Scrap is counted from your **loot bag and your
-litterbox together** (the loot bag is used up first), so you don't have to dig it out first.
+**cash AND SCRAP** (the $0 loot the MEGA VAC-COPs drop). Scrap is counted from your **backpack and your
+litterbox together** (the backpack is used up first), so you don't have to dig it out first.
 Upgrades are saved in your cat's save file (with your cash and litterbox), so they're there next game.
 The TUTORIAL always starts with none, so it's the same for everyone.
 
@@ -3601,11 +3621,11 @@ The TUTORIAL always starts with none, so it's the same for everyone.
 | Who (Catleone / Burrow sewer) | Button | Upgrades (tiers) |
 |---|---|---|
 | Comrade Whiskers / Clawd | UNLOCK NEW WEAPON CRATES (also on the shop page) | **WEAPON CRATES** (3): 1 = Hairball Blaster + Red Dot, 2 = Tommy Gun + Frozen Tuna, 3 = Yarn-Zooka + Cucumber Launcher. Without crates the shop sells only the Neon Bat, Paw-Pistol, Catnip and Catdip (locked guns show as LOCKED). |
-| Don Catleone / Pawnie | UPGRADE MY RANK | **DEEP POCKETS** (2): loot bag 3 -> 4 -> 5. **BIGGER BACKPACK** (2): 6 -> 8 -> 10. |
+| Don Catleone / Pawnie | UPGRADE MY RANK | **BIGGER BACKPACK** (3): 6 -> 8 -> 10 -> 12 slots (loot + gear). (The old DEEP POCKETS loot-bag upgrade was merged into it: an old save's DEEP POCKETS tiers become BIGGER BACKPACK tiers.) |
 | The TINKER WORKBENCH (east wall, between the litterbox and the CAT-CAM TV) | [E] TINKER WORKBENCH | **DELUXE LITTERBOX** (2): 9 -> 15 -> 21 slots. **MAINFRAME CAPACITOR** (2, crew): 1 scrap feeds +35% / +50% instead of +25%. |
 | Frankie "Espresso" / Jittery Jax | GARAGE & ZOOMIES UPGRADES | **ESPRESSO BLOODSTREAM** (2): walk + zoomies +12% / +24%. **TWIN-TURBO ENGINE** (2, crew): your ride +15% / +30% top speed and pickup. **NEON ZOOM-BIKE** and **ARMORED MEOW-VAN** (unlocks), then SELECT VEHICLE buttons. |
 | Paulie "No-Brooms" / Bumper-Car Benny | COMBAT TRAINING | **THICK FUR** (2): max HP 100 -> 125 -> 150. **SCRAP MAGNET** (2): bots you smash have +15% / +30% chance to drop a SCRAP, on top of the usual 5% (not bosses). |
-| Nonna Catleone / "Gold-Tooth" Gus | NONNA'S KITCHEN / GUS'S FENCE | **GOURMET FENCE** (2): fish, sardines and koi pay +20% / +40% at the exit. **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. |
+| Nonna Catleone / "Gold-Tooth" Gus | NONNA'S KITCHEN / GUS'S FENCE | **GOURMET FENCE** (2): the shop pays +20% / +40% for fish, sardines and koi. **STUFFED CHEEKS** (2): snack stacks 3 -> 4 -> 5. |
 | Sal / Calamity Clara / Lil' Mittens / Billy | STREET TRICKS | **HEAVY PAWS** (2): melee +25% / +50% damage and knockback. **INSIDER TUNNEL** (2, crew): your exit opens 5 / 10 heat earlier. |
 
 **Crew** upgrades help your whole gang: the gang gets the BEST tier anyone in it owns. So in co-op, one cat
@@ -3619,12 +3639,11 @@ with a Twin-Turbo upgrades everyone's car.
   (only while it's parked and empty). Your pick is saved and comes back next game.
 
 ### Balance targets (Nov 2026 balance pass)
-- A careful raid pays about **$100-150** (3-slot loot bag), a greedy koi raid **$450-500**, quests $100-250.
+- A careful raid brings home about **$100-200** of loot (6-slot backpack, shared with spare gear), a greedy koi raid **$450-500**, quests $100-250.
 - Every upgrade together costs about **$4,700 + 46 scrap** per cat: the first one after 1-2 raids, the
   middle tiers around raid 5, everything around raids 15-20. Scrap is the real gate (bosses drop one per cat
   up top, regular bots 5%); cash mostly buys guns and snacks.
-- DEEP POCKETS tier 1 costs **2 scrap** on purpose: +1 bag slot is +33% income, so it shouldn't be the
-  automatic first buy.
+- BIGGER BACKPACK tier 3 costs **3 scrap**: 12 slots is a lot of fish per trip.
 
 ### Changing prices and numbers (Godot editor)
 - **Prices:** open `scenes/main.tscn`, click the **Upgrades** node (right under Wallet) > Inspector > **Costs**.
@@ -3646,12 +3665,12 @@ gang colour, `Headlight*`, `Taillight*`, `Thrusters`, `Sign` glow white. The wor
 
 ### How it works (for the curious)
 `scripts/upgrades.gd` (the **Upgrades** node) keeps every player's tiers; the host checks cash + scrap and takes them
-(`request_buy`), then tells everyone. Other scripts just ask it: the loot bag size (`ItemManager.bag_size_for`), max HP
+(`request_buy`), then tells everyone. Other scripts just ask it: the backpack size (`ItemManager.pack_size_for`), max HP
 (`CatHealth.max_health_for`), the car (`GetawayCar.set_vehicle`), and so on. The inventory screen grows to match (and
 scrolls when the litterbox gets big).
 
 ### Testing it (Claude's tools)
-- Buy things: `-- --host --cash=3000 --give=scrap,scrap,scrap --buy_upgrade=deep_pockets,thick_fur` (prints a
+- Buy things: `-- --host --cash=3000 --give=scrap,scrap,scrap --buy_upgrade=bigger_pack,thick_fur` (prints a
   `DevCapture upgrades` line after each buy). `--upgrade_log` just prints what you have.
 - Pick a ride: `--select_vehicle=fish_van` (prints `DevCapture vehicle`).
 - Screenshots: `--workbench` (walks to the bench and opens its page), `--teams=0 --vehicles_lineup --no_hud --cam_follow

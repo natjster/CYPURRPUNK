@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "golden_koi"
 display_name = "GOLDEN KOI"
-description = "Worth $400! But it's HEAVY (slows you down) and it JINGLES (VAC-COPs spot you from further away)."
+description = "Sells for $400! But it's HEAVY (slows you down) and it JINGLES (VAC-COPs spot you from further away)."
 kind = 0
 cash_value = 400
 bag_space = 2

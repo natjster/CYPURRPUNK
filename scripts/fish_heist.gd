@@ -28,7 +28,7 @@ extends Node3D
 ##       (slows you) and NOISY (Roombas spot you from further). Taken loot grows back after a while.
 ##       WHAT lies WHERE is the loot table, res://loot/city.tres (placed by the Items node).
 ##       SCRAP isn't on the street: only a destroyed MEGA VAC-COP drops it. It's worth $0 here
-##       (it stays in your bag at the exit) - it's fuel for THE MAINFRAME (scripts/mainframe.gd).
+##       (the shop won't buy it) - it's fuel for THE MAINFRAME (scripts/mainframe.gd).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
 ##   - At the heat its own MAINFRAME says (scripts/mainframe.gd exit_heat: 60 / 75 / 82 / 90 / 95)
 ##     a gang's crew breaks through: its EXIT manhole opens, somewhere random, and every PAYPHONE
@@ -36,16 +36,16 @@ extends Node3D
 ##     (scripts/npcs/payphone.gd) are scattered too: call your boss on one and they tell you where
 ##     your exit is; the HUD arrow switches on for your gang. The phones ring until every gang
 ##     in the game has called.
-##   - Walk (or drive) onto the open exit: your loot pays its cash_value into YOUR cash
-##     (the Wallet, scripts/wallet.gd), quests done at that moment pay their bonus, and you climb
-##     down to the hub. That was your trip: wait there for the next district.
+##   - Walk (or drive) onto the open exit: you climb down to the hub WITH your loot (it stays in
+##     your backpack: sell it at the Black Markitten, ItemManager.request_sell, or bury it in the
+##     litterbox), quests done at that moment pay their bonus into YOUR cash (scripts/wallet.gd). That was your trip: wait there for the next district.
 ##   - (The HUD heat bar shows how close you are.) At 100 the hatch is SEALED and the DEEP CLEAN starts: a swarm of
 ##     VAC-COPs plus the MEGA VAC-COP. Anyone left up top is as good as dead (after
 ##     deep_clean_seconds they're knocked out no matter what, losing what they carry).
 ##     Then a NEW DISTRICT is built (new seed, heat back to where THE MAINFRAME says) and Don can send you up again.
 ##
 ## Multiplayer: the HOST is the referee. It checks every frame who is standing on the open exit,
-## empties their loot bag and tells everyone with an RPC. The extracted player's own computer
+## pays quest bonuses and tells everyone with an RPC. The extracted player's own computer
 ## then moves their cat down to the hub (owners always move their own cat).
 ## Manholes and payphones are placed from the city seed with their OWN random generator,
 ## so every computer places them identically and buildings never move. Which gangs have found
@@ -378,15 +378,13 @@ func _physics_process(delta: float) -> void:
 			continue
 		# Extract! Ignore this cat for a moment while its new position arrives from its owner.
 		_extract_wait[player_id] = _clock + 3.0
-		# Quests first, while the loot is still in the bag (e.g. Mittens wants 3 fish IN it).
+		# Quests are paid now (e.g. Mittens wants 3 fish IN your backpack: they stay in it).
 		var quest_bonus: int = QuestManager.instance.complete_on_extract(player_id)[0]
-		# Only MONEY loot is cashed in; SCRAP ($0) stays in the bag for THE MAINFRAME / the stash.
-		var loot := items.take_cash_loot(player_id) if items.bag_used(player_id) > 0 else []
-		var earned := 0
-		for item_id in loot:
-			earned += (items.catalog[item_id] as ItemData).cash_value
-		# GOURMET FENCE (scripts/upgrades.gd): this cat's fence pays +20% / +40% for the loot.
-		earned = roundi(earned * Upgrades.gourmet_multiplier(player_id))
+		# The LOOT COMES HOME: nothing is sold here. It stays in the backpack, to sell at the Black
+		# Markitten (ItemManager.request_sell), bury in the litterbox, or feed to THE MAINFRAME.
+		# We only report what it's worth (the extraction popup, the RAID REPORT).
+		var loot := items.loot_in_pack(player_id)
+		var loot_worth := items.loot_value(player_id)
 		if their_car != null:
 			their_car.remove_occupant(player_id)  # out of the car first...
 			# ...and once the last cat is out it waits at its parking spot for the next trip up.
@@ -399,8 +397,9 @@ func _physics_process(delta: float) -> void:
 			chaos_bonus = MessManager.instance.player_messes_this_trip(player_id) * DistrictTwist.instance.bin_day_cash_per_mess
 		if MessManager.instance != null:
 			MessManager.instance.clear_trip_messes(player_id)
-		Wallet.instance.earn(player_id, earned + quest_bonus + chaos_bonus, "extracted %d loot" % loot.size())
-		_extracted.rpc(player_id, earned, quest_bonus, chaos_bonus)
+		if quest_bonus + chaos_bonus > 0:
+			Wallet.instance.earn(player_id, quest_bonus + chaos_bonus, "extracted (quest / chaos bonus)")
+		_extracted.rpc(player_id, loot_worth, quest_bonus, chaos_bonus, loot.size())
 
 
 ## Host, while sealed: when time's up, whoever is still up top goes down (loot and all), then a
@@ -459,12 +458,18 @@ func _set_state(is_sealed: bool, gangs_revealed: Array, gangs_opened: Array) -> 
 ## earned = what the loot was worth; quest_bonus = extra cash from quests finished just now;
 ## chaos_bonus = BIN DAY's pay for the messes made on the trip (scripts/district_twist.gd).
 @rpc("authority", "call_local", "reliable")
-func _extracted(player_id: int, earned: int, quest_bonus: int = 0, chaos_bonus: int = 0) -> void:
+## loot_worth = what the loot they brought home is worth (still in their backpack), loot_count = how
+## many pieces.
+func _extracted(player_id: int, loot_worth: int, quest_bonus: int = 0, chaos_bonus: int = 0, loot_count: int = 0) -> void:
 	# (The chaos bonus counts as a bonus for the RAID REPORT.)
-	Events.player_extracted.emit(player_id, earned, quest_bonus + chaos_bonus)  # (scripts/events.gd)
+	Events.player_extracted.emit(player_id, loot_worth, quest_bonus + chaos_bonus)  # (scripts/events.gd)
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
-	var popup_text := ("EXTRACTED +$%d" % earned) if earned > 0 else "EXTRACTED"
+	var popup_text := "EXTRACTED"
+	if loot_count > 0:
+		popup_text += "
+%d LOOT HOME ($%d)" % [loot_count, loot_worth] if loot_worth > 0 else "
+%d LOOT HOME" % loot_count
 	if quest_bonus > 0:
 		popup_text += "\nQUEST DONE +$%d" % quest_bonus
 	if chaos_bonus > 0:

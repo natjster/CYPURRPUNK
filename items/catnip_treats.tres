@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "catnip_treats"
 display_name = "CATNIP TREATS"
-description = "Premium catnip treats from Meow-Mart's top shelf. Don't eat them: they're worth $80 at the drop-off."
+description = "Premium catnip treats from Meow-Mart's top shelf. Don't eat them: sell them for $80 at the Black Markitten."
 kind = 0
 cash_value = 80
 bag_space = 1

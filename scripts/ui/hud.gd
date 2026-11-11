@@ -318,6 +318,14 @@ func _process(delta: float) -> void:
 	# The menus live inside the game picture, UNDER this layer, so get out of their way.
 	frame.visible = in_game and not menu_open()
 	middle.visible = not wants_input(seat)
+	# The INVENTORY's backpack view (inventory_ui.gd) needs a clean screen: no names over heads, no
+	# sewer cash board under its boxes (its JOB strip shows your cash).
+	var inventory := InventoryScreen.for_seat(seat)
+	var in_inventory := inventory != null and inventory.visible
+	for hidden_piece in ["Names", "Scoreboard"]:
+		var piece := element(hidden_piece, seat)
+		if piece != null:
+			piece.modulate.a = 0.0 if in_inventory else 1.0
 	_update_prompt()
 	_update_status()
 

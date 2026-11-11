@@ -193,7 +193,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   `use_for(team)`: FEED +25 / HACK `hack_target(team)` -25 at 100% (feed line `_hacked`) / FULL refuses. `exit_heat(team)` = that gang's exit, live;
   `lowest_charge()` sets city-wide `starting_heat()` / `heat_multiplier()` / `boss_at_start()`. `_refresh_district` (host, each second + after a feed):
   while `went_up.is_empty()` a changed lowest restarts the district (covers late-arriving gangs too; `RoombaPatrol.restart_heat_levels` spawns the 0% boss).
-  Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: `take_cash_loot` leaves it in
+  Not saved. The seal drains BEFORE `start_district`, so overclock needs a pre-trip feed. Heat bar: `set_heat(..., exit_heat)` draws the EXIT tick. SCRAP = $0 loot (`items/scrap.tres`), only the boss drops it: the shop won't buy it, it stays in
   the bag at the exit; `ItemManager.is_stashable` lets it in the stash. Hub CRT `_update_mainframe_crt` runs on every hub. Test: `--mainframe=N` or `=A,B`
   (client feed: `--wait=120 --give=scrap --pos=-11,-199.5,0 --press_key=E`).
 - SEWER BREACH (`mainframe.gd`, host `_run_breach`): a gang reaching 0% gets one LAST RAID first (`_had_last_raid[team]` = at 0% as the district starts, `_note_last_raids`, banner; a hack before anyone goes up counts). `doomed_gangs()` = at 0% AND had it. Doomed + `sealed` + `players_up_top()==0` -> siren `_run_warning` / `_set_warning` RPC (`warning_teams`, `warning_left`, `breach_warning_seconds`, line = `breach_text`); `FishHeist._run_deep_clean` holds `new_district` while `breach_coming()`; scrap in time = cancelled. Time up -> `_start_breach` RPC (`breached_teams`, `breach_left`,
@@ -240,7 +240,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
   Players see it as THE LITTERBOX (code names stay "stash"; prompt `hub.stash_prompt` "STORE YOUR SHIT").
   Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (litterbox on the east wall,
-  `hub._build_stash`); the inventory screen (`InventoryScreen`) swaps the loot bag for the stash there.
+  `hub._build_stash`); the inventory screen (`InventoryScreen`) opens a LITTERBOX box there. ANY item is stashable (fish too).
   (`request_put_away` = paw -> backpack.) `scripts/player_profile.gd` (`Profile` node): each player saves
   their OWN cash + stash to `user://profiles/<name>.cfg`, sends it to the host on start/join
   (`_request_restore`, host validates), and saves only after `_restore_done`. Test runs use
@@ -309,8 +309,7 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   9 steps (`step` 1..9, `phase` for sub-steps, DONE=10 -> banner -> `_back_to_menu(false)`), HUD `Frame/Top/TutorialBox`
   (`TutorialStep`/`TutorialHint`), code-built cyan beacon. Training rules: `PlayerProfile.restore` sends $starting_cash + empty
   stash and never reads/writes the save; heat held each physics frame (priority 100; step 8 = `exit_heat`); `Tutorial.health_floor()`
-  in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets `bag_size` 4 (inventory grid grows on open:
-  `_match_bag_size`) + Mainframe charge; city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
+  in `CatHealth.damage`; `Tutorial.allows_deploy()` in `hub.deploy`; `prepare()` sets the Mainframe charge (the 6-slot backpack fits 3 fish + scrap); city via `_begin_game(seed, showcase=true)`. Test: `--headless -- --tutorial --tutorial_auto --capture=shots/tut.png` (needs --capture or DevCapture never runs; exit 0 = pass).
   GREEN ARROW: tutorial `_point_compass` drives HUD `Compass` on steps 1-7/9 (fish_heist nulls its compass then); step 8 = fish_heist's
   real PAYPHONE -> EXIT arrow, no beacon, `step8_exit_title` at phase 1. `--tutorial_shots` (windowed) saves shots/tutorial_step*.png.
 - Hand-written `.tscn` files: use `position`/`rotation` properties, not Transform3D matrices.
@@ -466,13 +465,13 @@ SEWER UPGRADES (SETUP_GUIDE §25): `scripts/upgrades.gd` (`Upgrades.instance`, n
 `player_upgrades` {player_id: {id: tier}} synced (`_set_tier`/`_set_all`), `costs` export (id -> [[cash, scrap] per tier]), `INFO`/`PAGES`.
 Host `request_buy(player_id, id)` = Wallet.spend + `ItemManager.spend_scrap` (bag first, then stash; `scrap_count_of`). Read with static
 `Upgrades.level(pid, id)` / `best_in_team(team, id)` (CREW: mainframe_capacitor, turbo_engine, insider_tunnel). Hooks: `ItemManager.bag/pack/stash/
-quick_stack_size_for(pid)` (NEVER read bag_size etc. directly), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
+quick_stack_size_for(pid)` (NEVER read pack_size etc. directly; `bag_size_for` = old alias of `pack_size_for`), `CatHealth.max_health_for`, `Upgrades.shop_allows` (crates; also refused in
 request_buy), `zoomies/engine/gourmet/melee_multiplier`, `scrap_magnet_chance` (enemy.explode), `Mainframe.exit_heat`/`charge_per_scrap_for`.
 Pages open in NpcDialog via `Upgrades.open_page(cat, page, speaker, voice, back)`; NPC export `upgrade_page`/`upgrade_button` adds the button
 to the greeting (or action `upgrades:<page>`). TINKER WORKBENCH = hub `_build_workbench` (`models/workbench.glb`). RIDES: `team_vehicle[team]`,
 `request_select_vehicle` (car must be empty) -> `GetawayCar.set_vehicle(id)` swaps Model/CarModel (`cyber_bike.glb`/`fish_van.glb`), box, stats
 (`bike_*`/`van_*` exports, `smash_speed_factor`); any `Trim*` part glows gang colour. Profile saves "upgrades" + "vehicle"; tutorial sends {}.
-Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_bag_size`) inside a ScrollContainer (`_fit_scroll`).
+Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_sizes`; slots shrink to fit).
 Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --workbench --vehicles_lineup` ("DevCapture upgrades/vehicle/lineup/workbench").
 
 WEAPON MODELS (ROADMAP §5 #6, SETUP_GUIDE §9 "The weapon models"): the 8 weapon scenes' `Model/Mesh` = `models/<weapon>.glb` from
@@ -485,6 +484,19 @@ kit's new poly face `"uvs"` = exact per-corner UVs). Groups: Body, `HeatCoil` (t
 ("DevCapture weapon" lines), `--give=X --portrait=me --portrait_side=1.3 --portrait_dist=1.5 --portrait_height=0.55`.
 
 ## Items framework
+ONE BACKPACK (Phase 2 UI overhaul): inventory = `{"hands", "pack", "stash", "quick"}` (NO "bag" any more). `pack` holds loot AND
+spare gear, 1 slot each, `pack_size_for(pid)` = 6 + 2 per `bigger_pack` tier (3 tiers; old `deep_pockets` merged in
+`Upgrades._merge_old_upgrades`). Full pack = `_can_take` false for loot. NOTHING is sold at the exit: fish_heist reports
+`loot_value`/`loot_in_pack` (`_extracted(pid, worth, quest, chaos, count)`, Events.player_extracted loot_value = worth) and pays only
+quest/chaos; the SHOP buys loot: `ItemManager.request_sell(pid, pack_index | -1)` (`sell_price` incl. gourmet, `pack_sell_value`,
+Events.loot_sold), Shopkeeper `_sell_buttons`. Helpers `take_all_loot` (rob), `take_one_loot` (last LOOT only), `count_in_bag`/
+`take_from_bag`/`bag_used` (= loot count) read the pack. Cats wear `models/cat_backpack.glb` (`tools/make_backpack_spec.py`) at
+`CatModel/BackPack` (`ItemManager.BACKPACK_SPOT`, `_update_backpack`: "Strip" glow cyan->amber->red by fullness; `PackAnchor` locator,
+`backpack_anchor(cat)`). INVENTORY = NMS backpack view: `CatPlayer.inventory_open()` blocks moving/looking and glides the camera
+(`_update_inventory_camera`, "Inventory Camera" exports, side offset scaled by pane aspect, `inventory_view_amount()`); `inventory_ui.gd`
+lays out ocean-blue boxes on the right (`_layout`), draws callout lines from projected 3D anchors (`_project` via
+`GameScreen.camera_for_seat`), slots = Buttons + `SlotFace` (icon, name, price badge). Hud hides Names/Scoreboard while it's open.
+Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`, `--talk=ComradeWhiskers --choose=0,0` (sell all).
 All items go through `scripts/items/item_manager.gd` (`ItemManager.instance`, the `Items` node):
 item cards are `ItemData` .tres files in `res://items/` (auto-loaded); held items with behaviour
 extend `HeldItem`, guns extend `Weapon` (data-driven via exports). Host referees pickup/drop/
@@ -534,8 +546,8 @@ interact branches to cat_player. Test: `--press_key=E` (waits 10 physics frames 
 ## Quest framework
 `scripts/quests/quest_manager.gd` (`QuestManager.instance`, `Quests` node): cards = `QuestData` .tres in
 `res://quests/` (auto-loaded). Host-authoritative `active`/`completed` per peer, synced via `_set_quests`;
-progress is counted from the loot bag (not synced separately). `fish_heist.gd` calls
-`complete_on_extract` BEFORE `take_bag` and adds the bonus in `_extracted`. (No HUD quest line any more.)
+progress is counted from the backpack (`count_in_bag`, not synced separately). `fish_heist.gd` calls
+`complete_on_extract` at the exit (items stay in the backpack) and adds the bonus in `_extracted`. (No HUD quest line any more.)
 ONE QUEST AT A TIME: `current_quest(id)`, `giver_of(id)` (`givers`, 5th arg of `_set_quests`), `progress_text(id)`;
 host `_request_start` refuses while one is active; `Npc._choose` says `busy_lines` instead; inventory JOB box + ABANDON
 (`abandon_quest`, hub only, two presses). Test: `--quest=X --abandon_quest`.

@@ -6,7 +6,7 @@
 script = ExtResource("1_data")
 id = "golden_koi_heist"
 title = "THE GOLDEN KOI"
-description = "Extract with a Golden Koi in your loot bag."
+description = "Extract with a Golden Koi in your backpack."
 kind = 0
 item = "golden_koi"
 count = 1

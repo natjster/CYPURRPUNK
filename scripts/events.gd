@@ -29,8 +29,9 @@ signal sewer_breached(teams: Array)
 ## survived = THE 1% MIRACLE (false = OVERCLEAN wiped them out).
 signal sewer_breach_ended(survived: bool)
 
-## EVERY computer: a player climbed down the exit. loot_value = what their loot was worth,
-## quest_bonus = extra cash from quests finished just now (fish_heist.gd).
+## EVERY computer: a player climbed down the exit. loot_value = what the loot they brought home
+## is worth (it stays in their backpack, to sell at the shop), quest_bonus = extra cash from quests
+## finished just now (fish_heist.gd).
 signal player_extracted(player_id: int, loot_value: int, quest_bonus: int)
 
 ## EVERY computer: a player hit 0 HP and is DOWNED, waiting for a teammate to revive them.
@@ -40,7 +41,7 @@ signal player_downed(player_id: int, cause: String)
 ## EVERY computer: a downed player was picked back up by teammate "by" (cat_health.gd).
 signal player_revived(player_id: int, by: int)
 
-## EVERY computer: a rival "by" robbed this downed player's loot bag (cat_health.gd).
+## EVERY computer: a rival "by" robbed this downed player's backpack (cat_health.gd).
 signal player_robbed(player_id: int, by: int)
 
 ## HOST only: rival "by" landed a melee hit on this player (cat_health.gd).
@@ -72,7 +73,7 @@ signal enemy_destroyed(enemy: Enemy)
 ## cause = e.g. "A VAC-COP" (cat_health.gd damage). The RAID REPORT's "MOST SHED".
 signal player_hurt(player_id: int, amount: int, cause: String)
 
-## HOST only: a VAC-COP sucked one loot item out of this player's bag (item_manager.gd
+## HOST only: a VAC-COP sucked one loot item out of this player's backpack (item_manager.gd
 ## take_one_loot, called by roomba.gd's bonk). The RAID REPORT's "BUTTERPAWS".
 signal loot_vacuumed(player_id: int, item_id: String)
 
@@ -88,6 +89,10 @@ signal store_alarm_tripped(player_id: int)
 ## EVERY computer: the RAID REPORT for the district that just ended has gone up on every screen
 ## (scripts/raid_report.gd). report = the whole finished report (rows, awards, crew line).
 signal raid_report_shown(report: Dictionary)
+
+## HOST only: a player sold loot at the shop (item_manager.gd request_sell). items = the item ids
+## sold, cash = what they got for them.
+signal loot_sold(player_id: int, items: Array, cash: int)
 
 
 # --- Testing: --event_log prints every event as it happens ("[Events] ..." lines) ---

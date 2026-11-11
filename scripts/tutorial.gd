@@ -28,7 +28,7 @@ extends Node
 ##   - The heat is FROZEN (no surprise Deep Clean). At step 8 it jumps to exit_heat so the exit
 ##     opens and the payphones ring at once.
 ##   - Your HP never drops below Min Health (cat_health.gd asks health_floor()).
-##   - The loot bag has Loot Bag Slots (4) so the 3 fish AND the scrap fit.
+##   - The 6-slot backpack has room for the 3 fish AND the scrap (they come home in it).
 ##   - Don won't send you up before step 5 (hub.gd asks allows_deploy()).
 ##   - Spare fish appear at the centre crossroads if there aren't enough nearby.
 ##   - A VAC-COP is moved near you at step 7 if none is close, and the one you smash drops SCRAP
@@ -45,8 +45,6 @@ extends Node
 @export var city_seed: int = 1999
 ## Your gang's MAINFRAME charge at the start (%). Feeding the scrap at the end adds 25%.
 @export_range(0.0, 100.0, 25.0) var mainframe_charge: float = 75.0
-## Loot bag slots during the tutorial (normally 3): room for 3 fish AND the scrap.
-@export var loot_bag_slots: int = 4
 ## Your HP never goes below this in the tutorial (so a beginner can't get knocked out).
 @export var min_health: int = 25
 ## The quest Lil' Mittens gives (its id in res://quests/), and how many fish it wants.
@@ -108,8 +106,8 @@ extends Node
 ## Don says this if you ask to go up before step 5.
 @export_multiline var too_early_to_deploy: String = "Not so fast, kid. Finish your prep down here first - follow the yellow line at the top."
 @export_group("Step 6 - Fish")
-@export var step6_title: String = "STEP 6/9: GRAB 3 FISH FOR YOUR LOOT BAG"
-@export_multiline var step6_hint: String = "Follow the beacon to Meow-Mart and press [{E}] on 3 Fish ($50 each). Watch your Loot Bag! ({fish}/{need})"
+@export var step6_title: String = "STEP 6/9: GRAB 3 FISH FOR YOUR BACKPACK"
+@export_multiline var step6_hint: String = "Follow the beacon to Meow-Mart and press [{E}] on 3 Fish ($50 each). They go in your BACKPACK. ({fish}/{need})"
 @export_group("Step 7 - Scrap")
 @export var step7_title: String = "STEP 7/9: DESTROY A VAC-COP FOR SCRAP"
 @export_multiline var step7_hint: String = "Shoot or smash a patrolling VAC-COP! (In normal raids, MEGA VAC-COP bosses drop SCRAP - this tutorial bot is carrying a piece for you!)"
@@ -122,10 +120,10 @@ extends Node
 @export_multiline var step8_hint: String = "HEAT HIT {heat}! Your exit is open! Follow the big GREEN ARROW at the top to the nearest ringing PAYPHONE and press [{E}] so Don sends you the exit location."
 ## Shown the moment you've answered (the green arrow flips to the EXIT).
 @export var step8_exit_title: String = "STEP 8/9: FOLLOW THE GREEN ARROW TO THE EXIT"
-@export_multiline var step8_exit: String = "Don's on the line above the phone! The GREEN ARROW now points to the EXIT - follow it to the glowing manhole to cash out your Fish and keep your Scrap!"
+@export_multiline var step8_exit: String = "Don's on the line above the phone! The GREEN ARROW now points to the EXIT - follow it to the glowing manhole to bring your Fish and Scrap home in your backpack!"
 @export_group("Step 9 - Feed")
 @export var step9_title: String = "STEP 9/9: FEED SCRAP TO THE MAINFRAME"
-@export_multiline var step9_hint: String = "You extracted with your cash + $100 quest bonus, and kept your SCRAP! Walk to the Mainframe on the west wall and press [{E}] to charge it (+25%)."
+@export_multiline var step9_hint: String = "You're home with your fish + the $100 quest bonus! (Sell fish to Comrade Whiskers later.) Walk to the Mainframe on the west wall and press [{E}] to feed it your SCRAP (+25%)."
 
 const STEPS := 9
 const DONE := 10
@@ -187,7 +185,6 @@ static func allows_deploy() -> bool:
 ## game.gd, just before a tutorial game starts: the training-run rules.
 func prepare() -> void:
 	step = 0
-	ItemManager.instance.bag_size = loot_bag_slots  # (the scene reloads after: back to normal)
 	var mainframe := Mainframe.instance
 	mainframe.charges[Teams.CATLEONE] = mainframe_charge
 

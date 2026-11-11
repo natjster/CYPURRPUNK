@@ -39,6 +39,21 @@ extends CharacterBody3D
 ## so the cat isn't blocking the crosshair.
 @export var gun_shoulder_offset: float = 0.7
 
+@export_group("Inventory Camera")
+## INVENTORY VIEW (Tab / I / pad Y, scripts/ui/inventory_ui.gd): the camera glides in close behind
+## the cat, off to the right, so its BACKPACK sits on the left of the screen and the inventory's
+## callout boxes have the right half. The cat turns its back to the camera and stands still.
+## How close the camera comes (metres; normal play is 3.5).
+@export var inventory_camera_distance: float = 2.2
+## How far right the camera slides (metres): more = the cat sits further left.
+@export var inventory_camera_side: float = 0.75
+## How far down the camera drops (metres), towards the backpack.
+@export var inventory_camera_lift: float = -0.1
+## Camera tilt while the inventory is open (degrees; minus = looking down a little).
+@export var inventory_camera_pitch_degrees: float = -12.0
+## How fast it glides in and out (higher = snappier).
+@export var inventory_camera_speed: float = 7.0
+
 @export_group("Zoomies Juice")
 ## Cat leans its nose forward while sprinting.
 @export var zoomies_lean_degrees: float = 15.0
@@ -72,6 +87,12 @@ var air_jumps: int = 0
 var _air_jumps_left: int = 0
 var _air_jump_time_left: float = 0.0
 var _air_jump_seconds: float = 0.0  # how long the current catdip lasted in total (for the HUD timer)
+## Inventory camera: 0 = normal view, 1 = fully in the backpack view (eases between).
+var _inventory_blend: float = 0.0
+var _inventory_was_open := false
+var _pitch_before_inventory: float = 0.0
+var _pitch_returning := false
+var _base_spring_length: float = 3.5
 ## Owner only: true while knocked out (0 HP, see cat_health.gd). The cat flops onto its side
 ## and ignores the keyboard until it wakes up in the sewers.
 var knocked_out: bool = false
@@ -279,7 +300,7 @@ func display_name() -> String:
 
 
 # --- A DOWNED cat is something other cats can use with E (scripts/interactable.gd) ---
-# Your own gang: "HOLD: REVIVE <NAME>". The other gang: "HOLD: ROB <NAME>" (their loot bag).
+# Your own gang: "HOLD: REVIVE <NAME>". The other gang: "HOLD: ROB <NAME>" (their backpack).
 # (The rules are all in cat_health.gd.)
 
 func interact_distance(helper: CatPlayer) -> float:
@@ -305,6 +326,7 @@ func _ready() -> void:
 	Settings.changed.connect(_on_settings_changed)
 	# Stop the spring arm from "hitting" the cat's own collision and zooming in.
 	spring_arm.add_excluded_object(get_rid())
+	_base_spring_length = spring_arm.spring_length
 	_apply_look()
 	# The leg and tail meshes from scenes/cat_model.tscn (animated in _animate_legs_and_tail).
 	_leg_l = cat_model.get_node_or_null("LegL")
@@ -588,7 +610,7 @@ func _type_taunt(delta: float) -> void:
 ## the camera like the mouse does. Gentle near the middle (for aiming), fast at full tilt.
 ## STICK SPEED and INVERT STICK Y come from SETTINGS > CONTROLS.
 func _stick_look(delta: float) -> void:
-	if not is_controlled or not reads_input() or _menu_open() or _pad_in_inventory():
+	if not is_controlled or not reads_input() or _menu_open() or inventory_open():
 		return
 	var stick := Seats.get_vector(slot, "look_left", "look_right", "look_up", "look_down")
 	if stick == Vector2.ZERO:
@@ -784,16 +806,23 @@ func _menu_open() -> bool:
 
 
 ## True when the cat shouldn't move from the keyboard: a menu is open, or it's knocked out.
-## (Also while a controller player has the inventory open: their stick and A button are
-## moving around the inventory then, not the cat. And for a split-screen cat with no
-## controller yet: see reads_input.)
+## (Also while this player has the INVENTORY open: the camera is framing the cat's backpack then,
+## and a controller's stick and A button are moving around the inventory, not the cat. And for a
+## split-screen cat with no controller yet: see reads_input.)
 func _input_blocked() -> bool:
-	return _menu_open() or knocked_out or _pad_in_inventory() or not reads_input()
+	return _menu_open() or knocked_out or inventory_open() or not reads_input()
 
 
-func _pad_in_inventory() -> bool:
+## Is this player's own inventory screen open (showing this cat)?
+func inventory_open() -> bool:
 	var inventory := InventoryScreen.for_seat(slot)
-	return inventory != null and inventory.visible and Seats.uses_pad(slot)
+	return inventory != null and inventory.visible and inventory.owner_cat == self and is_multiplayer_authority()
+
+
+## 0..1: how far the camera has glided into the inventory view (the inventory's callout lines
+## fade in with it).
+func inventory_view_amount() -> float:
+	return _inventory_blend
 
 
 ## Owner only: jump this cat somewhere else in the world (hub <-> city), facing "yaw".
@@ -827,7 +856,41 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	camera.fov = lerp(camera.fov, fov, weight)
 	# Over-the-shoulder view while holding a weapon that asks for it. (We slide the whole
 	# spring arm, because a SpringArm3D always puts its camera back on its own centre line.)
-	spring_arm.position.x = lerp(spring_arm.position.x, gun_shoulder_offset if shoulder_view else 0.0, weight)
+	var shoulder_x := gun_shoulder_offset if shoulder_view else 0.0
+	_update_inventory_camera(delta)
+	var b := _inventory_blend
+	# A narrow split-screen pane shows less to the sides: slide less, or the cat drops off the edge.
+	var side := inventory_camera_side
+	if b > 0.0 and GameScreen.instance != null:
+		var pane := GameScreen.instance.screen_size_for_seat(slot)
+		side *= clampf((pane.x / maxf(pane.y, 1.0)) / (4.0 / 3.0), 0.35, 1.3)
+	spring_arm.position.x = lerp(spring_arm.position.x, lerpf(shoulder_x, side, b), weight)
+	spring_arm.position.y = lerpf(0.0, inventory_camera_lift, b)
+	spring_arm.spring_length = lerpf(_base_spring_length, inventory_camera_distance, b)
+
+
+## INVENTORY VIEW: glide the camera in behind the cat (and back out when it closes), tilt it, and
+## turn the cat's back (and its backpack) to the camera. The player's own camera tilt is put back
+## afterwards.
+func _update_inventory_camera(delta: float) -> void:
+	var open := inventory_open()
+	if open and not _inventory_was_open:
+		_pitch_before_inventory = spring_arm.rotation.x
+		_pitch_returning = false
+	elif not open and _inventory_was_open:
+		_pitch_returning = true
+	_inventory_was_open = open
+	var weight := 1.0 - exp(-inventory_camera_speed * delta)
+	_inventory_blend = lerpf(_inventory_blend, 1.0 if open else 0.0, weight)
+	if absf(_inventory_blend - (1.0 if open else 0.0)) < 0.002:
+		_inventory_blend = 1.0 if open else 0.0
+	if open:
+		spring_arm.rotation.x = lerp_angle(spring_arm.rotation.x, deg_to_rad(inventory_camera_pitch_degrees), weight)
+		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, camera_pivot.rotation.y, weight)
+	elif _pitch_returning:
+		spring_arm.rotation.x = lerp_angle(spring_arm.rotation.x, _pitch_before_inventory, weight)
+		if absf(spring_arm.rotation.x - _pitch_before_inventory) < 0.01:
+			_pitch_returning = false
 
 
 ## Someone's weapon hit this cat. Sent to the cat's OWNER, who shoves it (owner moves its cat).

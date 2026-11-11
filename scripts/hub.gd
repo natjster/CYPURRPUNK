@@ -12,16 +12,17 @@ extends Node3D
 ##   - Walk up to DON CATLEONE (the boss cat at the north end) and press E to talk.
 ##     Pick "SEND ME UP TOP" and he sends you into the city (deploy()).
 ##   - COMRADE WHISKERS runs THE BLACK MARKITTEN on the west wall: the only place to get
-##     gear (guns, catnip, catdip). Pay with the cash you earn extracting fish.
+##     gear (guns, catnip, catdip). He also BUYS the fish you bring home
+##     (SELL buttons on his shop page): that's where cash comes from.
 ##     He's a Shopkeeper NPC (scripts/npcs/shopkeeper.gd); his shop is built in _build_shop().
 ##   - THE MAINFRAME, the big CRT in the middle of the west wall (scripts/mainframe.gd): its
 ##     screen shows THIS gang's charge (OVERCLOCK ACTIVE / SYSTEM ONLINE / POWER LOW / WARNING /
-##     CRITICAL). Bring SCRAP home in your loot bag and press E there to feed it (+25%), or at
+##     CRITICAL). Bring SCRAP home in your backpack and press E there to feed it (+25%), or at
 ##     100% to hack the rival gang's (-25%).
 ##   - THE CAT-CAM TV on the east wall, across the water from the Mainframe (_build_catcam): press E
 ##     to watch your crew up top over their shoulder (scripts/spectator.gd).
-##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): your loot is
-##     cashed in and you're brought back down here (return_cat()).
+##   - In the city, climb down the EXIT manhole once it opens (fish_heist.gd): you're
+##     brought back down here (return_cat()) with your loot still in your backpack.
 ##
 ##   - THE NORTH BREACH TUNNEL: a dark pipe behind a heavy BLAST GATE at the north end of the west
 ##     walkway. It stays shut... until a gang's Mainframe hits 0%. Then the SEWER BREACH comes
@@ -256,7 +257,7 @@ var _moon_energy: float = 1.0
 var _crt_key := ""  # what the CRT shows now, so it's only rewritten when that changes
 
 
-## THE MAINFRAME's E spot, only while you have scrap in your loot bag: "[E] FEED SCRAP (+25%)", or
+## THE MAINFRAME's E spot, only while you have scrap in your backpack: "[E] FEED SCRAP (+25%)", or
 ## at 100% "[E] HACK RIVAL MAINFRAME (-25%)" (or a FULL reminder when there's nobody to hack).
 ## Pressing it asks the host (Mainframe.request_feed), which checks and does it.
 class MainframeTerminal extends Interactable:
@@ -724,7 +725,7 @@ func _build_props() -> void:
 
 	# THE MAINFRAME: a giant CRT computer on the west wall (scripts/mainframe.gd). Its sign, screen
 	# and light show this gang's tier, live (_update_mainframe_crt); walk up with SCRAP in your
-	# loot bag and press E to feed it (+25%) or, at 100%, hack the rival's (-25%).
+	# backpack and press E to feed it (+25%) or, at 100%, hack the rival's (-25%).
 	var frame_x := -w + 1.0
 	LevelKit.add_box(self, Vector3(frame_x, 2.5, 0), Vector3(2, 5, 6), _metal, true)
 	_crt_screen = LevelKit.add_box(self, Vector3(frame_x + 1.15, 2.8, 0), Vector3(0.3, 2.2, 4.0), _neon, false)

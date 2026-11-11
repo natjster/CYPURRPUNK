@@ -7,7 +7,7 @@ extends Resource
 ## (plus its model scene). See SETUP_GUIDE.md, "Adding a new item or weapon".
 ##
 ## Two kinds of item:
-##   LOOT  goes in your loot bag (fish). Cash value is paid at the drop-off.
+##   LOOT  goes in your backpack (fish). Cash value is paid at the drop-off.
 ##         Shown stacked on your cat (one in the mouth, the rest on its head).
 ##   HELD  goes in your paws (weapons, tools, catnip). Uses 1 or 2 paws.
 ##         Left Mouse uses the item in your right paw, Right Mouse the one in your left.
@@ -40,7 +40,7 @@ enum Kind { LOOT, HELD }
 @export_group("Loot")
 ## Cash paid for each one delivered to the drop-off.
 @export var cash_value: int = 0
-## Room it takes in the loot bag.
+## Room it takes in the backpack.
 @export var bag_space: int = 1
 ## HEAVY loot: your cat's speed is multiplied by this while it's in your bag
 ## (1.0 = no change, 0.8 = 20% slower). With several heavy things, the slowest one counts.

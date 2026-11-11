@@ -11,6 +11,10 @@ extends Npc
 ##     shows everywhere. Items with no price (0) are skipped, even if they're in Stock.
 ##   - Clicking BUY asks the HOST (ItemManager.request_buy), which checks your cash, takes it,
 ##     and puts the item in your paws (or backpack). The answer pops up on screen.
+##   - He also BUYS LOOT: loot comes home from the city in your backpack (nothing is sold at the
+##     exit), and the shop page lists "SELL ALL LOOT" + one "SELL <ITEM>" button per kind of loot
+##     you carry, at its card's Cash Value (more with the GOURMET FENCE upgrade). Scrap isn't
+##     bought (it's for THE MAINFRAME). ItemManager.request_sell does it, on the host.
 ##     The shop page stays open so you can keep shopping.
 ##
 ## To sell something new: give its item card a Price, then add its id to Stock in the
@@ -20,6 +24,9 @@ extends Npc
 @export var stock: Array[String] = ["neon_bat", "catnip", "catdip", "frozen_tuna", "red_dot", "hairball_blaster", "pistol", "yarn_zooka", "tommy_gun", "cucumber_launcher"]
 ## What he says on the shop page. One is picked at random. %d = your cash.
 @export_multiline var shop_lines: PackedStringArray = ["Take your pick. You've got $%d."]
+## The SELL buttons: all the loot at once, and one of a kind ("%s" = the item, "%d" = the price).
+@export var sell_all_text: String = "SELL ALL LOOT - $%d"
+@export var sell_one_text: String = "SELL 1 %s - $%d"
 ## Button that leaves the shop page (goes back to the greeting).
 @export var back_text: String = "BACK"
 ## Button on the shop page that opens the WEAPON CRATES upgrade page (scripts/upgrades.gd).
@@ -40,7 +47,7 @@ func open_shop(cat: CatPlayer) -> void:
 	var line: String = shop_lines[randi() % shop_lines.size()] if not shop_lines.is_empty() else "Take your pick."
 	if line.contains("%d"):
 		line = line % my_cash
-	var buttons := []
+	var buttons := _sell_buttons(cat)
 	var locked := []
 	for item_id in stock:
 		var data: ItemData = ItemManager.instance.catalog.get(item_id)
@@ -56,6 +63,32 @@ func open_shop(cat: CatPlayer) -> void:
 	buttons.append_array(locked)
 	buttons.append([back_text, talk.bind(cat)])
 	NpcDialog.for_cat(cat).open(npc_name, line, buttons, voice)
+
+
+## SELL buttons for the loot in this cat's backpack: everything at once, then one per kind of loot.
+func _sell_buttons(cat: CatPlayer) -> Array:
+	var items := ItemManager.instance
+	var total := items.pack_sell_value(cat.player_id)
+	if total <= 0:
+		return []
+	var buttons := [[sell_all_text % total, _sell.bind(cat, -1)]]
+	var pack: Array = items.get_inventory(cat.player_id).pack
+	var seen := {}
+	for i in pack.size():
+		var price := items.sell_price(cat.player_id, pack[i])
+		if price > 0 and not seen.has(pack[i]):
+			seen[pack[i]] = true
+			var data: ItemData = items.catalog[pack[i]]
+			buttons.append([sell_one_text % [data.display_name, price], _sell.bind(cat, i)])
+	return buttons
+
+
+## A SELL button (pack_index -1 = all the loot): ask the host, then redraw the shop page.
+func _sell(cat: CatPlayer, pack_index: int) -> void:
+	ItemManager.instance.request_sell.rpc_id(1, cat.player_id, pack_index)
+	await get_tree().create_timer(0.2).timeout
+	if NpcDialog.is_open_for(cat.slot):
+		open_shop(cat)
 
 
 ## A BUY button: ask the host, then re-open the shop page (so the cash line is fresh).

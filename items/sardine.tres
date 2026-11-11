@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "sardine"
 display_name = "SARDINE"
-description = "Small, silver, everywhere. Worth $20 at the drop-off."
+description = "Small, silver, everywhere. Sells for $20 at the Black Markitten."
 kind = 0
 cash_value = 20
 bag_space = 1

@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "fresh_catch"
 display_name = "FRESH CATCH"
-description = "Straight off Meow-Mart's iced seafood counter. Worth $75 at the drop-off."
+description = "Straight off Meow-Mart's iced seafood counter. Sells for $75 at the Black Markitten."
 kind = 0
 cash_value = 75
 bag_space = 1

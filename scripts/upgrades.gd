@@ -6,7 +6,8 @@ extends Node
 ##
 ## WHO SELLS WHAT (each NPC has an "Upgrade Page" in the Inspector; the page lists live here, PAGES):
 ##   Comrade Whiskers / Clawd   "shop"      WEAPON CRATES (unlock better guns in the shop)
-##   Don Catleone / Pawnie      "boss"      DEEP POCKETS (loot bag), BIGGER BACKPACK
+##   Don Catleone / Pawnie      "boss"      BIGGER BACKPACK (6 -> 8 -> 10 -> 12 slots; the old DEEP
+##                                          POCKETS loot-bag upgrade was merged into it: _merge_old_upgrades)
 ##   Tinker Workbench (hub.gd)  "workbench" DELUXE LITTERBOX (stash), MAINFRAME CAPACITOR
 ##   Frankie / Jittery Jax      "vehicles"  ESPRESSO BLOODSTREAM (run faster), TWIN-TURBO ENGINE,
 ##                                          NEON ZOOM-BIKE + ARMORED MEOW-VAN (and choosing your ride)
@@ -20,19 +21,19 @@ extends Node
 ##
 ## How buying works (the HOST is the referee, as always):
 ##   1. You click an upgrade button: request_buy goes to the host.
-##   2. The host checks your cash (Wallet) and your SCRAP (loot bag + litterbox, ItemManager.scrap_count_of),
+##   2. The host checks your cash (Wallet) and your SCRAP (backpack + litterbox, ItemManager.scrap_count_of),
 ##      takes both, raises your tier and tells every computer (_set_tier).
 ##   3. Your computer saves it (player_profile.gd) and redraws the page.
 ##
 ## Where the upgrades are USED (each just asks Upgrades.level / best_in_team):
-##   item_manager.gd  bag_size_for / pack_size_for / stash_size_for / quick_stack_size_for
+##   item_manager.gd  pack_size_for / stash_size_for / quick_stack_size_for, sell_price (gourmet)
 ##   shopkeeper.gd    shop_allows (weapon crates)       cat_player.gd   zoomies_multiplier
 ##   getaway_car.gd   engine_multiplier, set_vehicle   cat_health.gd   max_health_for
-##   enemy.gd         scrap_magnet_chance              fish_heist.gd   gourmet_multiplier
+##   enemy.gd         scrap_magnet_chance
 ##   melee_weapon.gd  melee_multiplier                 mainframe.gd    charge_per_scrap_for, exit_heat
 ##
 ## Prices: select the Upgrades node in main.tscn > Inspector > Costs. Each upgrade has one
-## [cash, scrap] pair per tier, e.g. "deep_pockets": [[150, 1], [350, 2]] = tier 1 costs $150 +
+## [cash, scrap] pair per tier, e.g. "thick_fur": [[150, 1], [350, 2]] = tier 1 costs $150 +
 ## 1 scrap, tier 2 $350 + 2 scrap. The number of pairs IS the number of tiers.
 ## Tutorial runs start with no upgrades at all (player_profile.gd), so they're always the same.
 
@@ -45,8 +46,7 @@ static var instance: Upgrades
 ## Each upgrade's price per tier: id -> [[cash, scrap], ...] (see the top of this file).
 @export var costs: Dictionary = {
 	"shop_crates": [[100, 1], [200, 2], [320, 3]],
-	"deep_pockets": [[100, 2], [230, 2]],
-	"bigger_pack": [[80, 1], [160, 2]],
+	"bigger_pack": [[80, 1], [160, 2], [260, 3]],
 	"deluxe_litterbox": [[100, 1], [200, 2]],
 	"mainframe_capacitor": [[130, 1], [260, 2]],
 	"espresso_zoomies": [[100, 1], [200, 2]],
@@ -72,7 +72,7 @@ static var instance: Upgrades
 @export var crate_3_items: PackedStringArray = ["yarn_zooka", "cucumber_launcher"]
 
 @export_group("What each tier gives")
-## Backpack slots per BIGGER BACKPACK tier (6 -> 8 -> 10).
+## Backpack slots per BIGGER BACKPACK tier (6 -> 8 -> 10 -> 12).
 @export var pack_slots_per_tier: int = 2
 ## Litterbox slots per DELUXE LITTERBOX tier (9 -> 15 -> 21).
 @export var stash_slots_per_tier: int = 6
@@ -84,7 +84,7 @@ static var instance: Upgrades
 @export var engine_per_tier: float = 0.15
 ## Chance per SCRAP MAGNET tier that a smashed (non-boss) bot drops a SCRAP (0.15 = 15%).
 @export var scrap_magnet_per_tier: float = 0.15
-## Extra cash for extracted loot per GOURMET FENCE tier (0.2 = +20%).
+## Extra cash for loot sold at the shop per GOURMET FENCE tier (0.2 = +20%).
 @export var gourmet_per_tier: float = 0.2
 ## Extra melee damage + knockback per HEAVY PAWS tier (0.25 = +25%).
 @export var heavy_paws_per_tier: float = 0.25
@@ -97,8 +97,7 @@ static var instance: Upgrades
 const INFO := {
 	"shop_crates": {"name": "WEAPON CRATES", "tiers": ["STREET SMUGGLER CRATE", "MOB SYNDICATE CRATE", "EXPERIMENTAL CRATE"],
 		"about": "Unlocks better guns in the shop: 1 = HAIRBALL BLASTER + RED DOT, 2 = TOMMY GUN + FROZEN TUNA, 3 = YARN-ZOOKA + CUCUMBER LAUNCHER."},
-	"deep_pockets": {"name": "DEEP POCKETS", "about": "Loot bag 3 -> 4 -> 5 slots."},
-	"bigger_pack": {"name": "BIGGER BACKPACK", "about": "Backpack 6 -> 8 -> 10 slots."},
+	"bigger_pack": {"name": "BIGGER BACKPACK", "about": "Backpack (loot + gear) 6 -> 8 -> 10 -> 12 slots."},
 	"deluxe_litterbox": {"name": "DELUXE LITTERBOX", "about": "Litterbox 9 -> 15 -> 21 slots."},
 	"mainframe_capacitor": {"name": "MAINFRAME CAPACITOR", "crew": true, "about": "1 scrap charges the Mainframe +35% / +50% (not +25%)."},
 	"espresso_zoomies": {"name": "ESPRESSO BLOODSTREAM", "about": "You walk and zoom +12% / +24% faster."},
@@ -107,7 +106,7 @@ const INFO := {
 	"unlock_fish_van": {"name": "ARMORED MEOW-VAN", "about": "Heavy, smashes bots slower, 3 passengers."},
 	"thick_fur": {"name": "THICK FUR", "about": "Max HP 100 -> 125 -> 150."},
 	"scrap_magnet": {"name": "SCRAP MAGNET", "about": "Bots you smash: 15% / 30% chance to drop a SCRAP."},
-	"gourmet_fence": {"name": "GOURMET FENCE", "about": "Fish, sardines and koi pay +20% / +40% at the exit."},
+	"gourmet_fence": {"name": "GOURMET FENCE", "about": "The shop pays +20% / +40% for fish, sardines and koi."},
 	"stuffed_cheeks": {"name": "STUFFED CHEEKS", "about": "Quick-use snack stacks 3 -> 4 -> 5."},
 	"heavy_paws": {"name": "HEAVY PAWS", "about": "Melee hits +25% / +50% damage and knockback."},
 	"insider_tunnel": {"name": "INSIDER TUNNEL", "crew": true, "about": "Your gang's exit opens 5 / 10 heat earlier."},
@@ -116,7 +115,7 @@ const INFO := {
 ## Which upgrades each page sells (an NPC's Upgrade Page picks one of these names).
 const PAGES := {
 	"shop": ["shop_crates"],
-	"boss": ["deep_pockets", "bigger_pack"],
+	"boss": ["bigger_pack"],
 	"workbench": ["deluxe_litterbox", "mainframe_capacitor"],
 	"vehicles": ["espresso_zoomies", "turbo_engine", "unlock_cyber_bike", "unlock_fish_van"],
 	"combat": ["thick_fur", "scrap_magnet"],
@@ -293,7 +292,7 @@ func request_buy(player_id: int, upgrade_id: String) -> void:
 		_buy_result.rpc_id(peer, player_id, false, "%s costs $%d. You've got $%d." % [title, cash_cost, Wallet.instance.cash_of(player_id)])
 		return
 	if items.scrap_count_of(player_id) < scrap_cost:
-		_buy_result.rpc_id(peer, player_id, false, "%s needs %d SCRAP. You've got %d (loot bag + litterbox)." % [title, scrap_cost, items.scrap_count_of(player_id)])
+		_buy_result.rpc_id(peer, player_id, false, "%s needs %d SCRAP. You've got %d (backpack + litterbox)." % [title, scrap_cost, items.scrap_count_of(player_id)])
 		return
 	if not Wallet.instance.spend(player_id, cash_cost) or not items.spend_scrap(player_id, scrap_cost):
 		return
@@ -334,6 +333,7 @@ func _set_all(player_id: int, upgrades: Dictionary) -> void:
 func restore(player_id: int, upgrades: Dictionary, vehicle: String) -> void:
 	if not multiplayer.is_server():
 		return
+	upgrades = _merge_old_upgrades(upgrades)
 	var clean := {}
 	for upgrade_id in upgrades:
 		if upgrade_id is String and costs.has(upgrade_id):
@@ -347,6 +347,19 @@ func restore(player_id: int, upgrades: Dictionary, vehicle: String) -> void:
 		_set_choice.rpc(player_id, vehicle)
 		if vehicle_of(Teams.team_of(player_id)) == "interceptor":
 			_set_team_vehicle.rpc(Teams.team_of(player_id), vehicle)
+
+
+## Old saves: DEEP POCKETS (the loot bag's own upgrade, before loot moved into the one backpack)
+## turns into BIGGER BACKPACK tiers, so nobody loses what they paid for. (A copy: the save's own
+## dictionary isn't changed; the profile saves the merged one next time.)
+static func _merge_old_upgrades(upgrades: Dictionary) -> Dictionary:
+	if not upgrades.has("deep_pockets"):
+		return upgrades
+	var merged := upgrades.duplicate()
+	var pockets := int(merged.get("deep_pockets", 0))
+	merged.erase("deep_pockets")
+	merged["bigger_pack"] = int(merged.get("bigger_pack", 0)) + pockets  # (restore clamps it to the top tier)
+	return merged
 
 
 # --- Choosing your gang's ride (Frankie / Jittery Jax) ---
@@ -421,7 +434,7 @@ func _forget(player_id: int) -> void:
 func open_page(cat: CatPlayer, page: String, speaker: String, voice: String = "", back: Callable = Callable()) -> void:
 	var me := cat.player_id
 	var items := ItemManager.instance
-	var line := "%s\nYOU HAVE: $%d   %d SCRAP (loot bag + litterbox)" % [PAGE_LINES.get(page, ""), Wallet.instance.cash_of(me), items.scrap_count_of(me)]
+	var line := "%s\nYOU HAVE: $%d   %d SCRAP (backpack + litterbox)" % [PAGE_LINES.get(page, ""), Wallet.instance.cash_of(me), items.scrap_count_of(me)]
 	var buttons := []
 	for upgrade_id in PAGES.get(page, []):
 		var info: Dictionary = INFO.get(upgrade_id, {})

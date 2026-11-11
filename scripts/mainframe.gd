@@ -11,7 +11,7 @@ extends Node
 ##   - Every time a district is SEALED (max heat, the DEEP CLEAN: Events.district_sealed) each
 ##     ACTIVE gang (at least 1 player in the game) loses drain_per_district (25%).
 ##   - SCRAP (res://items/scrap.tres) only drops from a destroyed MEGA VAC-COP. Bring it home
-##     in your loot bag (it isn't cashed in at the exit: it stays in the bag), walk up to your
+##     in your backpack (the shop won't buy it), walk up to your
 ##     gang's MAINFRAME on the west wall of your sewer and press E. 1 scrap does one of these:
 ##       FEED  (under 100%)  your gang's Mainframe +charge_per_scrap (25%)
 ##       HACK  (your gang is at 100%, an active rival above 0%)  the RIVAL's Mainframe
@@ -582,7 +582,7 @@ func request_feed(player_id: int) -> void:
 		return
 	var items := ItemManager.instance
 	if items.count_in_bag(player_id, SCRAP_ID) <= 0:
-		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No SCRAP in your loot bag. Smash a MEGA VAC-COP for some.")
+		_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "No SCRAP in your backpack. Smash a MEGA VAC-COP for some.")
 		return
 	var team := cat.team
 	var use := use_for(team)

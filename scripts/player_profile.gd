@@ -3,10 +3,10 @@ extends Node
 ## CYPURRPUNK — SAVED PROGRESS: your cash and your stash, kept between games.
 ## Attach to the "Profile" node in main.tscn. Reach it with PlayerProfile.instance.
 ##
-## What's saved: your CASH, what's in your STASH (the lockers in the sewers: gear, and spare
-## SCRAP for THE MAINFRAME), your SEWER UPGRADES (scripts/upgrades.gd: id -> tier) and the
+## What's saved: your CASH, what's in your STASH (the litterbox in the sewers: anything you bury
+## there, gear, fish, SCRAP), your SEWER UPGRADES (scripts/upgrades.gd: id -> tier) and the
 ## ride you last picked for your gang ("vehicle"). That's all:
-## what you carry (paws, backpack, loot bag) is NOT saved, so put gear in the stash before you
+## what you carry (paws, quick-use slots, backpack) is NOT saved, so put gear in the stash before you
 ## quit — a player who quits drops what they carry on the spot, like before.
 ##
 ## Where: on YOUR computer, one file per cat you've made (Settings.cats, CHOOSE YOUR CAT screen):
