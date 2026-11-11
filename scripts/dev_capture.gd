@@ -123,6 +123,10 @@ extends Node
 ##   --track=N       measure how smoothly other players' cats move over N frames
 ##   --net_interval=S  simulate a laggy connection: send our cat's position only every S seconds
 ##   --frames=N        frames to wait before the snap (default 90 = 1.5 s)
+##   --hud_heat=R[,L]  keep the guns in our right (and left) paw at this HEAT (0..1; 1 = OVERHEATED) so the
+##                     bottom-left gun box shows it, e.g. --give=pistol,red_dot --hud_heat=0.3,0.9
+##   --hud_buffs=LIST  switch on buff / debuff badges (top-left): sticky (held at 60%), catnip, catdip
+##                     -> prints a "DevCapture hud loadout" line (what the gun box and badges show)
 ##   --scale=N         size of the saved image: each game pixel = N pixels (default 4 = 960 tall)
 ##   --window=WxH      window size for this run, e.g. --window=1720x720 to test an ultrawide shape
 ##   --setting=NAME:VALUE  change a setting for this run (never saved), e.g. --setting=split_side_by_side:false
@@ -415,6 +419,8 @@ func _ready() -> void:
 			_test_give.rpc_id(1, player.player_id, args["give"])
 			for i in 20:
 				await get_tree().process_frame
+		if args.has("hud_heat") or args.has("hud_buffs"):
+			_hud_preview(player, args)
 		if args.has("to_stash") or args.has("from_stash"):
 			# Walk to THE STASH lockers, then click slots the way the inventory screen does:
 			#   --to_stash=hand:0,pack:0   (each moves that item into the stash; indexes shift as you go)
@@ -1315,6 +1321,36 @@ func _all_psx(node: Node) -> bool:
 		if material == null or material.shader != LevelKit.PSX_SHADER:
 			return false
 	return true
+
+
+## --hud_heat / --hud_buffs: hold the gun heat and buff timers still until the snap, so the new
+## ocean-blue HUD pieces (scripts/ui/hud_weapon_display.gd, hud_status_icons.gd) can be checked.
+func _hud_preview(player: CatPlayer, args: Dictionary) -> void:
+	var heats: Array = []
+	for value in str(args.get("hud_heat", "")).split(",", false):
+		heats.append(clampf(float(value), 0.0, 1.0))
+	var buffs: PackedStringArray = str(args.get("hud_buffs", "")).split(",", false)
+	if "catnip" in buffs:
+		player.start_boost(1.3, 30.0)
+	if "catdip" in buffs:
+		player.start_double_jump(1, 20.0)
+	var frames := int(args.get("frames", "90"))
+	for frame in frames:
+		for hand in mini(heats.size(), 2):
+			var weapon := ItemManager.instance.held_item(player, hand) as Weapon
+			if weapon != null:
+				weapon.heat = heats[hand]
+				weapon.is_overheated = heats[hand] >= 1.0
+		if "sticky" in buffs:
+			player._sticky_left = player.sticky_seconds * 0.6
+		if frame == mini(30, frames / 2):  # (physics frames can run slower than the snap's frames)
+			var display := Hud.element("Held", player.slot) as HudWeaponDisplay
+			var icons := Hud.element("StatusIcons", player.slot) as HudStatusIcons
+			print("DevCapture hud loadout: paws=%s quick=%s badges=%s" % [
+				", ".join(display._paws.map(func(p): return "%s heat=%.2f%s key=%s" % [p.id, p.heat, " OVERHEAT" if p.overheated else "", p.key])) if display != null else "?",
+				", ".join(display._quick.map(func(q): return "%s x%d [%s]" % [q.id if q.id != "" else "-", q.count, q.key])) if display != null else "?",
+				", ".join(icons._effects.map(func(e): return "%s %.0f%%" % [e.id, e.fraction * 100.0])) if icons != null and icons.visible else "none"])
+		await get_tree().physics_frame
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.

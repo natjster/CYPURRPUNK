@@ -1004,8 +1004,8 @@ func _free_now(node: Node) -> void:
 		node.queue_free()
 
 
-## The bottom-of-screen text (HUD "Held") and crosshair, for whatever each of OUR players holds
-## (on their own HUD: split screen).
+## The bottom-left gun box (HUD "Held", scripts/ui/hud_weapon_display.gd) and crosshair, for
+## whatever each of OUR players holds (on their own HUD: split screen).
 func _update_hud() -> void:
 	if Game.instance == null:
 		return
@@ -1014,23 +1014,36 @@ func _update_hud() -> void:
 
 
 func _update_hud_for(cat: CatPlayer) -> void:
-	var lines := PackedStringArray()
+	var paws: Array = []   # [right paw, left paw]: what each holds (see HudWeaponDisplay.show_loadout)
+	var quick: Array = []  # the two QUICK USE slots
 	var wants_crosshair := false
 	if cat.is_controlled:
-		var labels := ["R:", "L:"]  # right paw, left paw (keys: SETTINGS > KEYS)
+		var keys := ["shoot", "use_left"]  # right paw fires with LMB / RT, left with RMB / LT (SETTINGS > KEYS)
 		for hand in 2:
 			var held := held_item(cat, hand)
-			if held != null:
-				var text := held.hud_text()
-				lines.append(("%s %s" % [labels[hand], text]) if text != "" else labels[hand])
-				wants_crosshair = wants_crosshair or held.wants_crosshair()
-		var quick := quick_slots(cat.player_id)
-		for slot in 2:  # QUICK USE slots, e.g. "1: CATNIP x2"
-			if not quick[slot].is_empty():
-				var data: ItemData = catalog[quick[slot][0]]
-				lines.append("%s: %s x%d" % [Controls.key_text("quick_%d" % (slot + 1)), data.display_name, quick[slot].size()])
-	Hud.show_element("Held", not lines.is_empty(), cat.slot)
-	Hud.set_text("Held", "  |  ".join(lines), cat.slot)
+			if held == null or held.data == null:
+				continue
+			var weapon := held as Weapon
+			paws.append({
+				"id": held.data.id,
+				"name": weapon.hud_name if weapon != null else held.data.display_name,
+				"heat": weapon.heat if weapon != null else 0.0,
+				"overheated": weapon != null and weapon.is_overheated,
+				"heats": weapon != null and weapon.heat_per_shot > 0.0,
+				"key": Hud.key_for(keys[hand], cat.slot),
+			})
+			wants_crosshair = wants_crosshair or held.wants_crosshair()
+		var slots := quick_slots(cat.player_id)
+		for slot in 2:  # QUICK USE slots (keys 1 / 2, d-pad left / right)
+			var stack: Array = slots[slot]
+			quick.append({
+				"id": stack[0] if not stack.is_empty() else "",
+				"count": stack.size(),
+				"key": Hud.key_for("quick_%d" % (slot + 1), cat.slot),
+			})
+	var display := Hud.element("Held", cat.slot) as HudWeaponDisplay
+	if display != null:
+		display.show_loadout(paws, quick)
 	Hud.show_element("Crosshair", wants_crosshair, cat.slot)
 
 

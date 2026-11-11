@@ -66,10 +66,12 @@ var shoulder_view: bool = false
 var speed_boost: float = 1.0
 var _sticky_left: float = 0.0  # owner: seconds of sticky paws left
 var _boost_time_left: float = 0.0
+var _boost_seconds: float = 0.0  # how long the current boost lasted in total (for the HUD timer)
 ## Catdip: extra jumps allowed in mid-air while it lasts (see start_double_jump).
 var air_jumps: int = 0
 var _air_jumps_left: int = 0
 var _air_jump_time_left: float = 0.0
+var _air_jump_seconds: float = 0.0  # how long the current catdip lasted in total (for the HUD timer)
 ## Owner only: true while knocked out (0 HP, see cat_health.gd). The cat flops onto its side
 ## and ignores the keyboard until it wakes up in the sewers.
 var knocked_out: bool = false
@@ -388,6 +390,7 @@ func _process(delta: float) -> void:
 func start_boost(multiplier: float, seconds: float) -> void:
 	speed_boost = multiplier
 	_boost_time_left = seconds
+	_boost_seconds = seconds
 
 
 ## Owner only: allow extra jumps in mid-air for a while (catdip). extra = 1 is a double jump.
@@ -395,6 +398,34 @@ func start_double_jump(extra: int, seconds: float) -> void:
 	air_jumps = extra
 	_air_jumps_left = extra
 	_air_jump_time_left = seconds
+	_air_jump_seconds = seconds
+
+
+## BUFF / DEBUFF TIMERS for the HUD badges next to the health bar (scripts/ui/hud_status_icons.gd).
+## Owner only (the HUD only shows our own cats). Fraction = how much is left: 1 = just started, 0 = over.
+func sticky_fraction() -> float:
+	return clampf(_sticky_left / maxf(sticky_seconds, 0.01), 0.0, 1.0)
+
+
+func boost_fraction() -> float:
+	return clampf(_boost_time_left / maxf(_boost_seconds, 0.01), 0.0, 1.0)
+
+
+func air_jump_fraction() -> float:
+	return clampf(_air_jump_time_left / maxf(_air_jump_seconds, 0.01), 0.0, 1.0)
+
+
+## Seconds left of each (sticky paws / catnip boost / catdip double jump).
+func sticky_seconds_left() -> float:
+	return _sticky_left
+
+
+func boost_seconds_left() -> float:
+	return _boost_time_left
+
+
+func air_jump_seconds_left() -> float:
+	return _air_jump_time_left
 
 
 ## The player changed a setting: pick up the new field of view.
@@ -667,8 +698,7 @@ func _physics_process(delta: float) -> void:
 func _sticky_paws(delta: float) -> float:
 	if is_on_floor() and StickyPatch.touches(global_position):
 		if _sticky_left <= 0.0:
-			Sound.play_at("splat", global_position, -6.0)
-			Hud.popup("STICKY PAWS!", 1.5, slot)
+			Sound.play_at("splat", global_position, -6.0)  # (the HUD shows a STICKY PAWS badge, top-left)
 		_sticky_left = sticky_seconds
 	_sticky_left = maxf(_sticky_left - delta, 0.0)
 	return sticky_slow if _sticky_left > 0.0 else 1.0

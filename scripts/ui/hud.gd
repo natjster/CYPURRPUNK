@@ -17,11 +17,14 @@ extends CanvasLayer
 ##       ├── Bars         <- health bars over enemies / hurt cats (scripts/ui/hud_health_bars.gd)
 ##       ├── Damage       <- damage numbers off things you shoot (scripts/ui/hud_damage_numbers.gd)
 ##       ├── Top          <- stays up while you talk / shop: Health (your health bar, top-left,
-##       │                   scripts/ui/hud_health_bar.gd), Feed (under it: "CLAWD DOWNED MITTENS",
+##       │                   scripts/ui/hud_health_bar.gd), StatusIcons (buff / debuff badges right
+##       │                   of it: sticky paws, catnip, catdip; scripts/ui/hud_status_icons.gd), Feed (under it: "CLAWD DOWNED MITTENS",
 ##       │                   Hud.feed), Heat (the red/blue heat bar, top-right,
 ##       │                   scripts/ui/hud_heat_bar.gd), DropOff (top-middle), Scoreboard
 ##       │                   (under Heat, everyone's cash: only shown in the sewers, wallet.gd)
-##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt, Held
+##       ├── Middle       <- hidden while a window is open: Popup, Banner, Crosshair, Message, Prompt,
+##       │                   Held (bottom-left: the guns in your paws + quick-use slots, in the ocean-blue
+##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd)
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── NpcDialog    <- the talk box (scripts/ui/npc_dialog.gd)        } open, it gets the mouse
 ##       └── PlayerPause  <- split screen: one player's pause menu (scripts/ui/player_pause.gd)
@@ -316,6 +319,7 @@ func _process(delta: float) -> void:
 	frame.visible = in_game and not menu_open()
 	middle.visible = not wants_input(seat)
 	_update_prompt()
+	_update_status()
 
 
 ## Write the feed's lines into Frame/Top/Feed (a RichTextLabel: each line its own colour,
@@ -341,6 +345,50 @@ func _update_prompt() -> void:
 	show_element("Prompt", text != "", seat)
 	if text != "":
 		set_text("Prompt", "[%s] %s" % [key_for("interact", seat), text], seat)
+
+
+## The BUFF / DEBUFF badges next to the health bar (Frame/Top/StatusIcons), from OUR player's cat.
+## Order = left to right. New effect: add a line here (see scripts/ui/hud_status_icons.gd).
+func _update_status() -> void:
+	var icons := element("StatusIcons", seat) as HudStatusIcons
+	if icons == null:
+		return
+	var game := Game.instance
+	var cat := game.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if game != null and in_game else null
+	var effects: Array = []
+	if cat != null and cat.reads_input():
+		if cat.sticky_seconds_left() > 0.0:
+			effects.append({"id": "sticky_paws", "fraction": cat.sticky_fraction(), "seconds_left": cat.sticky_seconds_left(), "debuff": true})
+		if cat.boost_seconds_left() > 0.0:
+			effects.append({"id": "catnip", "fraction": cat.boost_fraction(), "seconds_left": cat.boost_seconds_left(), "debuff": false})
+		if cat.air_jump_seconds_left() > 0.0:
+			effects.append({"id": "catdip", "fraction": cat.air_jump_fraction(), "seconds_left": cat.air_jump_seconds_left(), "debuff": false})
+	icons.set_effects(effects)
+	_place_status_icons(icons, effects.size())
+
+
+## The badges sit right of the health bar. On a narrow HUD (4:3 in the PS1 look, split screen) that
+## would run into the heat bar, so they drop just under the health bar instead and the FEED moves
+## down to make room.
+func _place_status_icons(icons: HudStatusIcons, count: int) -> void:
+	var health := element("Health", seat)
+	var heat := element("Heat", seat)
+	var feed := element("Feed", seat)
+	if health == null:
+		return
+	var width := count * (icons.badge_size + icons.gap)
+	var beside := Vector2(health.position.x + health.size.x + 12.0, health.position.y + (health.size.y - icons.badge_size) / 2.0)
+	var room := heat == null or not heat.visible or beside.x + width + 12.0 <= heat.position.x
+	var under_bar := count > 0 and not room
+	if under_bar:
+		var bar_left: float = (health as HudHealthBar).number_box_width + 8.0 if health is HudHealthBar else 0.0
+		icons.position = Vector2(health.position.x + bar_left, health.position.y + health.size.y + 6.0)
+	else:
+		icons.position = beside
+	if feed != null:
+		if not feed.has_meta("design_y"):
+			feed.set_meta("design_y", feed.position.y)
+		feed.position.y = feed.get_meta("design_y") + (icons.badge_size + 6.0 if under_bar else 0.0)
 
 
 ## The button name to show THIS player for an action: their controller button if they play

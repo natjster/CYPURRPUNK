@@ -12,6 +12,8 @@
 [ext_resource type="Script" path="res://scripts/ui/hud_damage_numbers.gd" id="10_damage"]
 [ext_resource type="Script" path="res://scripts/ui/hud_heat_bar.gd" id="11_heat"]
 [ext_resource type="Script" path="res://scripts/ui/hud_compass_arrow.gd" id="12_compass"]
+[ext_resource type="Script" path="res://scripts/ui/hud_weapon_display.gd" id="13_weapons"]
+[ext_resource type="Script" path="res://scripts/ui/hud_status_icons.gd" id="14_status"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tutorial"]
 content_margin_left = 10.0
@@ -83,6 +85,16 @@ offset_right = 384.0
 offset_bottom = 52.0
 mouse_filter = 2
 script = ExtResource("8_hpbar")
+
+[node name="StatusIcons" type="Control" parent="Frame/Top"]
+visible = false
+layout_mode = 0
+offset_left = 396.0
+offset_top = 14.0
+offset_right = 596.0
+offset_bottom = 54.0
+mouse_filter = 2
+script = ExtResource("14_status")
 
 [node name="DropOff" type="Label" parent="Frame/Top"]
 layout_mode = 1
@@ -295,20 +307,19 @@ theme_override_font_sizes/font_size = 20
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Held" type="Label" parent="Frame/Middle"]
+[node name="Held" type="Control" parent="Frame/Middle"]
 visible = false
-modulate = Color(1, 1, 1, 0.9)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 24.0
-offset_top = -52.0
-offset_right = 924.0
+offset_top = -138.0
+offset_right = 344.0
 offset_bottom = -22.0
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.4, 1, 1, 1)
-text = "R: HEAT [----------]"
+mouse_filter = 2
+script = ExtResource("13_weapons")
 
 [node name="Inventory" type="Control" parent="Frame"]
 visible = false

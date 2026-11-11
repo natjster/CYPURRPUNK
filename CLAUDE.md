@@ -12,8 +12,14 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
 - UI LOOKS: `Settings.modern_ui` (SETTINGS > EFFECTS > UI STYLE). false = PS1: `menu_viewport` and every HUD SubViewport render at game pixels
   (size = the pane's game viewport, `size_2d_override` keeps the layout), blown up nearest, and `CRTOverlay` (top-level ColorRect, psx_post with `pixel_scale`/`area_offset`/`area_scale`) covers game+HUD+menus; the per-pane CRT is off (`_game_dither` hidden, panes show the raw viewport). true (default) = MODERN: real-res UI, overlay hidden, per-pane CRT on. One player + PS1: `hud_scale_for` = fit * `ps1_hud_scale` (1.33). Thin lines in HUD `_draw` need `Hud.line(w)`, text outlines `Hud.outline(w)`.
 - HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport, in a SubViewport (`GameScreen._seat_huds[seat]`, seat 0 too: GameScreen._input pushes each seat's events to its HUD first; player 1's mouse only while `Hud.wants_input(0)`). Use the statics: `Hud.set_text/show_element/set_color/
-  show_message/popup/set_in_game/element` by label name (Health, Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
-  Popup, Crosshair, Message, Prompt, Held). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  show_message/popup/set_in_game/element` by label name (Health, StatusIcons [HudStatusIcons, buff badges, fed by hud.gd
+  `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
+  Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
+  Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
+  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`]).
+  OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
+  `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
+  phases 2-4 (Inventory, Shop, Workbench). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
   GameScreen keeps that player's input for their HUD.
@@ -322,6 +328,10 @@ commented, expose tuning as `@export`, give Godot editor click-paths, and update
   data-driven text in an export too (`--export-debug` build accepts the `-- --host --talk=` test args; add `--capture` or it never quits).
 
 ## Models + tool servers + OVERCLEAN (Phase 0, SETUP_GUIDE §20-21)
+- ICONS: `tools/cypurr_icons.py` + MCP `tools/icon_mcp.py` ("cypurrpunk-icons"): a numpy rasteriser that reads .tscn primitives +
+  .glb -> `ui/icons/items/<id>.png` (64px WHITE orthographic side profiles, seams/texture = darker lines; `ITEMS` table = source +
+  view side/high/melee + yaw), `status/<id>.png` (32px, drawn in code), `npcs/<id>.png` (64px coloured 3/4 portraits from the
+  NPC scene's `Model`, + `locked_mystery`). `python tools/cypurr_icons.py all`, then `--headless --import`.
 - `.mcp.json` = two local stdio MCP servers (Python, mcp 2.x `MCPServer` with 1.x `FastMCP` fallback): `tools/model_mcp.py`
   (logic `tools/cypurr_models.py`: spec JSON -> `.bbmodel` (Blockbench 4.10 "free" format, groups inline in outliner, cubes +
   "prism" meshes + locators, embedded PNG painted by ops) -> `.glb` (group = node, locator = empty node, 16 px = 1 m, NEAREST,

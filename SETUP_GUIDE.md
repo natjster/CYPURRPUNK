@@ -1372,6 +1372,8 @@ never bonks and never steals.
 - Within 7.5 m it lobs a glob at your feet every 3.5 seconds (a puddle where it lands).
 - Puddles last 6 seconds. Touch one on the ground and you have **STICKY PAWS**: half speed until
   3 seconds after you leave it (zoomies 9 -> 4.5 m/s, slow enough for a VAC-COP to catch you).
+  You hear a splat and an amber **paw-in-glue badge** appears next to your health bar (top-left),
+  draining as the 3 seconds run out (section 13, "Buff and debuff badges").
   Jumping over a puddle keeps you clean.
 
 **The look (Nov 2026):** both are Blockbench models now. The LINT-TRAPPER (`models/lint_trapper.glb`)
@@ -1666,7 +1668,10 @@ scripts/items/
 scripts/ui/inventory_ui.gd   <- the inventory screen
 ```
 The HUD pieces for items are **Crosshair** and **Held** in `scenes/ui/hud.tscn` (§13); they only
-show while you hold something that wants them.
+show while you hold something that wants them. **Held** is the ocean-blue gun box bottom-left: it
+shows the item's side-view picture from `ui/icons/items/<id>.png`, so a NEW item needs its icon made
+too (ask Claude, or run `python tools/cypurr_icons.py item <id>` after adding it to `ITEMS` in that
+file, then let Godot import it). No picture yet = the box just shows the item's name.
 
 ### Melee: the Neon Bat (`scripts/items/melee_weapon.gd`, class **MeleeWeapon**)
 A melee weapon is a gun whose "shot" is a short **swing**: same item system, same shops, same
@@ -2432,6 +2437,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Cash             <- top-left, big green "$120"
     │   ├── Carrying         <- "LOOT 2/6" or "QUEST: MITTENS' FISH 2/3"
     │   ├── Health           <- your health bar, drawn in code (script ui/hud_health_bar.gd)
+    │   ├── StatusIcons      <- buff / debuff badges right of the health bar (ui/hud_status_icons.gd)
     │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE" / the Sewer Breach clock
     │   ├── Heat             <- top-right: flashing red/blue heat bar (script ui/hud_heat_bar.gd)
     │   └── Scoreboard       <- top-right, under Heat: everyone's cash (sewers only)
@@ -2441,7 +2447,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Crosshair        <- drawn lines (script ui/hud_crosshair.gd), only with a gun
     │   ├── Message          <- what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK TO DON CATLEONE" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
-    │   └── Held             <- bottom-left: "R: PAW-PISTOL [###-------]"
+    │   └── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
     ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
     └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
         └── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script
@@ -2468,6 +2474,66 @@ HUD (CanvasLayer)            script: ui/hud.gd
     **Choice Height**. Text sizes: **Speaker** / **Line** > Theme Overrides > Font Sizes.
   - **Inventory:** select **Inventory**: Slot Size, Slot Font Size, Title Font Size, Columns.
   - Box and button colours / borders for both: `ui/hud_theme.tres` (PanelContainer, Button).
+
+### The OCEAN-BLUE style (`ui/hud_style.tres`, script `scripts/ui/hud_style.gd`)
+The new HUD pieces (and, next, the inventory, shop and workbench) share ONE set of colours: a
+translucent deep-ocean-blue box with a bright cyan-blue edge and brighter corner brackets.
+- **Change the look:** FileSystem dock > `ui` > double-click **hud_style.tres**. In the Inspector:
+  - **Panels:** Panel Color (the see-through blue inside), Border Color, Faint Border Color (empty
+    slots), Border Width, Corner Length (the bright corner brackets; 0 = none), Text Color.
+  - **Weapons:** Cool Color (a cool gun: ocean blue), Hot Color (fully heated: red), **Heat Blend**
+    (which colours a gun passes through as it heats: VIOLET_SWEEP = blue, violet, pink, red, the
+    default; THERMAL = blue, cyan, yellow, orange, red; STRAIGHT = a plain mix, a bit grey in the
+    middle), Heat Curve (higher = stays blue longer), Overheat Flash Color + Flashes Per Second.
+  - **Buffs and debuffs:** Buff Color (catnip, catdip), Debuff Color (sticky paws, amber), Timer
+    Fill Opacity, Ending Soon Seconds (the badge pulses for its last second).
+  Press **Ctrl+S**; the game uses it next time it starts.
+- Thin lines follow `Hud.line()` so they don't vanish in the chunky PS1 UI look.
+
+### The gun box and quick-use slots (**Frame > Middle > Held**, `scripts/ui/hud_weapon_display.gd`)
+```
+ OVERHEAT                       <- only while a gun is overheated (flashes)
++----------------------+ +---+
+| RMB                  | |1  |  <- QUICK USE 1: the item's picture, key, "x2" stack count
+|  [left paw gun]      | +---+
+|     [right paw gun]  | +---+
+|                  LMB | |2  |  <- QUICK USE 2 (a faint empty frame when there's nothing in it)
++----------------------+ +---+
+```
+- One gun: its side-view picture, its name top-left and its fire button bottom-right.
+- **Heat:** the picture is ocean blue when cool and changes colour towards red as `weapon.heat`
+  rises (see Heat Blend above); the box edge warms up too. Overheated = the picture flashes and
+  **OVERHEAT** shows above the box. Guns that never overheat (pistol, hairball blaster) stay blue.
+- **Dual wield** (two one-paw guns): two pictures overlapping. The RIGHT paw's (LMB / RT) is in
+  front, the LEFT paw's (RMB / LT) peeks out behind it, up and to the left. Each heats on its own.
+- Button names follow `Hud.key_for` (controller buttons for a pad player).
+- Nothing in your paws and nothing in the quick-use slots = the whole thing hides.
+- **Tuning** (select **Held** in `hud.tscn`): Weapon Box Size, Quick Slot Size, Gap, Padding, Dual
+  Offset (how far the back gun sits up-left), Back Opacity, font sizes, Heat Follow Speed.
+  To move it, drag it (it's anchored bottom-left).
+
+### Buff and debuff badges (**Frame > Top > StatusIcons**, `scripts/ui/hud_status_icons.gd`)
+Small square badges right of your health bar, one per effect on your cat right now:
+
+| Badge | Effect | Colour |
+|---|---|---|
+| paw in dripping glue | **STICKY PAWS** (stepped in LINT-TRAPPER glue: half speed) | amber (debuff) |
+| jagged leaf + speed lines | **CATNIP** speed boost | blue (buff) |
+| tin under a double chevron | **CATDIP** double jump | blue (buff) |
+
+A lighter fill inside each badge drains downwards as the effect runs out; the badge pulses in its
+last second. On a narrow screen (4:3 in the PS1 UI look, split screen) there's no room between the
+health bar and the heat bar, so the badges sit just under the health bar and the FEED moves down.
+Tuning (select **StatusIcons**): Badge Size, Gap, Padding, Pulse Per Second. hud.gd `_update_status`
+feeds it from the cat (`sticky_fraction()`, `boost_fraction()`, `air_jump_fraction()`); a new effect
+= a line there + a picture from the icon tool (section 20).
+
+Test (pictures in `shots/`):
+```powershell
+C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --path . -- --solo --deploy --give=red_dot,red_dot,catnip,catnip,catdip --hud_heat=0.35,1.0 --hud_buffs=sticky,catnip,catdip --frames=240 --capture=shots/hud.png
+```
+`--hud_heat=R,L` holds each paw's gun at that heat (1 = overheated), `--hud_buffs=sticky,catnip,catdip`
+switches badges on; it prints a `DevCapture hud loadout` line. Add `--setting=modern_ui:false` for the PS1 look.
 
 ### Names over heads (`scripts/ui/hud_name_tags.gd`, on **Frame > Names**)
 Cats and NPCs still have a **NameTag** (Label3D) in their own scene: it's the *marker* that says
@@ -2985,7 +3051,7 @@ step 1, step 8 before the payphone and step 8 after it. Add `--tutorial_shots` a
 
 ---
 
-## 20. Real models from Blockbench + Claude's tool servers (Model Shop, Sound Lab)
+## 20. Real models from Blockbench + Claude's tool servers (Model Shop, Sound Lab, Icon Studio)
 
 The game is moving from code-built boxes to real low-poly models (ROADMAP.md §5). The first two
 were the **trash bin** and the **traffic cone** you see on street corners and in empty yards; the
@@ -3070,10 +3136,23 @@ They give Claude new tools. You never run them; they're free and run on this PC.
 | Server (file) | Tools it gives Claude |
 |---|---|
 | **Model Shop** (`tools/model_mcp.py`) | `create_or_edit_bbmodel` (write/change a Blockbench project: boxes, round cans and cones, free-form "poly" shapes like the car's wedge, groups, markers, a painted pixel-art texture), `export_bbmodel_to_glb`, `inspect_model` (triangles, texture size, groups vs the rules), `list_models` |
+| **Icon Studio** (`tools/icon_mcp.py`) | `make_item_icon` (an orthographic SIDE PROFILE of any item, rendered from its real scene / .glb: white with darker detail lines, so the HUD can colour it), `make_status_icon` (the sticky paws / catnip / catdip badges), `make_npc_portrait` (coloured head-and-shoulders portrait of a sewer NPC, or `locked_mystery`: a dark silhouette with a "?"), `make_all_icons`, `list_icons` |
 | **Sound Lab** (`tools/sound_mcp.py`) | `generate_overclean_voice` (free text-to-speech + robot + loudspeaker echo + chime), `generate_cat_voice_blips` (Animal Crossing style talking cats: `meow_blip_<name>_1..4.wav`; soft and rounded by default, ask for "crunch" for the old harsh PS1 chatter), `generate_ps1_sfx` (crunchy effects: bin clatter, cone bounce, scratch, PA chime, metal clang, plastic tap, or a custom recipe), `list_sounds` |
 
-The real work is in `tools/cypurr_models.py` and `tools/cypurr_sound.py`, which also run from a
-terminal (each prints its instructions when run with no arguments). Remake every OVERCLEAN line:
+The real work is in `tools/cypurr_models.py`, `tools/cypurr_sound.py` and `tools/cypurr_icons.py`,
+which also run from a terminal (each prints its instructions when run with no arguments).
+
+**Icons** (`ui/icons/`): `items/<id>.png` (64x64 side profiles of every held item and loot),
+`status/<id>.png` (32x32 badges), `npcs/<id>.png` (64x64 portraits of all 14 sewer NPCs +
+`locked_mystery.png`). The icon tool reads the scenes the way Godot does (BoxMesh / SphereMesh /
+CylinderMesh / CapsuleMesh / PrismMesh / TorusMesh sizes, node positions / rotations / scales, and
+the .glb files the guns use), so after a model changes, remake its icon:
+```powershell
+python tools/cypurr_icons.py all
+C:\GoDot\Godot_v4.7.2-stable_win64_console.exe --headless --path . --import
+```
+How each item is looked at (side view, from above for round tins, laid down for melee) is the
+`ITEMS` table at the top of `tools/cypurr_icons.py`. Remake every OVERCLEAN line:
 ```powershell
 python tools/cypurr_sound.py batch tools/sound_specs/overclean.json
 ```
