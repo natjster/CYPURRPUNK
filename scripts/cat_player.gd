@@ -185,13 +185,15 @@ var sync_camera_pitch: float = -0.3
 ## that), the cat puffs up, nearby screens get a little shake, and it yells in its own voice: a quick
 ## burst of voice blips (MY CAT > VOICE picks MALE or FEMALE; CatLook.voice_sound).
 @export var taunt_lines: Array[String] = ["GO LICK YOURSELF!"]
-## How many voice blips the shout is, and how far apart (seconds): few + close = one loud yell.
-@export var taunt_shout_blips: int = 4
-@export var taunt_blip_gap: float = 0.07
+## How fast the line types itself out, in letters per second: the same speed as NPC talking
+## (npc_dialog.gd Letters Per Second = 26). 0 = the whole line at once.
+@export var taunt_letters_per_second: float = 26.0
+## One voice blip at the start of every WORD as it types (like NPCs), never closer than this (seconds).
+@export var taunt_blip_gap: float = 0.2
 @export var taunt_blip_volume_db: float = 2.0
 ## Shouting voice is this much higher than the cat's talking voice (1.0 = same).
 @export var taunt_shout_pitch: float = 1.15
-## How long the line stays up (seconds; it fades out over the last bit).
+## How long the line stays up AFTER it has finished typing (seconds; it fades out over the last bit).
 @export var taunt_seconds: float = 1.8
 ## The line's text colour.
 @export var taunt_color: Color = Color(1, 1, 1)
@@ -211,7 +213,7 @@ var unseen_by_bots: bool = false
 var _taunt_label: Label3D  # the "GO LICK YOURSELF!" line (made the first time we meow)
 var _taunt_hide_at: float = 0.0
 var _taunt_blip_wait: float = 0.0
-var _taunt_blips_left: int = 0
+var _taunt_typed: float = -1.0  # how many letters of the taunt are showing (-1 = all of them)
 
 ## Every cat's voice pitch is nudged by its colours, so two FEMALE cats still sound different.
 const VOICE_PITCH_LOW: float = 0.88
@@ -405,7 +407,7 @@ func _ready() -> void:
 ## Other players' cats: ease toward the latest position from the network.
 func _process(delta: float) -> void:
 	if _taunt_label != null and _taunt_label.visible:
-		_shout_blips(delta)
+		_type_taunt(delta)
 		if Time.get_ticks_msec() / 1000.0 > _taunt_hide_at:
 			_taunt_label.hide()
 	if is_multiplayer_authority():
@@ -581,7 +583,8 @@ static func voice_pitch_of(cat_look: Dictionary) -> float:
 ## The taunt line over our head. It's a HUD name-tag marker (hud_name_tags.gd draws it sharp on
 ## every player's HUD, ours too: it hangs off the CatModel, not the cat itself), plain outlined
 ## text with no box. Meta "shout_at" / "shout_seconds" tell hud_name_tags.gd to draw it as a SHOUT
-## (slams in big, shakes, fades out at the end). The whole line shows at once: no typing.
+## (slams in big, shakes, fades out at the end). Meta "typed" = how many letters show: the line
+## types itself out like an NPC talking (_type_taunt).
 func _show_taunt(text: String) -> void:
 	if _taunt_label == null:
 		_taunt_label = Label3D.new()
@@ -596,28 +599,46 @@ func _show_taunt(text: String) -> void:
 	_taunt_label.text = text
 	_taunt_label.modulate = taunt_color
 	_taunt_label.set_meta("shout_at", Time.get_ticks_msec())
-	_taunt_label.set_meta("shout_seconds", taunt_seconds)
+	# It stays up for the typing time PLUS Taunt Seconds (so the fade-out starts after it's all typed).
+	var typing_time := 0.0
+	if taunt_letters_per_second > 0.0:
+		typing_time = text.length() / taunt_letters_per_second
+	_taunt_typed = 0.0 if typing_time > 0.0 else -1.0
+	_taunt_label.set_meta("typed", 0 if _taunt_typed >= 0.0 else -1)
+	_taunt_label.set_meta("shout_seconds", typing_time + taunt_seconds)
 	_taunt_label.show()
 	_taunt_blip_wait = 0.0
-	_taunt_blips_left = taunt_shout_blips
-	_taunt_hide_at = Time.get_ticks_msec() / 1000.0 + taunt_seconds
+	_taunt_hide_at = Time.get_ticks_msec() / 1000.0 + typing_time + taunt_seconds
 	moves.puff(taunt_puff)  # chest out! (cat_moves.gd squash & stretch springs it back)
 	Feedback.shake_near(global_position, taunt_shake, taunt_shake_radius)
 
 
-## Every computer, every frame while the taunt is up: the YELL = a quick burst of Taunt Shout Blips
-## voice blips, Taunt Blip Gap apart, pitched up a bit (Taunt Shout Pitch).
-func _shout_blips(delta: float) -> void:
-	if _taunt_blips_left <= 0:
+## Every computer, every frame while the taunt is up: a few more letters (Taunt Letters Per Second),
+## and one voice blip at the start of each word (at least Taunt Blip Gap apart), pitched up a bit
+## (Taunt Shout Pitch). Works just like NPC talking (npc_dialog.gd).
+func _type_taunt(delta: float) -> void:
+	if _taunt_typed < 0.0:
 		return
+	var text := _taunt_label.text
+	var before := int(_taunt_typed)
+	_taunt_typed += taunt_letters_per_second * delta
+	var shown := mini(int(_taunt_typed), text.length())
 	_taunt_blip_wait -= delta
-	if _taunt_blip_wait > 0.0:
-		return
-	var player := Sound.play_at(CatLook.voice_sound(look), global_position + Vector3.UP * 0.6, taunt_blip_volume_db)
-	if player != null:
-		player.pitch_scale = voice_pitch() * taunt_shout_pitch * randf_range(0.94, 1.08)
-	_taunt_blip_wait = taunt_blip_gap
-	_taunt_blips_left -= 1
+	if _taunt_blip_wait <= 0.0:
+		for i in range(before, shown):
+			# Only the first letter of a word (a letter whose previous character isn't a letter).
+			if not NpcDialog._is_letter(text[i]) or (i > 0 and NpcDialog._is_letter(text[i - 1])):
+				continue
+			var player := Sound.play_at(CatLook.voice_sound(look), global_position + Vector3.UP * 0.6, taunt_blip_volume_db)
+			if player != null:
+				player.pitch_scale = voice_pitch() * taunt_shout_pitch * randf_range(0.94, 1.08)
+			_taunt_blip_wait = taunt_blip_gap
+			break
+	if shown >= text.length():
+		_taunt_typed = -1.0
+		_taunt_label.set_meta("typed", -1)
+	else:
+		_taunt_label.set_meta("typed", shown)
 
 
 ## Controller camera: the right stick (LOOK UP / DOWN / LEFT / RIGHT in SETTINGS > KEYS) turns

@@ -63,9 +63,9 @@ Not counted: bosses, SEWER BREACH bots, SQUIRT-DRONES and LINT-TRAPPERS never st
 
 ### MEOW = the taunt
 Press **M** (keyboard) or **B** (controller) — rebind it in SETTINGS > KEYS ("MEOW"). Your cat **SHOUTS
-"GO LICK YOURSELF!"** on everyone's screen: the whole line slams up over its head at once in big white
-outlined text (no box), shakes like a yell and fades out; your cat puffs up tall, screens near it get a
-little shake, and it yells in a quick burst of its own voice.
+"GO LICK YOURSELF!"** on everyone's screen: the line slams up over its head in big white outlined text
+(no box) and types itself out at the same speed as NPC talking, with one voice blip per word, then shakes
+like a yell and fades out; your cat puffs up tall and screens near it get a little shake.
 Pick your cat's **VOICE** in MY CAT: **MALE** (low) or **FEMALE** (high). On top of that, every
 cat's pitch is nudged by its fur, eye and marking colours, so two cats never sound quite the same. VAC-COPs within **22 m hear it**: they turn amber, a **?**
 pops up over them and they drive over to look. Lure them away from a teammate, or into a trap.
@@ -91,8 +91,8 @@ pops up over them and they drive over to look. Lure them away from a teammate, o
 - **Every VAC-COP scene** (`scenes/roomba.tscn`, root) > Mess + Meows: Tidies Messes, Mess Notice
   Range, Tidy Seconds, Distracted Sight, Hears Meows, Investigate Seconds.
 - **scenes/player.tscn** (root) > Meow Taunt: Taunt Lines (add more and one is picked at random),
-  Taunt Shout Blips / Taunt Blip Gap / Blip Volume Db / Taunt Shout Pitch (the yell), Taunt Seconds
-  (how long the line stays), Taunt Color (white), Taunt Puff (how tall the cat puffs up), Taunt Shake /
+  Taunt Letters Per Second (typing speed, 26 = same as NPCs) / Taunt Blip Gap / Blip Volume Db / Taunt
+  Shout Pitch (the voice), Taunt Seconds (how long the line stays after it has typed out), Taunt Color (white), Taunt Puff (how tall the cat puffs up), Taunt Shake /
   Shake Radius, Meow Heard From. How the line slams in and shakes: **scenes/ui/hud.tscn** > HUD > Frame >
   **Names** > Shouts (Shout Pop, Shout Slam Seconds, Shout Shake, Shout Tremble, Shout Fade). Sounds > Meow Cooldown.
 - **A new voice** (e.g. "robot"): add it to `VOICES` and `VOICE_NAMES` in `scripts/cat/cat_look.gd`
