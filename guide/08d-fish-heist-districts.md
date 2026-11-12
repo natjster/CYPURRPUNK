@@ -47,10 +47,15 @@ new district. In the code that just means a new city seed: the whole city is gen
    heat has passed every gang's Mainframe number or everyone has used their trip, the heat races to 100 (**Heat Per Second When
    All Home** on the Heat node, 5/s) and the DEEP CLEAN skips its 30-second wait, so the next
    district comes quickly.
-7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
-   swarm of **40 extra VAC-COPs** pour in near anyone still up top and hunt them from 6x further
-   away. You can fight, but after **30 seconds** anyone still up there is knocked out no matter
-   what (everything they carry is lost). Don won't send anyone up while it's sealed.
+7. At **100 heat** the **DEEP CLEAN** starts: the MEGA VAC-COP plus a swarm of **40 extra VAC-COPs**
+   pour in near anyone still up top and hunt them from 6x further away. **THE LAST CALL**: the exits
+   stay open **10 more seconds**. The heat bar (top-right) turns into a yellow-and-black hazard
+   countdown that drains towards a big seconds number (red and flashing for the last 3, a beep every
+   second), and the blue arrow points every cat at its own exit, payphone call or not. Then the
+   exit lids SLAM shut and the hatch is **SEALED**; the heat bar shows **SAFE** (you got down) or
+   **SHUT / TOO LATE** for a few seconds. Everyone back home early = it seals at once. After
+   **30 more seconds** anyone still up there is knocked out no matter what (everything they carry is
+   lost). Don won't send anyone up during the last call or while it's sealed.
 8. A few seconds later a **new district** is built (new city, heat back to 0, fresh patrol) and
    Don can send you up again.
 
@@ -130,7 +135,10 @@ arrows cost nothing.
     Exit Spacing. (When the arrow helps with a payphone = your Mainframe, §8b.)
   - **Payphones**: Exit Open From Start (on), Payphones (how many), Payphone Spacing, Payphone Min Distance.
   - **The blue arrow (HUD)**: Seal Warning At Heat (90).
-  - **The DEEP CLEAN**: Deep Clean Seconds (30), New District Delay.
+  - **The DEEP CLEAN**: Hatch Closing Seconds (10, the LAST CALL; 0 = slam shut at once), Deep Clean
+    Seconds (30, after the seal), New District Delay.
+  - The countdown's look: select **Heat** under HUD > Frame > Top in `scenes/ui/hud.tscn`, Inspector >
+    **Hatch Closing (heat 100)** (colours, Danger Seconds, Sealed Seconds, tag size, thump).
 - Select **Roombas** > **DEEP CLEAN swarm**: Deep Clean Roombas (40, how many swarm in), Swarm
   Min/Max Distance (how close to you they appear), Swarm Sight Multiplier.
 - How long a district lasts: **Heat** > Heat Per Second (see **HEAT** below).
@@ -147,6 +155,8 @@ arrows cost nothing.
   photographs the floating line over the phone.
 - `--deploy --heat=80 --heat_hold=600 --near_exit=6 --hold=move_forward --hold_frames=120` walks
   onto the open exit (prints `extracted`).
+- `--deploy --heat=100 --heat_delay=60 --heat_hold=20 --frames=170` = a shot of the LAST CALL
+  countdown with the cat up top (`--heat_delay` waits until it's deployed).
 - `--deploy --heat=100 --heat_hold=30 --frames=4800` runs a whole DEEP CLEAN and prints
   `[Game] New district: city #...`.
 

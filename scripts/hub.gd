@@ -401,8 +401,8 @@ func deploy(cat: CatPlayer) -> void:
 		# A SEWER BREACH (mainframe.gd): nobody goes anywhere until it's over.
 		Hud.show_message("%s: %s" % [boss_name, line_breach], 4.0, cat.slot)
 		return
-	if FishHeist.instance.sealed:
-		# The DEEP CLEAN is on up there: wait for the next district.
+	if FishHeist.instance.deep_clean_on():
+		# The DEEP CLEAN is on up there (its LAST CALL too): wait for the next district.
 		Hud.show_message("%s: %s" % [boss_name, line_sealed], 4.0, cat.slot)
 		return
 	if not Tutorial.allows_deploy():

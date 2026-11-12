@@ -36,7 +36,7 @@ says so; anything that cares listens. Nobody has to know who else is listening.
 
 | Event | When | Heard on |
 |---|---|---|
-| `district_sealed()` | max heat: the hatch seals, the DEEP CLEAN starts | every computer |
+| `district_sealed()` | max heat: the DEEP CLEAN starts (the hatch seals after the 10 s LAST CALL) | every computer |
 | `player_extracted(player_id, loot_value, quest_bonus)` | a player climbed down the exit | every computer |
 | `player_downed(player_id, cause)` | a cat hit 0 HP and waits for a revive | every computer |
 | `player_revived(player_id, by)` | a teammate picked a downed cat back up | every computer |

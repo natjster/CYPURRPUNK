@@ -35,7 +35,14 @@
   POP-OUT + LID SLAM: `hub.deploy` teleports into the hole and flings the cat (`pop_out_speed`, `moves.lock_steering(air time)`;
   cat_moves only clears the lock on the floor when velocity.y <= 0). `Events.player_went_up` (every computer, once per player
   per district) -> `fish_heist._on_player_went_up` -> `Manhole.play_slam()` (tween: lid flies, flips, slams, dust, shake_near).
-  Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
+  Heat 100: LAST CALL first (12 Nov 2026): host `_start_last_call` rpc (every computer: `hatch_closes_in` counts down locally,
+  siren, feed, `Events.district_sealed` = the swarm/drain/announcer NOW), exits still work for `hatch_closing_seconds` (10);
+  `hatch_closing()` / `deep_clean_on()` (hub deploy refuses on it); arrow points at `exit_for(team)` unrevealed + urgent; no
+  payphone hint line. Countdown is drawn by the HUD heat bar (`HudHeatBar.set_hatch/set_hatch_sealed/clear_hatch`, fed by
+  `_update_hatch_clock`); card at seal = SAFE if `escaped` (set in `_extracted`) or never `went_up`, else SHUT/TOO LATE.
+  Host `_seal_hatch()` at time or when `players_up_top()==0`; `_set_state` newly_sealed slams every exit lid (`play_slam`) and
+  only emits `district_sealed` if no last call ran (late joiner / 0 s). Test: `--deploy --heat=100 --heat_delay=60 --frames=170`.
+  Then the seal: `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
   `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.

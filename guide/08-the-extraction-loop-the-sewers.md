@@ -18,7 +18,8 @@ THE SEWERS (hub, safe)  --Don sends you up the entry manhole-->  THE CITY (grab 
              and call Don to learn where. At 60-95 heat the Mainframe points you
              at a payphone)
 
-  HEAT hits 100: the hatch is SEALED, the DEEP CLEAN swarm wipes out anyone still up top,
+  HEAT hits 100: the DEEP CLEAN swarm comes, you get a 10-second LAST CALL to reach your exit,
+  then the hatch is SEALED and the swarm wipes out anyone still up top,
   and the rebellion moves to a NEW DISTRICT (a new city seed).
 ```
 

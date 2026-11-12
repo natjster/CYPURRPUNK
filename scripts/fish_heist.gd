@@ -86,7 +86,12 @@ extends Node3D
 @export var sewer_title_fade: float = 1.0
 
 @export_group("The DEEP CLEAN (max heat)")
-## Once the hatch is sealed, the swarm hunts whoever is still up top for this many seconds.
+## LAST CALL: when the heat hits 100 the DEEP CLEAN starts at once (swarm, siren), but the exit
+## hatches stay open this many more seconds, with a big countdown on everyone's screen
+## (scripts/ui/hud_hatch_clock.gd). During it the arrow points every cat at its own exit, even if
+## nobody called on a payphone. 0 = the hatch slams shut the moment the heat hits 100.
+@export var hatch_closing_seconds: float = 10.0
+## Once the hatch is sealed (after the LAST CALL above), the swarm hunts whoever is still up top for this many seconds.
 ## Then anyone still standing is knocked out anyway (loot lost), and a new district is built.
 @export var deep_clean_seconds: float = 30.0
 ## After the DEEP CLEAN, wait this long (seconds) before building the next district, so
@@ -113,12 +118,19 @@ var revealed: Array[bool] = []
 ## Per gang: true once that gang's exit has opened in this district. It stays open, even if a
 ## rival's hack pushes that gang's exit heat back up.
 var exit_opened: Array[bool] = []
-## True from max heat until the new district is built: the hatch is shut, nobody gets out.
+## True from max heat (+ the LAST CALL seconds) until the new district is built: the hatch is
+## shut, nobody gets out.
 var sealed: bool = false
+## THE LAST CALL (every computer): seconds left before the hatch seals; -1 = not counting.
+## Counts down on each computer by itself (the host's word is final: it sends _set_state).
+var hatch_closes_in: float = -1.0
 ## Player ID -> true for everyone who has been up top in THIS district (their one trip is used:
 ## Don won't send them up again until the next one). Set by the host (_mark_went_up), copied to
 ## everyone; emptied for every new district (place_items).
 var went_up := {}
+## Player ID -> true for everyone who climbed down an exit in THIS district (every computer; the
+## heat bar's SAFE / TOO LATE card at the seal uses it).
+var escaped := {}
 
 var _built: Array[Node] = []  # manholes and payphones, so a new district can clear them
 var _exits: Array[Manhole] = []  # by team number
@@ -135,6 +147,8 @@ var _extract_wait := {}
 ## next district. -1 = not yet.
 var _deep_clean_ends_at: float = -1.0
 var _new_district_at: float = -1.0
+## Host: when the LAST CALL ends and the hatch seals (-1 = not counting).
+var _hatch_seals_at: float = -1.0
 
 
 func _enter_tree() -> void:
@@ -164,8 +178,11 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	sealed = false
 	_hint_announced.clear()
 	went_up.clear()  # a new district: everyone gets a trip up again
+	escaped.clear()
 	_deep_clean_ends_at = -1.0
 	_new_district_at = -1.0
+	_hatch_seals_at = -1.0
+	hatch_closes_in = -1.0
 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(city_seed * 31 + HEIST_SEED_SALT)
@@ -352,6 +369,16 @@ func exit_direction_name(team: int) -> String:
 	return names[posmod(roundi(angle / (TAU / 8.0)), 8)]
 
 
+## THE LAST CALL: the DEEP CLEAN has started but the hatch hasn't sealed yet (exits still work).
+func hatch_closing() -> bool:
+	return hatch_closes_in >= 0.0 and not sealed
+
+
+## Is OVERCLEAN deep cleaning this district (the LAST CALL, or sealed)? Don won't send anyone up.
+func deep_clean_on() -> bool:
+	return sealed or hatch_closing()
+
+
 ## The gangs that have at least one player UP TOP right now (the only ones who still need a call:
 ## a gang that's all home, or all knocked out, can't use its exit any more).
 func _gangs_up_top() -> Array[int]:
@@ -365,9 +392,10 @@ func _gangs_up_top() -> Array[int]:
 
 # --- Every frame (every computer): how things look and sound ---
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _exits.is_empty():
 		return
+	_tick_hatch_clock(delta)
 	for team in _exits.size():
 		var open := exit_is_open(team)
 		exit_opened[team] = exit_opened[team] or open
@@ -385,8 +413,8 @@ func _process(_delta: float) -> void:
 ## Once per gang per district, on this computer: tell this gang's players up top that their
 ## Mainframe has tracked down a payphone (the blue arrow comes on).
 func _announce_hints() -> void:
-	if Game.instance == null or sealed:
-		return
+	if Game.instance == null or deep_clean_on():
+		return  # (THE LAST CALL: the arrow points at the exit anyway)
 	for cat in Game.instance.playing_cats():
 		var team := cat.team
 		if _hint_announced.has(team) or is_revealed(team) or not payphone_hint_is_on(team):
@@ -396,6 +424,17 @@ func _announce_hints() -> void:
 		_hint_announced[team] = true
 		Hud.feed("MAINFRAME: PAYPHONE LOCATED - FOLLOW THE ARROW", Teams.color_of(team))
 		Sound.play("scanner_beep")
+
+
+## THE LAST CALL, on this computer: count down, with a beep on every whole second (an urgent
+## one for the last few).
+func _tick_hatch_clock(delta: float) -> void:
+	if not hatch_closing() or hatch_closes_in <= 0.0:
+		return
+	var before := ceili(hatch_closes_in)
+	hatch_closes_in = maxf(hatch_closes_in - delta, 0.0)
+	if ceili(hatch_closes_in) < before and before > 1:
+		Sound.play("alert" if before <= 4 else "scanner_beep", -2.0 if before <= 4 else -6.0)
 
 
 # --- The referee (host only) ---
@@ -414,11 +453,18 @@ func _physics_process(delta: float) -> void:
 		if not went_up.has(player_id) and Game.instance.is_up_top(player_id):
 			_mark_went_up.rpc(player_id)
 
-	# Max heat: seal the hatch and start the DEEP CLEAN.
-	if not sealed and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
-		_deep_clean_ends_at = _clock + deep_clean_seconds
-		_set_state.rpc(true, revealed, exit_opened)  # (announces Events.district_sealed: the swarm comes)
-		print("[Heist] Hatch SEALED: the DEEP CLEAN begins")
+	# Max heat: the DEEP CLEAN begins. First THE LAST CALL (hatch_closing_seconds to get out),
+	# then the hatch seals.
+	if not deep_clean_on() and HeatMeter.instance.heat >= HeatMeter.MAX_HEAT:
+		if hatch_closing_seconds > 0.0:
+			_hatch_seals_at = _clock + hatch_closing_seconds
+			_start_last_call.rpc(hatch_closing_seconds)  # (announces Events.district_sealed: the swarm comes)
+			print("[Heist] DEEP CLEAN: the hatch closes in %.0f s" % hatch_closing_seconds)
+		else:
+			_seal_hatch()
+	# Time's up (or nobody is left up top to wait for): SLAM.
+	if hatch_closing() and (_clock >= _hatch_seals_at or Game.instance.players_up_top() == 0):
+		_seal_hatch()
 	if sealed:
 		_run_deep_clean()
 		return
@@ -462,6 +508,14 @@ func _physics_process(delta: float) -> void:
 		_extracted.rpc(player_id, loot_worth, quest_bonus, chaos_bonus, loot.size())
 
 
+## Host: shut the hatch (nobody else gets out) and start the DEEP CLEAN's clock.
+func _seal_hatch() -> void:
+	_hatch_seals_at = -1.0
+	_deep_clean_ends_at = _clock + deep_clean_seconds
+	_set_state.rpc(true, revealed, exit_opened)
+	print("[Heist] Hatch SEALED")
+
+
 ## Host, while sealed: when time's up, whoever is still up top goes down (loot and all), then a
 ## new district is built.
 func _run_deep_clean() -> void:
@@ -502,15 +556,43 @@ func request_reveal_exit(player_id: int) -> void:
 @rpc("authority", "call_local", "reliable")
 func _set_state(is_sealed: bool, gangs_revealed: Array, gangs_opened: Array) -> void:
 	var newly_sealed := is_sealed and not sealed
+	var had_last_call := hatch_closes_in >= 0.0
 	sealed = is_sealed
 	for team in mini(gangs_revealed.size(), revealed.size()):
 		revealed[team] = gangs_revealed[team]
 	for team in mini(gangs_opened.size(), exit_opened.size()):
 		exit_opened[team] = gangs_opened[team]
 	if newly_sealed:
-		Sound.play("boss_siren")
+		hatch_closes_in = 0.0
+		# Every exit lid flies up and SLAMS shut (scripts/manhole.gd), and the heat bar's countdown
+		# turns into the SAFE / TOO LATE card, per player.
+		for exit in _exits:
+			exit.play_slam()
+		if Game.instance != null:
+			for cat in Game.instance.playing_cats():
+				var bar := Hud.element("Heat", cat.slot) as HudHeatBar
+				if bar != null:
+					# SAFE = climbed down an exit, or never went up. (Knocked out = TOO LATE, even
+					# though the knockout already carried them home.)
+					var id := cat.player_id
+					bar.set_hatch_sealed(escaped.has(id) or not went_up.has(id))
+		if not had_last_call:
+			# (No LAST CALL ran here: hatch_closing_seconds = 0, or we only just joined.)
+			Sound.play("boss_siren")
+			Events.district_sealed.emit()  # (scripts/events.gd: the Roomba patrol sends the swarm)
 		Hud.show_message("THE HATCH IS SEALED.\nOVERCLEAN IS DEEP CLEANING THIS DISTRICT.", 6.0)
-		Events.district_sealed.emit()  # (scripts/events.gd: the Roomba patrol sends the swarm)
+
+
+## Host -> everyone: THE LAST CALL. The DEEP CLEAN starts now (swarm, siren, OVERCLEAN's line), but
+## the exits stay open for `seconds` more. The heat bar shows the countdown (_update_hatch_clock).
+@rpc("authority", "call_local", "reliable")
+func _start_last_call(seconds: float) -> void:
+	if deep_clean_on():
+		return
+	hatch_closes_in = seconds
+	Sound.play("boss_siren")
+	Hud.feed("OVERCLEAN: DEEP CLEAN STARTED - HATCH CLOSING", Color(1.0, 0.3, 0.25))
+	Events.district_sealed.emit()  # (scripts/events.gd: the Roomba patrol sends the swarm)
 
 
 # --- What the host tells everyone (runs on every computer) ---
@@ -522,6 +604,7 @@ func _set_state(is_sealed: bool, gangs_revealed: Array, gangs_opened: Array) -> 
 ## many pieces.
 func _extracted(player_id: int, loot_worth: int, quest_bonus: int = 0, chaos_bonus: int = 0, loot_count: int = 0) -> void:
 	# (The chaos bonus counts as a bonus for the RAID REPORT.)
+	escaped[player_id] = true
 	Events.player_extracted.emit(player_id, loot_worth, quest_bonus + chaos_bonus)  # (scripts/events.gd)
 	if not PlayerId.is_local(player_id):
 		return  # someone else's cat: their computer moves it
@@ -557,6 +640,8 @@ func _mark_went_up(player_id: int, announce: bool = true) -> void:
 ## hatch sealed, and who has already been up.
 func send_state_to(peer: int) -> void:
 	_set_state.rpc_id(peer, sealed, revealed, exit_opened)
+	if hatch_closing():
+		_start_last_call.rpc_id(peer, maxf(_hatch_seals_at - _clock, 0.0))
 	for player_id in went_up:
 		_mark_went_up.rpc_id(peer, player_id, false)
 
@@ -611,6 +696,7 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	# is open and the hatch isn't sealed. Once someone in our gang has called the boss on a payphone
 	# it points at our exit manhole. Before that you find a payphone ON YOUR OWN - unless the heat
 	# has reached our MAINFRAME's number (payphone_hint_is_on): then it points at the nearest one.
+	_update_hatch_clock(my_cat, in_sewers)
 	var compass := Hud.element("Compass", seat) as HudCompassArrow
 	# THE TUTORIAL (scripts/tutorial.gd) points the arrow itself at every step except 8 (step 8 =
 	# this real payphone -> exit arrow). Then hands off: null = nothing below touches the arrow.
@@ -644,8 +730,8 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		return
 	var target := Vector3.INF
 	var what := "EXIT"
-	if is_revealed(my_cat.team):
-		target = exit_for(my_cat.team)
+	if is_revealed(my_cat.team) or hatch_closing():
+		target = exit_for(my_cat.team)  # (THE LAST CALL: no time to find a payphone)
 	elif payphone_hint_is_on(my_cat.team) or (Tutorial.active() and Tutorial.instance.step == 8):
 		target = nearest_payphone(where)
 		what = "PAYPHONE"
@@ -653,9 +739,22 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 		_hide_compass(compass)
 		return
 	var flat := Vector2(target.x - where.x, target.z - where.z)
-	var urgent := HeatMeter.instance != null and HeatMeter.instance.heat >= seal_warning_at_heat
+	var urgent := hatch_closing() or (HeatMeter.instance != null and HeatMeter.instance.heat >= seal_warning_at_heat)
 	compass.point_at(_screen_angle(where, target, GameScreen.instance.camera_for_seat(seat)),
 		"%s  %dm" % [what, int(flat.length())], urgent)
+
+
+## THE LAST CALL countdown on this player's heat bar (Hud "Heat", scripts/ui/hud_heat_bar.gd,
+## set_hatch). Once sealed the bar shows its own SAFE / TOO LATE card (_set_state starts it), then
+## goes back to normal by itself.
+func _update_hatch_clock(my_cat: CatPlayer, in_sewers: bool) -> void:
+	var bar := Hud.element("Heat", my_cat.slot) as HudHeatBar
+	if bar == null:
+		return
+	if hatch_closing():
+		bar.set_hatch(hatch_closes_in, hatch_closing_seconds, in_sewers)
+	elif not sealed:
+		bar.clear_hatch()
 
 
 ## Where the payphone nearest to "where" is (flat distance), or Vector3.INF if there are none.

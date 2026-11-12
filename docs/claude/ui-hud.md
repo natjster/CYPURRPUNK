@@ -7,7 +7,7 @@
 - HUD = `scenes/ui/hud.tscn` (`scripts/ui/hud.gd`, class `Hud`), a CanvasLayer OUTSIDE the game viewport, in a SubViewport (`GameScreen._seat_huds[seat]`, seat 0 too: GameScreen._input pushes each seat's events to its HUD first; player 1's mouse only while `Hud.wants_input(0)`). Use the statics: `Hud.set_text/show_element/set_color/
   show_message/popup/set_in_game/element` by label name (Health, StatusIcons [HudStatusIcons, buff badges, fed by hud.gd
   `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
-  Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
+  Heat [HudHeatBar, top-right, fed by heat_meter; HATCH CLOSING countdown mode fed by fish_heist `set_hatch`], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
   gun name + fire key hidden (`show_weapon_name`/`show_fire_key` = false), 2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`], Boost [HudBoostBar, bottom-left above Held,
   driver only, `_update_boost`]).

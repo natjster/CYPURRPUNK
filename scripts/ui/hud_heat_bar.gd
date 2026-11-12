@@ -20,6 +20,15 @@ extends Control
 ## its tier (cyan OVERCLOCK, green ONLINE, yellow POWER LOW, orange WARNING, flashing red
 ## CRITICAL) and a white flash when it's fed. (Show Mainframe Tag = a small "MAINFRAME" word over it.)
 ##
+## THE LAST CALL (heat 100, scripts/fish_heist.gd hatch_closing_seconds): the bar turns into the
+## HATCH CLOSING countdown, up top AND in the sewers (fish_heist.gd calls set_hatch every frame):
+##   HATCH CLOSING                        <- tag over the bar ("... - YOU'RE SAFE" in the sewers)
+##   ░░░░░░░░░▚▚▚▚▚▚▚▚▚▚▚▚▚  [ 7 ]          <- hazard stripes that DRAIN towards the number box,
+##                                           the seconds left thump on every tick
+##   - The last danger_seconds: red, and the whole thing flashes.
+##   - When it hits 0: the box says SAFE (green) or TOO LATE (red) for sealed_seconds
+##     (set_hatch_sealed), then it's the plain heat bar again.
+##
 ## Move / resize it in hud.tscn like any Control (select Heat, drag it, or change Layout >
 ## Transform). Colours and timings are below (Inspector, with Heat selected).
 
@@ -52,6 +61,22 @@ extends Control
 ## Seconds the frame flashes white when the heat goes up a level.
 @export var level_up_flash: float = 0.6
 
+@export_group("Hatch closing (heat 100)")
+## The hazard stripes and the tag while there's still time.
+@export var hatch_color: Color = Color(1.0, 0.78, 0.12)
+## The last danger_seconds, and the TOO LATE card.
+@export var danger_color: Color = Color(1.0, 0.16, 0.14)
+## The tag in the sewers, and the SAFE card.
+@export var safe_color: Color = Color(0.45, 1.0, 0.55)
+## Below this many seconds the countdown goes red and flashes.
+@export var danger_seconds: float = 3.0
+## How long the SAFE / TOO LATE card stays once the hatch seals (seconds).
+@export var sealed_seconds: float = 3.0
+## Size of the "HATCH CLOSING" tag over the bar.
+@export var hatch_tag_size: int = 16
+## How much bigger the seconds get on each tick (0.35 = 35%).
+@export var thump_scale: float = 0.35
+
 @export_group("Mainframe mode (in the sewers)")
 ## Write a small "MAINFRAME" over the bar in the sewers.
 @export var show_mainframe_tag: bool = false
@@ -72,6 +97,14 @@ var _phase: float = 0.0
 var _mainframe_mode: bool = false
 var _mainframe_color: Color = Color(0.2, 1.0, 0.45)
 var _mainframe_critical: bool = false
+## THE LAST CALL: seconds left (-1 = not counting), what it started from, and whether this player
+## is already safe in the sewers.
+var _hatch_left: float = -1.0
+var _hatch_total: float = 10.0
+var _hatch_safe: bool = false
+## Seconds since the hatch sealed (-1 = no SAFE / TOO LATE card showing) and which card.
+var _sealed_for: float = -1.0
+var _made_it: bool = false
 
 
 func _ready() -> void:
@@ -106,7 +139,34 @@ func set_mainframe(charge: float, max_charge: float, color: Color, critical: boo
 	_mainframe_critical = critical
 
 
+## fish_heist.gd, every frame of THE LAST CALL: seconds left, seconds it started from, and whether
+## this player is already safe in the sewers.
+func set_hatch(seconds_left: float, seconds_total: float, safe: bool) -> void:
+	_hatch_left = maxf(seconds_left, 0.0)
+	_hatch_total = maxf(seconds_total, 0.01)
+	_hatch_safe = safe
+	_sealed_for = -1.0
+
+
+## fish_heist.gd, the moment the hatch seals: the SAFE (made_it) or TOO LATE card.
+func set_hatch_sealed(made_it: bool) -> void:
+	if _hatch_left >= 0.0:
+		_sealed_for = 0.0
+		_made_it = made_it
+		_hatch_left = -1.0
+
+
+## Back to the plain heat bar (a new district).
+func clear_hatch() -> void:
+	_hatch_left = -1.0
+	_sealed_for = -1.0
+
+
 func _process(delta: float) -> void:
+	if _sealed_for >= 0.0:
+		_sealed_for += delta
+		if _sealed_for >= sealed_seconds:
+			_sealed_for = -1.0
 	# Two flips (red -> blue -> red) make one full cycle, so the cycle speed is half the flip speed.
 	var flips_per_second := flash_speed + flash_speed_per_level * maxi(_level - 1, 0)
 	_phase = fmod(_phase + delta * flips_per_second * 0.5, 1.0)
@@ -129,6 +189,9 @@ func current_color() -> Color:
 
 
 func _draw() -> void:
+	if _hatch_left >= 0.0 or _sealed_for >= 0.0:
+		_draw_hatch()
+		return
 	var font := get_theme_font("font", "Label")
 	var h := size.y
 	var colour := current_color()
@@ -182,3 +245,83 @@ func _draw() -> void:
 		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
 		draw_string_outline(font, exit_tag_pos, "PHONE", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
 		draw_string(font, exit_tag_pos, "PHONE", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Color.WHITE)
+
+
+# --- THE LAST CALL look (heat 100: the hatch is closing) ---
+
+func _draw_hatch() -> void:
+	var font := get_theme_font("font", "Label")
+	var now := Time.get_ticks_msec() / 1000.0
+	var h := size.y
+	var box_left := size.x - number_box_width
+	var bar_w := box_left - 8.0
+	var bar_top := (h - bar_thickness) * 0.5
+	var dark := Color(0.04, 0.01, 0.08)
+	var sealed := _sealed_for >= 0.0
+	var danger := not sealed and _hatch_left <= danger_seconds
+	var flash := 0.5 + 0.5 * sin(now * TAU * 3.0) if danger else 0.0
+	var accent := danger_color if danger else hatch_color
+	if sealed:
+		accent = safe_color if _made_it else danger_color
+	var frame_colour := accent.lerp(Color.WHITE, flash * 0.6)
+
+	# --- The number box: the seconds left (thumping on every tick), or SAFE / TOO LATE ---
+	var box := Rect2(box_left, 0, number_box_width, h)
+	draw_rect(box, back_color)
+	if danger:
+		draw_rect(box, Color(danger_color, 0.35 * flash))
+	draw_rect(box, frame_colour, false, Hud.line(2.0))
+	var number := str(ceili(_hatch_left)) if not sealed else ("SAFE" if _made_it else "SHUT")
+	var font_size := number_font_size
+	while font_size > 10 and font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > number_box_width - 10.0:
+		font_size -= 2
+	var into_second := _hatch_left - floorf(_hatch_left)  # just after a tick ~1 -> just before the next ~0
+	var thump := 1.0 + thump_scale * pow(into_second, 4.0) if not sealed and _hatch_left > 0.05 else 1.0
+	if sealed:
+		thump = 1.0 + 0.5 * clampf(1.0 - _sealed_for / 0.15, 0.0, 1.0)  # (slammed in)
+	var text_size := font.get_string_size(number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var centre := box.get_center()
+	draw_set_transform(centre, 0.0, Vector2.ONE * thump)
+	var text_pos := Vector2(-text_size.x * 0.5, text_size.y * 0.5 - font.get_descent(font_size))
+	draw_string_outline(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Hud.outline(6), dark)
+	draw_string(font, text_pos, number, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE.lerp(accent, 0.35 if danger or sealed else 0.0))
+	draw_set_transform(Vector2.ZERO)
+
+	# --- The bar: hazard stripes that drain towards the number box as the seconds run out ---
+	var fraction := 0.0 if sealed else clampf(_hatch_left / _hatch_total, 0.0, 1.0)
+	var bar := Rect2(0, bar_top, bar_w, bar_thickness)
+	draw_rect(bar, back_color)
+	var fill := Rect2(bar_w * (1.0 - fraction), bar_top, bar_w * fraction, bar_thickness)
+	if fill.size.x > 0.5:
+		draw_rect(fill, Color(accent, 0.55))
+		_draw_stripes(fill, accent.lerp(Color.WHITE, flash * 0.4), now)
+	# One notch per second.
+	for i in range(1, int(ceilf(_hatch_total))):
+		var x := bar_w * (1.0 - float(i) / _hatch_total)
+		draw_line(Vector2(x, bar_top), Vector2(x, bar_top + bar_thickness), Color(0, 0, 0, 0.7), Hud.line(1.0))
+	draw_rect(bar, frame_colour, false, Hud.line(1.0))
+
+	# --- The tag over the bar ---
+	var tag := ("HATCH SEALED - SAFE" if _made_it else "HATCH SEALED - TOO LATE") if sealed else ("HATCH CLOSING - YOU'RE SAFE" if _hatch_safe else "HATCH CLOSING - GET OUT!")
+	var tag_font := Hud.text_size(hatch_tag_size)
+	var tag_size := font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font)
+	var tag_pos := Vector2(bar_w - tag_size.x, bar_top - 4.0)
+	var tag_colour := safe_color if _hatch_safe and not sealed else accent
+	draw_string_outline(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, Hud.outline(5), dark)
+	draw_string(font, tag_pos, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, tag_font, tag_colour.lerp(Color.WHITE, flash * 0.5))
+
+
+## Diagonal black stripes over a filled box, scrolling sideways (a hazard tape look).
+func _draw_stripes(box: Rect2, colour: Color, now: float) -> void:
+	draw_rect(box, colour)
+	var step := 10.0
+	var shift := fmod(now * 24.0, step * 2.0)
+	var x := box.position.x - box.size.y - step * 2.0 + shift
+	while x < box.end.x:
+		var a := Vector2(x, box.end.y)
+		var points := PackedVector2Array([a, a + Vector2(step, 0), a + Vector2(step + box.size.y, -box.size.y), a + Vector2(box.size.y, -box.size.y)])
+		for i in points.size():
+			points[i].x = clampf(points[i].x, box.position.x, box.end.x)  # (keep inside the box)
+		if points[1].x - points[0].x > 0.1 or points[2].x - points[3].x > 0.1:
+			draw_colored_polygon(points, Color(0.04, 0.01, 0.08, 0.85))
+		x += step * 2.0

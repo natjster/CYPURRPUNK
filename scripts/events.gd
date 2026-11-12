@@ -21,7 +21,8 @@ extends Node
 ##
 ## The events (add new ones here, with a comment saying who emits them and where):
 
-## EVERY computer: the hatch was just sealed at max heat; the DEEP CLEAN starts (fish_heist.gd).
+## EVERY computer: max heat, the DEEP CLEAN starts (fish_heist.gd). The exits stay open for the
+## LAST CALL (FishHeist.hatch_closing_seconds) before the hatch really seals (FishHeist.sealed).
 signal district_sealed()
 ## EVERY computer: a SEWER BREACH just started on these gangs (scripts/mainframe.gd).
 signal sewer_breached(teams: Array)
