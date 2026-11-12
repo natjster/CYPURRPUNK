@@ -113,7 +113,7 @@ func _ready() -> void:
 		if key == "fur":
 			_add_row(CatLook.COAT_KEY, y, false)
 			y += ROW_STEP
-	for slot in CatLook.SLOTS:
+	for slot in CatLook.SLOTS if CatLook.SHOW_ACCESSORIES else []:  # hidden for now (see cat_look.gd)
 		_add_row(slot, y, false)
 		y += ROW_STEP
 	_add_row(CatLook.VOICE_KEY, y, false)

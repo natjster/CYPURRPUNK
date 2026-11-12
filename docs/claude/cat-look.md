@@ -30,3 +30,5 @@ COAT PATTERNS (12 Nov 2026, user asked for "kinds of cats", same model, coloring
 fur copies (`LIMB_PARTS` LegL/LegR/Tail = limb picture). psx_lit has `patch_color`/`patch_amount` (default 0 = off):
 texture alpha 0 = MARKINGS colour (calico, tuxedo socks). Pictures from `tools/make_cat_coats.py`; Godot cylinder sides
 use only v 0..0.5 (caps below). MY CAT rows are 15 px apart (9 rows). Test `--coat_lineup[=a,b]`.
+ACCESSORIES OFF (12 Nov 2026, user: "get rid of clothing and hair for now, I'll re-add later"): `CatLook.SHOW_ACCESSORIES = false`
+→ apply() wears nothing, random_look rolls "", MY CAT skips the slot rows. Saved part ids are kept. Flip to true to restore.

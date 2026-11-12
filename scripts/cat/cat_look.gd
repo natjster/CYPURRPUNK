@@ -38,6 +38,11 @@ const COLOR_PARTS: Dictionary = {
 	"eyes": ["EyeL", "EyeR"],
 	"nose": ["Nose"],
 }
+## Show ACCESSORIES (hats, hair, face and neck things) at all? OFF for now (user's call, 12 Nov
+## 2026): cats wear none, MY CAT hides the HAT / FACE / NECK rows and random cats roll none.
+## Every cat's saved picks are KEPT, so setting this back to true brings them all back as they were.
+## (NPC cats' own hats are part of their scenes and stay.)
+const SHOW_ACCESSORIES: bool = false
 ## Accessory slots, in MY CAT screen order.
 const SLOTS: Array[String] = ["hat", "face", "neck"]
 ## Where each slot's (0, 0, 0) sits on the cat model (top of the head, in front of the eyes,
@@ -148,7 +153,7 @@ static func random_look(rng: RandomNumberGenerator) -> Dictionary:
 			look[key] = colors[rng.randi() % colors.size()]
 	for slot in SLOTS:
 		var ids := part_ids_for(slot)
-		look[slot] = ids[rng.randi() % ids.size()]
+		look[slot] = ids[rng.randi() % ids.size()] if SHOW_ACCESSORIES else ""
 	look[VOICE_KEY] = VOICES[rng.randi() % VOICES.size()]
 	if not coat_ids().is_empty():
 		look[COAT_KEY] = coat_ids()[rng.randi() % coat_ids().size()]
@@ -192,7 +197,7 @@ static func apply(model: Node3D, look: Dictionary) -> void:
 		if look.get(key) is Color:
 			_paint(model, key, look[key])
 	for slot in SLOTS:
-		_wear(model, slot, look.get(slot, ""))
+		_wear(model, slot, look.get(slot, "") if SHOW_ACCESSORIES else "")
 	_wear_coat(model, look)
 
 

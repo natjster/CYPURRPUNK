@@ -4,6 +4,10 @@
 
 
 ### What the player sees
+> **ACCESSORIES ARE OFF FOR NOW (12 Nov 2026):** no hats, hair, face or neck things on player cats, and
+> the HAT / FACE / NECK rows below are hidden. Every cat's picks are still saved. To bring them back:
+> open `scripts/cat/cat_look.gd` and change `const SHOW_ACCESSORIES: bool = false` to `true`.
+
 **PLAY** on the start menu opens **CHOOSE YOUR CAT**: your cats along the top, the look rows on
 the left, and the cat slowly turning on the right. (During a game, **MY CAT** in the pause menu
 opens the same screen to restyle or rename the cat you're playing; no switching cats mid-game.
