@@ -119,27 +119,33 @@ side both get it), tall enough to reach the ground even while you're bouncing or
 - **Combo** (same Inspector, group **Combo**): keep swinging and it goes **forehand → backhand →
   forehand...** Pause longer than **Combo Window** (0.9 s) and it starts over at the forehand.
 - **GROUND SLAM (Frozen Tuna only)**: open `scenes/items/frozen_tuna.tscn`, select **FrozenTuna**, group
-  **Combo**: **Can Slam** is ticked only there (the bat has it off). The tuna has a **SLAM METER** (a bar
-  under the tuna in the bottom-left weapon box) that starts empty and fills as your swings **connect**:
-  **Slam Charge Per Hit** (0.25 = four hits), **Slam Charge Per Extra Target** (bonus for hitting a crowd),
-  **Slam Charge Per Second** (a slow trickle while you hold it; 0 = only hits fill it). Full = a chime
-  (**Slam Ready Sound**), a buzz, and the bar flashes gold with **SLAM READY** over the box. Then the
-  **3rd swing of a combo** (or **jump + swing** = the AIR SLAM dive, **Air Slam Speed** 16 m/s) is the
-  slam, and the meter empties. The slam hits harder (**Finisher Damage** x1.75), shoves much further
+  **Combo**: **Can Slam** is ticked only there (the bat has it off). The tuna slams by **HOLDING** the
+  swing button, like reviving a friend: a **tap** is a normal forehand / backhand; keep **holding** and,
+  after **Slam Hold Delay** (0.25 s), the **SLAM METER** (a bar under the tuna in the bottom-left weapon
+  box, **CHARGING...** above it) fills over **Slam Hold Seconds** (1 s) while the cat lifts the fish over
+  its head and the pad buzzes harder. Full = it **SLAMS** on its own. Let go early = the meter empties.
+  After a slam, let go and wait **Slam Recover** (0.5 s) before the next swing. Fill it in the air and you
+  DIVE into an **AIR SLAM** (**Air Slam Speed** 16 m/s). **Slam Charge Sound** plays when it starts filling.
+  The slam hits harder (**Finisher Damage** x1.75), shoves much further
   (**Finisher Push** x2.2), reaches further (**Finisher Reach**), dazes VAC-COPs (**Finisher Stun**),
   shakes harder (**Finisher Shake** / **Finisher Hit Stop**) and sends out a neon **SHOCKWAVE** hitting
   everything within **Shockwave Radius** (3.4 m on the tuna) with a boom (**Finisher Sound** / **Volume**).
   The meter's look: `scenes/ui/hud.tscn` > the weapon box (**HudWeaponDisplay**) > group **Slam Meter**.
   Test: `--host --deploy --give=frozen_tuna --bait_roomba=2 --combo_test [--slam_charged] [--air_slam] --frames=2`
-  (prints a "DevCapture combo" line per swing with the meter's charge).
+  (prints a "DevCapture combo" line per swing; `--slam_charged` makes the 3rd swing a real HOLD and prints
+  "DevCapture slam_hold" lines as the meter fills).
 - **THROWING THE BAT (offhand)**: the bat's card (`items/neon_bat.tres`) has **Offhand** ticked, so it goes
   in your **LEFT paw** first, leaving the right paw free for a gun. From the left paw it swings with
   **Right Mouse / LT** (or Left Mouse / RT when your right paw is empty). Press the **MELEE** button
-  (**F** / middle mouse / pad **RB**, rebindable in SETTINGS > KEYS) and you **throw** it: it spins end over
-  end with its neon trail, bonks the first VAC-COP / rival cat / car it passes, and lands on the street
-  for you to grab again with E. Its numbers: `neon_bat.tscn` > **NeonBat** > group **Throw**
+  (**F** / middle mouse / pad **RB**, rebindable in SETTINGS > KEYS) and you **throw** it like a
+  **BOOMERANG**: it spins end over end with its neon trail, bonks the first VAC-COP / rival cat / car it
+  passes (or a wall), turns round, swoops back to you (it chases you if you run) and lands back in your
+  paw, bonking anything it passes on the way back too. It never leaves your backpack, and you can't throw
+  or swing it again until it's back. Its numbers: `neon_bat.tscn` > **NeonBat** > group **Throw**
   (**Throwable**, **Throw Damage** x1.5, **Throw Push** x1.6, **Throw Stun** 1 s); the flight itself is on
-  the cat (below, **Player > Melee** > group **Throw**: speed, lift, gravity, spin...).
+  the cat (below, **Player > Melee** > group **Throw**: **Throw Speed** 24 + **Throw Out Seconds** 0.45 =
+  how far it goes, **Throw Return Speed** 20, **Throw Curve** = how wide it swoops back, **Throw Catch
+  Distance**, **Throw Return Max Seconds**, **Throw Return Damage** x0.6 on the way back, lift, gravity, spin).
 - **CLAW SCRATCH (bare paws)**: nothing in your LEFT paw (and no 2-paw weapon) = the MELEE button
   **scratches**: right swipe, left swipe, then a big **X RAKE** with both paws (x2 damage, x2 shove, dazes
   VAC-COPs). Hold it to keep scratching. Each swipe rips three neon **claw marks** across the air, the cat

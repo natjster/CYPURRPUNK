@@ -46,13 +46,13 @@ extends Control
 @export var heat_follow_speed: float = 10.0
 
 @export_group("Slam Meter")
-## THE SLAM METER (the FROZEN TUNA): a bar along the bottom of the gun box that fills as your swings
-## connect. How tall it is (HUD units), its colour while filling, and when it's full (it flashes).
+## THE SLAM METER (the FROZEN TUNA): a bar along the bottom of the gun box that fills while you HOLD
+## the button. How tall it is (HUD units), its colour while filling, and when it's full (it flashes).
 @export var charge_bar_height: float = 7.0
 @export var charge_color: Color = Color(0.3, 0.75, 1.0, 0.9)
 @export var charge_ready_color: Color = Color(1.0, 0.85, 0.2, 1.0)
-## The words over the box while the slam is ready.
-@export var slam_ready_text: String = "SLAM READY"
+## The words over the box while you HOLD to charge the slam.
+@export var slam_ready_text: String = "CHARGING..."
 
 ## [right paw, left paw] (or just [paw] for a two-paw gun): {"id", "name", "heat", "overheated",
 ## "heats" (false = never overheats), "key"}. Set by show_loadout.
@@ -142,7 +142,8 @@ func _draw_weapon_box(style: HudStyle, box: Rect2) -> void:
 
 
 ## THE SLAM METER (only for a weapon that has one: paw "charge" >= 0): a thin bar inside the bottom
-## edge of the box. Full = it flashes gold and SLAM READY shows above the box.
+## edge of the box. It fills while you HOLD the button; CHARGING... shows above the box, and it flashes
+## gold as it nears full (then the tuna slams).
 func _draw_slam_meter(font: Font, box: Rect2) -> void:
 	for i in mini(_paws.size(), 2):
 		var charge: float = _paws[i].get("charge", -1.0)
@@ -151,11 +152,11 @@ func _draw_slam_meter(font: Font, box: Rect2) -> void:
 		var bar := Rect2(box.position + Vector2(padding * 0.5, box.size.y - charge_bar_height - padding * 0.4),
 			Vector2((box.size.x - padding) * 0.72, charge_bar_height))  # (leaves room for the key on the right)
 		draw_rect(bar, Color(0, 0.03, 0.06, 0.75))
-		var ready := charge >= 1.0
+		var ready := charge >= 0.8
 		var flash := 0.5 + 0.5 * sin(_time * TAU * 3.0)
 		var color := charge_ready_color.lerp(Color.WHITE, flash * 0.5) if ready else charge_color
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(charge, 0.0, 1.0), bar.size.y)), color)
-		if ready:
+		if charge > 0.0:
 			_text(font, Vector2(box.position.x + 2.0, box.position.y - 6.0), slam_ready_text, overheat_font_size, color)
 		return  # (one meter is plenty: only the tuna has one, and it takes both paws)
 

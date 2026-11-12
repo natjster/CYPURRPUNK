@@ -472,28 +472,6 @@ func _free_paw_for(data: ItemData, hands: Array) -> int:
 	return hands.find("")
 
 
-## THROW (the MELEE button with a Throwable weapon in the LEFT paw, scripts/cat/cat_melee.gd): the
-## item leaves the paw now, and lands on the street at "land" after "delay" seconds (when the
-## spinning bat gets there). Host only.
-@rpc("any_peer", "call_local", "reliable")
-func request_throw(player_id: int, hand: int, land: Vector3, delay: float) -> void:
-	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
-		return
-	var cat := _cat(player_id)
-	if cat == null or Game.instance.car_of(player_id) != null:
-		return
-	var inventory := get_inventory(player_id).duplicate(true)
-	hand = clampi(hand, 0, 1)
-	var item_id: String = inventory.hands[hand]
-	if item_id == "" or _is_two_handed(inventory.hands):
-		return
-	if Motion.flat_distance(land, cat.global_position) > 40.0:
-		land = cat.global_position  # no throwing things across the map
-	inventory.hands[hand] = ""
-	_set_inventory.rpc(player_id, inventory)
-	get_tree().create_timer(clampf(delay, 0.0, 3.0)).timeout.connect(_spawn_dropped.bind(item_id, land))
-
-
 ## Host: put an item on the street with a brand-new world ID.
 ## dropper = the cat that dropped it (it won't auto-grab it back until it steps away).
 func _spawn_dropped(item_id: String, at: Vector3) -> void:

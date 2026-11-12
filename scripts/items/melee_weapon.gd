@@ -65,23 +65,24 @@ extends Weapon
 @export var impact_light: float = 3.0
 
 @export_group("Combo")
-## THE COMBO: keep swinging and it goes FOREHAND -> BACKHAND -> FOREHAND... and, on a weapon that
-## CAN SLAM (below) with its SLAM METER full, the 3rd swing is an overhead GROUND SLAM (the finisher).
+## THE COMBO: keep swinging and it goes FOREHAND -> BACKHAND -> FOREHAND...
 ## Wait longer than this between swings (seconds) and the combo starts over at the forehand.
 @export var combo_window: float = 0.9
 ## Can this weapon GROUND SLAM at all? Only the FROZEN TUNA can (scenes/items/frozen_tuna.tscn).
-## Off = it just swings forehand / backhand forever, and an air swing is a normal swing.
+## Off = holding the button just keeps swinging forehand / backhand.
 @export var can_slam: bool = false
-## THE SLAM METER (so nobody can spam slams): it starts empty and fills as your swings CONNECT.
-## How much one swing that hits something fills it (1 = full in one hit, 0.25 = four hits).
-@export_range(0.0, 1.0) var slam_charge_per_hit: float = 0.25
-## Extra fill for every MORE thing the same swing hits (hit 3 VAC-COPs = this x2 on top).
-@export_range(0.0, 1.0) var slam_charge_per_extra_target: float = 0.05
-## Slow fill on its own while you hold it (per second; 0 = only hitting fills it).
-@export_range(0.0, 0.5) var slam_charge_per_second: float = 0.02
-## The sound when the meter fills up (res://sounds/sfx/, no .wav; "" = none).
-@export var slam_ready_sound: String = "pa_chime"
-## The SLAM (3rd hit): damage x this, shove x this (VAC-COPs, rival cats and cars all fly further).
+## THE SLAM METER = HOLD TO CHARGE (like reviving a friend): tap = a normal swing; keep HOLDING the
+## button and the meter on the weapon box fills while you raise the fish overhead; when it's full you
+## GROUND SLAM on your own. Let go early = the meter empties again.
+## Seconds of holding before the meter starts filling (so a normal tap never charges).
+@export var slam_hold_delay: float = 0.25
+## Seconds of holding (after that) to fill the meter all the way.
+@export var slam_hold_seconds: float = 1.0
+## Seconds after a slam before you can swing again.
+@export var slam_recover: float = 0.5
+## The sound when you start charging (res://sounds/sfx/, no .wav; "" = none).
+@export var slam_charge_sound: String = "pa_chime"
+## The SLAM: damage x this, shove x this (VAC-COPs, rival cats and cars all fly further).
 @export var finisher_damage: float = 1.75
 @export var finisher_push: float = 2.2
 ## The slam reaches this much further / wider than a normal swing (1 = the same).
@@ -97,16 +98,22 @@ extends Weapon
 ## The boom the slam makes (res://sounds/sfx/, no .wav; "" = none) and how loud (dB).
 @export var finisher_sound: String = "explode"
 @export var finisher_volume: float = -9.0
-## AIR SLAM: swing while in the air and you DIVE down (metres per second) into a slam finisher.
-## 0 = an air swing is just a normal swing.
+## AIR SLAM: fill the meter while in the air and you DIVE down (metres per second) into the slam.
+## 0 = no dive (it slams wherever you are).
 @export var air_slam_speed: float = 16.0
 
 var _model: Node3D
 ## The combo: which swing is next (0 forehand, 1 backhand, 2 slam) and until when it carries on.
 var combo_step: int = 0
 var _combo_until: float = 0.0
-## THE SLAM METER, 0 (empty) to 1 (SLAM READY). Owner's computer only (shown on the HUD's weapon box).
+## THE SLAM METER, 0 (empty) to 1 (SLAM!). Owner's computer only (shown on the HUD's weapon box).
 var slam_charge: float = 0.0
+## Hold-to-charge: still holding since the last press, how long, and "let go first" after a slam.
+var _holding: bool = false
+var _hold_time: float = 0.0
+var _wait_release: bool = false
+## A BOOMERANG weapon that's out flying (cat_melee.gd show_throw): it's hidden and can't be swung.
+var in_flight: bool = false
 ## Where the last swing's slam hit the ground (for the test line), and the trail's extra reach now.
 var last_slam_spot := Vector3.ZERO
 var _trail_boost: float = 1.0
@@ -139,18 +146,15 @@ func _fire() -> void:
 	# THE COMBO: which swing is this? (Too long since the last one = back to the forehand.)
 	if now > _combo_until:
 		combo_step = 0
-	var step := combo_step
 	var charged := slam_ready()
-	if step == 2 and not charged:
-		step = 0  # no slam ready: the combo just goes round forehand -> backhand again
+	# A full SLAM METER = this swing is the SLAM; otherwise forehand / backhand by turns.
+	var step := 2 if charged else combo_step % 2
 	var air_slam := charged and air_slam_speed > 0.0 and not holder.is_on_floor()
-	if air_slam:
-		step = 2  # swinging in mid-air with the SLAM READY = the SLAM (and you dive into it)
 	var slam := step == 2
 	if slam:
-		slam_charge = 0.0  # used up: hit things to fill it again
-	# (Next swing: forehand <-> backhand, and the 3rd one tries to be the slam.)
-	combo_step = 0 if slam else step + 1
+		slam_charge = 0.0  # used up: hold the button again to fill it
+	# (Next swing: forehand <-> backhand; after a slam, the forehand again.)
+	combo_step = 0 if slam else 1 - step
 	_combo_until = now + combo_window
 	Seats.rumble(holder.player_id, 0.9 if slam else 0.5, 0.35 if slam else 0.2, 0.08)
 
@@ -210,9 +214,6 @@ func _fire() -> void:
 		if target.receive_hit(info):
 			# (The slam's numbers pop big and yellow, like a crit.)
 			Hud.damage_number(info.position, info.damage, info.crit or slam, holder.slot)  # on OUR HUD
-	if hit_anything and not slam:
-		# THE SLAM METER fills from swings that connect (not from the slam itself).
-		_add_slam_charge(slam_charge_per_hit + slam_charge_per_extra_target * maxi(already.size() - 1, 0))
 	if hit_anything:
 		Feedback.shake(holder.player_id, finisher_shake if slam else hit_shake)  # THWACK (scripts/feedback.gd)
 	elif slam:
@@ -337,24 +338,62 @@ func _make_trail() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	_update_trail(delta)
-	if can_slam and holder != null and holder.is_multiplayer_authority() and slam_charge_per_second > 0.0:
-		_add_slam_charge(slam_charge_per_second * delta)
 
 
-## Is the SLAM METER full (the next combo finisher / air swing is a GROUND SLAM)?
+## Owner only, every physics frame while held (ItemManager _use_held_items). A weapon that CAN SLAM
+## swings on the PRESS, then keeps CHARGING while you hold the button: full meter = GROUND SLAM.
+func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
+	if in_flight:
+		_holding = false
+		return  # (a thrown boomerang bat is out flying: nothing to swing)
+	if not can_slam:
+		super.use_tick(trigger_down, trigger_pressed, delta)
+		return
+	_cooldown = maxf(_cooldown - delta, 0.0)
+	if not trigger_down:
+		_holding = false
+		_wait_release = false
+		slam_charge = 0.0  # let go early = the meter empties
+		_raise_for_charge()
+		return
+	if _wait_release:
+		return  # just slammed: let go of the button before the next swing
+	if not _holding:
+		if _cooldown > 0.0:
+			return
+		_fire()  # the PRESS: a normal forehand / backhand right away
+		_cooldown = 1.0 / fire_rate
+		_holding = true
+		_hold_time = 0.0
+		return
+	# STILL HOLDING: fill the meter (after a short wait, so a tap never charges).
+	_hold_time += delta
+	var before := slam_charge
+	slam_charge = clampf((_hold_time - slam_hold_delay) / maxf(slam_hold_seconds, 0.05), 0.0, 1.0)
+	if before <= 0.0 and slam_charge > 0.0 and slam_charge_sound != "":
+		Sound.play(slam_charge_sound, -12.0)  # (only we hear it: it's our meter)
+	if slam_charge > 0.0:
+		Seats.rumble(holder.player_id, 0.1 + 0.3 * slam_charge, 0.0, delta * 2.0)  # a growing buzz
+	_raise_for_charge()
+	if slam_charge >= 1.0:
+		_fire()  # FULL: GROUND SLAM (in the air: dive into it)
+		_cooldown = slam_recover
+		_holding = false
+		_wait_release = true
+
+
+## Owner's view: while charging, lift the fish up over the head (more meter = higher, with a shiver).
+func _raise_for_charge() -> void:
+	if _model == null or (_swing_tween != null and _swing_tween.is_running()):
+		return
+	var lift := swing_angle * 0.75 * slam_charge
+	var shiver := sin(Time.get_ticks_msec() * 0.06) * 0.04 * slam_charge
+	_model.rotation = _model_home + Vector3(lift, shiver, 0)
+
+
+## Is the SLAM METER full (this swing is the GROUND SLAM)?
 func slam_ready() -> bool:
 	return can_slam and slam_charge >= 1.0
-
-
-## Owner only: fill the SLAM METER a bit. Full = a chime and a buzz so you know it's ready.
-func _add_slam_charge(amount: float) -> void:
-	if not can_slam or slam_charge >= 1.0:
-		return
-	slam_charge = minf(slam_charge + amount, 1.0)
-	if slam_charge >= 1.0:
-		if slam_ready_sound != "":
-			Sound.play(slam_ready_sound, -6.0)  # (only we hear it: it's our meter)
-		Seats.rumble(holder.player_id, 0.3, 0.6, 0.15)
 
 
 ## Every frame: remember where the bat is while swinging, fade the old bits, redraw the ribbon.

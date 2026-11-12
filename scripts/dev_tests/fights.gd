@@ -263,15 +263,16 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 	var gap_arg := str(args["combo_test"])
 	var gap := float(gap_arg) if gap_arg.is_valid_float() else 0.5
 	var target := _nearest_roomba(Game.instance, player.global_position)
-	if args.has("slam_charged"):
-		bat.slam_charge = 1.0  # --slam_charged: start with the SLAM METER full (frozen tuna)
 	if args.has("air_slam"):
 		player.velocity.y = 9.0
 		await _seconds(0.25)
 	for i in 3:
 		var step := 2 if (args.has("air_slam") and not player.is_on_floor()) else bat.combo_step
 		var hp_before: int = target.health if target != null and is_instance_valid(target) else -1
-		bat._fire()
+		if i == 2 and args.has("slam_charged"):
+			await _hold_for_slam(bat)  # --slam_charged: the 3rd swing HOLDS the button until the meter slams
+		else:
+			bat._fire()
 		await _seconds(0.05)
 		var hp: int = target.health if target != null and is_instance_valid(target) else -1
 		print("DevCapture combo: swing=%d step=%d next=%d vy=%.1f target_hp=%d->%d slam_spot=%s can_slam=%s charge=%.2f" % [
@@ -284,6 +285,27 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture combo: shockwave at %s scale=%s alpha=%.2f visible=%s" % [r.global_position, r.scale,
 			((r.mesh as PrimitiveMesh).material as StandardMaterial3D).albedo_color.a, r.is_visible_in_tree()])
 	await _seconds(0.06)
+
+
+## Hold the trigger on a SLAM weapon frame by frame (like a player holding the button) until it slams,
+## printing the meter as it fills. Gives up after 3 s.
+func _hold_for_slam(bat: MeleeWeapon) -> void:
+	var held := 0.0
+	var printed := -1
+	bat.use_tick(false, false, 0.016)  # (start from "not holding")
+	bat._cooldown = 0.0
+	while held < 3.0:
+		var delta := get_physics_process_delta_time()
+		bat.use_tick(true, held == 0.0, delta)
+		held += delta
+		if int(held * 4.0) != printed:
+			printed = int(held * 4.0)
+			print("DevCapture slam_hold: held=%.2f charge=%.2f" % [held, bat.slam_charge])
+		if bat._wait_release:
+			print("DevCapture slam_hold: SLAM after %.2f s" % held)
+			break
+		await get_tree().physics_frame
+	bat.use_tick(false, false, 0.016)
 
 
 ## --melee_test=scratch[:N] / throw: the MELEE button (scripts/cat/cat_melee.gd). scratch = N claw swipes
@@ -308,8 +330,14 @@ func _melee_test(player: CatPlayer, args: Dictionary) -> void:
 		await _seconds(0.15)
 		var flying := Game.instance.get_node_or_null("Thrown")
 		print("DevCapture melee: mid-flight thrown=%s at=%s" % [flying != null, (flying as Node3D).global_position if flying != null else Vector3.ZERO])
-		await _seconds(1.4)
-		print("DevCapture melee: after throw hands=%s target_hp=%d->%d world_bats=%d" % [items.get_inventory(player.player_id).hands,
+		await _seconds(0.5)
+		var paw_bat := items.held_item(player, 1)
+		print("DevCapture melee: coming back thrown=%s paw_visible=%s in_flight=%s" % [Game.instance.get_node_or_null("Thrown") != null,
+			paw_bat.visible if paw_bat != null else false, (paw_bat as MeleeWeapon).in_flight if paw_bat is MeleeWeapon else false])
+		await _seconds(1.6)
+		print("DevCapture melee: %s" % melee.last_result)
+		print("DevCapture melee: after throw paw_visible=%s hands=%s target_hp=%d->%d world_bats=%d" % [paw_bat.visible if paw_bat != null else false,
+			items.get_inventory(player.player_id).hands,
 			hp_before, target.health if target != null and is_instance_valid(target) else -1,
 			items.world.values().filter(func(w): return w.item == "neon_bat").size()])
 		return

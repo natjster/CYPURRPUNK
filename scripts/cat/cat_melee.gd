@@ -3,9 +3,9 @@ extends Node3D
 ## CYPURRPUNK — the MELEE button (F / middle mouse / pad RB): node Player > Melee.
 ##
 ## What the button does depends on your paws:
-##   * A THROWABLE weapon (the NEON BAT) in your LEFT paw (offhand) -> THROW it. It spins through the
-##     air, bonks the first VAC-COP / rival cat / car it hits (dazing VAC-COPs) and lands on the street,
-##     where you pick it back up with E like any item.
+##   * A THROWABLE weapon (the NEON BAT) in your LEFT paw (offhand) -> THROW it like a BOOMERANG. It
+##     spins out, bonks the first VAC-COP / rival cat / car it hits (dazing VAC-COPs), turns round and
+##     swoops back into your paw (bonking things on the way back too). No throwing again until it's back.
 ##   * Nothing in your LEFT paw -> SCRATCH with your bare claws: fast swipes, right paw, left paw, then
 ##     a big X RAKE with both. Hold the button to keep scratching. Neon claw marks rip across the air
 ##     in front of you, the cat lunges and pounces into each swipe, the camera punches, and a hit
@@ -17,9 +17,9 @@ extends Node3D
 ## (scripts/hit.gd), exactly like the bat: VAC-COPs, rival cats and cars all take them.
 ##
 ## Multiplayer: the scratcher's computer finds what it hit and hands out the Hits (like the bat),
-## then tells every computer to draw the swipe (show_scratch). A throw asks the host to take the bat
-## out of your paw and drop it where it lands (ItemManager.request_throw); every computer draws the
-## spinning bat (show_throw).
+## then tells every computer to draw the swipe (show_scratch). A throw never takes the bat out of your
+## inventory: every computer hides the bat in your paw and flies a spinning copy out and back
+## (show_throw + _update_flights); only the thrower's computer hands out the Hits.
 
 @export_group("Scratch")
 ## Swipes per second while you hold the button.
@@ -83,18 +83,28 @@ extends Node3D
 @export var spark_count: int = 10
 
 @export_group("Throw")
-## How fast the thrown bat flies (metres per second), how much it aims up above where you look, and
-## how hard it falls (gravity, metres per second per second).
+## THE BOOMERANG BAT. How fast it flies OUT (metres per second), how much it aims up above where you
+## look, and how much it dips on the way (gravity, metres per second per second; 0 = dead straight).
 @export var throw_speed: float = 24.0
-@export var throw_lift: float = 0.2
-@export var throw_gravity: float = 14.0
-## Longest flight before it just drops (seconds).
-@export var throw_max_seconds: float = 1.4
+@export var throw_lift: float = 0.1
+@export var throw_gravity: float = 3.0
+## How long it flies OUT before it turns round (seconds; x Throw Speed = its reach). It also turns
+## round early when it bonks something or hits a wall.
+@export var throw_out_seconds: float = 0.45
+## How fast it comes BACK (metres per second; it chases you if you run), and how wide it swoops out
+## to one side on the way (0 = straight back, 1 = a big curve).
+@export var throw_return_speed: float = 20.0
+@export_range(0.0, 2.0) var throw_curve: float = 0.8
+## It's CAUGHT when it gets this close to you (metres), or after this long coming back (seconds).
+@export var throw_catch_distance: float = 0.8
+@export var throw_return_max_seconds: float = 2.5
+## Things it bonks on the way BACK take this share of the throw's damage (0 = it only hits going out).
+@export_range(0.0, 2.0) var throw_return_damage: float = 0.6
 ## How close it must pass to something to bonk it (metres).
 @export var throw_radius: float = 0.5
 ## Spins per second while it flies.
 @export var throw_spin: float = 3.0
-## Seconds before you can throw / scratch again after a throw.
+## Seconds before you can scratch again after the bat is caught.
 @export var throw_cooldown: float = 0.5
 
 ## The cat this belongs to (the Player node).
@@ -107,6 +117,8 @@ var _combo_until: float = 0.0
 ## numbers). Not in the scene tree; freed with this node.
 var _claws: MeleeWeapon
 var _thrown: MeleeWeapon
+## Bats of ours out flying (every computer): [{node, held, points, out, time, returning, ...}].
+var _flights: Array = []
 var _rng := RandomNumberGenerator.new()
 ## The swipe animation (every computer): which paw (0 right, 1 left, 2 both) and how far through it (0..1+).
 var _anim_paw: int = 0
@@ -153,6 +165,9 @@ func _exit_tree() -> void:
 ## allowed = not in a menu / the safe zone.
 func melee_tick(allowed: bool, pressed: bool, just_pressed: bool, delta: float) -> void:
 	_cooldown -= delta
+	if is_throw_out():
+		_cooldown = maxf(_cooldown, throw_cooldown)  # wait for the boomerang to come back
+		return
 	if not allowed or not pressed or _cooldown > 0.0 or cat.riding_car != null:
 		return
 	var items := ItemManager.instance
@@ -278,6 +293,7 @@ func show_scratch(step: int, connected: bool, hit_spots: PackedVector3Array, for
 
 ## Every frame: draw the claw marks (rip in, freeze on a hit, fade out).
 func _process(delta: float) -> void:
+	_update_flights(delta)  # thrown boomerang bats
 	_cooldown_visuals(delta)
 	_mesh.clear_surfaces()
 	_mesh_node.global_transform = Transform3D.IDENTITY
@@ -408,11 +424,12 @@ func _sparks(where: Vector3) -> void:
 	fade.tween_callback(light.queue_free)
 
 
-# --- THROW ---
+# --- THROW (BOOMERANG) ---
 
-## Owner only: throw the weapon in our LEFT paw. Works out its whole flight now (a falling arc, the
-## first thing it passes close to gets bonked), asks the host to take it out of our paw and drop it
-## where it lands, and shows everyone the spinning flight.
+## Owner only: throw the weapon in our LEFT paw. Works out its flight OUT now (a straight-ish line;
+## the first thing it passes close to gets bonked and it turns round there, or at a wall, or at the end
+## of its reach), then everyone's computer flies it back to our paw (show_throw / _update_flights).
+## The bat never leaves our inventory: it's just hidden while it's out.
 func _throw(weapon: MeleeWeapon) -> void:
 	_cooldown = throw_cooldown
 	var look := -cat.camera.global_basis.z
@@ -422,28 +439,16 @@ func _throw(weapon: MeleeWeapon) -> void:
 	var velocity := (look + Vector3.UP * throw_lift).normalized() * throw_speed
 	var spot := cat.global_position + Vector3.UP * 0.7 + flat * 0.4
 	var space := get_world_3d().direct_space_state
-	var ball := SphereShape3D.new()
-	ball.radius = throw_radius
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = ball
-	query.exclude = _own_rids()
 	var points := PackedVector3Array([spot])
 	var step := 1.0 / 60.0
 	var time := 0.0
 	var target: Node = null
 	var stopped := false
-	while time < throw_max_seconds and not stopped:
+	while time < throw_out_seconds and not stopped:
 		var next := spot + velocity * step
 		velocity.y -= throw_gravity * step
 		time += step
-		# Anything to bonk near here?
-		query.transform = Transform3D(Basis.IDENTITY, next)
-		for result in space.intersect_shape(query, 32):
-			var found := Hit.target_of(result.collider)
-			if found == null or found == cat or (found is CatPlayer and (found as CatPlayer).team == cat.team):
-				continue
-			target = found
-			break
+		target = _throw_target_near(space, next, [])  # anything to bonk near here?
 		# A wall or the ground in the way?
 		var ray := PhysicsRayQueryParameters3D.create(spot, next)
 		ray.exclude = _own_rids()
@@ -451,29 +456,47 @@ func _throw(weapon: MeleeWeapon) -> void:
 		if target != null:
 			stopped = true
 		elif wall:
-			next = wall.position - (next - spot).normalized() * 0.2  # (bounce off a hair, not into it)
+			next = wall.position - (next - spot).normalized() * 0.2  # (turn round a hair off the wall)
 			stopped = true
 		spot = next
 		points.append(spot)
-	var land := ItemManager.instance._ground_below(spot)
-	if land.y > spot.y + 1.0:
-		land = cat.global_position  # (it ended up inside something: drop it at our feet)
 	# The Hit, ready now but handed out when the bat GETS there.
+	_copy_weapon_numbers(weapon, _thrown)
 	if target != null:
-		_copy_weapon_numbers(weapon, _thrown)
-		var info := _thrown._make_hit(flat, spot)
-		var paws := Upgrades.melee_multiplier(cat.player_id)
-		info.damage = roundi(weapon.damage * weapon.throw_damage * paws * (weapon.crit_multiplier if info.crit else 1.0))
-		info.enemy_push = (flat + Vector3.UP * 0.4) * weapon.enemy_knockback * weapon.throw_push * paws
-		info.push_scale = weapon.throw_push
-		info.stun_seconds = maxf(info.stun_seconds, weapon.throw_stun)
-		get_tree().create_timer(time).timeout.connect(_throw_landed.bind(target, info))
-	last_result = "throw item=%s seconds=%.2f target=%s land=%s" % [weapon.data.id, time, target.name if target != null else "none", land]
+		get_tree().create_timer(time).timeout.connect(_throw_landed.bind(target, _throw_hit(weapon, flat, spot, 1.0)))
+	last_result = "throw item=%s out_seconds=%.2f target=%s turn=%s" % [weapon.data.id, time, target.name if target != null else "none", spot]
 	Seats.rumble(cat.player_id, 0.4, 0.2, 0.08)
 	cat.aim.kick(-1.0, 0.0, 1.0, camera_roll_degrees, camera_fov_punch, 0.0, 0.0)
 	cat.aim_until = Time.get_ticks_msec() / 1000.0 + 0.4
-	ItemManager.instance.request_throw.rpc_id(1, cat.player_id, 1, land, time)
 	show_throw.rpc(weapon.data.id, points, time, target != null)
+
+
+## Owner only: the first enemy / rival cat / car within throw_radius of `where` (not us, not our gang,
+## not anything in `skip`), or null.
+func _throw_target_near(space: PhysicsDirectSpaceState3D, where: Vector3, skip: Array) -> Node:
+	var ball := SphereShape3D.new()
+	ball.radius = throw_radius
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = ball
+	query.exclude = _own_rids()
+	query.transform = Transform3D(Basis.IDENTITY, where)
+	for result in space.intersect_shape(query, 32):
+		var found := Hit.target_of(result.collider)
+		if found == null or found == cat or skip.has(found) or (found is CatPlayer and (found as CatPlayer).team == cat.team):
+			continue
+		return found
+	return null
+
+
+## Owner only: the Hit a thrown weapon gives (scale = Throw Return Damage on the way back).
+func _throw_hit(weapon: MeleeWeapon, flat: Vector3, spot: Vector3, scale: float) -> Hit:
+	var info := _thrown._make_hit(flat, spot)
+	var paws := Upgrades.melee_multiplier(cat.player_id)
+	info.damage = roundi(weapon.damage * weapon.throw_damage * paws * scale * (weapon.crit_multiplier if info.crit else 1.0))
+	info.enemy_push = (flat + Vector3.UP * 0.4) * weapon.enemy_knockback * weapon.throw_push * paws * scale
+	info.push_scale = weapon.throw_push * scale
+	info.stun_seconds = maxf(info.stun_seconds, weapon.throw_stun)
+	return info
 
 
 ## Owner only: the thrown bat reached what it was going to bonk.
@@ -485,8 +508,7 @@ func _throw_landed(target: Node, info: Hit) -> void:
 	Feedback.shake(cat.player_id, 0.3)
 
 
-## A throw's hit points at this stand-in, a copy of the thrown weapon's numbers (the real one is gone
-## from the paw by the time it lands).
+## A throw's hit points at this stand-in, a copy of the thrown weapon's numbers.
 func _copy_weapon_numbers(from: MeleeWeapon, to: MeleeWeapon) -> void:
 	to.holder = cat
 	for property in ["damage", "crit_chance", "crit_multiplier", "cat_knockback", "cat_hop", "car_impulse",
@@ -494,7 +516,8 @@ func _copy_weapon_numbers(from: MeleeWeapon, to: MeleeWeapon) -> void:
 		to.set(property, from.get(property))
 
 
-## Everyone: draw the thrown weapon spinning along its flight, then bonk / clatter at the end.
+## Everyone: hide the bat in our paw, fly a spinning copy OUT along `points` (bonk at the end if it hit
+## something), then _update_flights curves it BACK to our paw.
 @rpc("any_peer", "call_local", "reliable")
 func show_throw(item_id: String, points: PackedVector3Array, seconds: float, hit_something: bool) -> void:
 	if cat == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(cat.player_id) or points.size() < 2:
@@ -502,6 +525,11 @@ func show_throw(item_id: String, points: PackedVector3Array, seconds: float, hit
 	var data: ItemData = ItemManager.instance.catalog.get(item_id)
 	if data == null or data.scene == null:
 		return
+	var held := ItemManager.instance.held_item(cat, 1)
+	if held != null:
+		held.visible = false  # it's out flying
+		if held is MeleeWeapon:
+			(held as MeleeWeapon).in_flight = true
 	var world: Node = Game.instance if Game.instance != null else get_tree().root
 	var flying := data.scene.instantiate() as Node3D
 	flying.name = "Thrown"
@@ -517,27 +545,91 @@ func show_throw(item_id: String, points: PackedVector3Array, seconds: float, hit
 	var spin_axis := (points[points.size() - 1] - points[0]).cross(Vector3.UP).normalized()
 	if spin_axis == Vector3.ZERO:
 		spin_axis = Vector3.RIGHT
-	var melee := flying as MeleeWeapon
-	var tween := flying.create_tween()
-	tween.tween_method(func(t: float):
-		if not is_instance_valid(flying):
-			return
-		var along := t * (points.size() - 1)
-		var i := mini(int(along), points.size() - 2)
-		flying.global_position = points[i].lerp(points[i + 1], along - i)
-		flying.global_basis = Basis(spin_axis, -t * seconds * throw_spin * TAU).scaled(Vector3.ONE * data.hold_scale)  # END OVER END
+	_flights.append({"node": flying, "held": held, "points": points, "out": maxf(seconds, 0.05), "time": 0.0,
+		"returning": false, "back_time": 0.0, "axis": spin_axis, "scale": data.hold_scale, "hit": hit_something,
+		"skip": [], "side": 1.0 if _rng.randf() < 0.5 else -1.0})
+
+
+## Every frame (every computer): move the thrown bats. OUT = along the worked-out path; BACK = homing
+## on our paw with a sideways swoop, spinning the whole time. The owner also bonks things it passes on
+## the way back. Close enough = CAUGHT: the bat is back in the paw.
+func _update_flights(delta: float) -> void:
+	for flight in _flights.duplicate():
+		var flying := flight.node as Node3D
+		if not is_instance_valid(flying) or not is_instance_valid(cat):
+			_flights.erase(flight)
+			continue
+		flight.time += delta
+		var points: PackedVector3Array = flight.points
+		var melee := flying as MeleeWeapon
 		if melee != null:
 			melee._trail_until = Time.get_ticks_msec() / 1000.0 + 0.05  # its neon trail follows it
-	, 0.0, 1.0, maxf(seconds, 0.05))
-	tween.tween_callback(func():
-		var end := points[points.size() - 1]
-		if hit_something:
-			Sound.play_at("bonk", end, 0.0)
-			if melee != null:
-				melee._impact(end, false)
-		else:
-			Sound.play_at("cone_bounce", end, -4.0)  # clatter on the street
-		flying.queue_free())
+		flying.global_basis = Basis(flight.axis, -flight.time * throw_spin * TAU).scaled(Vector3.ONE * flight.scale)  # END OVER END
+		if not flight.returning:
+			var t := clampf(flight.time / flight.out, 0.0, 1.0)
+			var along := t * (points.size() - 1)
+			var i := mini(int(along), points.size() - 2)
+			flying.global_position = points[i].lerp(points[i + 1], along - i)
+			if t >= 1.0:
+				flight.returning = true
+				var end := points[points.size() - 1]
+				if flight.hit:
+					Sound.play_at("bonk", end, 0.0)
+					if melee != null:
+						melee._impact(end, false)
+				else:
+					Sound.play_at("swing", end, -6.0)  # whoosh as it turns round
+			continue
+		# BACK: fly at our paw (which may have moved), curving out to one side early on.
+		flight.back_time += delta
+		var paw := cat.global_position + Vector3.UP * 0.7
+		var to_paw := paw - flying.global_position
+		var distance := to_paw.length()
+		if distance < throw_catch_distance or flight.back_time > throw_return_max_seconds:
+			_catch(flight)
+			continue
+		var side_dir := to_paw.cross(Vector3.UP).normalized() * float(flight.side)
+		var swoop := clampf(1.0 - flight.back_time / 0.5, 0.0, 1.0) * throw_curve
+		var move := (to_paw.normalized() + side_dir * swoop).normalized() * throw_return_speed * delta
+		if move.length() > distance:
+			move = to_paw
+		var before := flying.global_position
+		flying.global_position += move
+		# The owner bonks anything it passes on the way back (once each, never what it hit going out).
+		if cat.is_multiplayer_authority() and throw_return_damage > 0.0:
+			var found := _throw_target_near(get_world_3d().direct_space_state, flying.global_position, flight.skip)
+			if found != null:
+				flight.skip.append(found)
+				var weapon := flight.held as MeleeWeapon
+				if weapon != null and is_instance_valid(weapon):
+					var dir := flying.global_position - before
+					var flat := Vector3(dir.x, 0, dir.z).normalized()
+					_throw_landed(found, _throw_hit(weapon, flat, flying.global_position, throw_return_damage))
+					Sound.play_at("bonk", flying.global_position, -2.0)
+					weapon._impact(flying.global_position, false)
+					last_result += " return_hit=%s" % found.name
+
+
+## Everyone: the bat is back. Show it in the paw again.
+func _catch(flight: Dictionary) -> void:
+	_flights.erase(flight)
+	var flying := flight.node as Node3D
+	if is_instance_valid(flying):
+		Sound.play_at("cone_bounce", flying.global_position, -8.0)  # *thwap* into the paw
+		flying.queue_free()
+	var held = flight.held
+	if held != null and is_instance_valid(held):
+		(held as Node3D).visible = true
+		if held is MeleeWeapon:
+			(held as MeleeWeapon).in_flight = false
+	if is_instance_valid(cat) and cat.is_multiplayer_authority():
+		Seats.rumble(cat.player_id, 0.3, 0.1, 0.06)
+		last_result += " caught=true"
+
+
+## Is a throw of ours still out flying? (melee_tick: no new throw / scratch until it's back.)
+func is_throw_out() -> bool:
+	return not _flights.is_empty()
 
 
 func _own_rids() -> Array[RID]:
