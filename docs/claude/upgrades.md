@@ -24,3 +24,9 @@ no breach fighting until recruited (checked every 0.25 s in `_process`, never in
 Models from `tools/make_upgrade_specs.py`. InventoryScreen grids resize per cat (`_match_sizes`; slots shrink to fit).
 Test: `--buy_upgrade=a,b --select_vehicle=X --upgrade_log --vehicles_lineup`, `--workbench [--workbench_recruit=N --workbench_pick=5,3 --workbench_buy=a,b
 --workbench_tab=N]` ("DevCapture workbench"), `--rebellion_tier=N` (`--talk=<recruit>` sets 5 by itself).
+RECRUIT HOMES (`scripts/recruit_home.gd`, `RecruitHome`, Node3D children of a hub in main.tscn): each recruit's own furniture,
+`npc` export -> hidden + collision off until `npc.is_recruited()` (polled 0.25 s, pop tween on join). Catleone only so far:
+MittensHome/PaulieHome/SalHome/NonnaHome/FrankieHome, models from `tools/make_recruit_home_specs.py` (mittens_box,
+paulie_scrapheap, sal_heavy_bag, nonna_kitchen, frankie_garage). Part names: Glow/Lamp/Burner lit, Sign soft, Trim gang colour,
+Swing sways. `show_ride` (Frankie) parks `Upgrades.vehicle_of(hub.team)` (RIDE_MODELS) and swaps it live; `prompt` set = an
+Interactable that opens WorkbenchScreen on tab `rebellion_tier + 1`. Burrow recruits have no homes yet.

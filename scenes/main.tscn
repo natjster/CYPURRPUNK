@@ -41,6 +41,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npcs/gold_tooth_gus.tscn" id="q_gold_tooth_gus"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/jittery_jax.tscn" id="q_jittery_jax"]
 [ext_resource type="PackedScene" path="res://scenes/npcs/calamity_clara.tscn" id="q_calamity_clara"]
+[ext_resource type="Script" path="res://scripts/recruit_home.gd" id="rh_recruit_home"]
 [ext_resource type="Script" path="res://scripts/overclean_announcer.gd" id="34_announcer"]
 [ext_resource type="Script" path="res://scripts/raid_report.gd" id="35_report"]
 [ext_resource type="Script" path="res://scripts/ui/raid_report_screen.gd" id="36_report_screen"]
@@ -279,6 +280,94 @@ breach_cries = PackedStringArray("CHOKE ON A FURBALL!")
 breach_fire_seconds = 0.75
 breach_color = Color(0.35, 1, 0.3, 1)
 breach_pellets = 5
+
+[node name="MittensHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
+position = Vector3(12.75, 0, 6.5)
+rotation = Vector3(0, 1.5708, 0)
+script = ExtResource("rh_recruit_home")
+npc = NodePath("../LilMittens")
+model = "mittens_box"
+solid_size = Vector3(1.3, 0.9, 1.0)
+solid_offset = Vector3(0, 0.45, 0)
+sign_text = "HOME SWEET BOX"
+sign_offset = Vector3(0, 1.6, 0)
+sign_color = Color(1, 0.55, 0.75, 1)
+sign_size = 16
+light_color = Color(1, 0.7, 0.5, 1)
+light_energy = 1.2
+light_range = 3.0
+light_offset = Vector3(0, 1.1, -0.9)
+
+[node name="PaulieHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
+position = Vector3(10, 0, 18.6)
+script = ExtResource("rh_recruit_home")
+npc = NodePath("../PaulieNoBrooms")
+model = "paulie_scrapheap"
+solid_size = Vector3(1.4, 1.0, 0.8)
+solid_offset = Vector3(-0.1, 0.5, 0)
+sign_text = "COLLECTIONS"
+sign_offset = Vector3(0, 2.1, 0.2)
+sign_color = Color(1, 0.35, 0.3, 1)
+sign_size = 18
+light_color = Color(1, 0.55, 0.35, 1)
+light_energy = 3.0
+light_range = 4.5
+light_offset = Vector3(0, 1.6, -1.0)
+
+[node name="SalHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
+position = Vector3(-12.8, 0, 7.8)
+rotation = Vector3(0, -1.5708, 0)
+script = ExtResource("rh_recruit_home")
+npc = NodePath("../SalTheSlapper")
+model = "sal_heavy_bag"
+solid_size = Vector3(1.6, 2.0, 0.5)
+solid_offset = Vector3(0, 1, 0)
+sign_text = "SAL'S GYM"
+sign_offset = Vector3(0, 2.4, 0)
+sign_color = Color(1, 0.85, 0.3, 1)
+light_color = Color(1, 0.8, 0.55, 1)
+light_energy = 2.8
+light_range = 4.5
+light_offset = Vector3(0, 2.0, -1.1)
+
+[node name="NonnaHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
+position = Vector3(13.4, 0, -13.5)
+rotation = Vector3(0, 1.5708, 0)
+script = ExtResource("rh_recruit_home")
+npc = NodePath("../NonnaCatleone")
+model = "nonna_kitchen"
+solid_size = Vector3(2.25, 1.0, 0.75)
+solid_offset = Vector3(0.125, 0.5, -0.06)
+sign_text = "NONNA'S KITCHEN"
+sign_offset = Vector3(0.1, 2.1, 0.2)
+sign_color = Color(0.5, 1, 0.45, 1)
+sign_size = 18
+light_color = Color(1, 0.6, 0.35, 1)
+light_energy = 1.8
+light_offset = Vector3(-0.2, 1.8, -0.8)
+steam = true
+steam_offset = Vector3(-0.75, 1.35, -0.06)
+
+[node name="FrankieHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
+position = Vector3(-12.45, 0, 16.2)
+rotation = Vector3(0, -1.5708, 0)
+script = ExtResource("rh_recruit_home")
+npc = NodePath("../FrankieEspresso")
+model = "frankie_garage"
+solid_size = Vector3(5.25, 2.7, 3.0)
+solid_offset = Vector3(0, 1.35, 0)
+sign_text = "FRANKIE'S GARAGE"
+sign_offset = Vector3(0, 3.2, -1.6)
+sign_color = Color(0.4, 0.85, 1, 1)
+sign_size = 26
+light_color = Color(1, 0.9, 0.7, 1)
+light_energy = 2.5
+light_range = 5.0
+light_offset = Vector3(0, 2.2, -0.4)
+show_ride = true
+ride_offset = Vector3(0, 0.45, 0)
+prompt = "FRANKIE'S GARAGE: PICK A RIDE"
+prompt_radius = 3.2
 
 [node name="GangHub" type="Node3D" parent="." node_paths=PackedStringArray("leader", "shopkeeper")]
 position = Vector3(200, -200, 0)

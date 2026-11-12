@@ -55,6 +55,29 @@ The price depends on **how many** your gang has already recruited, not on which 
   recruit): `scenes/main.tscn` > Upgrades node > Inspector > Costs > `rebellion_tier`. The "type" words are
   `RECRUIT_TYPES` / `RECRUIT_SHORT` at the top of `scripts/upgrades.gd`.
 
+#### Recruits move in WITH THEIR OWN THING (`scripts/recruit_home.gd`)
+Every recruit brings a piece of furniture that's theirs, so recruiting fills out the sewer. It's hidden
+until that cat is recruited, then drops in with a little bounce. **Catleone sewer so far** (Burrow: not yet):
+
+| Recruit | Their thing (model) | Where (Hub) |
+|---|---|---|
+| Lil' Mittens | **HOME SWEET BOX**: her cardboard box, blanket, fairy lights, food bowl (`mittens_box`) | east wall, between the box shanties |
+| Paulie "No-Brooms" | **COLLECTIONS**: a drum of smashed VAC-COP junk, squashed Roombas, a snapped broom, NO BROOMS sign (`paulie_scrapheap`) | south-east corner |
+| Sal "The Slapper" | **SAL'S GYM**: a heavy bag with a Roomba face taped on (it sways), tyre, dumbbell (`sal_heavy_bag`) | west wall, by Sal |
+| Nonna Catleone | **NONNA'S KITCHEN**: stove, steaming pot of Sunday Gravy, checked-cloth table (`nonna_kitchen`) | east wall, north end |
+| Frankie "Espresso" | **FRANKIE'S GARAGE**: a garage bay with **your gang's chosen ride parked inside**; it swaps the moment you pick another ride. Press **E** at it to open the workbench on Frankie's tab (the rides) (`frankie_garage`) | west wall, south end |
+
+- They're nodes under **Hub** in `scenes/main.tscn` (MittensHome, PaulieHome, SalHome, NonnaHome, FrankieHome).
+  Click one: move/turn it with the gizmo (the open front faces the room). Inspector: **Npc** = whose it is,
+  **Model** = the `.glb` name in `models/`, **Solid** (the bump box), **Sign** (text/colour/size), **Light**,
+  **Life** (glow brightness, steam, how much the bag sways), **Garage** (Show Ride + where it's parked),
+  **Press E** (Prompt; empty = can't be used).
+- **Adding one for a Burrow recruit:** right-click **GangHub** > Add Child Node > Node3D, drag
+  `scripts/recruit_home.gd` onto it, set Npc + Model. New models: add a recipe to
+  `tools/make_recruit_home_specs.py`, then `python tools/make_recruit_home_specs.py` and
+  `python tools/cypurr_models.py all tools/model_specs/<name>.json`. Model parts named Glow / Lamp / Burner
+  light up, Sign glows softly, Trim glows in the gang colour, Swing sways.
+
 ### Which tab sells what
 
 | Tab (Catleone / Burrow) | Upgrades (tiers) |
