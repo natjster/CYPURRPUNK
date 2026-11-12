@@ -24,3 +24,9 @@ A = cat creator, P2-4 rows from `Seats.lobby_cats`; LOCAL START GAME = `solo_pre
 ONLINE NEXT = PlayScreen host/join, its BACK -> landing). Leaving the landing page `Seats.clear_lobby()`.
 Cat creator NEXT/BACK route by `main_menu._cat_from` (`cat_done` / `cat_closed`). Pause > MY CAT = `open(true)`.
 Test: `--solo`, `--name=`, `--look=N`, `--menu=cat|mode|coop|local|online|play`; prints `DevCapture look`.
+COAT PATTERNS (12 Nov 2026, user asked for "kinds of cats", same model, coloring only): look key `coat` (`CatLook.COAT_KEY`,
+`coat_ids()/coat()/coat_of()`; missing = lowest `order` = tabby so old cats are unchanged). Cards `cat_coats/*.tres`
+(`CatCoat`: body_texture, limb_texture, limb_uv_scale). `_wear_coat` runs after `_paint`, sets textures on the model's
+fur copies (`LIMB_PARTS` LegL/LegR/Tail = limb picture). psx_lit has `patch_color`/`patch_amount` (default 0 = off):
+texture alpha 0 = MARKINGS colour (calico, tuxedo socks). Pictures from `tools/make_cat_coats.py`; Godot cylinder sides
+use only v 0..0.5 (caps below). MY CAT rows are 15 px apart (9 rows). Test `--coat_lineup[=a,b]`.

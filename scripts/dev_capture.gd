@@ -94,6 +94,7 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##                     you've been up); prints went_up / in_hub / heat
 ##   --give=A,B        (host) put items straight into our paws/backpack (e.g. --give=pistol,catnip)
 ##   --cat_lineup[=res://x.tscn,...] the cat model (+ other cat scenes) side by side, own camera, no HUD
+##   --coat_lineup[=a,b]  one cat per COAT pattern (tabby, tiger, calico... or only those named) side by side
 ##                     (--lineup_yaw=DEG turns them, --lineup_dist=M, --lineup_fov)
 ##   --weapons_lineup[=a,b] a display rack of the weapons (own camera) + "DevCapture weapon" lines
 ##   --to_stash=hand:0,pack:0   walk to the stash lockers and put those items in the stash
@@ -532,7 +533,7 @@ func _ready() -> void:
 			await _lineups._vehicles_lineup(player)
 		if args.has("weapons_lineup"):
 			await _lineups._weapons_lineup(player)
-		if args.has("cat_lineup"):
+		if args.has("cat_lineup") or args.has("coat_lineup"):
 			await _lineups._cat_lineup(player)
 		if args.has("deploy"):
 			# Before --pos, so --pos can still pick an exact spot in the city.

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CatCoat" format=3]
+
+[ext_resource type="Script" path="res://scripts/cat/cat_coat.gd" id="1_coat"]
+
+[resource]
+script = ExtResource("1_coat")
+id = "solid"
+display_name = "SOLID"
+order = 1
+limb_uv_scale = Vector2(1, 1.5)

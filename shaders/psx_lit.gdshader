@@ -20,6 +20,10 @@ uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform sampler2D albedo_texture : source_color, hint_default_white, filter_nearest_mipmap, repeat_enable;
 // How many times the texture repeats across the surface.
 uniform vec2 uv_scale = vec2(1.0, 1.0);
+// PATCHES (cat coats like calico / tuxedo socks): where the texture is see-through (alpha 0)
+// the surface shows patch_color instead. patch_amount 0 = off (the default: nothing changes).
+uniform vec4 patch_color : source_color = vec4(1.0);
+uniform float patch_amount : hint_range(0.0, 1.0) = 0.0;
 // World UVs: the texture is laid out by real-world metres instead of per object, so windows
 // stay the same size on every building no matter how big it is (used by the city generator).
 uniform bool world_uv = false;
@@ -124,7 +128,8 @@ void fragment() {
 		uv = mix(UV, affine_uv.xy / affine_uv.z, strength);
 	}
 	vec4 tex = texture(albedo_texture, uv);
-	ALBEDO = albedo_color.rgb * tex.rgb * instance_tint.rgb;
+	vec3 base_color = mix(albedo_color.rgb * tex.rgb, patch_color.rgb, (1.0 - tex.a) * patch_amount);
+	ALBEDO = base_color * instance_tint.rgb;
 	EMISSION = emission_color.rgb * emission_energy * instance_tint.rgb;
 	if (emission_textured) {
 		EMISSION *= tex.rgb;

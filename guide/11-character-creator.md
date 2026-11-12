@@ -12,6 +12,7 @@ own pause menu.)
 ```
 <  [ WHISKERS ]  >  2/3  [NEW] [DELETE]     your cats: < > switch, type to rename
 FUR       <  [colour]  >        main coat
+COAT      <  TABBY     >        the KIND of cat: the pattern on the fur (see "Coat patterns" below)
 MARKINGS  <  [colour]  >        belly and muzzle
 EYES      <  [colour]  >        bright colours glow a little in the dark
 NOSE      <  [colour]  >
@@ -55,6 +56,31 @@ glasses...) under its **Model** node. It wears HAT / FACE / NECK accessories.
 
 That's it: it's in the MY CAT screen next time you press F5.
 
+### Coat patterns (TABBY, TIGER, CALICO... no code)
+The **COAT** row picks the pattern painted over the FUR colour. Same cat model, same colours:
+| Coat | Looks like |
+|---|---|
+| TABBY | the classic wavy stripes + ringed legs/tail (the default; old cats keep it) |
+| SOLID | plain fur, no pattern |
+| TIGER | bold, dark, thick stripes |
+| SPOTTED | leopard / bengal spots with lighter middles |
+| TICKED | fine salt-and-pepper speckle (Abyssinian) |
+| TORTIE | tortoiseshell: dark blotches over the fur |
+| CALICO | dark blotches PLUS patches in the MARKINGS colour (white markings = classic calico) |
+| TUXEDO | plain body with socks in the MARKINGS colour (black fur + white markings = tuxedo cat) |
+| POINTED | Siamese: legs and tail a dark shade of the fur (cream fur looks best) |
+
+Each one is a card in `cat_coats/` (`CatCoat`, script `scripts/cat/cat_coat.gd`). Double-click one to
+see: **Id**, **Display Name**, **Order** (menu order; the lowest is the default), **Body Texture**
+(body, head, ears, cheeks), **Limb Texture** (legs + tail) and **Limb Uv Scale**.
+**Add a coat:** FileSystem dock > right-click `cat_coats` > **Create New > Resource...** > `CatCoat`,
+fill in the boxes, save. It appears in MY CAT by itself (and random cats can roll it).
+The pictures are `textures/cat_coat_*.png`, made by `python tools/make_cat_coats.py` (edit that and
+re-run, or paint your own): GREY = how dark (light grey 240 = the plain fur colour), SEE-THROUGH pixels =
+the MARKINGS colour. Body pictures 32x32, limb pictures 16x16. Leg/tail cylinders only use the TOP
+HALF of a limb picture for their sides (top of leg at the top, foot at the middle line); the bottom
+half is the end caps. Test: `--solo --coat_lineup` (all coats in a row) or `--coat_lineup=tiger,calico`.
+
 ### Change the colours (no code)
 Double-click `cat_parts/palette.tres`. It has four lists: **Fur Colors**, **Marking Colors**,
 **Eye Colors**, **Nose Colors**. Click a colour to change it; **+ Add Element** adds one. The first
@@ -62,7 +88,7 @@ colour of each list is what a brand-new cat starts with in MY CAT.
 
 ### Where it lives
 - `scripts/cat/cat_look.gd` (`CatLook`) — the framework. A cat's **look** is a small list of
-  values: four colours plus which part is in each slot. `CatLook.apply(model, look)` paints a cat
+  values: four colours, the coat pattern, plus which part is in each slot. `CatLook.apply(model, look)` paints a cat
   model and puts the parts on. It also loads the part cards and palette, makes random looks, and
   throws away anything broken (unknown parts, wrong types).
 - `scripts/cat/cat_part.gd` (`CatPart`) — the accessory card. `scripts/cat/cat_palette.gd`
@@ -86,7 +112,7 @@ colour of each list is what a brand-new cat starts with in MY CAT.
   Test: `--solo --cat_lineup` shows the cat big under a work light (`--cat_lineup=res://other.tscn`
   puts another cat scene beside it for a before / after).
 - `scripts/ui/cat_creator.gd` (`CatCreator`, on **PS1Overlay > CatCreator**) — the screen. It builds
-  itself: the cat row, then one row per colour and per slot.
+  itself: the cat row, then one row per colour (COAT right under FUR) and per slot.
 - `scripts/settings.gd` — your cats: `Settings.cats` (each `{"id", "name", "look"}`) and
   `Settings.current_cat_id`, with helpers `current_cat()`, `new_cat()`, `select_cat()`,
   `update_current_cat()`, `delete_cat()`. Each cat's cash + stash file is named after its id.

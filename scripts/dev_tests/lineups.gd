@@ -40,9 +40,19 @@ func _vehicles_lineup(player: CatPlayer) -> void:
 ## look (classic orange tabby where it sets nothing). For judging cat model changes side by side.
 func _cat_lineup(player: CatPlayer) -> void:
 	var paths: Array[String] = ["res://scenes/cat_model.tscn"]
-	for extra in str(_args["cat_lineup"]).split(","):
+	for extra in str(_args.get("cat_lineup", "")).split(","):
 		if extra.ends_with(".tscn"):
 			paths.append(extra)
+	# --coat_lineup: one cat per COAT pattern (CatLook.coat_ids()), all in the same colours.
+	# --coat_lineup=tiger,calico: only those.
+	var coats: Array[String] = CatLook.coat_ids() if _args.has("coat_lineup") else []
+	var wanted := str(_args.get("coat_lineup", "")).split(",")
+	if coats.any(func(id): return id in wanted):
+		coats = coats.filter(func(id): return id in wanted)
+	if not coats.is_empty():
+		paths.clear()
+		for id in coats:
+			paths.append("res://scenes/cat_model.tscn")
 	if UndergroundHub.is_in_hub(player.global_position):
 		UndergroundHub.of(player).deploy(player)
 		for i in 30:
@@ -63,8 +73,11 @@ func _cat_lineup(player: CatPlayer) -> void:
 		cat.position = Vector3((i - (paths.size() - 1) / 2.0) * 1.05, 0, 0)
 		cat.rotation.y = PI + deg_to_rad(float(_args.get("lineup_yaw", "20")))  # cats face -Z: turn to the camera
 		row.add_child(cat)
-		CatLook.apply(cat, look)
-		print("DevCapture cat_model: %d %s" % [i, paths[i]])
+		var cat_look := look.duplicate()
+		if not coats.is_empty():
+			cat_look[CatLook.COAT_KEY] = coats[i]
+		CatLook.apply(cat, cat_look)
+		print("DevCapture cat_model: %d %s coat=%s" % [i, paths[i], CatLook.coat_of(cat_look)])
 	LevelKit.add_light(row, Vector3(0, 2.2, 1.8), Color(1, 0.94, 0.85), 5.0, 9.0)
 	var camera := Camera3D.new()
 	camera.fov = float(_args.get("lineup_fov", "45"))

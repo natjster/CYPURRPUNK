@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CatCoat" format=3]
+
+[ext_resource type="Script" path="res://scripts/cat/cat_coat.gd" id="1_coat"]
+[ext_resource type="Texture2D" path="res://textures/cat_tabby.png" id="2_body"]
+[ext_resource type="Texture2D" path="res://textures/cat_tabby_rings.png" id="3_limb"]
+
+[resource]
+script = ExtResource("1_coat")
+id = "tabby"
+display_name = "TABBY"
+order = 0
+body_texture = ExtResource("2_body")
+limb_texture = ExtResource("3_limb")
+limb_uv_scale = Vector2(1, 1.5)

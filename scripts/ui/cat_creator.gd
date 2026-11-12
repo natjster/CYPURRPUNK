@@ -44,7 +44,7 @@ const CAT_MODEL: PackedScene = preload("res://scenes/cat_model.tscn")
 ## Menu names for the colour keys and slots.
 const LABELS: Dictionary = {
 	"fur": "FUR", "markings": "MARKINGS", "eyes": "EYES", "nose": "NOSE",
-	"hat": "HAT", "face": "FACE", "neck": "NECK", "voice": "VOICE",
+	"hat": "HAT", "face": "FACE", "neck": "NECK", "voice": "VOICE", "coat": "COAT",
 }
 const HEADER_COLOR := Color(1, 0.55, 0.85)
 const VALUE_COLOR := Color(0.55, 0.9, 1)
@@ -52,6 +52,8 @@ const NOTE_COLOR := Color(0.5, 0.68, 0.8)
 const WARN_COLOR := Color(1, 0.8, 0.45)
 ## How fast the preview cat turns (radians per second).
 const SPIN_SPEED: float = 0.8
+## Gap between the look rows (pixels).
+const ROW_STEP: float = 15.0
 ## Longest cat name (it floats over your cat).
 const MAX_NAME_LENGTH: int = 12
 
@@ -102,14 +104,18 @@ func _ready() -> void:
 
 	_build_cat_row(38)
 
-	# One row per colour, then one per accessory slot, then the VOICE (MALE / FEMALE).
-	var y := 59.0
+	# One row per colour (with the COAT pattern right under FUR), then one per accessory slot,
+	# then the VOICE (MALE / FEMALE). ROW_STEP apart so all nine fit above the buttons.
+	var y := 58.0
 	for key in CatLook.COLOR_KEYS:
 		_add_row(key, y, true)
-		y += 17
+		y += ROW_STEP
+		if key == "fur":
+			_add_row(CatLook.COAT_KEY, y, false)
+			y += ROW_STEP
 	for slot in CatLook.SLOTS:
 		_add_row(slot, y, false)
-		y += 17
+		y += ROW_STEP
 	_add_row(CatLook.VOICE_KEY, y, false)
 
 	_build_preview(Vector2(178, 60), Vector2(118, 130))
@@ -358,6 +364,9 @@ func _refresh() -> void:
 			node.color = _look.get(key, Color.WHITE)
 		elif key == CatLook.VOICE_KEY:
 			(node as Label).text = CatLook.VOICE_NAMES.get(CatLook.voice_of(_look), "?")
+		elif key == CatLook.COAT_KEY:
+			var coat := CatLook.coat(CatLook.coat_of(_look))
+			(node as Label).text = coat.display_name if coat != null else "?"
 		else:
 			var part: CatPart = CatLook.parts().get(_look.get(key, ""))
 			(node as Label).text = part.display_name if part != null else "NONE"
@@ -370,6 +379,8 @@ func _options_for(key: String) -> Array:
 		return Array(CatLook.palette().colors_for(key))
 	if key == CatLook.VOICE_KEY:
 		return Array(CatLook.VOICES)
+	if key == CatLook.COAT_KEY:
+		return Array(CatLook.coat_ids())
 	return Array(CatLook.part_ids_for(key))
 
 

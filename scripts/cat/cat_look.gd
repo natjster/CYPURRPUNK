@@ -7,12 +7,14 @@ extends RefCounted
 ## A LOOK is a plain Dictionary (easy to save and send over the network):
 ##   {"fur": Color, "markings": Color, "eyes": Color, "nose": Color,
 ##    "hat": "fedora", "face": "", "neck": "bell_collar",     ("" = nothing in that slot)
-##    "voice": "female"}                                         (how it sounds when it talks: VOICES)
+##    "voice": "female",                                         (how it sounds when it talks: VOICES)
+##    "coat": "calico"}                                          (the fur PATTERN: a CatCoat card id)
 ## Anything missing just keeps the model's own colour / wears nothing.
 ##
 ## The OPTIONS are data, not code:
 ##   - colours: res://cat_parts/palette.tres (CatPalette)
 ##   - accessories: every CatPart card (.tres) in res://cat_parts/
+##   - coat patterns (tabby, tiger, calico...): every CatCoat card (.tres) in res://cat_coats/
 ## So a new hat or colour needs no code at all (SETUP_GUIDE §11).
 ##
 ## Adding a whole new SLOT (e.g. "back" for capes) is a small code change: add it to SLOTS
@@ -20,6 +22,12 @@ extends RefCounted
 
 const PARTS_FOLDER: String = "res://cat_parts/"
 const PALETTE_PATH: String = "res://cat_parts/palette.tres"
+const COATS_FOLDER: String = "res://cat_coats/"
+## The look key for the coat pattern (a CatCoat id). Missing = the first coat (the tabby).
+const COAT_KEY: String = "coat"
+## The fur meshes that wear the LIMB pattern (rings / socks / points); every other fur mesh
+## wears the BODY pattern.
+const LIMB_PARTS: Array[String] = ["LegL", "LegR", "Tail"]
 
 ## The colour keys, in MY CAT screen order, and which meshes of the cat model each one paints
 ## (node names in scenes/cat_model.tscn).
@@ -50,6 +58,8 @@ const VOICE_NAMES: Dictionary = {"male": "MALE", "female": "FEMALE"}
 
 static var _parts: Dictionary = {}  # part id -> CatPart (loaded once)
 static var _palette: CatPalette
+static var _coat_ids: Array[String] = []  # coat ids in menu order (loaded once)
+static var _coats: Dictionary = {}  # coat id -> CatCoat
 
 
 # --- The options (loaded from res://cat_parts/ the first time they're asked for) ---
@@ -77,6 +87,36 @@ static func part_ids_for(slot: String) -> Array[String]:
 	return ids
 
 
+## Every coat pattern id, in MY CAT order (the first one is the default).
+static func coat_ids() -> Array[String]:
+	if _coat_ids.is_empty():
+		var cards: Array[CatCoat] = []
+		for file in DirAccess.get_files_at(COATS_FOLDER):
+			file = file.trim_suffix(".remap")  # exported games rename resources
+			if file.ends_with(".tres"):
+				var coat := load(COATS_FOLDER + file) as CatCoat
+				if coat != null and not coat.id.is_empty():
+					cards.append(coat)
+		cards.sort_custom(func(a, b): return a.order < b.order)
+		for coat in cards:
+			_coats[coat.id] = coat
+			_coat_ids.append(coat.id)
+	return _coat_ids
+
+
+static func coat(id: String) -> CatCoat:
+	coat_ids()
+	return _coats.get(id)
+
+
+## A look's coat id (cats saved before coats existed get the first one, the tabby).
+static func coat_of(look: Dictionary) -> String:
+	var id: Variant = look.get(COAT_KEY, "")
+	if id is String and coat(id) != null:
+		return id
+	return coat_ids()[0] if not coat_ids().is_empty() else ""
+
+
 static func palette() -> CatPalette:
 	if _palette == null:
 		_palette = load(PALETTE_PATH) as CatPalette
@@ -95,6 +135,7 @@ static func default_look() -> Dictionary:
 	for slot in SLOTS:
 		look[slot] = ""
 	look[VOICE_KEY] = VOICES[0]
+	look[COAT_KEY] = coat_of({})
 	return look
 
 
@@ -109,6 +150,8 @@ static func random_look(rng: RandomNumberGenerator) -> Dictionary:
 		var ids := part_ids_for(slot)
 		look[slot] = ids[rng.randi() % ids.size()]
 	look[VOICE_KEY] = VOICES[rng.randi() % VOICES.size()]
+	if not coat_ids().is_empty():
+		look[COAT_KEY] = coat_ids()[rng.randi() % coat_ids().size()]
 	return look
 
 
@@ -125,6 +168,7 @@ static func clean(look: Variant) -> Dictionary:
 		var id: Variant = look.get(slot, "")
 		result[slot] = id if id is String and (id == "" or parts().has(id)) else ""
 	result[VOICE_KEY] = voice_of(look)
+	result[COAT_KEY] = coat_of(look)
 	return result
 
 
@@ -149,6 +193,31 @@ static func apply(model: Node3D, look: Dictionary) -> void:
 			_paint(model, key, look[key])
 	for slot in SLOTS:
 		_wear(model, slot, look.get(slot, ""))
+	_wear_coat(model, look)
+
+
+## Put the look's coat pattern on the fur (after _paint made the model's own fur materials).
+## Body/head/ears get the coat's body picture, legs/tail its limb picture; see-through pixels
+## show the MARKINGS colour (calico patches, tuxedo socks).
+static func _wear_coat(model: Node3D, look: Dictionary) -> void:
+	var card := coat(coat_of(look))
+	var copies: Dictionary = model.get_meta("look_materials_fur") if model.has_meta("look_materials_fur") else {}
+	if card == null or copies.is_empty():
+		return
+	# Which of the scene's fur materials belong to the legs / tail.
+	var limb_sources: Array = []
+	for part_name in LIMB_PARTS:
+		var mesh := model.get_node_or_null(part_name) as MeshInstance3D
+		if mesh != null and mesh.has_meta("look_source"):
+			limb_sources.append(mesh.get_meta("look_source"))
+	var patch: Color = look.get("markings", Color.WHITE) if look.get("markings") is Color else Color.WHITE
+	for source in copies:
+		var material: ShaderMaterial = copies[source]
+		var limb: bool = source in limb_sources
+		material.set_shader_parameter("albedo_texture", card.limb_texture if limb else card.body_texture)
+		material.set_shader_parameter("uv_scale", card.limb_uv_scale if limb else Vector2.ONE)
+		material.set_shader_parameter("patch_color", patch)
+		material.set_shader_parameter("patch_amount", 1.0)
 
 
 ## Recolour every mesh of one colour key. The first time, the model gets its OWN copy of each
