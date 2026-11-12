@@ -798,12 +798,12 @@ func _ready() -> void:
 			await _fights._feedback_test(player)
 		if args.has("car_test"):
 			await _cars._car_test(scene, player)
+		if args.has("car_juice"):
+			await _cars._car_juice_test(player)
 		if args.has("car_chase"):
 			await _cars._car_chase(scene, player)
 		if args.has("gunner_test"):
 			await _cars._gunner_test(scene, player)
-		if args.has("car_juice"):
-			await _cars._car_juice_test(player)
 		if args.has("swing_test"):
 			await _fights._swing_test(player, args)
 		if args.has("combo_test"):
