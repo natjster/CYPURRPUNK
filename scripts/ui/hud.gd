@@ -385,7 +385,7 @@ func _draw_feed() -> void:
 	label.text = text
 
 
-## "[E] TALK TO DON CATLEONE", "[E] OPEN STASH", "[E] GET IN"...: what E would do for OUR
+## "[E] TALK", "[E] OPEN STASH", "[E] GET IN"...: what E would do for OUR
 ## player's cat right now (scripts/interactable.gd picks the best thing in reach).
 func _update_prompt() -> void:
 	var game := Game.instance

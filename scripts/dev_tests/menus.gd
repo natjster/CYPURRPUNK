@@ -260,6 +260,7 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 			await get_tree().process_frame  # (they check every quarter second)
 	player.teleport_to(npc.global_position + npc.global_basis.z * 2.2, 0.0)
 	await get_tree().physics_frame
+	print("DevCapture talk prompt: %s prompt=\"%s\"" % [npc.name, Interactable.prompt_for(player)])
 	if npc is Payphone:
 		# A payphone opens no talk box: the boss's line types out over the phone, and the cat can
 		# keep moving. Face the phone (the line floats above it) and print what the boss said.

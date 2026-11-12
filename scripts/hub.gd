@@ -266,7 +266,8 @@ var _gauge_cells: Array[MeshInstance3D] = []
 var _gauge_cell_height: float = 0.5
 
 
-## THE MAINFRAME's E spot: "[E] THE MAINFRAME (63%)". Pressing it opens its window
+## THE MAINFRAME's E spot: "[E] OPEN MAINFRAME" ("[E] FEED ELECTRONICS" with some in your pack).
+## No percentage here: the big CRT on the Mainframe already shows it. Pressing it opens its window
 ## (scripts/ui/mainframe_screen.gd): what it does, its battery cells, and the FEED button.
 class MainframeTerminal extends Interactable:
 	var hub: UndergroundHub
@@ -277,9 +278,8 @@ class MainframeTerminal extends Interactable:
 		return super(cat)
 
 	func interact_prompt(cat: CatPlayer) -> String:
-		var mainframe := Mainframe.instance
 		var have := ItemManager.instance.count_in_bag(cat.player_id, Mainframe.FUEL_ID)
-		return "THE MAINFRAME (%d%%)%s" % [mainframe.percent(cat.team), "  - FEED ELECTRONICS" if have > 0 else ""]
+		return "FEED ELECTRONICS" if have > 0 else "OPEN MAINFRAME"
 
 	func interact(cat: CatPlayer) -> void:
 		var window := MainframeScreen.for_seat(cat.slot)

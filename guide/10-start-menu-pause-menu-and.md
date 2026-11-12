@@ -42,7 +42,7 @@
   explanation at the bottom. Changes apply instantly and are saved. **RESET** = defaults.
   **Esc** = back.
 - **No key list on screen during play** — the keys live in **SETTINGS > KEYS**, and prompts
-  ("[E] TALK TO...", "[E] PICKUP" by items, "TAB: close" in the inventory) always show the
+  ("[E] TALK", "[E] PICKUP" by items, "TAB: close" in the inventory) always show the
   player's *current* key. The city number is shown in the pause menu.
 - **Controllers** (Xbox, PlayStation, Switch Pro... anything Windows sees) work everywhere,
   including every menu. Whatever the player touched last decides what the prompts show: touch the

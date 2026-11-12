@@ -24,7 +24,7 @@ The **tier** is how many cells still have juice: 63% = 3 cells = SYSTEM ONLINE. 
 buys a whole tier, and the slow drain only costs you a tier when a cell runs dry (a line in the feed
 tells you: `MAINFRAME DRAINED: POWER LOW (EXIT AT 82 HEAT)`).
 
-Walk up to it and press **E** (`[E] THE MAINFRAME (63%)`): its **window** opens, like the shop. It
+Walk up to it and press **E** (`[E] OPEN MAINFRAME`, or `[E] FEED ELECTRONICS` with some in your pack; no % on the prompt, the big CRT shows it): its **window** opens, like the shop. It
 explains what it does and shows the cells, your exit heat, the city's starting heat, the slow drain and
 how long until the next cell runs dry, plus a tier table. Its button, with electronics in your pack:
 

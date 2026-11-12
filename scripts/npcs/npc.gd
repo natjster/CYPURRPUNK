@@ -36,7 +36,8 @@ signal action_chosen(action: String, cat: CatPlayer)
 
 ## Shown above the talk box, on the "[E] TALK TO ..." prompt and on the NameTag.
 @export var npc_name: String = "STRAY CAT"
-## The word on the prompt before the name: "[E] TALK TO STRAY CAT", "[E] USE PAYPHONE".
+## The word on the prompt: "[E] TALK" (a trailing " TO" is dropped while the name tag shows the name),
+## "[E] USE". With no visible NameTag the name is added: "[E] TALK TO STRAY CAT".
 @export var prompt_verb: String = "TALK TO"
 ## How close (metres) you must be to talk.
 @export var talk_radius: float = 3.0
@@ -336,7 +337,12 @@ func interact_distance(cat: CatPlayer) -> float:
 	return distance if distance < talk_radius else -1.0
 
 
+## Their name already floats over their head (the NameTag), so the prompt is just the verb:
+## "[E] TALK" / "[E] USE". Only when the tag is hidden or missing does the prompt add the name.
 func interact_prompt(_cat: CatPlayer) -> String:
+	var tag := get_node_or_null("NameTag") as Label3D
+	if tag != null and tag.visible and not tag.text.is_empty():
+		return prompt_verb.trim_suffix(" TO")  # "TALK TO" -> "TALK"
 	return "%s %s" % [prompt_verb, npc_name]
 
 

@@ -61,7 +61,7 @@ Test runs save to `test_profiles\` instead, so they never touch your real saves.
 - Don: `scenes/npcs/don_catleone.tscn`, an NPC (see **NPCs** below), placed under **Hub** in
   `main.tscn`. Drag him in the editor to move him (his sign and crates follow next time you play).
 - The talk box: **NpcDialog** in the HUD, `scenes/ui/hud.tscn` (`scripts/ui/npc_dialog.gd`, §13),
-  drawn sharp at full resolution. The "[E] TALK TO ..." line above it is the HUD's prompt for
+  drawn sharp at full resolution. The "[E] TALK" line (just the verb: the name already floats over their head) above it is the HUD's prompt for
   anything usable (§16 "Pressing E").
 - NPC names over their heads: each NPC's **NameTag** (Label3D) sets where the name floats and
   its colour (**Modulate**); the HUD draws it sharp (§13). Its text comes from **Npc Name**.

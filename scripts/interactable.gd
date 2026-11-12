@@ -7,7 +7,7 @@ extends Node3D
 ## HOW IT WORKS: everything usable joins the group "interactables" and answers three questions:
 ##     func interact_distance(cat: CatPlayer) -> float  # metres away, or -1 = "can't use me now"
 ##     func interact_prompt(cat: CatPlayer) -> String   # the HUD line after "[E] ", e.g.
-##                                                      # "TALK TO DON CATLEONE" ("" = no line)
+##                                                      # "TALK" ("" = no line)       
 ##     func interact(cat: CatPlayer) -> void            # E was pressed: do it
 ## and optionally:
 ##     func interact_priority() -> int                  # higher wins when two are in reach

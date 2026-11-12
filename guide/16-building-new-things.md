@@ -79,7 +79,7 @@ feeding the MAINFRAME) needs nothing else. Want to react when cash changes? Conn
 ### Pressing E (`scripts/interactable.gd`, class **Interactable**)
 Everything you can use with E goes through one system: street items, NPCs, payphones, the stash
 lockers and the car. The cat just asks "what's the best thing in reach?" and uses it; the HUD
-shows that thing's line ("[E] TALK TO DON CATLEONE", "[E] STORE YOUR SHIT", "[E] GET IN"). When two are
+shows that thing's line ("[E] TALK", "[E] STORE YOUR SHIT", "[E] GET IN"). When two are
 in reach, the higher **priority** wins (items 30, NPCs 20, stash 10, car 0), then the nearer one.
 
 **Making something new usable, no code for the "where" part** (e.g. a MAINFRAME terminal):
