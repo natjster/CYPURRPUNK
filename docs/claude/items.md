@@ -20,7 +20,8 @@ stays flat (one entry per item); slots = `pack_stacks(pid)` [{id,count,index}]; 
 `loot_value`/`loot_in_pack` (`_extracted(pid, worth, quest, chaos, count)`, Events.player_extracted loot_value = worth) and pays only
 quest/chaos; the SHOP buys loot: `ItemManager.request_sell(pid, pack_index | -1)` (`sell_price` incl. gourmet, `pack_sell_value`,
 Events.loot_sold), Shopkeeper `_sell_buttons`. Helpers `take_all_loot` (rob), `take_one_loot` (last LOOT only), `count_in_bag`/
-`take_from_bag`/`bag_used` (= loot count) read the pack. Cats wear `models/cat_backpack.glb` (`tools/make_backpack_spec.py`) at
+`take_from_bag`/`bag_used` (= loot count) read the pack. HIDDEN since 12 Nov 2026 (`ItemManager.show_backpack` = false: node still
+built, `visible` off, anchor still works). Cats wear `models/cat_backpack.glb` (`tools/make_backpack_spec.py`) at
 `CatModel/BackPack` (`ItemManager.BACKPACK_SPOT`, `_update_backpack`: "Strip" glow cyan->amber->red by fullness; `PackAnchor` locator,
 `backpack_anchor(cat)`). INVENTORY = NMS backpack view: `CatPlayer.inventory_open()` blocks moving/looking and glides the camera
 (`_update_inventory_camera`, "Inventory Camera" exports, side offset scaled by pane aspect, `inventory_view_amount()`); `inventory_ui.gd`

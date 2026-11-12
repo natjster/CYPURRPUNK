@@ -32,6 +32,8 @@ system, so new items need no new networking or pickup code.
   buries ONE of it. (Code: `ItemManager.pack_stacks` / `pack_has_room`.) Your cat WEARS it: a chunky
   purple backpack (`models/cat_backpack.glb`, recipe `tools/make_backpack_spec.py`) whose light
   strip goes cyan (empty) -> amber -> red (full), so you can see who's carrying a haul.
+  **The backpack is HIDDEN for now**: to show it again, open `scenes/main.tscn`, click the `Items`
+  node, and in the Inspector tick **Show Backpack**.
 - **QUICK USE slots:** two of them, used with **1** and **2** (controller: **d-pad left / right**).
   Catnip and catdip go here when you pick them up or buy them (not in your paws), up to 3 of the
   same item stacked per slot; one press uses one. The bottom of the HUD shows them ("1: CATNIP x2").

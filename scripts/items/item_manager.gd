@@ -58,6 +58,10 @@ const MAX_REACH_HEIGHT: float = 3.0
 ## How close (metres) you must be to see the floating label over a street item.
 @export var item_tag_distance: float = 18.0
 
+## Show the backpack model on every cat's back? OFF for now (user's call, 12 Nov 2026): the
+## model is still made and kept on the cat (hidden), so the inventory screen's callout line still
+## knows where to start. Tick this back on to see the backpacks again.
+@export var show_backpack: bool = false
 ## The light strip on a cat's backpack: empty / some room / full.
 @export var pack_light_empty: Color = Color(0.25, 0.95, 1.0)
 @export var pack_light_half: Color = Color(1.0, 0.8, 0.25)
@@ -1250,6 +1254,7 @@ func _update_backpack(cat: CatPlayer, used: int, size: int) -> void:
 		pack.name = "BackPack"
 		pack.position = BACKPACK_SPOT
 		cat.cat_model.add_child(pack)
+	pack.visible = show_backpack  # hidden for now; see show_backpack at the top
 	var fill := clampf(float(used) / maxf(size, 1), 0.0, 1.0)
 	var light := pack_light_empty.lerp(pack_light_half, fill * 2.0) if fill < 0.5 else pack_light_half.lerp(pack_light_full, (fill - 0.5) * 2.0)
 	LevelKit.make_parts_glow(pack, {"Strip": light}, 1.5 + fill * 2.0)
