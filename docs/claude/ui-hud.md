@@ -10,7 +10,8 @@
   Heat [HudHeatBar, top-right, fed by heat_meter; HATCH CLOSING countdown mode fed by fish_heist `set_hatch`], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
   gun name + fire key hidden (`show_weapon_name`/`show_fire_key` = false), 2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`], Boost [HudBoostBar, bottom-left above Held,
-  driver only, `_update_boost`]).
+  driver only, `_update_boost`], CarPointer [HudCarPointer, just above Held, on foot in the city: arrow + "CAR Nm" to our gang's car
+  (`_update_car_pointer` / `_my_car`; hidden in a car, in the hub, wrecked, < `hide_within`)]).
   OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
   `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for
   phases 2-4 (Inventory, Shop, Workbench). `ui/hud_theme.tres` (talk box + pause buttons/panels) uses the same ocean-blue

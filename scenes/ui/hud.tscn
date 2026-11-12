@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://scripts/ui/hud_loot_toast.gd" id="19_toast"]
 [ext_resource type="Script" path="res://scripts/ui/hud_boost_bar.gd" id="20_boost"]
 [ext_resource type="Script" path="res://scripts/ui/hud_cards.gd" id="21_cards"]
+[ext_resource type="Script" path="res://scripts/ui/hud_car_pointer.gd" id="22_carptr"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tutorial"]
 content_margin_left = 10.0
@@ -397,6 +398,20 @@ offset_bottom = -146.0
 grow_vertical = 0
 mouse_filter = 2
 script = ExtResource("20_boost")
+
+[node name="CarPointer" type="Control" parent="Frame/Middle"]
+visible = false
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -170.0
+offset_right = 224.0
+offset_bottom = -142.0
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("22_carptr")
 
 [node name="Inventory" type="Control" parent="Frame"]
 visible = false

@@ -92,7 +92,10 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── Message          <- (in a box, lower middle) what Don says, "KNOCKED OUT BY...", etc.
     │   ├── Prompt           <- "[E] TALK" / "[E] STORE YOUR SHIT" / "[E] GET IN" (hud.gd)
     │   ├── Held             <- bottom-left: gun picture(s) + 2 quick-use squares (ui/hud_weapon_display.gd)
-    │   └── Boost            <- bottom-left above Held, only while driving: the AFTERBURNER bar, split per charge (ui/hud_boost_bar.gd)
+    │   ├── Boost            <- bottom-left above Held, only while driving: the AFTERBURNER bar, split per charge (ui/hud_boost_bar.gd)
+    │   └── CarPointer       <- bottom-left just above Held, on foot in the city: a small arrow + "CAR 42m" pointing at YOUR
+    │                           gang's car (ui/hud_car_pointer.gd). Hidden in a car / in the sewers / car wrecked / closer
+    │                           than Hide Within (6 m). Select it for Color, Label, Arrow Size, Font Size, Show Distance.
     ├── Inventory (Control)  <- the Tab screen, builds its own boxes (script ui/inventory_ui.gd, §9)
     └── NpcDialog (Control)  <- the talk box (script ui/npc_dialog.gd, §8)
         └── Panel > VBox > Speaker, Scroll > Body > Line, Choices   <- choice buttons made by the script

@@ -27,6 +27,8 @@ extends CanvasLayer
 ##       │                   style; scripts/ui/hud_weapon_display.gd, fed by item_manager.gd),
 ##       │                   Boost (bottom-left, above Held, only while driving: the AFTERBURNER
 ##       │                   bar split into one piece per charge; scripts/ui/hud_boost_bar.gd)
+##       │                   CarPointer (bottom-left, just above Held, on foot in the city: a small
+##       │                   arrow + "CAR 42m" to YOUR gang's car; scripts/ui/hud_car_pointer.gd)
 ##       ├── Inventory    <- the Tab screen (scripts/ui/inventory_ui.gd)    } "windows": while one is
 ##       ├── Shop         <- THE BLACK MARKITTEN (scripts/ui/shop_screen.gd) }
 ##       ├── Workbench    <- THE TINKER WORKBENCH (scripts/ui/workbench_screen.gd) }
@@ -486,6 +488,7 @@ func _update_status() -> void:
 			effects.append({"id": "catdip", "fraction": cat.air_jump_fraction(), "seconds_left": cat.air_jump_seconds_left(), "debuff": false})
 	icons.set_effects(effects)
 	_update_boost(cat)
+	_update_car_pointer(cat)
 	_place_status_icons(icons, effects.size())
 
 
@@ -506,6 +509,43 @@ func _update_boost(cat: CatPlayer) -> void:
 	if held != null:
 		var bottom := held.position.y if held.visible else held.position.y + held.size.y
 		bar.position.y = bottom - bar.size.y - 8.0
+
+
+## The WHERE'S MY CAR pointer (Frame/Middle/CarPointer, scripts/ui/hud_car_pointer.gd): on foot in the
+## city it points at our gang's car (in CO-OP / SOLO there is only one). Hidden in a car, in the
+## sewers, or while the car is a wreck. It sits just above the guns box (Held), else in the corner.
+func _update_car_pointer(cat: CatPlayer) -> void:
+	var pointer := element("CarPointer", seat) as HudCarPointer
+	if pointer == null:
+		return
+	if cat == null or not cat.reads_input() or cat.riding_car != null or UndergroundHub.is_in_hub(cat.global_position):
+		pointer.hide_pointer()
+		return
+	var car := _my_car(cat)
+	if car == null or (car.health != null and car.health.wrecked):
+		pointer.hide_pointer()
+		return
+	var to_car := car.global_position - cat.global_position
+	var camera := GameScreen.instance.camera_for_seat(seat) if GameScreen.instance != null else null
+	var look := -camera.global_transform.basis.z if camera != null else Vector3.FORWARD
+	# Same maths as the extract compass (fish_heist.gd _screen_angle): 0 = ahead, clockwise.
+	pointer.point_at(Vector2(look.x, look.z).angle_to(Vector2(to_car.x, to_car.z)), Vector2(to_car.x, to_car.z).length())
+	var held := element("Held", seat)
+	if held != null:
+		var bottom := held.position.y if held.visible else held.position.y + held.size.y
+		pointer.position.y = bottom - pointer.size.y - 4.0
+
+
+## Our gang's car: the one parked in our gang's corner (or driven by our gang). With only one car
+## in the game (CO-OP / SOLO) that's simply it.
+func _my_car(cat: CatPlayer) -> GetawayCar:
+	var cars := Game.instance.cars()
+	if cars.size() == 1:
+		return cars[0]
+	for car in cars:
+		if car.gang() == cat.team:
+			return car
+	return null
 
 
 ## The badges sit right of the health bar. On a narrow HUD (4:3 in the PS1 look, split screen) that
