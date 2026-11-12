@@ -52,8 +52,10 @@ ICON_DIR = os.path.join(PROJECT_ROOT, "ui", "icons")
 # the item first (degrees round the up axis), for things that are thin from the side (a box).
 ITEMS = {
     # Held items (weapons + quick-use)
-    "neon_bat":          {"source": "res://scenes/items/neon_bat.tscn", "view": "melee", "spin": 0},
-    "frozen_tuna":       {"source": "res://scenes/items/frozen_tuna.tscn", "view": "melee", "spin": 0},
+    # Melee scenes tip their Model node back 0.7 rad (~40 deg) for the in-paw hold pose; that tilt
+    # showed up as a diagonal icon, so spin -40.1 turns it back to lying flat, tip to the right.
+    "neon_bat":          {"source": "res://scenes/items/neon_bat.tscn", "view": "melee", "spin": -40.1},
+    "frozen_tuna":       {"source": "res://scenes/items/frozen_tuna.tscn", "view": "melee", "spin": -40.1},
     "pistol":            {"source": "res://scenes/items/pistol.tscn", "view": "side"},
     "hairball_blaster":  {"source": "res://scenes/items/hairball_blaster.tscn", "view": "side"},
     "red_dot":           {"source": "res://scenes/items/red_dot.tscn", "view": "side"},
