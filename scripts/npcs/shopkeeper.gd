@@ -4,9 +4,10 @@ extends Npc
 ## Comrade Whiskers (scenes/npcs/comrade_whiskers.tscn, in the Hub) and Clawd (GangHub) are ones.
 ##
 ## How it works:
-##   - Press E on him and the SHOP SCREEN opens straight away (scripts/ui/shop_screen.gd, in your own
-##     HUD): your backpack on the left (click = SELL), his goods on the right in three tabs (MELEE /
-##     CONSUMABLES / FIREARMS; click a row = BUY). No talk box.
+##   - Press E on him to TALK (the normal NPC talk box: npc.gd + his pages in the Inspector). The
+##     "SHOW ME THE GOODS" button (choice action "shop") opens the SHOP SCREEN (scripts/ui/shop_screen.gd,
+##     in your own HUD): your backpack on the left (click = SELL), his goods on the right in three tabs (MELEE /
+##     CONSUMABLES / FIREARMS; click a row = BUY).
 ##   - Prices live on the item cards (res://items/*.tres > Shop > Price). He sells at that price and
 ##     buys gear back at half; street loot he buys at its full Cash Value (+GOURMET FENCE); scrap
 ##     never (ItemManager.sell_price_for). The HOST checks every buy and sale.
@@ -23,12 +24,9 @@ extends Npc
 @export_multiline var shop_lines: PackedStringArray = ["Take your pick. You've got $%d."]
 
 
-## E: open the shop screen (in this player's own HUD).
-func interact(cat: CatPlayer) -> void:
-	open_shop(cat)
+## (E = talk, like every NPC: npc.gd's interact. No override here, so he chats first.)
 
-
-## The "shop" action (an old talk-box button) opens the shop screen too.
+## The "shop" action (his SHOW ME THE GOODS button) opens the shop screen.
 func _on_action(action: String, cat: CatPlayer) -> void:
 	if action == "shop":
 		open_shop(cat)

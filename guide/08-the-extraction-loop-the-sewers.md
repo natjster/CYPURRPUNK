@@ -159,7 +159,8 @@ quests (table under **Quests** below). Move one by selecting them under **Hub** 
 **Comrade Whiskers** — a one-eyed ginger rebel in a red beret with a bullet bandolier, behind the
 counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the west wall, south of
 the breach tunnel. It's **the only place to get gear**: nothing but fish lies around the city any more.
-Press **E** on him and **THE BLACK MARKITTEN shop screen** opens straight away (no talk box). It's in
+Press **E** to talk to him (ask who he is, what this place is...), then pick **SHOW ME THE GOODS** and
+**THE BLACK MARKITTEN shop screen** opens. It's in
 the ocean-blue style, in your own HUD (split screen: everyone shops on their own screen):
 ```
  [cat + backpack]  PAWS / QUICK USE           ┌ THE BLACK MARKITTEN               $240 ┐
@@ -213,7 +214,7 @@ the ocean-blue style, in your own HUD (split screen: everyone shops on their own
 - **The cardboard-box homes** on the east wall are the model `models/box_shanty.glb` (doorway,
   blanket curtain, lit window, tin-can chimney; recipe `tools/model_specs/box_shanty.json`), placed by
   `_build_shanties()` in `scripts/hub.gd`. Add or move homes: edit `SHANTY_SPOTS` there (metres along the wall).
-- **How it works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC whose E opens
+- **How it works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC: E opens his talk box, and SHOW ME THE GOODS opens
   `scripts/ui/shop_screen.gd`, `ShopScreen`, at **HUD > Frame > Shop**). BUY asks the host
   (`ItemManager.request_buy`: price, crate unlock, room, cash); SELL asks `request_sell(player, where,
   index)` / `request_sell_all_loot(player)` (in the sewers only). Messages ("Bought ...", "Sold ...")

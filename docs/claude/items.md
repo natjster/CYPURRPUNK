@@ -27,7 +27,7 @@ Events.loot_sold), Shopkeeper `_sell_buttons`. Helpers `take_all_loot` (rob), `t
 lays out ocean-blue boxes on the right (`_layout`), draws callout lines from projected 3D anchors (`_project` via
 `GameScreen.camera_for_seat`), slots = Buttons + `SlotFace` (icon, name, price badge). Hud hides Names/Scoreboard while it's open.
 Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`.
-SHOP (Phase 3): `Shopkeeper.interact` -> `ShopScreen` (`scripts/ui/shop_screen.gd`, HUD `Frame/Shop`, `for_seat/is_open_for`; in
+SHOP (Phase 3): E = normal NPC talk box; his choice action `shop` (SHOW ME THE GOODS) -> `Shopkeeper.open_shop` -> `ShopScreen` (`scripts/ui/shop_screen.gd`, HUD `Frame/Shop`, `for_seat/is_open_for`; in
 `Hud.wants_input` + `cat._menu_open`): right half = 3 tabs (exports melee/consumable/firearm_items, filtered by keeper.stock), rows =
 Button + `RowFace` (icon or black silhouette when `!Upgrades.shop_allows`, BUY pill), SELL ALL; it opens the inventory in `shop_mode`
 (`open_for_shop`: left column at `shop_column_start`, SELL badges, click = `request_sell(pid, where, index)`, cat camera `shop_camera_side`)

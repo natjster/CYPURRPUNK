@@ -55,7 +55,18 @@ func _print_upgrades(player: CatPlayer, when: String) -> void:
 ##   --shop_close=Tab|Esc       a real key press that should close it
 ## Prints "DevCapture shop" lines (tab, rows, locked, cash, backpack, highlight, message).
 func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void:
+	# E = TALK first (his talk box), then his "shop" button (SHOW ME THE GOODS) opens the shop screen.
 	var used := Interactable.try_use(player)
+	for i in 3:
+		await get_tree().process_frame  # let the talk box lay out its buttons
+	var dialog := NpcDialog.for_cat(player)
+	var shop_button: Button = null
+	for button in dialog.choices_box.get_children():
+		if button is Button and (button as Button).text.ends_with("SHOW ME THE GOODS"):
+			shop_button = button
+	print("DevCapture shop talk: talk box open=%s line=\"%s\" shop button=%s" % [NpcDialog.is_open_for(player.slot), dialog.line_label.text.left(50), shop_button != null])
+	if shop_button != null:
+		shop_button.pressed.emit()
 	var shop := ShopScreen.for_seat(player.slot)
 	var items := ItemManager.instance
 	var report := func(when: String) -> void:
@@ -241,7 +252,7 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 ", " / ")])
 		return
 	if npc is Shopkeeper:
-		await _shop_test(player, npc as Shopkeeper, args)  # (E opens THE BLACK MARKITTEN shop screen, not a talk box)
+		await _shop_test(player, npc as Shopkeeper, args)  # (E talks, then SHOW ME THE GOODS opens THE BLACK MARKITTEN)
 		return
 	print("DevCapture talk: %s started=%s line=\"%s\"" % [npc.name, Interactable.try_use(player), NpcDialog.for_cat(player).line_label.text.left(50)])
 	if args.has("click_choice"):
