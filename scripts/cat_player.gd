@@ -47,8 +47,6 @@ extends CharacterBody3D
 @export var inventory_camera_distance: float = 2.2
 ## How far right the camera slides (metres): more = the cat sits further left.
 @export var inventory_camera_side: float = 0.75
-## ...and at THE BLACK MARKITTEN (the shop has the right half, the backpack the middle): further.
-@export var shop_camera_side: float = 1.5
 ## How far down the camera drops (metres), towards the backpack.
 @export var inventory_camera_lift: float = -0.1
 ## Camera tilt while the inventory is open (degrees; minus = looking down a little).
@@ -905,8 +903,7 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	_update_inventory_camera(delta)
 	var b := _inventory_blend
 	# A narrow split-screen pane shows less to the sides: slide less, or the cat drops off the edge.
-	var inventory := InventoryScreen.for_seat(slot)
-	var side := shop_camera_side if inventory != null and inventory.shop_mode else inventory_camera_side
+	var side := inventory_camera_side
 	if b > 0.0 and GameScreen.instance != null:
 		var pane := GameScreen.instance.screen_size_for_seat(slot)
 		side *= clampf((pane.x / maxf(pane.y, 1.0)) / (4.0 / 3.0), 0.35, 1.3)
