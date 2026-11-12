@@ -9,7 +9,7 @@
   `_update_status` from `cat.sticky/boost/air_jump_fraction()`; drops under the bar when the heat bar is in the way],
   Heat [HudHeatBar, top-right, fed by heat_meter], DropOff, Scoreboard [sewers only] |
   Popup, Crosshair, Message, Prompt, Held [HudWeaponDisplay: gun side-profile icons heat blue->red per paw, dual = stacked,
-  2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`], Boost [HudBoostBar, bottom-left above Held,
+  gun name + fire key hidden (`show_weapon_name`/`show_fire_key` = false), 2 quick-use squares; fed by `ItemManager._update_hud_for` -> `show_loadout(paws, quick)`], Boost [HudBoostBar, bottom-left above Held,
   driver only, `_update_boost`]).
   OCEAN-BLUE STYLE = `HudStyle` (`scripts/ui/hud_style.gd`, settings `ui/hud_style.tres`): `HudStyle.current()`, `draw_panel`,
   `heat_color(heat)` (`heat_blend`), `item_icon/status_icon/npc_portrait(id)`, `draw_icon` (fits the PNG's used rect). Use it for

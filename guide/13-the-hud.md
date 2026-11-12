@@ -141,19 +141,21 @@ translucent deep-ocean-blue box with a bright cyan-blue edge and brighter corner
 ```
  OVERHEAT                       <- only while a gun is overheated (flashes)
 +----------------------+ +---+
-| RMB                  | |1  |  <- QUICK USE 1: the item's picture, key, "x2" stack count
+|                      | |1  |  <- QUICK USE 1: the item's picture, key, "x2" stack count
 |  [left paw gun]      | +---+
 |     [right paw gun]  | +---+
-|                  LMB | |2  |  <- QUICK USE 2 (an empty slot isn't drawn at all)
+|                      | |2  |  <- QUICK USE 2 (an empty slot isn't drawn at all)
 +----------------------+ +---+
 ```
-- One gun: its side-view picture, its name top-left and its fire button bottom-right.
+- One gun: just its side-view picture. The gun's NAME and its fire button (LMB / RT) are hidden;
+  tick **Show Weapon Name** / **Show Fire Key** (select **Held** in `hud.tscn`, Inspector > Words)
+  to bring them back.
 - **Heat:** the picture is ocean blue when cool and changes colour towards red as `weapon.heat`
   rises (see Heat Blend above); the box edge warms up too. Overheated = the picture flashes and
   **OVERHEAT** shows above the box. Guns that never overheat (pistol, hairball blaster) stay blue.
 - **Dual wield** (two one-paw guns): two pictures overlapping. The RIGHT paw's (LMB / RT) is in
   front, the LEFT paw's (RMB / LT) peeks out behind it, up and to the left. Each heats on its own.
-- Button names follow `Hud.key_for` (controller buttons for a pad player).
+- Button names (quick-use keys, and the fire keys if turned on) follow `Hud.key_for` (controller buttons for a pad player).
 - Nothing in your paws and nothing in the quick-use slots = the whole thing hides.
 - **Tuning** (select **Held** in `hud.tscn`): Weapon Box Size, Quick Slot Size, Gap, Padding, Dual
   Offset (how far the back gun sits up-left), Back Opacity, font sizes, Heat Follow Speed.

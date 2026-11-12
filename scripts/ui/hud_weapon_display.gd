@@ -6,9 +6,11 @@ extends Control
 ##
 ## What you see:
 ##   ┌──────────────────────┐ ┌───┐
-##   │ PAW-PISTOL            │ │[1]│  <- QUICK USE 1 (catnip x2)
+##   │                      │ │[1]│  <- QUICK USE 1 (catnip x2)
 ##   │   [side view of gun] │ └───┘
-##   │                  LMB │ ┌───┐
+##   │                      │ ┌───┐
+##  (The gun's NAME and its fire KEY used to show in the box; both are off now: show_weapon_name /
+##   show_fire_key in the Inspector turn them back on.)
 ##   └──────────────────────┘ │[2]│  <- QUICK USE 2 (an EMPTY slot isn't drawn: less clutter)
 ##                            └───┘
 ##  - The gun picture is translucent OCEAN BLUE when cool. As it heats up (weapon.heat 0 -> 1) it
@@ -36,6 +38,11 @@ extends Control
 @export_range(0.0, 1.0) var back_opacity: float = 0.7
 
 @export_group("Words")
+## Show the gun's NAME (e.g. "PAW-PISTOL") in the top-left of the gun box. Off = just the picture.
+@export var show_weapon_name: bool = false
+## Show which button fires the gun (e.g. "LMB" / "RT") in the gun box corners. Off = hidden.
+## (The quick-use squares still show their keys.)
+@export var show_fire_key: bool = false
 @export var name_font_size: int = 14
 @export var key_font_size: int = 13
 @export var overheat_font_size: int = 18
@@ -122,18 +129,22 @@ func _draw_weapon_box(style: HudStyle, box: Rect2) -> void:
 	var inner := box.grow(-padding)
 	var font := get_theme_font("font", "Label")
 	if _paws.size() == 1:
-		inner.position.y += name_font_size * 0.6  # room for the name
-		inner.size.y -= name_font_size * 0.6
+		if show_weapon_name:
+			inner.position.y += name_font_size * 0.6  # room for the name
+			inner.size.y -= name_font_size * 0.6
 		_draw_gun(style, _paws[0], 0, inner, 1.0)
-		_text(font, box.position + Vector2(padding * 0.8, padding * 0.6 + name_font_size), _paws[0].name, name_font_size, style.text_color)
-		_text_right(font, box.end - Vector2(padding * 0.6, padding * 0.5), _paws[0].key, key_font_size, style.text_color)
+		if show_weapon_name:
+			_text(font, box.position + Vector2(padding * 0.8, padding * 0.6 + name_font_size), _paws[0].name, name_font_size, style.text_color)
+		if show_fire_key:
+			_text_right(font, box.end - Vector2(padding * 0.6, padding * 0.5), _paws[0].key, key_font_size, style.text_color)
 	else:
 		# DUAL WIELD: left paw behind (up-left), right paw in front (down-right).
 		var pic := Rect2(inner.position, inner.size - dual_offset)
 		_draw_gun(style, _paws[1], 1, Rect2(pic.position, pic.size), back_opacity)
 		_draw_gun(style, _paws[0], 0, Rect2(pic.position + dual_offset, pic.size), 1.0)
-		_text(font, box.position + Vector2(padding * 0.6, padding * 0.4 + key_font_size), _paws[1].key, key_font_size, style.text_color)
-		_text_right(font, box.end - Vector2(padding * 0.6, padding * 0.5), _paws[0].key, key_font_size, style.text_color)
+		if show_fire_key:
+			_text(font, box.position + Vector2(padding * 0.6, padding * 0.4 + key_font_size), _paws[1].key, key_font_size, style.text_color)
+			_text_right(font, box.end - Vector2(padding * 0.6, padding * 0.5), _paws[0].key, key_font_size, style.text_color)
 	if any_overheated:
 		var flash := 0.5 + 0.5 * sin(_time * TAU * style.overheat_flashes_per_second)
 		var color := style.hot_color.lerp(style.overheat_flash_color, flash)
