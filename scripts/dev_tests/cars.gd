@@ -21,8 +21,11 @@ func _car_juice_test(player: CatPlayer) -> void:
 			else:
 				Input.action_release(Seats.action(player.slot, action))
 	keys.call(["gas"], true)
+	var launch_streaks := 0
 	for i in 60:
 		await get_tree().physics_frame
+		launch_streaks = maxi(launch_streaks, car.get_node("Streaks").streak_count())
+	print("DevCapture car_juice launch streaks: up to %d on screen in the first second" % launch_streaks)
 	var speed_1s := -car.global_basis.z.dot(car.linear_velocity)
 	for i in 60:
 		await get_tree().physics_frame
@@ -46,7 +49,7 @@ func _car_juice_test(player: CatPlayer) -> void:
 		await get_tree().physics_frame
 	var after := -car.global_basis.z.dot(car.linear_velocity)
 	print("DevCapture car_juice drift: turbo level %d (1 blue, 2 orange), sparks=%s, body roll %.1f deg, speed %.1f -> %.1f after letting go" % [
-		best_level, juice._sparks[0].emitting or best_level > 0, rad_to_deg(roll), before, after])
+		best_level, juice.sparks_on or best_level > 0, rad_to_deg(roll), before, after])
 	keys.call(["gas"], false)
 
 
@@ -94,8 +97,9 @@ func _car_test(scene: Node, player: CatPlayer) -> void:
 		for b in 2:
 			flew[b] = flew[b] or bots[b].is_flying
 			top_y[b] = maxf(top_y[b], bots[b].global_position.y)
-	print("DevCapture car_test boost: speed_after=%.1f boosting_during=%s charges=%d flame_visible=%s" % [speed_after,
-		boost._flames[0].visible or not boost.is_boosting(), boost.charges, boost._fire.emitting or not boost.is_boosting()])
+	print("DevCapture car_test boost: speed_after=%.1f boosting_during=%s charges=%d flame_visible=%s streaks=%d" % [speed_after,
+		boost._flames[0].visible or not boost.is_boosting(), boost.charges, boost._flames[0].visible or not boost.is_boosting(),
+		car.get_node("Streaks").streak_count()])
 	print("DevCapture car_test launch: exhaust_bot flew=%s top_y=%.1f alive=%s | front_bot flew=%s top_y=%.1f alive=%s" % [flew[0], top_y[0],
 		is_instance_valid(bots[0]) and bots[0].health > 0, flew[1], top_y[1], is_instance_valid(bots[1]) and bots[1].health > 0])
 
@@ -103,6 +107,20 @@ func _car_test(scene: Node, player: CatPlayer) -> void:
 	bots[2]._bonk_car(car)
 	await get_tree().physics_frame
 	print("DevCapture car_test ram: hp=%d (expect %d)" % [health.health, health.max_health - roundi(bots[2].bonk_damage * bots[2].car_damage_multiplier)])
+
+	# A fake CRASH (30 m/s to a dead stop): with Crashes Hurt off (the default) the car must NOT lose HP.
+	var hp_before := health.health
+	health._recent_speed = 30.0
+	car.linear_velocity = Vector3.ZERO
+	health._check_for_crash(1.0 / 60.0)
+	for i in 3:
+		await get_tree().physics_frame
+	var bins := 0
+	for p in MessManager.instance.props():
+		if p.kind == MessProp.Kind.BIN:
+			bins += 1
+	print("DevCapture car_test crash: hp=%d (expect %d, crashes_hurt=%s) trash_bins_in_city=%d" % [health.health, hp_before,
+		health.crashes_hurt, bins])
 
 	# WRECK it: everyone out, can't get back in, then towed back fixed.
 	health.wreck_seconds = 1.5

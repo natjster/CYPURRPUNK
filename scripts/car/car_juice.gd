@@ -12,7 +12,8 @@ extends Node3D
 ##   BODY LEAN     the car body leans out of turns, squats when you floor it and dips its nose when
 ##                 you brake (just the model: the physics body never tilts).
 ##   LANDINGS      after a jump the body squashes down and springs back, with a thump, dust and shake.
-##   TYRE SMOKE    puffs off the back wheels while drifting or wheel-spinning.
+##   STREAKS       neon speed streaks (scripts/car/car_streaks.gd) off the back wheels on a launch and
+##                 while drifting (coloured by the turbo charge), and a burst on the turbo kick.
 ##   SPEED CAMERA  the chase camera pulls back a little the faster you go, and rattles at top speed.
 ##   RUMBLE        controllers buzz while drifting, on landings and on the turbo.
 ##
@@ -24,6 +25,15 @@ extends Node3D
 @export_group("Launch")
 ## Extra pull when you hit the gas from standstill (1.8 = 80% stronger), fading to normal at top speed.
 @export var launch_accel_bonus: float = 1.8
+## SPEED STREAKS off the back wheels on a launch (neon rips like the claw marks): how many in the
+## first burst, how many a second while the wheels spin, and their colour.
+@export var launch_streaks: int = 8
+@export var launch_streaks_per_second: float = 18.0
+@export var launch_streak_color: Color = Color(0.75, 0.95, 1.0)
+## How many streaks a BLUE drift turbo rips off (an ORANGE one = twice as many).
+@export var turbo_streaks: int = 10
+## Streaks a second off the back wheels while DRIFTING (more once the turbo is BLUE / ORANGE).
+@export var drift_streaks_per_second: float = 14.0
 
 @export_group("Drift Turbo")
 ## Drift this many seconds for a BLUE spark turbo...
@@ -97,25 +107,17 @@ var _squash_speed: float = 0.0
 var _was_grounded := true
 var _air_time: float = 0.0
 var _base_arm: float = -1.0
-var _sparks: Array[CPUParticles3D] = []
-var _smoke: Array[CPUParticles3D] = []
+var sparks_on := false  # drift streaks showing right now (for the test line)
 var _skid: AudioStreamPlayer3D
+var _streaks: CarStreaks
+var _was_wheelspin := false
 
 
 func _ready() -> void:
 	_last_pos = car.global_position
 	_last_yaw = car.global_rotation.y
-	# Two back wheels: one spark stream + one smoke stream each (built in code, chunky PS1 cubes).
-	for side in [-1.0, 1.0]:
-		var spot := Node3D.new()
-		add_child(spot)
-		spot.position = Vector3(0.75 * side, 0.1, 1.2)
-		var spark := CarFx.particles(spot, PackedColorArray([Color.WHITE, BLUE, Color(BLUE, 0.0)]),
-			0.08, 24, 0.35, 5.0, Vector3(side * 0.6, 0.8, 1.0), 35.0, -14.0)
-		_sparks.append(spark)
-		var smoke := CarFx.particles(spot, PackedColorArray([Color(0.8, 0.8, 0.85, 0.55), Color(0.4, 0.4, 0.45, 0.0)]),
-			0.35, 16, 0.9, 1.5, Vector3(0, 1, 1), 40.0, 1.5)
-		_smoke.append(smoke)
+	# (Drift sparks / tyre smoke used to be cubes; now they're SPEED STREAKS: scripts/car/car_streaks.gd.)
+	_streaks = car.get_node_or_null("Streaks") as CarStreaks
 	if skid_sound != "":
 		_skid = Sound.attach_loop(skid_sound, self, -80.0)
 		if _skid != null:
@@ -177,13 +179,8 @@ func turbo_level(seconds: float) -> int:
 func _turbo_fx(level: int) -> void:
 	var colour := ORANGE if level == 2 else BLUE
 	Sound.play_at("boost", car.global_position, -6.0 if level == 2 else -10.0)
-	var burst := CarFx.particles(car.get_parent(), PackedColorArray([Color.WHITE, colour, Color(colour, 0.0)]),
-		0.14, 30, 0.5, 8.0, car.global_basis.z, 40.0, -8.0)
-	burst.global_position = car.global_position + car.global_basis.z * 1.4 + Vector3.UP * 0.3
-	burst.one_shot = true
-	burst.explosiveness = 0.9
-	burst.emitting = true
-	get_tree().create_timer(1.5).timeout.connect(burst.queue_free)
+	if _streaks != null:  # a rip of neon SPEED STREAKS (scripts/car/car_streaks.gd)
+		_streaks.burst(colour, turbo_streaks * (2 if level == 2 else 1), "sides", 1.2 if level == 2 else 1.0)
 	_squash = -0.08  # a little rear-squat "kick"
 	for cat in _local_riders():
 		Feedback.shake(cat.player_id, 0.35 if level == 2 else 0.2)
@@ -267,13 +264,19 @@ func _physics_process(delta: float) -> void:
 	if car.is_multiplayer_authority():
 		level = turbo_level(_drift_time)  # the driver's own computer knows exactly
 	var wheelspin := on_ground and car.throttle > 0.8 and forward_speed < 4.0 and car.driver_id != 0
-	for i in _sparks.size():
-		_sparks[i].emitting = drifting and level > 0
-		if level > 0:
-			var colour := ORANGE if level == 2 else BLUE
-			_sparks[i].color_ramp.set_color(1, colour)
-			_sparks[i].color_ramp.set_color(_sparks[i].color_ramp.get_point_count() - 1, Color(colour, 0.0))
-		_smoke[i].emitting = drifting or wheelspin
+	# DRIFTS: neon streaks off the back wheels (no more cubes): pale while sliding, then BLUE, then
+	# ORANGE as the turbo charges, and more of them the longer you hold it.
+	sparks_on = drifting
+	if _streaks != null and drifting:
+		var drift_colour := launch_streak_color if level == 0 else (ORANGE if level == 2 else BLUE)
+		_streaks.stream(drift_colour, drift_streaks_per_second * (1.0 + 0.5 * level), delta, "wheels")
+	# LAUNCH: flooring it from standstill rips white SPEED STREAKS off the back wheels.
+	if _streaks != null and not wrecked:
+		if wheelspin and not _was_wheelspin:
+			_streaks.burst(launch_streak_color, launch_streaks, "wheels", 0.8)
+		elif wheelspin:
+			_streaks.stream(launch_streak_color, launch_streaks_per_second, delta, "wheels")
+	_was_wheelspin = wheelspin
 	if _skid != null:
 		var target_db := skid_volume_db if (drifting or wheelspin) else -80.0
 		_skid.volume_db = lerpf(_skid.volume_db, target_db, 1.0 - exp(-10.0 * delta))

@@ -62,6 +62,10 @@ extends Node3D
 @export var fov_kick: float = 18.0
 ## ...and shakes this hard (0..1, scripts/feedback.gd).
 @export var shake: float = 0.55
+## SPEED STREAKS (neon rips, like the claw marks): how many rip off the car the moment it fires,
+## and how many a second while it burns. Their size / speed: the Streaks node (scripts/car/car_streaks.gd).
+@export var streak_burst: int = 18
+@export var streaks_per_second: float = 40.0
 
 ## TESTS ONLY (DevCapture --car_test): pretend every car has this many charges. -1 = off (the real rule).
 static var test_charges: int = -1
@@ -80,12 +84,12 @@ var _last_max: int = 0
 var _blasted := {}
 var _flames: Array[Node3D] = []
 var _light: OmniLight3D
-var _fire: CPUParticles3D
+var _streaks: CarStreaks
 
 
 func _ready() -> void:
 	add_to_group(GameSystems.GROUP)  # new district = full charges; late joiners (game_systems.gd)
-	# Two exhaust flames (outer cone + white-hot core each), an orange light and a trail of fire cubes.
+	# Two exhaust flames (outer cone + white-hot core each), an orange light.
 	for side in [-1, 1]:
 		var pipe := Node3D.new()
 		pipe.set_meta("side", side)
@@ -100,8 +104,8 @@ func _ready() -> void:
 	_light.light_energy = 0.0
 	_light.visible = false
 	add_child(_light)
-	_fire = CarFx.particles(self, PackedColorArray([flame_core_color, flame_color, Color(0.25, 0.04, 0.0, 0.0)]),
-		0.22, 48, 0.4, 9.0, Vector3.BACK, 12.0, 2.0)
+	# (The trail behind the flames is neon SPEED STREAKS now, not fire cubes: scripts/car/car_streaks.gd.)
+	_streaks = car.get_node_or_null("Streaks") as CarStreaks
 
 
 ## Is it boosting right now? (getaway_car.gd floors it; enemy.gd launches instead of smashing.)
@@ -189,6 +193,8 @@ func _start_boost(count: int, progress: float) -> void:
 	recharge = progress
 	_boost_left = boost_seconds
 	Sound.play_at("boost", car.global_position, 3.0)
+	if _streaks != null:
+		_streaks.burst(flame_color, streak_burst, "sides", 1.4)  # the TAKE-OFF: a big rip of streaks
 	if car.is_multiplayer_authority() and not car.freeze:
 		car.apply_central_impulse(-car.global_basis.z * kick_speed * car.mass)
 	# Everyone in the car on THIS computer: a wide, shaky, rumbly camera.
@@ -256,7 +262,7 @@ func _box() -> Vector3:
 
 
 ## Every computer, every frame: flicker the flames while boosting.
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var on := is_boosting()
 	var box := _box()
 	var rear_z := box.z * 0.5
@@ -271,8 +277,8 @@ func _process(_delta: float) -> void:
 	_light.visible = on
 	_light.position = Vector3(0, 0.2, rear_z + 1.2)
 	_light.light_energy = light_energy * randf_range(0.7, 1.2) if on else 0.0
-	_fire.position = Vector3(0, -box.y * 0.1, rear_z + 0.3)
-	_fire.emitting = on
+	if on and _streaks != null:
+		_streaks.stream(flame_color, streaks_per_second, delta)
 
 
 # --- Game system hooks (scripts/game_systems.gd) ---

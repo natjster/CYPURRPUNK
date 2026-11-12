@@ -33,6 +33,7 @@ GetawayCar (RigidBody3D)            script: getaway_car.gd
 ├── Health (Node3D)                  script: car/car_health.gd  <- HP, smoke, fire, wrecks
 ├── Boost (Node3D)                   script: car/car_boost.gd   <- the AFTERBURNER (exhaust fire)
 ├── Juice (Node3D)                   script: car/car_juice.gd   <- arcade feel: launch, DRIFT TURBO, lean, landings
+├── Streaks (Node3D)                 script: car/car_streaks.gd <- neon SPEED STREAKS (launch, drifts, turbo, boost)
 ├── CameraRig (Node3D)               Top Level ON  <- follows the car with lag
 │   └── SpringArm3D                  position y=1.2, rotation x=-0.3, Spring Length 7
 │                                    (the cat's Camera3D gets moved here while driving)
@@ -134,15 +135,19 @@ A new district fixes it too. Test: `--drive --car_test` ("DevCapture car_test" l
 
 All knobs: open `scenes/getaway_car.tscn`, click **Juice** in the Scene panel, look at the Inspector.
 - **Launch**: flooring it from slow speed pulls harder (Launch Accel Bonus 1.8, fades out at top speed).
-- **DRIFT TURBO**: hold the handbrake (Space) through a corner while steering. Sparks fly off the back
-  wheels: BLUE after Turbo Blue Seconds (0.6), ORANGE after Turbo Orange Seconds (1.2). Let go of the
+- **DRIFT TURBO**: hold the handbrake (Space) through a corner while steering. Neon streaks fly off the back
+  wheels: pale at first, BLUE after Turbo Blue Seconds (0.6), ORANGE after Turbo Orange Seconds (1.2). Let go of the
   handbrake = a speed kick (Turbo Blue Kick 4 / Turbo Orange Kick 7.5 m/s), a whoosh and a camera kick.
   Drifts keep their speed: Drift Drag Scale (less handbrake slowdown), Drift Carry (sideways slide turned
   into forward speed) and Drift Max Angle (40 degrees: the car holds a sideways slide instead of spinning out).
 - **Body Lean**: only the model tilts: leans out of turns (Roll Degrees), squats on gas / dips on brakes
   (Pitch Degrees), Lean Spring = snappiness.
 - **Landing**: after a jump the body squashes and springs back with a thump, a dust puff and a shake.
-- **Tyre smoke** while drifting or wheel-spinning, a **skid sound** (Skid Sound / Volume / Pitch: any name
+- **SPEED STREAKS** (no more cubes): glowing rips like the cat's claw marks tear off the car on a launch
+  (Launch Streaks / Per Second / Color), while drifting (Drift Streaks Per Second) and on the turbo kick
+  (Turbo Streaks). Their size and timing: click the **Streaks** node (Streak Length, Speed Stretch, Streak
+  Width, Rip Seconds, Fade Seconds, Max Streaks).
+- A **skid sound** (Skid Sound / Volume / Pitch: any name
   from `sounds/sfx/`), **Speed Camera** (pulls back Camera Pullback metres at top speed, a little road
   rattle near top speed), and controller **rumble** on drifts, landings and turbos.
 Everything you see is worked out from how the car moves, on every computer (others see your sparks too).
@@ -154,7 +159,7 @@ No-Brooms / Bumper-Car Benny's tab) sells **AFTERBURNER**: tier 1 = 2 charges, t
 upgrade: the gang's best tier counts, whoever drives).
 While driving press **BOOST** (Shift, or A on a controller; rebind it in SETTINGS > KEYS): the car
 kicks forward and floors it past its top speed for a moment, with **fire roaring out of the exhaust**
-(two flame jets, an orange glow on the street, a trail of fire cubes, a wider + shaking camera).
+(two flame jets, an orange glow on the street, a rip of orange speed streaks (Boost node: Streak Burst, Streaks Per Second), a wider + shaking camera).
 **Nothing gets killed by the boost: it all goes FLYING.** Bots in the exhaust fire, or rammed while
 boosting, are launched into the air, spin, land and lie dazed (bosses are too heavy). Cats on foot
 in the fire get launched too (no damage), and bins and cones go over. A used charge comes back after

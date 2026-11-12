@@ -47,4 +47,5 @@
   only) = launch bonus, drift keeps speed (drag scale, carry, `drift_max_angle` swings the velocity back = no spin-outs), DRIFT TURBO
   (`_drift_time` -> `turbo_level` 1 blue / 2 orange, kick on handbrake release, `_turbo_fx` unreliable rpc). `_physics_process` on
   EVERY computer from measured motion: lean/squash on `Model/CarModel` (rotation + scale: nothing else may set those; wrecks use
-  `Model`), sparks/smoke, skid loop, landing thump, `camera_arm.spring_length` pullback, rumble. Test `--drive --car_juice`.
+  `Model`), drift/launch/turbo SPEED STREAKS via the `Streaks` node (`scripts/car/car_streaks.gd`: ImmediateMesh ribbons like the
+  claw marks, `burst()` / `stream()`; Boost uses it too, no cube particles), skid loop, landing thump, `camera_arm.spring_length` pullback, rumble. Test `--drive --car_juice`.
