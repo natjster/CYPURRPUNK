@@ -19,3 +19,6 @@
   seat 0 `pause` -> menu viewport (PauseMenu on top; while it's open only player 1 drives). Local rows: P1..P4 tag + `Seats.color`; READY cell shows
   `Hud.key_for("interact", seat)` blinking. Reveal + sounds `report_open/row/award` once per computer. Test: `--raid_report[=N] [--raid_report_after=F]`,
   `--report_ready=S,S:pad,S:key,S:stick,spare:D,S:pause [--report_ready_delay=N]`, `DevCapture report` / `report screen` / `after report` lines.
+- LOOK (12 Nov 2026) = HUD/menu ocean blue: node has `theme = menu_theme.tres` (Consolas + outline), `_panel` (PanelContainer + HudStyleBox)
+  wraps `_content` and is what `_fit` scales/centres; `_grid.draw` -> `_draw_strips` (row strips follow the name cell's alpha, seat-colour
+  left edge for local rows, header line). Colours are exports ("Colours" group). `line_squeeze` 2 (the outline is thicker).

@@ -146,7 +146,7 @@ func _print_report(report: Dictionary) -> void:
 	for seat in 4:
 		hud_frames.append(Hud.of(seat) != null and Hud.of(seat).frame.visible)
 	print("DevCapture report screen: up=%s size=%s scale=%.2f rows=%d shown_seats=%s hud_frames=%s menu_view=%s" % [
-		RaidReportScreen.is_up(), screen.size, screen._content.scale.x, screen._row_cells.size(),
+		RaidReportScreen.is_up(), screen.size, screen._panel.scale.x, screen._row_cells.size(),
 		GameScreen.instance.shown_seats(), hud_frames, GameScreen.instance.menu_view.visible])
 	# ...and once it has gone: split screen, HUDs and moving cats should all be back.
 	while RaidReportScreen.is_up():

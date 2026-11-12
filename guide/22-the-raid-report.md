@@ -65,6 +65,11 @@ Inspector (sizes are in GAME PIXELS: the picture is 240 tall, 320 wide on 4:3):
   Row Size / Small Size (8 / 7: names and numbers / the small second lines), and with up to
   **Roomy Rows** (4) cats the bigger **Roomy Row Size / Roomy Small Size** (10 / 8), used only if
   they fit the screen without shrinking.
+- **Colours (the HUD's ocean blue)**: it matches the HUD and the menus: same font and boxes (the
+  node's **Theme** is `ui/menu_theme.tres`), one blue panel with corner brackets round the whole
+  report, a faint strip behind each cat's row (your own cats' strips get a seat-coloured edge) and a
+  line under the column names. Title / Value / Text / Dim Text / Cash colours, Panel Fill / Edge,
+  Row Fill / Edge (alpha 0 = no strips), Header Line, Backdrop Color.
 - **Layout**: Line Squeeze (pulls a row's two lines together with lots of cats, so 8 fit), Column
   Gap, Margin, Dim (how dark the game behind gets), Min Scale (it shrinks to fit only as a last
   resort: shrinking blurs small text in the PS1 look), Max Name Letters (longer names get "...").
