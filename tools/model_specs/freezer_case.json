@@ -1,0 +1,475 @@
+{
+ "name": "freezer_case",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 58,
+ "background": "#2a2e36",
+ "about": "An upright supermarket freezer (2.0 x 2.2 x 0.8 m): two frosty glass doors glowing cold blue, shelves of fish and tins behind them, a FROZEN header light. Its back goes against a wall (+Z); the Glow group glows. 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,32] the door fronts: blue-white glow, shelves of goods, frost at the bottom"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "color": "#9fe8ff"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "top": "#ffffff40",
+   "bottom": "#3a8ac000"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    8,
+    32,
+    9
+   ],
+   "color": "#c8d8e0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    17,
+    32,
+    18
+   ],
+   "color": "#c8d8e0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    26,
+    32,
+    27
+   ],
+   "color": "#c8d8e0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    2,
+    3,
+    6,
+    8
+   ],
+   "color": "#ff5a8a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    7,
+    4,
+    11,
+    8
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    12,
+    3,
+    16,
+    8
+   ],
+   "color": "#5af0a0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    18,
+    4,
+    23,
+    8
+   ],
+   "color": "#ff5a8a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    24,
+    3,
+    30,
+    8
+   ],
+   "color": "#b07aff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    2,
+    12,
+    9,
+    17
+   ],
+   "color": "#e8a060"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    10,
+    13,
+    15,
+    17
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    17,
+    12,
+    24,
+    17
+   ],
+   "color": "#e8a060"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    25,
+    13,
+    30,
+    17
+   ],
+   "color": "#5ac8ff"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    2,
+    21,
+    8,
+    26
+   ],
+   "color": "#ff7a3a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    9,
+    22,
+    16,
+    26
+   ],
+   "color": "#5af0a0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    18,
+    21,
+    22,
+    26
+   ],
+   "color": "#ff5a8a"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    23,
+    22,
+    30,
+    26
+   ],
+   "color": "#ffd23a"
+  },
+  {
+   "op": "dither",
+   "rect": [
+    0,
+    26,
+    32,
+    32
+   ],
+   "color": "#ffffff",
+   "top": 0.1,
+   "bottom": 0.7
+  },
+  {
+   "op": "line",
+   "from": [
+    15,
+    0
+   ],
+   "to": [
+    15,
+    31
+   ],
+   "color": "#3a3e48"
+  },
+  {
+   "op": "line",
+   "from": [
+    16,
+    0
+   ],
+   "to": [
+    16,
+    31
+   ],
+   "color": "#3a3e48"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    12,
+    10,
+    14,
+    20
+   ],
+   "color": "#e0e4ea"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    18,
+    10,
+    20,
+    20
+   ],
+   "color": "#e0e4ea"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    32,
+    32
+   ],
+   "color": "#3a3e48"
+  },
+  {
+   "op": "comment",
+   "note": "[32,0,64,8] the header: FROZEN in cold neon"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    64,
+    8
+   ],
+   "color": "#101620"
+  },
+  {
+   "op": "text",
+   "pos": [
+    38,
+    2
+   ],
+   "text": "FROZEN",
+   "color": "#7ae8ff",
+   "spacing": 1
+  },
+  {
+   "op": "comment",
+   "note": "[32,8,64,40] the cabinet: dark steel"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    8,
+    64,
+    40
+   ],
+   "color": "#2a2e36"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    32,
+    8,
+    64,
+    40
+   ],
+   "colors": [
+    "#ffffff0a",
+    "#00000000",
+    "#00000018"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    32,
+    8,
+    64,
+    40
+   ],
+   "amount": 0.3,
+   "spread": 0.12
+  },
+  {
+   "op": "comment",
+   "note": "[0,32,32,40] the kick plate: black vents"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    32,
+    32,
+    40
+   ],
+   "color": "#15171c"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    32,
+    32,
+    40
+   ],
+   "colors": [
+    "#3a3e48",
+    "#15171c"
+   ],
+   "width": 1,
+   "direction": "horizontal"
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Glow",
+   "origin": [
+    0,
+    0,
+    -6
+   ],
+   "parent": "Body"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "cabinet",
+   "group": "Body",
+   "from": [
+    -16,
+    0,
+    -6
+   ],
+   "to": [
+    16,
+    35.2,
+    6.4
+   ],
+   "faces": {
+    "north": [
+     0,
+     32,
+     32,
+     40
+    ],
+    "south": [
+     32,
+     8,
+     64,
+     40
+    ],
+    "east": [
+     32,
+     8,
+     64,
+     40
+    ],
+    "west": [
+     32,
+     8,
+     64,
+     40
+    ],
+    "up": [
+     32,
+     8,
+     64,
+     40
+    ],
+    "down": [
+     32,
+     8,
+     64,
+     40
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "doors",
+   "group": "Glow",
+   "from": [
+    -15,
+    3,
+    -6.6
+   ],
+   "to": [
+    15,
+    31,
+    -6
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     32,
+     32
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "header",
+   "group": "Glow",
+   "from": [
+    -16,
+    31.4,
+    -6.8
+   ],
+   "to": [
+    16,
+    35.2,
+    -6
+   ],
+   "faces": {
+    "north": [
+     32,
+     0,
+     64,
+     8
+    ]
+   }
+  }
+ ]
+}

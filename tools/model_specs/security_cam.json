@@ -1,0 +1,337 @@
+{
+ "name": "security_cam",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 12,
+ "background": "#d8dade",
+ "about": "An OVERCLEAN security camera on a wall arm (0.75 m long). The Head group swivels (its pivot is the arm's end), the Lens group glows red. The wall plate is at z = +0 (stick its back on a wall, facing -Z). 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,32,16] camera body sides: off-white plastic, OVERCLEAN stencil, grime"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "color": "#d8dade"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "top": "#ffffff20",
+   "bottom": "#00000040"
+  },
+  {
+   "op": "text",
+   "pos": [
+    2,
+    5
+   ],
+   "text": "OVRCLN",
+   "color": "#2a2c34c0",
+   "spacing": 1
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    32,
+    16
+   ],
+   "amount": 0.3,
+   "spread": 0.12
+  },
+  {
+   "op": "comment",
+   "note": "[32,0,40,8] lens: a glowing red eye"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    0,
+    40,
+    8
+   ],
+   "color": "#200404"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    34,
+    2,
+    38,
+    6
+   ],
+   "color": "#ff2a1a"
+  },
+  {
+   "op": "pixels",
+   "list": [
+    [
+     35,
+     3,
+     "#ffd0c0"
+    ]
+   ]
+  },
+  {
+   "op": "comment",
+   "note": "[0,16,16,32] dark steel arm + plate"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "color": "#33353c"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "amount": 0.4,
+   "spread": 0.2
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "color": "#1c1d22"
+  },
+  {
+   "op": "comment",
+   "note": "[16,16,32,24] hood: dark grey"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    16,
+    16,
+    32,
+    24
+   ],
+   "color": "#4a4d55"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    16,
+    16,
+    32,
+    24
+   ],
+   "amount": 0.3,
+   "spread": 0.15
+  }
+ ],
+ "groups": [
+  {
+   "name": "Mount",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Head",
+   "origin": [
+    0,
+    0,
+    -7
+   ],
+   "parent": "Mount"
+  },
+  {
+   "name": "Lens",
+   "origin": [
+    0,
+    -1,
+    -12
+   ],
+   "parent": "Head"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "plate",
+   "group": "Mount",
+   "from": [
+    -2.5,
+    -2.5,
+    -0.6
+   ],
+   "to": [
+    2.5,
+    2.5,
+    0
+   ],
+   "sides": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "top": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "arm",
+   "group": "Mount",
+   "from": [
+    -0.8,
+    -0.8,
+    -7
+   ],
+   "to": [
+    0.8,
+    0.8,
+    -0.6
+   ],
+   "sides": [
+    0,
+    16,
+    16,
+    32
+   ],
+   "top": [
+    0,
+    16,
+    16,
+    32
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "body",
+   "group": "Head",
+   "from": [
+    -2.2,
+    -3.2,
+    -12
+   ],
+   "to": [
+    2.2,
+    0.6,
+    -4
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     8,
+     8
+    ],
+    "south": [
+     0,
+     0,
+     8,
+     8
+    ],
+    "east": [
+     0,
+     0,
+     32,
+     16
+    ],
+    "west": [
+     0,
+     0,
+     32,
+     16
+    ],
+    "up": [
+     0,
+     0,
+     32,
+     16
+    ],
+    "down": [
+     0,
+     0,
+     32,
+     16
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "hood",
+   "group": "Head",
+   "from": [
+    -2.8,
+    0.6,
+    -12.8
+   ],
+   "to": [
+    2.8,
+    1.4,
+    -3.6
+   ],
+   "sides": [
+    16,
+    16,
+    32,
+    24
+   ],
+   "top": [
+    16,
+    16,
+    32,
+    24
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "lens",
+   "group": "Lens",
+   "from": [
+    -1.4,
+    -2.6,
+    -12.6
+   ],
+   "to": [
+    1.4,
+    0.2,
+    -12
+   ],
+   "faces": {
+    "north": [
+     32,
+     0,
+     40,
+     8
+    ]
+   }
+  }
+ ]
+}

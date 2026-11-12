@@ -1,0 +1,770 @@
+{
+ "name": "mart_cat_sign",
+ "kind": "set_piece",
+ "texture_size": 128,
+ "seed": 77,
+ "background": "#1a0f24",
+ "about": "MEOW-MART's rooftop sign: a giant flat CAT HEAD (4 x 3 m) outlined in pink neon, glowing green eyes, a pink nose, whiskers, and a MEOW-MART bar under its chin, all on a steel frame. Groups: Frame, Neon (glows), Eyes (glow, blink in game). 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,64,48] head front: dark, pink neon outline, whiskers, a W mouth"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    64,
+    48
+   ],
+   "color": "#1a0f24"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    64,
+    48
+   ],
+   "amount": 0.2,
+   "spread": 0.1
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    64,
+    48
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    1,
+    1,
+    63,
+    47
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    3,
+    26
+   ],
+   "to": [
+    20,
+    28
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    3,
+    32
+   ],
+   "to": [
+    20,
+    31
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    44,
+    28
+   ],
+   "to": [
+    60,
+    26
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    44,
+    31
+   ],
+   "to": [
+    60,
+    32
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    26,
+    36
+   ],
+   "to": [
+    29,
+    39
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    29,
+    39
+   ],
+   "to": [
+    32,
+    36
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    32,
+    36
+   ],
+   "to": [
+    35,
+    39
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "line",
+   "from": [
+    35,
+    39
+   ],
+   "to": [
+    38,
+    36
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "comment",
+   "note": "[64,0,128,48] head back + sides: plum steel panels, rivets"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    64,
+    0,
+    128,
+    48
+   ],
+   "color": "#2c2035"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    64,
+    0,
+    128,
+    48
+   ],
+   "colors": [
+    "#ffffff0c",
+    "#00000000",
+    "#00000022"
+   ],
+   "width": 2,
+   "direction": "vertical"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    64,
+    0,
+    128,
+    48
+   ],
+   "color": "#4a3a2aa0",
+   "count": 10,
+   "size": 1.5
+  },
+  {
+   "op": "noise",
+   "rect": [
+    64,
+    0,
+    128,
+    48
+   ],
+   "amount": 0.3,
+   "spread": 0.15
+  },
+  {
+   "op": "comment",
+   "note": "[0,48,24,72] ear face: dark with a pink neon edge (it's a square turned 45 degrees)"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    48,
+    24,
+    72
+   ],
+   "color": "#1a0f24"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    48,
+    24,
+    72
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    1,
+    49,
+    23,
+    71
+   ],
+   "color": "#ff3fb4"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    7,
+    55,
+    17,
+    65
+   ],
+   "color": "#5a1a44"
+  },
+  {
+   "op": "comment",
+   "note": "[32,48,42,58] eye: bright green with a black slit"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    32,
+    48,
+    42,
+    58
+   ],
+   "color": "#5dffb0"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    36,
+    49,
+    38,
+    57
+   ],
+   "color": "#08140e"
+  },
+  {
+   "op": "comment",
+   "note": "[48,48,56,52] nose: bright pink"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    48,
+    48,
+    56,
+    52
+   ],
+   "color": "#ff70c8"
+  },
+  {
+   "op": "comment",
+   "note": "[0,80,80,96] the bar: MEOW-MART in big neon letters"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    80,
+    80,
+    96
+   ],
+   "color": "#120a18"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    80,
+    80,
+    96
+   ],
+   "color": "#3cf0ff"
+  },
+  {
+   "op": "text",
+   "pos": [
+    4,
+    83
+   ],
+   "text": "MEOW-MART",
+   "color": "#ff5ac0",
+   "scale": 2,
+   "spacing": 1
+  },
+  {
+   "op": "comment",
+   "note": "[80,80,96,96] steel: grey, rusty"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "color": "#4a4c55"
+  },
+  {
+   "op": "spots",
+   "rect": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "color": "#7a4a2aa0",
+   "count": 4,
+   "size": 1.5
+  },
+  {
+   "op": "noise",
+   "rect": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "amount": 0.4,
+   "spread": 0.2
+  }
+ ],
+ "groups": [
+  {
+   "name": "Frame",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Neon",
+   "origin": [
+    0,
+    0,
+    0
+   ],
+   "parent": "Frame"
+  },
+  {
+   "name": "Eyes",
+   "origin": [
+    0,
+    51,
+    -4
+   ],
+   "parent": "Frame"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "leg_l",
+   "group": "Frame",
+   "from": [
+    -26,
+    0,
+    -1.5
+   ],
+   "to": [
+    -23,
+    26,
+    1.5
+   ],
+   "sides": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "top": [
+    80,
+    80,
+    96,
+    96
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "leg_r",
+   "group": "Frame",
+   "from": [
+    23,
+    0,
+    -1.5
+   ],
+   "to": [
+    26,
+    26,
+    1.5
+   ],
+   "sides": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "top": [
+    80,
+    80,
+    96,
+    96
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "brace",
+   "group": "Frame",
+   "from": [
+    -24,
+    4,
+    -1
+   ],
+   "to": [
+    24,
+    6,
+    1
+   ],
+   "sides": [
+    80,
+    80,
+    96,
+    96
+   ],
+   "top": [
+    80,
+    80,
+    96,
+    96
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "bar",
+   "group": "Neon",
+   "from": [
+    -40,
+    8,
+    -3
+   ],
+   "to": [
+    40,
+    24,
+    3
+   ],
+   "faces": {
+    "north": [
+     0,
+     80,
+     80,
+     96
+    ],
+    "south": [
+     0,
+     80,
+     80,
+     96
+    ],
+    "east": [
+     80,
+     80,
+     82,
+     96
+    ],
+    "west": [
+     80,
+     80,
+     82,
+     96
+    ],
+    "up": [
+     80,
+     80,
+     96,
+     82
+    ],
+    "down": [
+     80,
+     80,
+     96,
+     82
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "head",
+   "group": "Neon",
+   "from": [
+    -32,
+    26,
+    -2.5
+   ],
+   "to": [
+    32,
+    74,
+    2.5
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     64,
+     48
+    ],
+    "south": [
+     64,
+     0,
+     128,
+     48
+    ],
+    "east": [
+     64,
+     0,
+     69,
+     48
+    ],
+    "west": [
+     64,
+     0,
+     69,
+     48
+    ],
+    "up": [
+     64,
+     0,
+     128,
+     5
+    ],
+    "down": [
+     64,
+     0,
+     128,
+     5
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "ear_l",
+   "group": "Neon",
+   "from": [
+    -34,
+    62,
+    -2
+   ],
+   "to": [
+    -10,
+    86,
+    2
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     24,
+     72
+    ],
+    "south": [
+     64,
+     0,
+     88,
+     24
+    ],
+    "east": [
+     64,
+     0,
+     68,
+     24
+    ],
+    "west": [
+     64,
+     0,
+     68,
+     24
+    ],
+    "up": [
+     64,
+     0,
+     88,
+     4
+    ],
+    "down": [
+     64,
+     0,
+     88,
+     4
+    ]
+   },
+   "origin": [
+    -22,
+    74,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    45
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "ear_r",
+   "group": "Neon",
+   "from": [
+    10,
+    62,
+    -2
+   ],
+   "to": [
+    34,
+    86,
+    2
+   ],
+   "faces": {
+    "north": [
+     0,
+     48,
+     24,
+     72
+    ],
+    "south": [
+     64,
+     0,
+     88,
+     24
+    ],
+    "east": [
+     64,
+     0,
+     68,
+     24
+    ],
+    "west": [
+     64,
+     0,
+     68,
+     24
+    ],
+    "up": [
+     64,
+     0,
+     88,
+     4
+    ],
+    "down": [
+     64,
+     0,
+     88,
+     4
+    ]
+   },
+   "origin": [
+    22,
+    74,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    45
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "eye_l",
+   "group": "Eyes",
+   "from": [
+    -19,
+    46,
+    -3.5
+   ],
+   "to": [
+    -9,
+    56,
+    -2.5
+   ],
+   "faces": {
+    "north": [
+     32,
+     48,
+     42,
+     58
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "eye_r",
+   "group": "Eyes",
+   "from": [
+    9,
+    46,
+    -3.5
+   ],
+   "to": [
+    19,
+    56,
+    -2.5
+   ],
+   "faces": {
+    "north": [
+     32,
+     48,
+     42,
+     58
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "nose",
+   "group": "Neon",
+   "from": [
+    -4,
+    40,
+    -3.5
+   ],
+   "to": [
+    4,
+    44,
+    -2.5
+   ],
+   "faces": {
+    "north": [
+     48,
+     48,
+     56,
+     52
+    ]
+   }
+  }
+ ]
+}

@@ -5,8 +5,8 @@
 - `scripts/city_generator.gd` (`CityGenerator`, the `City` node): the whole level is generated from a
   seed with one seeded RNG — keep all randomness on `_rng` and in a fixed order, or players' cities
   diverge. Host sends only the seed (`Game._receive_city_seed`). Centre crossroads and car spot
-  (`CAR_SPAWN`) are fixed for every seed; Meow-Mart's lot is random (`meow_mart_position`), except the start menu's
-  showcase city (`generate(PREVIEW_SEED, true)`: Meow-Mart by the centre; `car.park_for_menu()` at CAR_SPAWN). Nothing
+  (`CAR_SPAWN`) are fixed for every seed; Meow-Mart's BLOCK is random (`_meow_mart_block`; it takes the block's whole south half,
+  doors facing +z), except the start menu's showcase city (`generate(PREVIEW_SEED, true)`: the block NW of the centre; `car.park_for_menu()` at CAR_SPAWN). Nothing
   may tick game rules behind the menu: `everyone_has_been_up()` is false with 0 players (it used to race the heat). Buildings share
   materials; per-object colour comes from the shader's `instance_tint` instance uniform.
   Determinism check: DevCapture prints a city `fingerprint`; host and client must match.
@@ -30,18 +30,21 @@
   (layout unchanged); chaos bonus = `MessManager.player_messes_this_trip` in fish_heist (`_extracted` 4th arg). Boss news `news_line()`,
   send-off `send_off_line()` (npc.gd), (the hub CRT shows only the Mainframe % now; `intel_line()` is test-only), report `twist`. No up-top popup (user's call). Test: `--twist=NAME`, `--twist_rolls`, `--twist_heat=F`.
 
-- MEOW-MART INTERIOR (SETUP_GUIDE §27): `scripts/interiors/meow_mart_interior.gd` (`MeowMartInterior.instance`, node `Main/MeowMart` at
-  y=-50 (above `DEPTH_LINE`: counts as up top), GameSystems + Interactable (one `_best_action` dispatcher, prio 5)). Code-built, no randomness:
-  aisles (stepped `TIERS`, 4 segments each, `_stacks` can stacks), checkouts, FRESH CATCH counter, security SCALE (`PLATE_SPOT`), HEAVY basket
-  (`crate_pos`, host `_move_crate` cast_motion, drag = leash), EMPLOYEES ONLY roller door (`security_open`), back room KOI TANK (`HitRelay`
-  `scripts/interiors/hit_relay.gd`; other walls hand hits to the interior's `receive_hit`). Walk-through = each computer teleports its own cats
-  (`_check_doorways`: city glass line `city.meow_mart_door_spot` / interior `LEAVE_Z`). City storefront = `CityGenerator._build_meow_mart_storefront`
-  (no `_rng` draws; `meow_mart_doors` leaves with metas home_x/open_x, `storefront_doors` export). `contains(pos)`; hub `mood_at` -> `MART_MOOD` (-2:
-  no rain, store fog/ambient/ambience, moon only if someone's outdoors); `Roomba._can_chase` ignores cats inside; `cat_player` calls
-  `MeowMartInterior.cat_bump` after MessManager's. Host requests `request_swat/topple/tank_hit/drag/push/exit_button` -> RPCs; messes via
-  `MessManager.count_mess`; shatter -> `ItemManager.drop_on_street(tank_item)`, `trip_alarm` = `HeatMeter.add_heat(alarm_heat, true)` (instant),
-  `RoombaPatrol.ambush(spot, bots, reach)` + `hear_noise` every `ambush_call_every`, `Events.store_alarm_tripped`. Late join `_receive_state`,
-  new district `_reset`. Loot: LootSpawn `MEOW_MART_SHELF`/`MEOW_MART_COUNTER` (ItemManager `_free_mart_spots`), sidewalk koi line skipped via
-  `MeowMartInterior.koi_in_tank`. Lambdas capture locals by value: `_best_action`'s `offer` fills the dict in place. Test: `--test_meow_mart[=D]`,
-  `--inside_meow_mart[=W]`, `--shatter_tank[=F]`, `--mart_swat/topple/plate/drag/tank_hits/log`.
+- MEOW-MART (SETUP_GUIDE §27): a REAL walk-in store, no teleport. `scripts/interiors/meow_mart_interior.gd` (`MeowMartInterior.instance`,
+  node `Main/MeowMart`, GameSystems + Interactable (one `_best_action` dispatcher, prio 5)) is built once from code and moved onto its
+  block by `CityGenerator._build_meow_mart(block_center)` -> `place_in_city(floor_centre)` (hidden at y=-50 until then; `_placed`).
+  Store coords: ROOM 21 x 4.5 x 10.8, FRONT_Z +5.4 (always faces +z, translation only, no rotation), floor `FLOOR_LIFT` 6 cm above
+  the street, footprint `outer_size()`. Outside dressing = `scripts/interiors/meow_mart_exterior.gd` (`MeowMartExterior.build`:
+  cladding `textures/mart_cladding.png`, sign facade, neon, awning, models `mart_cat_sign`/`security_cam`/`rooftop_ac`/`freezer_case`
+  from `tools/make_meow_mart_specs.py`; tweens animate eyes/fans/cams). Inside: aisles (stepped `TIERS`, `AISLE_Z`, 4 segments,
+  `_stacks`), checkouts, FRESH CATCH counter, security SCALE (`PLATE_SPOT`), HEAVY basket (`crate_pos`, host `_move_crate` cast_motion),
+  EMPLOYEES ONLY roller door (`security_open`), back room KOI TANK (`HitRelay` `scripts/interiors/hit_relay.gd`; other walls hand hits to
+  `receive_hit`). Doors: `_animate_doors` (any cat near, no collision on the leaves). `contains(pos)` = inside the walls only; hub
+  `mood_at` -> `MART_MOOD`; `Roomba._can_chase` ignores cats inside; `cat_player` calls `cat_bump` after MessManager's. Host requests
+  `request_swat/topple/tank_hit/drag/push/exit_button` -> RPCs; messes via `MessManager.count_mess`; shatter -> `ItemManager.drop_on_street`,
+  `trip_alarm` = instant heat + `RoombaPatrol.ambush(street_spot)` + `hear_noise`, `Events.store_alarm_tripped`. Late join `_receive_state`,
+  new district `_reset`. Loot: LootSpawn `MEOW_MART_SHELF`/`MEOW_MART_COUNTER` (ItemManager `_free_mart_spots`); the OUTSIDE_MEOW_MART fish
+  row was removed from loot/city.tres (user's call, 12 Nov 2026: it blocked the door) so CLEARANCE's fish multiplier is idle. The street
+  lamp in front of the doors shifts 7 m. Tests (game port may be busy: add `--port=7790`): `--test_meow_mart[=D]`, `--inside_meow_mart[=W]`,
+  `--shatter_tank[=F]`, `--mart_swat/topple/plate/drag/tank_hits/log`; `--seed=1999` puts the store door at (-18, 0, -7).
 - DEPTH PULL (`psx_lit` `depth_pull` share of distance, `depth_pull_max` metres): thin layers on other surfaces z-fight because the vertex snap breaks depth interpolation. Used by StickyPatch (0.08) and the Mainframe screen + gauge cells (0.03, max 0.15; the % Label3D floats 0.22 m out). `--goop=D` drops a puddle to look at.

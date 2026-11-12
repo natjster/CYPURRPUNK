@@ -2,13 +2,13 @@ class_name MeowMartInterior
 extends Node3D
 ## CYPURRPUNK — INSIDE MEOW-MART: the first real heist interior (ROADMAP.md section 4 #8).
 ##
-## Walk through Meow-Mart's sliding glass doors in the city and you come out HERE: a neon-lit
-## PS1 supermarket. It isn't really behind the doors: it's built once, 50 m under the middle of
-## the city (Main/MeowMart, at y = -50, see scenes/interiors/meow_mart_interior.tscn), and the doors
-## move you here and back (CatPlayer.teleport_to). That way there's no scene switching: one cat can be
-## shopping while their couch buddy drives around outside, and the network carries on as normal.
-## (The sewers are at y = -200; everything above y = -100 counts as "up top", so the store does too:
-## guns work in here, heat ticks, and the DEEP CLEAN still gets you.)
+## A neon-lit PS1 supermarket that is REALLY THERE in the city: it takes the south half of a block
+## (the city picks the block, scripts/city_generator.gd _build_meow_mart, and calls place_in_city),
+## and you just walk in through the sliding glass doors. No teleport, no loading: you can see the
+## street through the glass, and your couch buddy can drive past while you shop.
+## The store is built once, from code, and MOVED to its block every district (Main/MeowMart, see
+## scenes/interiors/meow_mart_interior.tscn; until a city is built it waits at y = -50, out of sight).
+## The outside (cladding, rooftop sign, cameras, AC units...) is scripts/interiors/meow_mart_exterior.gd.
 ##
 ## WHAT'S IN THE STORE (all built from code in _build(), never random, the same on every computer):
 ##
@@ -44,7 +44,7 @@ extends Node3D
 
 static var instance: MeowMartInterior
 
-## Off = nobody can go in (the doors stay shut) and the golden koi goes back to a sidewalk.
+## Off = Meow-Mart is a solid pink box nobody can go in, and the golden koi goes back to a sidewalk.
 @export var enabled: bool = true
 
 @export_group("Doors")
@@ -52,8 +52,6 @@ static var instance: MeowMartInterior
 @export var door_open_distance: float = 3.2
 ## How fast they slide (1 = one full open per second).
 @export var door_slide_speed: float = 3.0
-## After going through, a cat can't go back through for this long (seconds).
-@export var door_cooldown: float = 0.8
 
 @export_group("Look")
 ## The fog and ambient light while YOUR camera is in the store (scripts/hub.gd mood_at).
@@ -69,6 +67,18 @@ static var instance: MeowMartInterior
 @export var light_range: float = 8.0
 ## Chance per second that a tube flickers for a moment (PS1 horror-film charm).
 @export_range(0.0, 1.0) var flicker_chance: float = 0.15
+
+@export_group("Outside")
+## The corrugated metal skin on the outside walls (multiplies its plum texture).
+@export var cladding_tint: Color = Color(1.0, 0.8, 1.0)
+## The big MEOW-MART letters, the neon frame and the cat head's glow.
+@export var sign_color: Color = Color(1, 0.22, 0.72)
+## The second neon colour (the strap line, the awning edge, the corner lights).
+@export var trim_color: Color = Color(0.25, 0.95, 1.0)
+## How big the giant neon cat head on the roof is (1 = 4.5 m wide).
+@export_range(0.5, 2.0) var cat_sign_scale: float = 1.25
+## How far the security cameras swing each way (radians; 0.6 = about 35 degrees).
+@export_range(0.0, 1.5) var camera_sweep: float = 0.6
 
 @export_group("Mess")
 ## A can stack falls when a cat runs into it faster than this (metres per second; walking is 4.5).
@@ -127,33 +137,38 @@ static var instance: MeowMartInterior
 @export var alarm_line: String = "AQUATIC DISPLAY BREACH DETECTED. ALL UNITS DISPATCHED TO MEOW-MART."
 
 # --- The layout (metres, from the store's own middle; the floor is at 0) ---
-const ROOM := Vector3(22, 4.5, 16)
+## (Store coordinates: x = east, z = south = out of the front door, 0 = the middle of the floor.
+## It must fit on half a city block: 24 x 12 m, minus 1 m of pavement front and sides.)
+const ROOM := Vector3(21, 4.5, 10.8)     ## inside size (the walls are outside this)
 const WALL := 0.3
-const FRONT_Z := 8.0                     ## the front wall with the sliding doors (south)
-const BACK_WALL_Z := -3.5                ## the wall between the shop floor and the back room
+const FLOOR_LIFT := 0.06                 ## the floor stands this far above the street (no flicker with the pavement)
+const FRONT_Z := 5.4                     ## the front wall with the sliding doors (south)
+const BACK_WALL_Z := -2.2                ## the wall between the shop floor and the back room
 const ENTRY_HALF_WIDTH := 1.5            ## half the width of the front doorway
-const FOYER_SPOT := Vector3(0, 0.2, 6.2)  ## where you appear coming in
-const LEAVE_Z := 7.55                    ## past this (in the doorway) = back out to the street
-const PLATE_SPOT := Vector3(-9.0, 0, -1.8)
+const GLASS_HALF := 3.5                  ## half the width of the whole glass front
+const GLASS_HEIGHT := 3.0
+const PLATE_SPOT := Vector3(-9.3, 0, 0.4)
 const PLATE_HALF := 0.75
 const SECURITY_DOOR_X := 7.0
 const SECURITY_DOOR_WIDTH := 2.2
 const SECURITY_DOOR_HEIGHT := 2.6
-const EXIT_BUTTON_SPOT := Vector3(8.7, 1.1, -3.75)  ## the push bar, on the back room side of the wall
-const TANK_SPOT := Vector3(0, 0, -6.0)
+const EXIT_BUTTON_SPOT := Vector3(8.7, 1.1, -2.45)  ## the push bar, on the back room side of the wall
+const TANK_SPOT := Vector3(0, 0, -4.0)
 const TANK_SIZE := Vector3(1.6, 1.2, 1.2)
 const TANK_STAND := 0.6
-const CRATE_HOME := Vector3(-6.8, 0, 2.4)
+const CRATE_HOME := Vector3(-6.6, 0, 0.6)
 const CRATE_SIZE := 0.8
 const AISLE_X: Array[float] = [-3.0, 1.5]
-const AISLE_LENGTH := 4.8
+const AISLE_Z := 0.9                     ## the middle of the aisles (front to back)
+const AISLE_LENGTH := 4.0
 const AISLE_SEGMENTS := 4
 ## The three steps of an aisle unit: [width, top height]. Cats hop up them like stairs.
 const TIERS: Array = [[1.4, 0.35], [0.9, 0.95], [0.45, 1.6]]
 const CHECKOUT_X: Array[float] = [-8.2, -5.4]
-const CHECKOUT_Z := 4.6
+const CHECKOUT_Z := 3.9
+const CHECKOUT_LENGTH := 2.0
 const COUNTER_X := 9.7                   ## the FRESH CATCH counter, along the east wall
-const COUNTER_Z := Vector2(-3.0, 2.6)    ## from / to
+const COUNTER_Z := Vector2(-1.6, 3.4)    ## from / to
 const PRODUCT_COLORS: Array[Color] = [Color(1, 0.3, 0.55), Color(0.3, 0.8, 1), Color(1, 0.8, 0.25),
 	Color(0.4, 1, 0.5), Color(0.75, 0.45, 1), Color(1, 0.5, 0.2)]
 
@@ -179,9 +194,7 @@ var _crate_sent_at := 0.0
 # This computer
 var _clock: float = 0.0
 var _asked := {}               # "kind:id" -> time we last asked the host (so we ask once)
-var _cooldown := {}            # player id -> clock time they may use a door again
-var _street_doors_open: float = 0.0  # 0 shut .. 1 open
-var _inside_doors_open: float = 0.0
+var _doors_open: float = 0.0  # the sliding front doors: 0 shut .. 1 open
 var _security_amount: float = 0.0
 var _fx_rng := RandomNumberGenerator.new()  # only for looks (flicker, spilled cans): never game rules
 
@@ -196,7 +209,8 @@ var _spilled: Array[Node3D] = []        # cans on the floor (freed on reset)
 var _lights: Array[OmniLight3D] = []
 var _tubes: Array[MeshInstance3D] = []
 var _flicker_left := {}                 # light index -> seconds of flicker left
-var _inside_leaves: Array[Node3D] = []
+var _door_leaves: Array[Node3D] = []
+var _placed := false                    # moved onto a city block yet?
 var _security_door: StaticBody3D
 var _security_shape: CollisionShape3D
 var _plate_top: MeshInstance3D
@@ -226,7 +240,6 @@ var _neon_mat: ShaderMaterial
 var _tube_mat: ShaderMaterial
 var _can_mat: ShaderMaterial
 var _ice_mat: ShaderMaterial
-var _night_mat: ShaderMaterial
 var _glass_mat: StandardMaterial3D
 var _water_mat: StandardMaterial3D
 var _can_mesh: CylinderMesh
@@ -247,7 +260,22 @@ func _ready() -> void:
 	_fx_rng.seed = 1999
 	_make_materials()
 	_build()
+	MeowMartExterior.build(self)  # the outside: cladding, rooftop sign, cameras... (meow_mart_exterior.gd)
 	_show_all(true)
+	visible = false  # (until a city puts it on a block: place_in_city)
+
+
+## The city (CityGenerator._build_meow_mart) puts the store on its block. "where" = the middle of
+## the floor, at floor height. Every computer builds the same city, so the store lands in the same spot.
+func place_in_city(where: Vector3) -> void:
+	global_position = where
+	visible = true
+	_placed = true
+
+
+## The whole store from outside, walls included (metres): the city keeps this much room for it.
+static func outer_size() -> Vector3:
+	return Vector3(ROOM.x + WALL * 2.0, ROOM.y + WALL, ROOM.z + WALL * 2.0)
 
 
 # --- Questions other scripts ask ---
@@ -256,8 +284,11 @@ func _ready() -> void:
 static func contains(where: Vector3) -> bool:
 	if instance == null:
 		return false
+	if not instance._placed:
+		return false
 	var local := where - instance.global_position
-	return absf(local.x) < ROOM.x * 0.5 + 1.0 and absf(local.z) < ROOM.z * 0.5 + 1.0 and local.y > -3.0 and local.y < ROOM.y + 3.0
+	# (Inside the walls only: the pavement outside and the roof are the city.)
+	return absf(local.x) < ROOM.x * 0.5 and absf(local.z) < ROOM.z * 0.5 and local.y > -1.0 and local.y < ROOM.y
 
 
 ## The Items node asks: is this sidewalk loot line's item really in the koi tank instead?
@@ -273,15 +304,19 @@ func loot_spots(counter: bool) -> Array[Vector3]:
 	return list
 
 
-## The city's Meow-Mart doorway (world position, street level), or INF if there's no door.
+## The store's doorway (world position, the outside of the front wall, street level), or INF if the
+## store isn't on a block.
 func street_door() -> Vector3:
-	var city := Game.instance.city if Game.instance != null else null
-	return city.meow_mart_door_spot if city != null else Vector3.INF
+	if not _placed or not enabled:
+		return Vector3.INF
+	var door := to_global(Vector3(0, 0, FRONT_Z + WALL))
+	door.y -= FLOOR_LIFT
+	return door
 
 
-## Which way is "out into the street" from the doorway.
+## Which way is "out into the street" from the doorway (the store always faces south, +z).
 func street_outward() -> Vector3:
-	return Game.instance.city.meow_mart_outward
+	return Vector3.BACK
 
 
 ## Where a cat stands when it comes OUT of the store (and the VAC-COPs gather in an alarm).
@@ -302,8 +337,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	if not enabled:
 		return
-	_animate_street_doors(delta)
-	_animate_inside_doors(delta)
+	_animate_doors(delta)
 	_animate_security_door(delta)
 	_animate_lights(delta)
 	_animate_koi()
@@ -318,39 +352,10 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not enabled or Game.instance == null or Game.instance.city == null:
+	if not enabled or not _placed or Game.instance == null:
 		return
-	# Every computer moves ITS OWN cats through the doors (the owner moves a cat: teleport_to).
-	for cat in Game.instance.local_cats():
-		_check_doorways(cat)
 	if multiplayer.is_server():
 		_host_tick(delta)
-
-
-## A cat crossing a doorway goes through it (outside -> foyer, foyer -> street).
-func _check_doorways(cat: CatPlayer) -> void:
-	if not cat.visible or cat.knocked_out or _clock < float(_cooldown.get(cat.player_id, 0.0)):
-		return
-	var here := cat.global_position
-	if contains(here):
-		var local := to_local(here)
-		if local.z > LEAVE_Z and absf(local.x) < ENTRY_HALF_WIDTH and street_door() != Vector3.INF:
-			var out := street_outward()
-			cat.teleport_to(street_spot() + Vector3(0, 0.3, 0), atan2(-out.x, -out.z))
-			_cooldown[cat.player_id] = _clock + door_cooldown
-			print("[MeowMart] %s left the store" % cat.name)
-		return
-	var door := street_door()
-	if door == Vector3.INF:
-		return
-	var out := street_outward()
-	var offset := here - door
-	var depth := -offset.dot(out)                        # > 0 = past the glass line, into the shop
-	var lateral := absf(offset.dot(Vector3(out.z, 0, -out.x)))  # sideways from the doorway's middle
-	if depth > -0.15 and depth < 1.0 and lateral < Game.instance.city.meow_mart_door_width * 0.5 - 0.1 and absf(offset.y) < 1.5:
-		cat.teleport_to(to_global(FOYER_SPOT), 0.0)  # (yaw 0 = facing into the store, north)
-		_cooldown[cat.player_id] = _clock + door_cooldown
-		print("[MeowMart] %s went inside" % cat.name)
 
 
 func _cats_inside() -> Array[CatPlayer]:
@@ -413,8 +418,8 @@ func _ask(kind: String, id: int, send: Callable) -> void:
 
 ## The nearer end of an aisle to a spot: {end: +1 / -1, distance (-1 = not near), inward (direction)}.
 func _nearest_end(aisle: int, local: Vector3) -> Dictionary:
-	var end := 1 if local.z > 0.0 else -1
-	var end_spot := Vector3(AISLE_X[aisle], 0, end * AISLE_LENGTH * 0.5)
+	var end := 1 if local.z > AISLE_Z else -1
+	var end_spot := Vector3(AISLE_X[aisle], 0, AISLE_Z + end * AISLE_LENGTH * 0.5)
 	var off := Motion.flat(local - end_spot)
 	# Standing off the end of the aisle (not along its side) and within its width.
 	if off.z * end < -0.1 or absf(off.x) > 0.8:
@@ -742,7 +747,7 @@ func _topple(aisle: int, side: int, from_end: int) -> void:
 		return
 	toppled[aisle] = side
 	_show_toppled(aisle, side, from_end, false)
-	Sound.play_at("shelf_collapse", to_global(Vector3(AISLE_X[aisle], 1.0, 0)), 2.0)
+	Sound.play_at("shelf_collapse", to_global(Vector3(AISLE_X[aisle], 1.0, AISLE_Z)), 2.0)
 	for player_cat in Game.instance.local_cats():
 		if contains(player_cat.global_position):
 			Seats.rumble(player_cat.player_id, 0.6, 0.6, 0.4)
@@ -965,7 +970,7 @@ func _show_toppled(aisle: int, side: int, from_end: int, instant: bool) -> void:
 	for shape: CollisionShape3D in _aisle_shapes[aisle]:
 		shape.disabled = true
 	var rubble := _aisle_rubble[aisle]
-	rubble.position = Vector3(AISLE_X[aisle] + side * (half_base + 0.8), 0.3, 0)
+	rubble.position = Vector3(AISLE_X[aisle] + side * (half_base + 0.8), 0.3, AISLE_Z)
 	rubble.disabled = false
 	# Every can stack on it comes down too (no extra mess: the topple already counted).
 	for stack in _stacks:
@@ -983,7 +988,7 @@ func _show_toppled(aisle: int, side: int, from_end: int, instant: bool) -> void:
 		can.set_instance_shader_parameter("instance_tint", PRODUCT_COLORS[i % PRODUCT_COLORS.size()])
 		add_child(can)
 		_spilled.append(can)
-		var start := Vector3(AISLE_X[aisle], rng.randf_range(0.4, 1.5), rng.randf_range(-AISLE_LENGTH * 0.5, AISLE_LENGTH * 0.5))
+		var start := Vector3(AISLE_X[aisle], rng.randf_range(0.4, 1.5), AISLE_Z + rng.randf_range(-AISLE_LENGTH * 0.5, AISLE_LENGTH * 0.5))
 		var land := Vector3(AISLE_X[aisle] + side * rng.randf_range(0.6, 3.2), 0.06, start.z + rng.randf_range(-1.2, 1.2))
 		land.z = clampf(land.z, BACK_WALL_Z + 0.4, FRONT_Z - 1.0)
 		var lying := Basis.from_euler(Vector3(PI / 2, rng.randf() * TAU, 0))
@@ -1051,35 +1056,21 @@ func _burst(color: Color, amount: int, size: float, speed: float) -> void:
 
 # --- Animations (every computer, every frame) ---
 
-func _animate_street_doors(delta: float) -> void:
-	var city := Game.instance.city if Game.instance != null else null
-	if city == null or city.meow_mart_doors.is_empty():
+## The sliding front doors open for any cat near them, inside or out (every computer, by itself).
+func _animate_doors(delta: float) -> void:
+	if not _placed:
 		return
-	var door := city.meow_mart_door_spot
+	var door := to_global(Vector3(0, 0, FRONT_Z))
 	var want := 0.0
 	for node in Game.instance.players.get_children():
 		var cat := node as Node3D
 		if cat.visible and Motion.flat_distance(cat.global_position, door) < door_open_distance and absf(cat.global_position.y - door.y) < 2.0:
 			want = 1.0
-	if want > 0.0 and _street_doors_open == 0.0:
+	if want > 0.0 and _doors_open == 0.0:
 		Sound.play_at("door_slide", door + Vector3(0, 1.5, 0), -4.0)
-	_street_doors_open = move_toward(_street_doors_open, want, door_slide_speed * delta)
-	for leaf in city.meow_mart_doors:
-		if is_instance_valid(leaf):
-			leaf.position.x = lerpf(leaf.get_meta("home_x"), leaf.get_meta("open_x"), _smooth(_street_doors_open))
-
-
-func _animate_inside_doors(delta: float) -> void:
-	var door := to_global(Vector3(0, 0, FRONT_Z))
-	var want := 0.0
-	for cat in _cats_inside():
-		if Motion.flat_distance(cat.global_position, door) < door_open_distance:
-			want = 1.0
-	if want > 0.0 and _inside_doors_open == 0.0:
-		Sound.play_at("door_slide", door + Vector3(0, 1.5, 0), -4.0)
-	_inside_doors_open = move_toward(_inside_doors_open, want, door_slide_speed * delta)
-	for leaf in _inside_leaves:
-		leaf.position.x = lerpf(leaf.get_meta("home_x"), leaf.get_meta("open_x"), _smooth(_inside_doors_open))
+	_doors_open = move_toward(_doors_open, want, door_slide_speed * delta)
+	for leaf in _door_leaves:
+		leaf.position.x = lerpf(leaf.get_meta("home_x"), leaf.get_meta("open_x"), _smooth(_doors_open))
 
 
 func _animate_security_door(delta: float) -> void:
@@ -1172,8 +1163,6 @@ func _make_materials() -> void:
 	_tube_mat = LevelKit.psx_material({"albedo_color": Color.WHITE, "emission_color": Color.WHITE, "emission_energy": 3.0})
 	_can_mat = LevelKit.psx_material({"albedo_color": Color.WHITE, "specular": 0.7, "roughness": 0.25})
 	_ice_mat = LevelKit.psx_material({"albedo_color": Color(0.85, 0.95, 1.0), "emission_color": Color(0.5, 0.8, 1.0), "emission_energy": 0.6, "specular": 0.9, "roughness": 0.1})
-	_night_mat = LevelKit.psx_material({"albedo_color": Color(0.02, 0.02, 0.05), "albedo_texture": preload("res://textures/neon_grid.png"),
-		"world_uv": true, "world_uv_scale": 0.5, "emission_color": Color(0.35, 0.2, 0.6), "emission_energy": 0.8, "emission_textured": true})
 	_glass_mat = StandardMaterial3D.new()
 	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_glass_mat.albedo_color = Color(0.55, 0.85, 1.0, 0.22)
@@ -1206,7 +1195,7 @@ func _build() -> void:
 	floor_mesh.mesh = LevelKit.subdivided_plane(Vector2(ROOM.x, ROOM.z))
 	floor_mesh.material_override = _floor_mat
 	add_child(floor_mesh)
-	LevelKit.add_collision(shell, Vector3(0, -0.5, 0), Vector3(ROOM.x + 2, 1, ROOM.z + 2))
+	LevelKit.add_collision(shell, Vector3(0, -0.5, 0), Vector3(ROOM.x + WALL * 2.0, 1, ROOM.z + WALL * 2.0))
 	_solid_box(shell, Vector3(0, ROOM.y + WALL * 0.5, 0), Vector3(ROOM.x + WALL * 2, WALL, ROOM.z + WALL * 2), _wall_mat)
 	_solid_box(shell, Vector3(-half.x - WALL * 0.5, half.y, 0), Vector3(WALL, ROOM.y, ROOM.z), _wall_mat)
 	_solid_box(shell, Vector3(half.x + WALL * 0.5, half.y, 0), Vector3(WALL, ROOM.y, ROOM.z), _wall_mat)
@@ -1245,33 +1234,31 @@ func _solid_box(body: StaticBody3D, center: Vector3, size: Vector3, material: Ma
 
 
 ## The front wall: glass, the sliding doors, and the night outside them.
+## The front wall: the glass front with the sliding doors in the middle. The doorway is a real
+## gap in the wall (the glass leaves only slide for show: you walk straight in and out).
 func _build_front(shell: StaticBody3D) -> void:
 	var half_x := ROOM.x * 0.5
-	var glass_half := 3.5
-	var glass_height := 3.0
 	var z := FRONT_Z + WALL * 0.5
 	for side in [-1.0, 1.0]:
-		var width := half_x - glass_half
-		_solid_box(shell, Vector3(side * (glass_half + width * 0.5), ROOM.y * 0.5, z), Vector3(width, ROOM.y, WALL), _wall_mat)
-		# Fixed glass beside the doors (solid: you only get out through the doors).
-		LevelKit.add_box(self, Vector3(side * (ENTRY_HALF_WIDTH + (glass_half - ENTRY_HALF_WIDTH) * 0.5), glass_height * 0.5, FRONT_Z),
-			Vector3(glass_half - ENTRY_HALF_WIDTH, glass_height, 0.06), _glass_mat, false)
-		LevelKit.add_collision(shell, Vector3(side * (ENTRY_HALF_WIDTH + (glass_half - ENTRY_HALF_WIDTH) * 0.5), glass_height * 0.5, FRONT_Z), Vector3(glass_half - ENTRY_HALF_WIDTH, glass_height, 0.3))
-	_solid_box(shell, Vector3(0, glass_height + (ROOM.y - glass_height) * 0.5, z), Vector3(glass_half * 2.0, ROOM.y - glass_height, WALL), _wall_mat)
-	# The night street "outside" (a glowing backdrop; you leave before you'd ever reach it).
-	LevelKit.add_box(self, Vector3(0, glass_height * 0.5, FRONT_Z + 0.6), Vector3(glass_half * 2.0, glass_height, 0.2), _night_mat, false)
-	LevelKit.add_collision(shell, Vector3(0, glass_height * 0.5, FRONT_Z + 0.7), Vector3(glass_half * 2.0, glass_height, 0.2))
-	# The two sliding leaves (inside the glass line).
+		var width := half_x - GLASS_HALF
+		_solid_box(shell, Vector3(side * (GLASS_HALF + width * 0.5), ROOM.y * 0.5, z), Vector3(width, ROOM.y, WALL), _wall_mat)
+		# Fixed glass beside the doors (solid: you only get in and out through the doors).
+		LevelKit.add_box(self, Vector3(side * (ENTRY_HALF_WIDTH + (GLASS_HALF - ENTRY_HALF_WIDTH) * 0.5), GLASS_HEIGHT * 0.5, z),
+			Vector3(GLASS_HALF - ENTRY_HALF_WIDTH, GLASS_HEIGHT, 0.06), _glass_mat, false)
+		LevelKit.add_collision(shell, Vector3(side * (ENTRY_HALF_WIDTH + (GLASS_HALF - ENTRY_HALF_WIDTH) * 0.5), GLASS_HEIGHT * 0.5, z), Vector3(GLASS_HALF - ENTRY_HALF_WIDTH, GLASS_HEIGHT, WALL))
+	_solid_box(shell, Vector3(0, GLASS_HEIGHT + (ROOM.y - GLASS_HEIGHT) * 0.5, z), Vector3(GLASS_HALF * 2.0, ROOM.y - GLASS_HEIGHT, WALL), _wall_mat)
+	# The two sliding leaves, just inside the glass line (no collision).
 	for side in [-1.0, 1.0]:
 		var leaf := Node3D.new()
-		leaf.position = Vector3(side * ENTRY_HALF_WIDTH * 0.5, 0, FRONT_Z - 0.12)
+		leaf.position = Vector3(side * ENTRY_HALF_WIDTH * 0.5, 0, z - 0.12)
 		leaf.set_meta("home_x", leaf.position.x)
 		leaf.set_meta("open_x", leaf.position.x + side * ENTRY_HALF_WIDTH * 0.95)
 		add_child(leaf)
-		LevelKit.add_box(leaf, Vector3(0, (glass_height - 0.2) * 0.5, 0), Vector3(ENTRY_HALF_WIDTH - 0.04, glass_height - 0.2, 0.05), _glass_mat, false)
-		var bar := LevelKit.add_box(leaf, Vector3(-side * ENTRY_HALF_WIDTH * 0.35, 1.0, -0.045), Vector3(0.06, 0.5, 0.04), _neon_mat, false)
-		bar.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.65))
-		_inside_leaves.append(leaf)
+		LevelKit.add_box(leaf, Vector3(0, (GLASS_HEIGHT - 0.2) * 0.5, 0), Vector3(ENTRY_HALF_WIDTH - 0.04, GLASS_HEIGHT - 0.2, 0.05), _glass_mat, false)
+		for face in [-1.0, 1.0]:  # a pink push bar on both faces
+			var bar := LevelKit.add_box(leaf, Vector3(-side * ENTRY_HALF_WIDTH * 0.35, 1.0, face * 0.045), Vector3(0.06, 0.5, 0.04), _neon_mat, false)
+			bar.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.65))
+		_door_leaves.append(leaf)
 	# A rubber welcome mat (a box ON the floor, not a sticker 1 cm above it).
 	var mat := LevelKit.add_box(self, Vector3(0, 0.025, FRONT_Z - 0.9), Vector3(2.2, 0.05, 1.0), _metal_mat, false)
 	mat.set_instance_shader_parameter("instance_tint", Color(1.0, 0.45, 0.8))
@@ -1310,8 +1297,8 @@ func _build_back_wall(shell: StaticBody3D) -> void:
 
 
 func _build_lights() -> void:
-	var spots: Array[Vector3] = [Vector3(-7, 0, 0.5), Vector3(-0.75, 0, 0.5), Vector3(5.5, 0, 0.5),
-		Vector3(-7, 0, 5.5), Vector3(-0.75, 0, 5.5), Vector3(5.5, 0, 5.5), Vector3(-5, 0, -6), Vector3(5, 0, -6)]
+	var spots: Array[Vector3] = [Vector3(-7, 0, -0.6), Vector3(-0.75, 0, -0.6), Vector3(5.5, 0, -0.6),
+		Vector3(-7, 0, 3.6), Vector3(-0.75, 0, 3.6), Vector3(5.5, 0, 3.6), Vector3(-5, 0, -3.8), Vector3(5, 0, -3.8)]
 	for spot in spots:
 		var tube := LevelKit.add_box(self, Vector3(spot.x, ROOM.y - 0.12, spot.z), Vector3(2.4, 0.08, 0.25), _tube_mat, false)
 		tube.set_instance_shader_parameter("instance_tint", light_color)
@@ -1322,21 +1309,21 @@ func _build_lights() -> void:
 func _build_signs() -> void:
 	LevelKit.add_sign(self, "MEOW-MART", Vector3(-4.0, 3.6, BACK_WALL_Z + WALL * 0.5 + 0.05), Color(1, 0.1, 0.65), 72, 0.0)
 	LevelKit.add_light(self, Vector3(-4.0, 3.4, BACK_WALL_Z + 1.0), Color(1, 0.15, 0.6), 1.5, 6.0)
-	LevelKit.add_sign(self, "CHECKOUT", Vector3((CHECKOUT_X[0] + CHECKOUT_X[1]) * 0.5, 3.4, CHECKOUT_Z + 1.4), Color(0.2, 0.9, 1), 40, 0.0)
+	LevelKit.add_sign(self, "CHECKOUT", Vector3((CHECKOUT_X[0] + CHECKOUT_X[1]) * 0.5, 3.4, CHECKOUT_Z + 1.2), Color(0.2, 0.9, 1), 40, 0.0)
 	LevelKit.add_sign(self, "FRESH CATCH", Vector3(ROOM.x * 0.5 - 0.05, 2.9, (COUNTER_Z.x + COUNTER_Z.y) * 0.5), Color(0.3, 0.85, 1), 48, -PI / 2)
 	LevelKit.add_light(self, Vector3(COUNTER_X - 1.2, 2.6, (COUNTER_Z.x + COUNTER_Z.y) * 0.5), Color(0.3, 0.8, 1), 1.4, 6.0)
 	LevelKit.add_sign(self, "EMPLOYEES ONLY", Vector3(SECURITY_DOOR_X, SECURITY_DOOR_HEIGHT + 0.5, BACK_WALL_Z + WALL * 0.5 + 0.05), Color(1, 0.15, 0.1), 28, 0.0)
 	LevelKit.add_sign(self, "SECURITY SCALE\nSTAND HERE", Vector3(-ROOM.x * 0.5 + 0.05, 1.9, PLATE_SPOT.z), Color(1, 0.75, 0.15), 22, PI / 2)
 	for aisle in AISLE_X.size():
-		LevelKit.add_sign(self, "AISLE %d" % (aisle + 1), Vector3(AISLE_X[aisle], 3.3, AISLE_LENGTH * 0.5 + 0.2), Color(0.3, 1, 0.5), 32, 0.0)
+		LevelKit.add_sign(self, "AISLE %d" % (aisle + 1), Vector3(AISLE_X[aisle], 3.3, AISLE_Z + AISLE_LENGTH * 0.5 + 0.2), Color(0.3, 1, 0.5), 32, 0.0)
 
 
 func _build_checkouts(shell: StaticBody3D) -> void:
 	for lane in CHECKOUT_X.size():
 		var x: float = CHECKOUT_X[lane]
-		var counter := _solid_box(shell, Vector3(x, 0.42, CHECKOUT_Z), Vector3(0.8, 0.84, 2.4), _metal_mat)
+		var counter := _solid_box(shell, Vector3(x, 0.42, CHECKOUT_Z), Vector3(0.8, 0.84, CHECKOUT_LENGTH), _metal_mat)
 		counter.set_instance_shader_parameter("instance_tint", Color(0.5, 0.45, 0.6))
-		LevelKit.add_box(self, Vector3(x, 0.88, CHECKOUT_Z + 0.25), Vector3(0.55, 0.08, 1.7), _metal_mat, false)  # conveyor belt
+		LevelKit.add_box(self, Vector3(x, 0.88, CHECKOUT_Z + 0.25), Vector3(0.55, 0.08, CHECKOUT_LENGTH - 0.7), _metal_mat, false)  # conveyor belt
 		var register := LevelKit.add_box(self, Vector3(x, 1.06, CHECKOUT_Z - 0.9), Vector3(0.45, 0.4, 0.4), _metal_mat, false)
 		register.set_instance_shader_parameter("instance_tint", Color(0.25, 0.25, 0.3))
 		var screen := LevelKit.add_box(self, Vector3(x, 1.38, CHECKOUT_Z - 0.95), Vector3(0.35, 0.22, 0.05), _neon_mat, false)
@@ -1359,7 +1346,7 @@ func _build_aisle(aisle: int) -> void:
 		var box := BoxShape3D.new()
 		box.size = Vector3(width, top - bottom, AISLE_LENGTH)
 		shape.shape = box
-		shape.position = Vector3(x, (top + bottom) * 0.5, 0)
+		shape.position = Vector3(x, (top + bottom) * 0.5, AISLE_Z)
 		body.add_child(shape)
 		_aisle_shapes[aisle].append(shape)
 		bottom = top
@@ -1373,7 +1360,7 @@ func _build_aisle(aisle: int) -> void:
 
 	var seg_length := AISLE_LENGTH / AISLE_SEGMENTS
 	for seg in AISLE_SEGMENTS:
-		var seg_z := -AISLE_LENGTH * 0.5 + seg_length * (seg + 0.5)
+		var seg_z := AISLE_Z - AISLE_LENGTH * 0.5 + seg_length * (seg + 0.5)
 		var pivot := Node3D.new()
 		pivot.position = Vector3(x, 0, seg_z)
 		add_child(pivot)
@@ -1395,7 +1382,7 @@ func _build_aisle(aisle: int) -> void:
 			_add_stack(aisle, _ledge_spot(x, side, stack_tier, seg_z + z_shift))
 			_loot_shelf.append(_ledge_spot(x, side, loot_tier, seg_z - z_shift) + Vector3(0, 0.15, 0))
 			for n in 3:
-				var at := _ledge_spot(0.0, side, stock_tier, (n - 1) * 0.32)
+				var at := _ledge_spot(0.0, side, stock_tier, (n - 1) * 0.28)
 				var product := LevelKit.add_box(inner, at + Vector3(0, 0.14, 0), Vector3(0.12, 0.28, 0.2), _can_mat, false)
 				product.set_instance_shader_parameter("instance_tint", PRODUCT_COLORS[(seg * 3 + n + aisle * 2 + side) % PRODUCT_COLORS.size()])
 
@@ -1474,22 +1461,22 @@ func _build_crate() -> void:
 
 ## The back room: a security desk with a monitor, racks of spare crates (the tank is its own piece).
 func _build_back_room(shell: StaticBody3D) -> void:
-	var desk := _solid_box(shell, Vector3(-8.5, 0.4, -6.8), Vector3(2.2, 0.8, 1.0), _metal_mat)
+	var desk := _solid_box(shell, Vector3(-8.5, 0.4, -4.6), Vector3(2.2, 0.8, 1.0), _metal_mat)
 	desk.set_instance_shader_parameter("instance_tint", Color(0.3, 0.3, 0.35))
-	var monitor := LevelKit.add_box(self, Vector3(-8.5, 1.15, -7.05), Vector3(0.9, 0.65, 0.4), _metal_mat, false)
+	var monitor := LevelKit.add_box(self, Vector3(-8.5, 1.15, -4.85), Vector3(0.9, 0.65, 0.4), _metal_mat, false)
 	monitor.set_instance_shader_parameter("instance_tint", Color(0.15, 0.15, 0.18))
-	var screen := LevelKit.add_box(self, Vector3(-8.5, 1.15, -6.84), Vector3(0.75, 0.5, 0.02), _neon_mat, false)
+	var screen := LevelKit.add_box(self, Vector3(-8.5, 1.15, -4.64), Vector3(0.75, 0.5, 0.02), _neon_mat, false)
 	screen.set_instance_shader_parameter("instance_tint", Color(0.05, 0.3, 0.15))
-	_monitor_label = LevelKit.add_sign(self, "", Vector3(-8.5, 1.15, -6.8), Color(0.3, 1, 0.6), 12, 0.0)
+	_monitor_label = LevelKit.add_sign(self, "", Vector3(-8.5, 1.15, -4.6), Color(0.3, 1, 0.6), 12, 0.0)
 	_monitor_label.pixel_size = 0.006
-	LevelKit.add_light(self, Vector3(-8.5, 1.4, -6.2), Color(0.3, 1, 0.6), 0.8, 3.0)
+	LevelKit.add_light(self, Vector3(-8.5, 1.4, -4.0), Color(0.3, 1, 0.6), 0.8, 3.0)
 	# Racks of spare stock on the east side.
 	for level in 3:
-		_solid_box(shell, Vector3(9.3, 0.05 + level * 0.8, -6.3), Vector3(1.6, 0.06, 3.0), _metal_mat)
+		_solid_box(shell, Vector3(9.3, 0.05 + level * 0.8, -3.8), Vector3(1.6, 0.06, 2.6), _metal_mat)
 		for n in 3:
-			var crate := LevelKit.add_box(self, Vector3(9.3, 0.08 + level * 0.8 + 0.25, -7.4 + n * 1.1), Vector3(0.9, 0.5, 0.7), _shelf_mat, false)
+			var crate := LevelKit.add_box(self, Vector3(9.3, 0.08 + level * 0.8 + 0.25, -4.7 + n * 0.9), Vector3(0.9, 0.5, 0.7), _shelf_mat, false)
 			crate.set_instance_shader_parameter("instance_tint", Color(0.7, 0.5, 0.3))
-	for post in [Vector3(8.55, 0, -7.75), Vector3(10.05, 0, -7.75), Vector3(8.55, 0, -4.85), Vector3(10.05, 0, -4.85)]:
+	for post in [Vector3(8.55, 0, -5.05), Vector3(10.05, 0, -5.05), Vector3(8.55, 0, -2.55), Vector3(10.05, 0, -2.55)]:
 		_solid_box(shell, post + Vector3(0, 1.1, 0), Vector3(0.08, 2.2, 0.08), _metal_mat)
 
 
@@ -1527,8 +1514,8 @@ func _build_tank() -> void:
 	water_floor.roughness = 0.05
 	water_floor.metallic_specular = 1.0
 	var puddle_mesh := CylinderMesh.new()
-	puddle_mesh.top_radius = 2.2
-	puddle_mesh.bottom_radius = 2.2
+	puddle_mesh.top_radius = 1.5
+	puddle_mesh.bottom_radius = 1.5
 	puddle_mesh.height = 0.04
 	puddle_mesh.radial_segments = 10
 	puddle_mesh.rings = 0
@@ -1539,7 +1526,7 @@ func _build_tank() -> void:
 	_puddle.visible = false
 	add_child(_puddle)
 	for i in 14:
-		var shard := LevelKit.add_box(self, TANK_SPOT + Vector3(cos(i * 2.4) * (0.9 + 0.1 * (i % 4)), 0.02, sin(i * 2.4) * (0.8 + 0.12 * (i % 3)) + 0.3),
+		var shard := LevelKit.add_box(self, TANK_SPOT + Vector3(cos(i * 2.4) * (0.9 + 0.1 * (i % 4)), 0.02, sin(i * 2.4) * (0.6 + 0.1 * (i % 3)) + 0.3),
 			Vector3(0.12, 0.04, 0.07), _ice_mat, false)
 		shard.rotation.y = i * 0.7
 		shard.visible = false

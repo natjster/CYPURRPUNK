@@ -2,6 +2,9 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ## DevCapture test module: Meow-Mart interior heist tests.
 ## Made by scripts/dev_capture.gd `_add_module`; its options are listed at the top of dev_capture.gd.
 
+## Just inside the front doors (store coordinates).
+const FOYER := Vector3(0, 0.2, 4.2)
+
 
 func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
 	var mart := MeowMartInterior.instance
@@ -17,10 +20,10 @@ func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture mart door: door=%s outward=%s cat=%s" % [mart.street_door().snapped(Vector3.ONE * 0.1), out, player.global_position.snapped(Vector3.ONE * 0.1)])
 	if args.has("inside_meow_mart"):
 		var where: String = args["inside_meow_mart"]
-		var spots := {"plate": MeowMartInterior.PLATE_SPOT + Vector3(1.6, 0.2, 0), "aisle": Vector3(-0.75, 0.2, 3.6),
-			"tank": MeowMartInterior.TANK_SPOT + Vector3(0, 0.2, 1.6), "backroom": Vector3(4.0, 0.2, -5.0),
-			"counter": Vector3(8.4, 0.2, 0.0), "door": Vector3(0, 0.2, 7.0)}
-		var local: Vector3 = spots.get(where, MeowMartInterior.FOYER_SPOT)
+		var spots := {"plate": MeowMartInterior.PLATE_SPOT + Vector3(1.6, 0.2, 0), "aisle": Vector3(-0.75, 0.2, 3.4),
+			"tank": MeowMartInterior.TANK_SPOT + Vector3(0, 0.2, 1.6), "backroom": Vector3(4.0, 0.2, -3.5),
+			"counter": Vector3(8.4, 0.2, 0.0), "door": Vector3(0, 0.2, 4.9)}
+		var local: Vector3 = spots.get(where, FOYER)
 		player.teleport_to(mart.to_global(local), PI if where == "door" else 0.0)
 		for i in 10:
 			await get_tree().physics_frame
@@ -45,7 +48,7 @@ func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
 			done += 1
 	if args.has("mart_topple"):
 		var aisle := clampi(int(args["mart_topple"]) - 1, 0, 1)
-		player.teleport_to(mart.to_global(Vector3(MeowMartInterior.AISLE_X[aisle] - 0.3, 0.2, MeowMartInterior.AISLE_LENGTH * 0.5 + 0.5)), 0.0)
+		player.teleport_to(mart.to_global(Vector3(MeowMartInterior.AISLE_X[aisle] - 0.3, 0.2, MeowMartInterior.AISLE_Z + MeowMartInterior.AISLE_LENGTH * 0.5 + 0.5)), 0.0)
 		for i in 4:
 			await get_tree().physics_frame
 		mart.cat_bump(player, Vector3(0, 0, -9.0))  # as if the cat ran at it with zoomies
@@ -57,7 +60,7 @@ func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
 		for i in 30:
 			await get_tree().physics_frame
 		print("DevCapture mart plate on: plate=%s door=%s" % [mart.plate_pressed, mart.security_open])
-		player.teleport_to(mart.to_global(MeowMartInterior.FOYER_SPOT), 0.0)
+		player.teleport_to(mart.to_global(FOYER), 0.0)
 		for i in 60:
 			await get_tree().physics_frame
 		print("DevCapture mart plate off 1s: plate=%s door=%s" % [mart.plate_pressed, mart.security_open])
@@ -85,7 +88,7 @@ func _meow_mart_test(player: CatPlayer, args: Dictionary) -> void:
 		for i in 10:
 			await get_tree().physics_frame
 		Interactable.try_use(player)  # (let go)
-		player.teleport_to(mart.to_global(MeowMartInterior.FOYER_SPOT), 0.0)
+		player.teleport_to(mart.to_global(FOYER), 0.0)
 		for i in 150:
 			await get_tree().physics_frame
 		print("DevCapture mart drag: crate=%s dragger=%d plate=%s door=%s" % [mart.crate_pos.snapped(Vector3.ONE * 0.1), mart.crate_dragger, mart.plate_pressed, mart.security_open])

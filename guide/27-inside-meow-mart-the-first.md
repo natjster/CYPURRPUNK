@@ -3,10 +3,20 @@
 [Back to the contents page](../SETUP_GUIDE.md)
 
 
-Meow-Mart's front is now a **glass storefront with sliding doors**. Walk up and they slide open
-(pneumatic `door_slide`); walk through and you're **inside a neon-lit supermarket**. Walk back out
-through the same doors (they're right behind you when you come in) and you're on the sidewalk in
-front of the shop again.
+Meow-Mart is a **real walk-in store**: it takes the whole south half of a city block, and the
+supermarket is right there behind its glass front. Walk up, the sliding doors open (pneumatic
+`door_slide`), and you just **walk in** — no teleport, no loading. You can see the street through the
+glass from inside, and the shop's glow from the street.
+
+### The outside (the BADASS part)
+- **Corrugated plum-metal walls** with a roof parapet, and a tall **sign facade** with MEOW-MART in giant
+  pink neon letters and a cyan "24/7 * FISH * CATNIP * NO DOGS" strap line.
+- A **pink neon frame** round the glass, a steel **awning** over the doors with a cyan neon lip.
+- On the roof: a **GIANT NEON CAT HEAD** (glowing green eyes that blink), and **AC units** with spinning fans.
+- **OVERCLEAN security cameras** sweeping the street from the front corners (and three more inside,
+  one watching the koi tank), red lenses glowing.
+- Inside: a row of glowing **FROZEN freezer cases** on the back wall and a nest of shopping carts by the door.
+- The old line of fish in front of the door is gone (it blocked the entrance).
 
 ### What's in there
 ```
@@ -46,8 +56,10 @@ front of the shop again.
 
 ### Tuning (no code)
 Open `scenes/main.tscn`, click **Main > MeowMart**, and look in the Inspector:
-- **Enabled** — off = the doors stay shut and the golden koi goes back to a random sidewalk.
-- **Doors:** *Door Open Distance* (3.2 m), *Door Slide Speed*, *Door Cooldown*.
+- **Enabled** — off = Meow-Mart is a solid pink box nobody can go in, and the golden koi goes back to a random sidewalk.
+- **Doors:** *Door Open Distance* (3.2 m), *Door Slide Speed*.
+- **Outside:** *Cladding Tint* (the wall metal), *Sign Color* (pink neon), *Trim Color* (cyan neon),
+  *Cat Sign Scale* (the rooftop cat head, 1.25), *Camera Sweep* (how far the cameras swing).
 - **Look:** *Fog Color / Fog Albedo / Ambient Color / Ambient Energy* (the store's haze), *Ambience*
   (the hum), *Light Color / Light Energy / Light Range* (the tubes), *Flicker Chance*.
 - **Mess:** *Swat Bump Speed*, *Swat Reach*, *Swat Heat*, *Topple Ram Speed* (6 = zoomies only),
@@ -57,21 +69,25 @@ Open `scenes/main.tscn`, click **Main > MeowMart**, and look in the Inspector:
 - **Golden Koi Tank:** *Tank Item* (`golden_koi`), *Tank Hits To Break* (3), *Pounce Speed*, *Tank Mess*.
 - **Store Alarm:** *Alarm Heat* (25), *Alarm Seconds* (60), *Ambush Bots* (4), *Ambush Call Range*
   (90 m), *Ambush Call Every* (6 s), *Ambush Seconds* (45), *Alarm Sound* and *Alarm Line*.
-- **The storefront** (the glass front in the city) is on **Main > City**, group **Meow-Mart
-  storefront**: *Storefront Doors* (off = the old solid box), *Recess*, *Width*, *Height*, *Glow Color*.
+- **The pavement props** outside (vending machine, A-frame, carts, dumpster) are on **Main > City**:
+  *Props At Meow Mart*.
+- **The 3D models** (`models/mart_cat_sign.glb`, `security_cam.glb`, `rooftop_ac.glb`, `freezer_case.glb`)
+  come from recipes in `tools/make_meow_mart_specs.py`; open `models/blockbench/<name>.bbmodel` in
+  Blockbench to repaint one, then ask Claude to re-export it.
 - **The new loot** cards: `items/fresh_catch.tres`, `items/gourmet_tuna.tres`, `items/catnip_treats.tres`
   (models `scenes/items/tuna_can.tscn`, `catnip_treats.tscn`; the Fresh Catch reuses the fish model).
 
 ### How it works (for Claude / the curious)
-- The store is NOT behind the doors: it's built once from code, 50 m under the middle of the city
-  (`Main/MeowMart`, `scenes/interiors/meow_mart_interior.tscn` -> `scripts/interiors/meow_mart_interior.gd`,
-  class `MeowMartInterior`, at y = -50). Crossing the city's glass line or the store's front doorway
-  moves the cat with `CatPlayer.teleport_to` (each computer moves its own cats). Above y = -100 still
-  counts as "up top" (`UndergroundHub.is_in_hub` is false): heat ticks, guns fire, the DEEP CLEAN still
-  gets you. `MeowMartInterior.contains(pos)` = "inside the store"; `hub.mood_at` returns `MART_MOOD` there.
-- The city side: `CityGenerator._build_meow_mart_storefront` (no random numbers, so cities are unchanged)
-  fills `city.meow_mart_doors` (the two leaves), `meow_mart_door_spot` and `meow_mart_door_width`; the
-  interior script slides the leaves.
+- The store is built once from code (`Main/MeowMart`, `scenes/interiors/meow_mart_interior.tscn` ->
+  `scripts/interiors/meow_mart_interior.gd`, class `MeowMartInterior`; the outside dressing is
+  `scripts/interiors/meow_mart_exterior.gd`) and **moved onto its block** every district:
+  `CityGenerator._build_meow_mart(block_center)` calls `place_in_city(...)` (the store always faces
+  south, +z; it waits hidden at y = -50 until then). Its floor is 6 cm above the street (`FLOOR_LIFT`)
+  so it never flickers with the pavement. `MeowMartInterior.contains(pos)` = "inside the walls";
+  `hub.mood_at` returns `MART_MOOD` there.
+- The city side: `city.meow_mart_door_spot` (the doorway), `meow_mart_position` (1 m out in the
+  street). The store's footprint is `MeowMartInterior.outer_size()`; the lamp that would stand in
+  front of the doors is moved 7 m along.
 - Host-decided, everyone shown: `request_swat / request_topple / request_tank_hit / request_drag /
   request_push / request_exit_button` (first argument = player id, `PlayerId.sender_owns`) ->
   `_swat / _topple / _set_tank_hits / _shatter / _set_alarm / _set_doors / _set_crate` RPCs.
@@ -84,7 +100,8 @@ Open `scenes/main.tscn`, click **Main > MeowMart**, and look in the Inspector:
   target's own position.
 
 ### Testing
-- `--host --deploy --test_meow_mart --hold=move_forward` walks you in (`[MeowMart] 1 went inside`).
+- `--host --seed=1999 --test_meow_mart=4 --hold=move_forward --hold_frames=110 --mart_log=30` walks you
+  in (the log's `in=true`). Film shots: `--seed=1999 --no_hud --cam_from=-7,4,8 --look_from=-18,5,-10`.
 - `--inside_meow_mart[=foyer|plate|aisle|tank|backroom|counter|door]` puts you inside.
 - `--shatter_tank[=F]` (host) breaks the tank: prints `DevCapture mart shatter: ... heat 0.7 -> 26.3 ...`.
 - `--mart_swat=N`, `--mart_topple=1|2`, `--mart_plate`, `--mart_drag`, `--mart_tank_hits=N`, `--mart_log[=N]`

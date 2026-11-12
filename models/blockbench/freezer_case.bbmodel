@@ -1,0 +1,353 @@
+{
+	"meta": {
+		"format_version": "4.10",
+		"model_format": "free",
+		"box_uv": false
+	},
+	"name": "freezer_case",
+	"model_identifier": "",
+	"visible_box": [
+		1,
+		1,
+		0
+	],
+	"variable_placeholders": "",
+	"variable_placeholder_buttons": [],
+	"timeline_setups": [],
+	"unhandled_root_fields": {},
+	"resolution": {
+		"width": 64,
+		"height": 64
+	},
+	"elements": [
+		{
+			"name": "cabinet",
+			"box_uv": false,
+			"rescale": false,
+			"locked": false,
+			"render_order": "default",
+			"allow_mirror_modeling": true,
+			"from": [
+				-16,
+				0,
+				-6
+			],
+			"to": [
+				16,
+				35.2,
+				6.4
+			],
+			"autouv": 0,
+			"color": 0,
+			"origin": [
+				0.0,
+				17.6,
+				0.20000000000000018
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						0,
+						32,
+						32,
+						40
+					],
+					"texture": 0
+				},
+				"south": {
+					"uv": [
+						32,
+						8,
+						64,
+						40
+					],
+					"texture": 0
+				},
+				"east": {
+					"uv": [
+						32,
+						8,
+						64,
+						40
+					],
+					"texture": 0
+				},
+				"west": {
+					"uv": [
+						32,
+						8,
+						64,
+						40
+					],
+					"texture": 0
+				},
+				"up": {
+					"uv": [
+						32,
+						8,
+						64,
+						40
+					],
+					"texture": 0
+				},
+				"down": {
+					"uv": [
+						32,
+						8,
+						64,
+						40
+					],
+					"texture": 0
+				}
+			},
+			"type": "cube",
+			"uuid": "5d2b7fda-2104-47e6-8367-701832ddaa43"
+		},
+		{
+			"name": "doors",
+			"box_uv": false,
+			"rescale": false,
+			"locked": false,
+			"render_order": "default",
+			"allow_mirror_modeling": true,
+			"from": [
+				-15,
+				3,
+				-6.6
+			],
+			"to": [
+				15,
+				31,
+				-6
+			],
+			"autouv": 0,
+			"color": 0,
+			"origin": [
+				0.0,
+				17.0,
+				-6.3
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						0,
+						0,
+						32,
+						32
+					],
+					"texture": 0
+				},
+				"south": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"east": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"west": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"down": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				}
+			},
+			"type": "cube",
+			"uuid": "b9737873-eb70-4a80-bbd6-ec3219939233"
+		},
+		{
+			"name": "header",
+			"box_uv": false,
+			"rescale": false,
+			"locked": false,
+			"render_order": "default",
+			"allow_mirror_modeling": true,
+			"from": [
+				-16,
+				31.4,
+				-6.8
+			],
+			"to": [
+				16,
+				35.2,
+				-6
+			],
+			"autouv": 0,
+			"color": 0,
+			"origin": [
+				0.0,
+				33.3,
+				-6.4
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						32,
+						0,
+						64,
+						8
+					],
+					"texture": 0
+				},
+				"south": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"east": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"west": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"up": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				},
+				"down": {
+					"uv": [
+						0,
+						0,
+						0,
+						0
+					],
+					"texture": null
+				}
+			},
+			"type": "cube",
+			"uuid": "89c1923a-6735-4a2a-bd56-b37bcfaa3d10"
+		}
+	],
+	"outliner": [
+		{
+			"name": "Body",
+			"origin": [
+				0,
+				0,
+				0
+			],
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"color": 0,
+			"uuid": "342c9595-ca62-44f9-98a6-34538907c4dd",
+			"export": true,
+			"mirror_uv": false,
+			"isOpen": true,
+			"locked": false,
+			"visibility": true,
+			"autouv": 0,
+			"children": [
+				{
+					"name": "Glow",
+					"origin": [
+						0,
+						0,
+						-6
+					],
+					"rotation": [
+						0,
+						0,
+						0
+					],
+					"color": 0,
+					"uuid": "ffaa97ed-8218-437f-b28b-1d0642a0c62b",
+					"export": true,
+					"mirror_uv": false,
+					"isOpen": true,
+					"locked": false,
+					"visibility": true,
+					"autouv": 0,
+					"children": [
+						"b9737873-eb70-4a80-bbd6-ec3219939233",
+						"89c1923a-6735-4a2a-bd56-b37bcfaa3d10"
+					]
+				},
+				"5d2b7fda-2104-47e6-8367-701832ddaa43"
+			]
+		}
+	],
+	"textures": [
+		{
+			"path": "",
+			"name": "freezer_case.png",
+			"folder": "",
+			"namespace": "",
+			"id": "0",
+			"width": 64,
+			"height": 64,
+			"uv_width": 64,
+			"uv_height": 64,
+			"particle": false,
+			"use_as_default": false,
+			"layers_enabled": false,
+			"sync_to_project": "",
+			"render_mode": "default",
+			"render_sides": "auto",
+			"frame_time": 1,
+			"frame_order_type": "loop",
+			"frame_order": "",
+			"frame_interpolate": false,
+			"visible": true,
+			"internal": true,
+			"saved": false,
+			"uuid": "47be2ab2-eb8e-42d7-b060-96f8289dcda3",
+			"relative_path": "",
+			"source": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAIh0lEQVR4nOVZy6ssRxn/dU3P+/06j3tzCS4kcLlkqeIrLuIDV+ofoOA1El0lBglk5UZBQZOV78SFJAiCZiUoF0TUxd1KlAgJel5zzpnnOfPs6ad81VM91TPdM3PmCLPoH8xU1Vf1VVd9/b2qWvnoJz/nYIf417vv7vLxUOnvld/9YSvm733p8/h/8O9cALZzOyW4LX8QvvmP/3j1Hz/9Aa9NdXmMaIeNX8XvCcBygC+88EPIePu1lxCE3yZ+vUQj/jAor7FAuvOCjXVYXKzYSFAZJogwfp8AnIANEO2Ll5/w0X6//9fgzdDYF/0C5ONffQlKyOY2UZrFxS62bzuewMJUeFPaNvR1feveYBCCNrtu83MBYBmb0rahr+vbBEHqTG1ZQIvtFU4QywvckLYNfV0fIextyvSw+qb8BIXygB/9/KfYBt/6+vO8vA2/po289l69jmarxeu6PuVlIpH08TiOA0WZe5ZqpYJOt8vrpmmgVqvh6urax3Owv4+Ly0tej8VisCzLrwHvF+7iNrgNv6a5GyUcn5zyzdEmF/tNw4Aaj/uE1ThveP2ZdBq6bmI0mnBauVxCr3fF+957732PN5GIQ9eN9VEgDB93erz8m1L2aMQfRN8EpqHzkt4KvR3HsaEoy6GTBADMF9ponMG2bZizxfdn8/S6HV5enDd4eXh4iGaz5T1Hm4yxt1dHu90GY7GbC0De9Lr6Jsjl84GqvYhqtYLzRgOJZMob79g2WCzG+zod1wwEyBxUNY7xRPOeITDVDRSKJV53nSCAzz56LvThf3z2Fyu9+KcfPQft2R949XW8YSawCmdn5+SyfONJYLZuzPrmME0TqqpC1yd8DP1IA9R4wjeuXCrNNGDNw6n/K91neP2o8jYvv9x9Bj9DYe3CifdPp/wxPnzmCdNdrKHDtiz+JlchHo9jPB4hvrAJGYahI5vNAY7tqTyhUilD02IYjye8TabjrqywmQncJtUP4xV0oZ70lmgDpLbpdBqTibtYotGmSeWTKVf9g8AYm20MSCT9kUM3TLCYilQ6xecn1GpVtNsdVwCb6cC2cFbSSaVzuSwGg6GrquZ0ySwsy6/2cpQg0MZJAMViEb1u16dNqVQKmqZ5bZqfcHR0LDnB0IxdLHV1/za8gk6qetXzR4JtYFtAp92CbVuoFWvo9tyoNJRMgfoowghna9m2K4D7ozP89yPfCZ2c+h8n3uL1gxnNbbuJEPEK+uI8xHvfdbh+jPwmkM/lMBgOl95qEEhQyWSSOzuKBMrCuOFohDt376DfHwRGBhkq/f0zu3kicwBXsjIP1YPom0Cou6z22UxmbXQwDNeJhqHZbCOdSnFDEyaQSCT4vHLIVbe1cGeD+iaYjIdLnv36eq62YTg42MfFhZveCuRyOQwlLRoYOneoIiI4tgnL8h/D1BuuF4+c8o3o61CuVNeOIb+QzWa4Shu6jngigeFozM1HmEqlXOZ2TzQxRkBOhERKXa/XuAA9ATz8iRvnF/H6N/6y0UYevvyqn+/7L27EJ6t6UDaYyaQxGo35T8AKMI/G+QVq1SranQ4XWJAJiZCaz6dxcnLGaWtNgPr+nH9z5SacENrXesFCJfyy7Aq2Vinzkxplbpbpt2uy2f71/GRXKhW9k57YrIxer4N0MsGdKc1HwiOtEXwkWjKHVqvJx9drNaEBq8LcJiFQ2YLP7R+Ox8hkM/wYS4kJqbPsreWkxrRsT52Jj+r7e3VcNt0jtBC8GEN3DtValfsGygLluSg/mGjaTAC727+nqo3Gha9bJCwE0owYf6MZjMdzUzBNC0fHpysfQxnl9fXAe5bwAeK56o73754FVsR8SOP6s+ggNMTNCB2kU2lo0ym38Vwuj+l0ynMFihStVjtwLuFvVCI8GJ4C3/07Hv/7yBv04aee5G3qezD8lNeW+z+G38Djf/Pbvv6Hd2N4PHxraT65/40FDx0oKCn1pQ0yhSGmzo/QJIxCsQh1PJlvKh7n5YTS7Nn8ZO+ttisMSr2HQzcTU+nvnfw9vNOwgfw978EbtUX9FvykikLFZYTdD1iwYJjzKy1Ct+ve/BBKxSKuJMcpcHx84mWMcoRgrpSBh3fYjcv5W9qeP5fN8FsgUkv5Z5nGEi3oN9Um0CYjZDMp3m63W7ydTMRRKRe9calUEulU0mvnsmmehHGxf/WQ4Y1z58alwG34Tcvy1LRYLKDb7a09ENEZIJ/PYzDoc19AIY9osjnpUw3Z7B4y2TH3L3SfYBiGmyiRECybJ2FcAL+6oEUpNy5fnz3sNvyyOhpGlzsvbaL5TIIuNEgwi2mwoU8RT5ApTfnhiJzfHApOTs9QKBTQ7/dDj9jKrj+Pt1v+8CffDq27JxQgRyjGy+eKoLsDmUcl7cGOERQFKCySIGJqzHdDLPIAcbUt1FqAVLtaqaI/mB+D6fuC+LaQz+f4xQvNTY6IMQalvv/ETjWgXK0vndFXQeTzgXOVS+h0KJvc/FJF/eBTD7BrE5AvMBe/3CyCDCLGlAV7d9FqNgN8QTAsiy5TnN1rwL0nl7/gLjo9+XAUizFMJhqv00YXfYRQeTnxCfInlBKzGNu9E7y6Is9volwqc9sVC12l6gLJJAnB1Z79/T1cXjY9Prr/E6ZAB6ZG45xHlkXhKrvWgHKltkQ7PDzA+fk8OpCAYjFV8vgKj/0y5DEC5OyKpRIGM6e4uHnbtnbvA0ajvpf47NVraLbaGAxHoWcE2asT+PeCZBK6ri99HyBkc1nvviJfKPBvBIl4HDolRbnc7jWgvn+HZ4DX1/21Yynbo8RGPhLL8D6iSDfFwinKlykEYWrK/ac/tFMB7BoMEQdDxMEQcTBEHAwRB0PEwRBxMEQcDBEHQ8TBEHEwRBwMEQdDxMEQcTBEHAwRB0PEwRBxMEQcDBEHQ8TBdr2AXeN/tB5DK8J8Nz8AAAAASUVORK5CYII="
+		}
+	]
+}

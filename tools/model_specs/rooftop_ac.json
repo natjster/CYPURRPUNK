@@ -1,0 +1,368 @@
+{
+ "name": "rooftop_ac",
+ "kind": "prop",
+ "texture_size": 64,
+ "seed": 31,
+ "background": "#8a8f96",
+ "about": "A chunky rooftop air-conditioning unit (1.5 x 1.1 x 1.2 m): ribbed grey steel, a big round fan grille on top (the Fan group spins in game), a pipe running down the back. 16 px = 1 m.",
+ "paint": [
+  {
+   "op": "comment",
+   "note": "[0,0,48,18] the box sides: ribbed galvanised steel, rust streaks, a hazard sticker"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    0,
+    48,
+    18
+   ],
+   "color": "#8a8f96"
+  },
+  {
+   "op": "stripes",
+   "rect": [
+    0,
+    0,
+    48,
+    18
+   ],
+   "colors": [
+    "#ffffff18",
+    "#00000000",
+    "#0000002a"
+   ],
+   "width": 1,
+   "direction": "vertical"
+  },
+  {
+   "op": "gradient",
+   "rect": [
+    0,
+    8,
+    48,
+    18
+   ],
+   "top": "#5a3a2000",
+   "bottom": "#5a3a2090"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    4,
+    3,
+    10,
+    7
+   ],
+   "color": "#f0c020"
+  },
+  {
+   "op": "text",
+   "pos": [
+    5,
+    2
+   ],
+   "text": "!",
+   "color": "#1a1a1a"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    0,
+    48,
+    18
+   ],
+   "amount": 0.3,
+   "spread": 0.15
+  },
+  {
+   "op": "edge",
+   "rect": [
+    0,
+    0,
+    48,
+    18
+   ],
+   "color": "#55595f"
+  },
+  {
+   "op": "comment",
+   "note": "[0,24,24,48] the top: grey with the dark fan hole"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    0,
+    24,
+    24,
+    48
+   ],
+   "color": "#7c8188"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    0,
+    24,
+    24,
+    48
+   ],
+   "amount": 0.35,
+   "spread": 0.15
+  },
+  {
+   "op": "comment",
+   "note": "[24,24,40,40] fan grille: black with silver blades"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    24,
+    24,
+    40,
+    40
+   ],
+   "color": "#111214"
+  },
+  {
+   "op": "line",
+   "from": [
+    24,
+    24
+   ],
+   "to": [
+    39,
+    39
+   ],
+   "color": "#9aa0a8"
+  },
+  {
+   "op": "line",
+   "from": [
+    39,
+    24
+   ],
+   "to": [
+    24,
+    39
+   ],
+   "color": "#9aa0a8"
+  },
+  {
+   "op": "line",
+   "from": [
+    31,
+    24
+   ],
+   "to": [
+    31,
+    39
+   ],
+   "color": "#6a7078"
+  },
+  {
+   "op": "line",
+   "from": [
+    24,
+    31
+   ],
+   "to": [
+    39,
+    31
+   ],
+   "color": "#6a7078"
+  },
+  {
+   "op": "edge",
+   "rect": [
+    24,
+    24,
+    40,
+    40
+   ],
+   "color": "#5a5e66"
+  },
+  {
+   "op": "comment",
+   "note": "[40,24,48,32] pipe: copper"
+  },
+  {
+   "op": "fill",
+   "rect": [
+    40,
+    24,
+    48,
+    32
+   ],
+   "color": "#a86a3a"
+  },
+  {
+   "op": "noise",
+   "rect": [
+    40,
+    24,
+    48,
+    32
+   ],
+   "amount": 0.4,
+   "spread": 0.2
+  }
+ ],
+ "groups": [
+  {
+   "name": "Body",
+   "origin": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "name": "Fan",
+   "origin": [
+    0,
+    18.4,
+    0
+   ],
+   "parent": "Body"
+  }
+ ],
+ "elements": [
+  {
+   "type": "cube",
+   "name": "feet",
+   "group": "Body",
+   "from": [
+    -11,
+    0,
+    -9
+   ],
+   "to": [
+    11,
+    1.2,
+    9
+   ],
+   "sides": [
+    0,
+    0,
+    48,
+    2
+   ],
+   "top": [
+    0,
+    24,
+    24,
+    48
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "box",
+   "group": "Body",
+   "from": [
+    -12,
+    1.2,
+    -9.6
+   ],
+   "to": [
+    12,
+    18,
+    9.6
+   ],
+   "faces": {
+    "north": [
+     0,
+     0,
+     48,
+     18
+    ],
+    "south": [
+     0,
+     0,
+     48,
+     18
+    ],
+    "east": [
+     0,
+     0,
+     40,
+     18
+    ],
+    "west": [
+     0,
+     0,
+     40,
+     18
+    ],
+    "up": [
+     0,
+     24,
+     24,
+     48
+    ],
+    "down": [
+     0,
+     24,
+     24,
+     48
+    ]
+   }
+  },
+  {
+   "type": "cube",
+   "name": "fan",
+   "group": "Fan",
+   "from": [
+    -7,
+    18,
+    -7
+   ],
+   "to": [
+    7,
+    18.8,
+    7
+   ],
+   "sides": [
+    24,
+    24,
+    40,
+    25
+   ],
+   "top": [
+    24,
+    24,
+    40,
+    40
+   ]
+  },
+  {
+   "type": "cube",
+   "name": "pipe",
+   "group": "Body",
+   "from": [
+    -1,
+    0,
+    9.6
+   ],
+   "to": [
+    1,
+    14,
+    11.6
+   ],
+   "sides": [
+    40,
+    24,
+    48,
+    32
+   ],
+   "top": [
+    40,
+    24,
+    48,
+    32
+   ]
+  }
+ ]
+}
