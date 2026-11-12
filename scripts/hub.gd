@@ -301,6 +301,7 @@ func _ready() -> void:
 	_build_tunnel()
 	_build_props()
 	_build_breach_tunnel()
+	add_child(RecruitReveal.new())  # the "NEW RECRUIT!" camera shot (scripts/recruit_reveal.gd)
 	_city_mood = {
 		"fog_light_color": _environment.fog_light_color,
 		"volumetric_fog_albedo": _environment.volumetric_fog_albedo,

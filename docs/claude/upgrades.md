@@ -30,3 +30,9 @@ MittensHome/PaulieHome/SalHome/NonnaHome/FrankieHome, models from `tools/make_re
 paulie_scrapheap, sal_heavy_bag, nonna_kitchen, frankie_garage). Part names: Glow/Lamp/Burner lit, Sign soft, Trim gang colour,
 Swing sways. `show_ride` (Frankie) parks `Upgrades.vehicle_of(hub.team)` (RIDE_MODELS) and swaps it live; `prompt` set = an
 Interactable that opens WorkbenchScreen on tab `rebellion_tier + 1`. Burrow recruits have no homes yet.
+RECRUIT REVEAL (`scripts/recruit_reveal.gd`, `RecruitReveal`, one per hub, added in hub `_ready`): on `Upgrades.recruited` (every
+computer) for its gang -> `Npc.pop_in(delay, tag_hidden)` (squash/elastic + `_pop_burst`: sparks parented to Game, OmniLight flash,
+voice meow) + `RecruitHome.pop_delay`; local gang cats in that hub (`_shows_to`) get a camera shot via static `camera_for(cat)`
+(first in game_screen `view_override_for`), `is_watching` freezes the cat (`_menu_open`), open workbenches close and reopen on the
+recruit's tab after. Cats in the city only get a feed line. Test: `--reveal_test=N [--reveal_wait=F]` (menus.gd).
+Tests can host on another port with `--port=N` (`Net.game_port()`) while the game is already open on this PC.

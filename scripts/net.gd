@@ -82,6 +82,15 @@ var _advert_timer: float = 0.0
 var _listen_socket: PacketPeerUDP = null
 
 
+## The port actually used: PORT, unless a test run says --port=N (so tests can run while the game is
+## already open on this PC, holding PORT).
+func game_port() -> int:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--port="):
+			return int(arg.substr(7))
+	return PORT
+
+
 func _ready() -> void:
 	multiplayer.connected_to_server.connect(func(): joined.emit())
 	multiplayer.connection_failed.connect(_on_connection_failed)
@@ -96,11 +105,11 @@ func _exit_tree() -> void:
 ## Start a game others can join. Returns OK, or an error if the port is already in use.
 func host() -> Error:
 	var peer := ENetMultiplayerPeer.new()
-	var error := peer.create_server(PORT, MAX_PLAYERS)
+	var error := peer.create_server(game_port(), MAX_PLAYERS)
 	if error != OK:
 		return error
 	multiplayer.multiplayer_peer = peer
-	print("[Network] Hosting on port %d" % PORT)
+	print("[Network] Hosting on port %d" % game_port())
 	_start_advertising()
 	_open_router()
 	return OK
@@ -116,7 +125,7 @@ func join(address: String) -> Error:
 	if not decoded.is_empty():
 		address = decoded
 	var peer := ENetMultiplayerPeer.new()
-	var error := peer.create_client(address, PORT)
+	var error := peer.create_client(address, game_port())
 	if error != OK:
 		return error
 	multiplayer.multiplayer_peer = peer

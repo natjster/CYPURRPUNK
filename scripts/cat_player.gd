@@ -882,6 +882,7 @@ func _menu_open() -> bool:
 	return PauseMenu.is_open or NpcDialog.is_open_for(slot) or PlayerPause.is_open_for(slot) or ShopScreen.is_open_for(slot) \
 		or WorkbenchScreen.is_open_for(slot) or MainframeScreen.is_open_for(slot) \
 		or Mainframe.instance.is_spectating(self) or RaidReportScreen.is_up() \
+		or RecruitReveal.is_watching(self) \
 		or (is_multiplayer_authority() and Spectator.is_watching(slot))  # (CAT-CAM: our buttons switch / heckle / leave)
 
 

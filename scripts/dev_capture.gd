@@ -495,6 +495,10 @@ func _ready() -> void:
 		#   --vehicles_lineup             (TURF WAR host: both gangs' cars parked in front of us, as a bike + a van)
 		if args.has("buy_upgrade") or args.has("select_vehicle") or args.has("upgrade_log"):
 			await _menus._upgrades_test(player, args)
+		#   --reveal_test=N [--reveal_wait=F]  (our gang "recruits" cat N right away: the NEW RECRUIT camera shot
+		#                                       plays; prints "DevCapture reveal" lines, snaps F frames in, default 60)
+		if args.has("reveal_test"):
+			await _menus._reveal_test(player, args)
 		#   --hub_pos=X,Y,Z [--hub_yaw=DEG]  (stand at that spot INSIDE our sewer hub (hub-local metres), camera turned DEG)
 		if args.has("hub_pos"):
 			var hub := UndergroundHub.of(player)

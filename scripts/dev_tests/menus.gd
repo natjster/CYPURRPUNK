@@ -26,6 +26,32 @@ func _upgrades_test(player: CatPlayer, args: Dictionary) -> void:
 			(car.get_node("CollisionShape3D").shape as BoxShape3D).size, car.get_node("Model/CarModel").scene_file_path.get_file(), car._wheels.size()])
 
 
+## NEW RECRUIT REVEAL test (--reveal_test=N): pretend our gang just recruited cat N (recruits
+## before it count as in), then print where the camera is while the shot plays.
+func _reveal_test(player: CatPlayer, args: Dictionary) -> void:
+	for i in 30:
+		await get_tree().physics_frame
+	var tier := int(args["reveal_test"])
+	Upgrades.rebellion_override = tier
+	Upgrades.instance._recruited(player.team, tier)  # (what every computer runs after a real recruit)
+	var wait := int(args.get("reveal_wait", "60"))
+	for i in wait:
+		await get_tree().process_frame
+		if i % 20 == 0 or i == wait - 1:
+			var camera := RecruitReveal.camera_for(player)
+			var current := player.get_viewport().get_camera_3d()
+			print("DevCapture reveal frame %d: watching=%s blocked=%s camera=%s current=%s" % [i, RecruitReveal.is_watching(player),
+				player._input_blocked(), camera.global_position if camera != null else "-", current.name if current != null else "-"])
+	for npc in UndergroundHub.of(player).get_children():
+		if npc is Npc and (npc as Npc).rebellion_tier == tier:
+			var sparks := Game.instance.get_node_or_null("RecruitSparks") as CPUParticles3D
+			var flash := npc.get_node_or_null("RecruitFlash") as OmniLight3D
+			print("DevCapture reveal pop: %s scale=%s tag=%s sparks=%s flash=%s" % [npc.npc_name, npc._model.scale,
+				npc.get_node("NameTag").visible if npc.has_node("NameTag") else "-",
+				"%s emitting=%s at %s" % [sparks.visible, sparks.emitting, sparks.global_position] if sparks != null else "none",
+				"%.1f" % flash.light_energy if flash != null else "none"])
+
+
 func _print_upgrades(player: CatPlayer, when: String) -> void:
 	var me := player.player_id
 	var items := ItemManager.instance

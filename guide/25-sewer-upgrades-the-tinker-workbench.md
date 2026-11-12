@@ -55,6 +55,21 @@ The price depends on **how many** your gang has already recruited, not on which 
   recruit): `scenes/main.tscn` > Upgrades node > Inspector > Costs > `rebellion_tier`. The "type" words are
   `RECRUIT_TYPES` / `RECRUIT_SHORT` at the top of `scripts/upgrades.gd`.
 
+#### The NEW RECRUIT camera shot (`scripts/recruit_reveal.gd`)
+When your gang recruits a cat, everyone in your gang who is **down in the sewer** watches a short camera
+shot (about 3.4 seconds). The workbench closes, the camera cuts to the empty spot, and the cat drops in with
+a squash-and-bounce: sparkles in the gang colour, a flash of light, their meow and a **NEW RECRUIT!** banner.
+Their furniture (below) pops in at the same moment. Your cat can't move during the shot. Afterwards the
+camera returns to your cat, and if you had the workbench open it reopens on the new cat's tab. Gang members
+up in the city just get a line in the feed.
+- **Nothing to set up in the editor**: each hub makes its own reveal when the game starts.
+- **Tuning**: the numbers are at the top of `scripts/recruit_reveal.gd` (`reveal_seconds`, `pop_delay` =
+  how long the camera looks at the empty spot first, `camera_distance`, `camera_height`, `push_in`,
+  `orbit_degrees`, `look_height`, `camera_fov`, `banner_seconds`). The camera sits in front of the way the
+  cat's **Model** faces in `scenes/main.tscn`, and it moves closer if a wall is in the way.
+- The bounce and sparkles are `pop_in()` / `_pop_burst()` in `scripts/npcs/npc.gd`.
+- Test: `--reveal_test=N` (pretends your gang just recruited cat N).
+
 #### Recruits move in WITH THEIR OWN THING (`scripts/recruit_home.gd`)
 Every recruit brings a piece of furniture that's theirs, so recruiting fills out the sewer. It's hidden
 until that cat is recruited, then drops in with a little bounce. **Catleone sewer so far** (Burrow: not yet):

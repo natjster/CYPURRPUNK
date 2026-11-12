@@ -228,6 +228,94 @@ func _update_presence() -> void:
 		print("[NPC] %s joined the rebellion (tier %d)" % [npc_name, rebellion_tier])
 
 
+## Which way this cat faces when nobody's near (its model's own turn in the level). The recruit
+## reveal (scripts/recruit_reveal.gd) puts its camera in front of that.
+func front_basis() -> Basis:
+	var basis := global_basis
+	if _model != null:
+		basis = basis * Basis.from_euler(_model_home_rotation)
+	return basis.orthonormalized()
+
+
+## THE NEW-RECRUIT POP (scripts/recruit_reveal.gd calls this when our gang recruits us): after
+## "delay" seconds we drop in squashed flat, bounce up to full size, and a burst of sparkles in the
+## gang colour + a flash of light + a meow go off. delay 0 = straight away. Our name tag stays hidden
+## for tag_hidden seconds (the reveal's banner already says the name).
+func pop_in(delay: float, tag_hidden: float = 0.0) -> void:
+	_update_presence()  # (don't wait for the next presence check: show us now)
+	if _model == null:
+		return
+	var tag := get_node_or_null("NameTag") as Label3D
+	_model.rotation = _model_home_rotation  # (face the camera's way, not the last cat we looked at)
+	_model.scale = Vector3(0.001, 0.001, 0.001)  # (here, but too small to see until the pop)
+	if tag != null:
+		tag.visible = false
+	var tween := create_tween()
+	if delay > 0.0:
+		tween.tween_interval(delay)
+	tween.tween_callback(func():
+		_model.scale = Vector3(1.4, 0.15, 1.4)
+		_pop_burst())
+	tween.tween_property(_model, "scale", Vector3(0.85, 1.25, 0.85), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_model, "scale", Vector3.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	if tag != null:
+		get_tree().create_timer(maxf(tag_hidden, delay)).timeout.connect(func(): tag.visible = true)
+
+
+## The sparkles, the flash and the meow of pop_in. Everything cleans itself up after.
+func _pop_burst() -> void:
+	var color := Teams.color_of(maxi(0, _home.team)) if _home != null else Color(1, 0.85, 0.3)
+	var sparks := CPUParticles3D.new()
+	sparks.name = "RecruitSparks"
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.amount = 60
+	sparks.lifetime = 1.1
+	sparks.direction = Vector3.UP
+	sparks.spread = 70.0
+	sparks.gravity = Vector3(0, -4.0, 0)
+	sparks.initial_velocity_min = 2.0
+	sparks.initial_velocity_max = 4.0
+	sparks.scale_amount_min = 0.6
+	sparks.scale_amount_max = 1.4
+	var box := BoxMesh.new()  # (little cubes, like the gun sparks in weapon.gd: they show up at 240p)
+	box.size = Vector3.ONE * 0.08
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.disable_fog = true  # (the sewer fog would swallow them)
+	box.material = material
+	sparks.mesh = box
+	var fade := Gradient.new()  # gang colour -> gold
+	fade.offsets = PackedFloat32Array([0.0, 1.0])
+	fade.colors = PackedColorArray([color.lightened(0.4), Color(1, 0.85, 0.3)])
+	var shrink := Curve.new()  # full size -> gone
+	shrink.add_point(Vector2(0.0, 1.0))
+	shrink.add_point(Vector2(0.7, 0.8))
+	shrink.add_point(Vector2(1.0, 0.0))
+	sparks.scale_amount_curve = shrink
+	sparks.color_ramp = fade
+	# (Added to the game, like the bat's sparks in melee_weapon.gd, so they fly free of us.)
+	var world: Node = Game.instance if Game.instance != null else get_tree().root
+	world.add_child(sparks)
+	sparks.global_position = global_position + Vector3(0, 0.5, 0)
+	sparks.emitting = true
+	get_tree().create_timer(sparks.lifetime + 0.5).timeout.connect(sparks.queue_free)
+	var flash := OmniLight3D.new()
+	flash.name = "RecruitFlash"
+	flash.position = Vector3(0, 1.0, 0)
+	flash.light_color = color.lightened(0.4)
+	flash.light_energy = 8.0
+	flash.omni_range = 5.0
+	add_child(flash)
+	var dim := flash.create_tween()
+	dim.tween_property(flash, "light_energy", 1.0, 0.8)
+	dim.tween_property(flash, "light_energy", 0.0, 1.5)
+	dim.tween_callback(flash.queue_free)
+	Sound.play_at(voice if voice != "" else "meow", global_position)
+	Sound.play("buy", -4.0)  # (a little "ta-da" on top)
+
+
 func _nearest_cat() -> Node3D:
 	var nearest: Node3D = null
 	var best := look_range

@@ -494,7 +494,9 @@ func _copy_crt_settings() -> void:
 func view_override_for(cat: CatPlayer) -> Camera3D:
 	if cat == null:
 		return null
-	var feed: Camera3D = Mainframe.instance.feed_camera_for(cat) if Mainframe.instance != null else null
+	var feed: Camera3D = RecruitReveal.camera_for(cat)  # a NEW RECRUIT popping in (scripts/recruit_reveal.gd)
+	if feed == null and Mainframe.instance != null:
+		feed = Mainframe.instance.feed_camera_for(cat)
 	if feed == null and Spectator.instance != null:
 		feed = Spectator.instance.camera_for(cat)
 	return feed

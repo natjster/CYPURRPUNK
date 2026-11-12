@@ -79,6 +79,9 @@ extends Node3D
 const RIDE_MODELS := {"interceptor": "getaway_car", "cyber_bike": "cyber_bike", "fish_van": "fish_van"}
 
 var present: bool = true
+## Set by the recruit reveal (scripts/recruit_reveal.gd): wait this long before the next pop, so
+## the furniture pops in together with its cat while the camera is watching. Used once.
+var pop_delay: float = 0.0
 var _model: Node3D
 var _swing: Node3D
 var _ride: Node3D
@@ -148,8 +151,12 @@ func _update_presence() -> void:
 		shape.set_deferred("disabled", not now)
 	if now and not first and pop_seconds > 0.0 and _model != null:
 		# Moving in: drops in a little squashed and bounces up to full size.
-		_model.scale = Vector3(1.3, 0.2, 1.3)
 		var tween := create_tween()
+		if pop_delay > 0.0:
+			_model.scale = Vector3(0.001, 0.001, 0.001)  # (too small to see until the pop)
+			tween.tween_interval(pop_delay)
+			pop_delay = 0.0
+		tween.tween_callback(func(): _model.scale = Vector3(1.3, 0.2, 1.3))
 		tween.tween_property(_model, "scale", Vector3.ONE, pop_seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
