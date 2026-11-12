@@ -21,7 +21,7 @@
   Weapon rolls `damage`/`crit_chance` on the shooter and sends it in `roomba.take_hit(shooter_id, amount)`;
   Roomba `health` is synced (synchronizer, on change).
 - CASH = `scripts/wallet.gd` (`Wallet.instance`, `Wallet` node): host `earn(id, n, why)` / `spend(id, n) -> bool` /
-  `set_cash`; anyone `cash_of(id)`, signal `cash_changed`; draws the sewer `Scoreboard`. Never keep cash elsewhere.
+  `set_cash`; anyone `cash_of(id)`, signal `cash_changed`; draws the sewer `Scoreboard` (off: `@export show_scoreboard = false`, 12 Nov 2026). Never keep cash elsewhere.
 - Stash + saves: inventories also hold `"stash"` (use `get_stash`; keep it when rewriting inventories).
   Players see it as THE LITTERBOX (code names stay "stash"; prompt `hub.stash_prompt` "STORE YOUR SHIT").
   Host `request_to_stash`/`request_from_stash` need `hub.near_stash(cat)` (litterbox on the east wall,

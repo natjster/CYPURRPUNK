@@ -80,7 +80,7 @@ HUD (CanvasLayer)            script: ui/hud.gd
     │   ├── StatusIcons      <- buff / debuff badges right of the health bar (ui/hud_status_icons.gd)
     │   ├── DropOff          <- top-middle: "EXTRACT ^ 40m" / "THE SEWERS - SAFE ZONE" / the Sewer Breach clock
     │   ├── Heat             <- top-right: flashing red/blue heat bar (script ui/hud_heat_bar.gd)
-    │   └── Scoreboard       <- top-right, under Heat: everyone's cash (sewers only)
+    │   └── Scoreboard       <- top-right, under Heat: everyone's cash (sewers only; OFF for now: Wallet node > Show Scoreboard)
     ├── Middle (Control)     <- hidden while the talk box or inventory is open
     │   ├── Cards            <- draws the ocean-blue boxes behind Banner / Popup / Message (ui/hud_cards.gd)
     │   ├── Banner           <- big news in a box near the top (Tutorial complete, Sewer Breach results);

@@ -12,7 +12,7 @@ extends Node
 ## nothing else needs changing.
 ##
 ## It also draws the SCOREBOARD (everyone's cash, richest first, top-right of the HUD), but only
-## while you're down in the sewers: up in the city the HUD stays clean.
+## while you're down in the sewers, and only if show_scoreboard is ticked (OFF for now).
 ##
 ## Multiplayer: the HOST is the referee, same as health and quests. Every computer keeps a copy
 ## of everyone's cash; only the host changes it, and tells everyone (_set_cash).
@@ -104,6 +104,10 @@ func _forget_player(player_id: int) -> void:
 
 # --- HUD: the scoreboard (HUD label "Scoreboard", scenes/ui/hud.tscn) ---
 
+## Show everyone's cash in the top-right while in the sewers? OFF for now (user's call, 12 Nov 2026).
+## Tick it again to bring the list back: click the Wallet node in main.tscn > Inspector > Show Scoreboard.
+@export var show_scoreboard: bool = false
+
 func _process(_delta: float) -> void:
 	if Game.instance == null:
 		return
@@ -114,7 +118,7 @@ func _process(_delta: float) -> void:
 func _update_scoreboard(my_cat: CatPlayer) -> void:
 	var me := my_cat.player_id
 	var seat := my_cat.slot
-	var in_sewers := not Game.instance.is_up_top(me)
+	var in_sewers := show_scoreboard and not Game.instance.is_up_top(me)
 	Hud.show_element("Scoreboard", in_sewers, seat)
 	if not in_sewers:
 		return
