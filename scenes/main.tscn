@@ -48,6 +48,7 @@
 [ext_resource type="Script" path="res://scripts/mess_manager.gd" id="37_mess"]
 [ext_resource type="Script" path="res://scripts/spectator.gd" id="38_spectator"]
 [ext_resource type="Script" path="res://scripts/district_twist.gd" id="38_twist"]
+[ext_resource type="Script" path="res://scripts/ui/menu_logo.gd" id="39_logo"]
 [ext_resource type="PackedScene" path="res://scenes/interiors/meow_mart_interior.tscn" id="39_mart"]
 
 [sub_resource type="Environment" id="Env_night"]
@@ -478,35 +479,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.02, 0, 0.05, 0.4)
+color = Color(0.0, 0.03, 0.06, 0.45)
 
-[node name="Title" type="Label" parent="PS1Overlay/Lobby"]
+[node name="Logo" type="Control" parent="PS1Overlay/Lobby"]
 offset_top = 14.0
 offset_right = 320.0
-offset_bottom = 50.0
-theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
-theme_override_colors/font_outline_color = Color(0.25, 0.02, 0.2, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 32
-text = "CYPURRPUNK"
-horizontal_alignment = 1
-
-[node name="Subtitle" type="Label" parent="PS1Overlay/Lobby"]
-offset_top = 48.0
-offset_right = 320.0
-offset_bottom = 64.0
-theme_override_colors/font_color = Color(0.4, 1, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = ""
-horizontal_alignment = 1
-
-[node name="Tagline" type="Label" parent="PS1Overlay/Lobby"]
-offset_top = 64.0
-offset_right = 320.0
-offset_bottom = 76.0
-theme_override_colors/font_color = Color(0.75, 0.65, 0.9, 0.8)
-text = "loot the city. find the hatch. back to the sewers."
-horizontal_alignment = 1
+offset_bottom = 80.0
+mouse_filter = 2
+script = ExtResource("39_logo")
 
 [node name="MainScreen" type="VBoxContainer" parent="PS1Overlay/Lobby"]
 offset_left = 115.0
@@ -581,7 +561,7 @@ theme_override_constants/separation = 3
 
 [node name="HostLabel" type="Label" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/HostColumn"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+theme_override_colors/font_color = Color(1, 0.55, 0.85, 1)
 text = "HOST A GAME"
 horizontal_alignment = 1
 
@@ -604,7 +584,7 @@ theme_override_constants/separation = 3
 
 [node name="JoinLabel" type="Label" parent="PS1Overlay/Lobby/PlayScreen/VBox/Columns/JoinColumn"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+theme_override_colors/font_color = Color(1, 0.55, 0.85, 1)
 text = "JOIN A FRIEND"
 horizontal_alignment = 1
 
@@ -674,7 +654,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.02, 0, 0.05, 0.55)
+color = Color(0.0, 0.03, 0.06, 0.6)
 
 [node name="Panel" type="PanelContainer" parent="PS1Overlay/PauseMenu"]
 layout_mode = 1
@@ -696,7 +676,7 @@ theme_override_constants/separation = 4
 
 [node name="Title" type="Label" parent="PS1Overlay/PauseMenu/Panel/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.35, 0.8, 1)
+theme_override_colors/font_color = Color(1, 0.55, 0.85, 1)
 theme_override_font_sizes/font_size = 16
 text = "PAUSED"
 horizontal_alignment = 1
@@ -742,6 +722,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("13_theme")
 script = ExtResource("26_creator")
 
 [node name="ColorDepthDither" type="ColorRect" parent="PS1Overlay"]

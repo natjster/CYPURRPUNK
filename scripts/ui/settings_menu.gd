@@ -87,8 +87,8 @@ const TABS: Array = [
 	]],
 ]
 
-const HEADER_COLOR := Color(1, 0.35, 0.8)
-const VALUE_COLOR := Color(0.4, 1, 1)
+const HEADER_COLOR := Color(1, 0.55, 0.85)
+const VALUE_COLOR := Color(0.55, 0.9, 1)
 
 @onready var tabs_box: HBoxContainer = $Panel/VBox/Tabs
 @onready var scroll: ScrollContainer = $Panel/VBox/Scroll

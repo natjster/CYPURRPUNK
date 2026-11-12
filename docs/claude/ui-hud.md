@@ -32,6 +32,10 @@
   Name tags use `GameScreen.camera_for_seat/screen_size_for_seat`.
   HUD windows must NOT use grab_focus (Godot keeps one focus per Window, across SubViewports): each keeps a
   `SeatFocus` (`scripts/ui/seat_focus.gd`: set_buttons/handle(event)/clear, highlight = "hover" stylebox).
+- MENU LOOK (12 Nov 2026) = the HUD's ocean blue: `ui/menu_theme.tres` (Consolas bold 8, boxes = `HudStyleBox`
+  `scripts/ui/hud_style_box.gd`, a scripted StyleBox with fill/border/corner brackets/glow, menu units = 1/3 HUD units).
+  Titles soft pink `Color(1, 0.55, 0.85)`, values `Color(0.55, 0.9, 1)`. CatCreator node now carries the theme too.
+  Start-menu logo = `Lobby/Logo` (`MenuLogo`, `scripts/ui/menu_logo.gd`, drawn; main_menu flickers its alpha); the tagline is gone.
 - UI under `PS1Overlay` (theme `ui/menu_theme.tres`): `Lobby` = `MainMenu` (`scripts/ui/main_menu.gd`,
   emits host/join/settings signals), `PauseMenu` (`PauseMenu.is_open` → cat/car/inventory ignore
   keys), `SettingsMenu` (`scenes/ui/settings_menu.tscn`, rows from its `TABS` list), `CatCreator`,

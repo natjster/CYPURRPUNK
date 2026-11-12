@@ -1,103 +1,131 @@
-[gd_resource type="Theme" format=3]
+[gd_resource type="Theme" load_steps=12 format=3]
 
-; CYPURRPUNK menu look: dark purple boxes, neon pink edges, cyan when the mouse is over it.
-; Used by the start menu, pause menu and settings menu. Double-click this file in Godot's
-; FileSystem dock to edit the colours in the Theme editor.
+; CYPURRPUNK menu look = the HUD's OCEAN-BLUE look (same colours as ui/hud_style.tres + ui/hud_theme.tres):
+; translucent deep-blue boxes, thin bright-blue edges with brighter corner brackets, chunky monospace text.
+; Used by the start menu, MY CAT, pause menu, settings menu, on-screen keyboard.
+; The boxes are HudStyleBox (scripts/ui/hud_style_box.gd). Double-click this file in Godot's FileSystem
+; dock to edit it in the Theme editor (click a style to change its colours in the Inspector).
+; The menus are laid out on a 320 x 240 screen: 1 pixel here = 3 of the HUD's units.
 
-[sub_resource type="StyleBoxFlat" id="Btn_normal"]
+[ext_resource type="Script" path="res://scripts/ui/hud_style_box.gd" id="1_box"]
+
+[sub_resource type="SystemFont" id="Font_menu"]
+font_names = PackedStringArray("Consolas", "Lucida Console", "Courier New", "Monospace")
+font_weight = 700
+
+[sub_resource type="StyleBox" id="Btn_normal"]
+script = ExtResource("1_box")
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+fill_color = Color(0.03, 0.14, 0.24, 0.72)
+border_color = Color(0.22, 0.72, 0.98, 0.35)
+corner_length = 0.0
+
+[sub_resource type="StyleBox" id="Btn_hover"]
+script = ExtResource("1_box")
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+fill_color = Color(0.08, 0.3, 0.46, 0.9)
+border_color = Color(0.55, 0.9, 1, 1)
+corner_length = 3.0
+corner_color = Color(1, 1, 1, 1)
+glow_color = Color(0.3, 0.8, 1, 0.5)
+
+[sub_resource type="StyleBox" id="Btn_pressed"]
+script = ExtResource("1_box")
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+fill_color = Color(0.28, 0.78, 1, 0.95)
+border_color = Color(0.85, 0.97, 1, 1)
+corner_length = 0.0
+
+[sub_resource type="StyleBox" id="Btn_disabled"]
+script = ExtResource("1_box")
+content_margin_left = 5.0
+content_margin_top = 1.0
+content_margin_right = 5.0
+content_margin_bottom = 1.0
+fill_color = Color(0.03, 0.1, 0.16, 0.5)
+border_color = Color(0.22, 0.72, 0.98, 0.15)
+corner_length = 0.0
+
+[sub_resource type="StyleBox" id="Btn_focus"]
+script = ExtResource("1_box")
+fill_color = Color(0, 0, 0, 0)
+border_color = Color(0.55, 0.9, 1, 0.9)
+corner_length = 3.0
+corner_color = Color(1, 1, 1, 1)
+glow_color = Color(0.3, 0.8, 1, 0.5)
+
+[sub_resource type="StyleBox" id="Edit_normal"]
+script = ExtResource("1_box")
 content_margin_left = 4.0
 content_margin_top = 1.0
 content_margin_right = 4.0
 content_margin_bottom = 1.0
-bg_color = Color(0.1, 0.04, 0.16, 0.85)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.35, 0.8, 0.7)
+fill_color = Color(0.01, 0.05, 0.1, 0.9)
+border_color = Color(0.22, 0.72, 0.98, 0.5)
+corner_length = 0.0
 
-[sub_resource type="StyleBoxFlat" id="Btn_hover"]
-content_margin_left = 4.0
-content_margin_top = 1.0
-content_margin_right = 4.0
-content_margin_bottom = 1.0
-bg_color = Color(0.2, 0.06, 0.3, 0.95)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.4, 1, 1, 1)
+[sub_resource type="StyleBox" id="Edit_focus"]
+script = ExtResource("1_box")
+fill_color = Color(0, 0, 0, 0)
+border_color = Color(0.55, 0.9, 1, 1)
+corner_length = 3.0
 
-[sub_resource type="StyleBoxFlat" id="Btn_pressed"]
-content_margin_left = 4.0
-content_margin_top = 1.0
-content_margin_right = 4.0
-content_margin_bottom = 1.0
-bg_color = Color(1, 0.35, 0.8, 0.9)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.8, 0.95, 1)
-
-[sub_resource type="StyleBoxFlat" id="Btn_focus"]
-draw_center = false
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.4, 1, 1, 0.8)
-
-[sub_resource type="StyleBoxFlat" id="Edit_normal"]
-content_margin_left = 3.0
-content_margin_top = 1.0
-content_margin_right = 3.0
-content_margin_bottom = 1.0
-bg_color = Color(0.02, 0.01, 0.05, 0.9)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.4, 1, 1, 0.45)
-
-[sub_resource type="StyleBoxFlat" id="Edit_focus"]
-draw_center = false
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.4, 1, 1, 1)
-
-[sub_resource type="StyleBoxFlat" id="Panel"]
+[sub_resource type="StyleBox" id="Panel"]
+script = ExtResource("1_box")
 content_margin_left = 8.0
 content_margin_top = 6.0
 content_margin_right = 8.0
 content_margin_bottom = 6.0
-bg_color = Color(0.05, 0.02, 0.09, 0.9)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 0.35, 0.8, 0.8)
-shadow_color = Color(1, 0.35, 0.8, 0.15)
-shadow_size = 4
+fill_color = Color(0.02, 0.09, 0.16, 0.9)
+border_color = Color(0.22, 0.72, 0.98, 0.88)
+corner_length = 7.0
+
+[sub_resource type="StyleBoxFlat" id="Scroll_bar"]
+content_margin_left = 2.0
+content_margin_right = 2.0
+bg_color = Color(0.03, 0.14, 0.24, 0.6)
+
+[sub_resource type="StyleBoxFlat" id="Scroll_grabber"]
+content_margin_left = 2.0
+content_margin_right = 2.0
+bg_color = Color(0.22, 0.72, 0.98, 0.7)
 
 [resource]
+default_font = SubResource("Font_menu")
 default_font_size = 8
-Button/colors/font_color = Color(1, 0.85, 0.95, 1)
-Button/colors/font_hover_color = Color(0.4, 1, 1, 1)
-Button/colors/font_focus_color = Color(0.4, 1, 1, 1)
-Button/colors/font_pressed_color = Color(0.05, 0.02, 0.09, 1)
-Button/colors/font_disabled_color = Color(0.5, 0.4, 0.55, 1)
+Button/colors/font_color = Color(0.78, 0.94, 1, 0.95)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_focus_color = Color(1, 1, 1, 1)
+Button/colors/font_hover_pressed_color = Color(0.02, 0.09, 0.16, 1)
+Button/colors/font_pressed_color = Color(0.02, 0.09, 0.16, 1)
+Button/colors/font_disabled_color = Color(0.4, 0.55, 0.65, 1)
 Button/styles/normal = SubResource("Btn_normal")
 Button/styles/hover = SubResource("Btn_hover")
 Button/styles/pressed = SubResource("Btn_pressed")
+Button/styles/hover_pressed = SubResource("Btn_pressed")
 Button/styles/focus = SubResource("Btn_focus")
-Button/styles/disabled = SubResource("Btn_normal")
-Label/colors/font_color = Color(0.85, 0.8, 0.95, 1)
-LineEdit/colors/font_color = Color(1, 0.8, 0.45, 1)
-LineEdit/colors/font_placeholder_color = Color(0.55, 0.5, 0.65, 1)
-LineEdit/colors/caret_color = Color(0.4, 1, 1, 1)
+Button/styles/disabled = SubResource("Btn_disabled")
+Label/colors/font_color = Color(0.9, 0.95, 1, 1)
+Label/colors/font_outline_color = Color(0.01, 0.04, 0.08, 1)
+Label/constants/outline_size = 2
+LineEdit/colors/font_color = Color(1, 1, 1, 1)
+LineEdit/colors/font_placeholder_color = Color(0.45, 0.62, 0.75, 1)
+LineEdit/colors/caret_color = Color(0.55, 0.9, 1, 1)
 LineEdit/styles/normal = SubResource("Edit_normal")
 LineEdit/styles/focus = SubResource("Edit_focus")
+LineEdit/styles/read_only = SubResource("Edit_normal")
+Panel/styles/panel = SubResource("Panel")
 PanelContainer/styles/panel = SubResource("Panel")
+VScrollBar/styles/scroll = SubResource("Scroll_bar")
+VScrollBar/styles/grabber = SubResource("Scroll_grabber")
+VScrollBar/styles/grabber_highlight = SubResource("Scroll_grabber")
+VScrollBar/styles/grabber_pressed = SubResource("Scroll_grabber")

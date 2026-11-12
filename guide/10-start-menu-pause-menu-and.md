@@ -4,7 +4,8 @@
 
 
 ### What the player sees
-- **Start menu:** big flickering CYPURRPUNK title over the rainy city (the camera slowly pans),
+- **Start menu:** the big CYPURRPUNK logo (cat ears on a pink "PURR", glitchy neon shadows, HUD-style
+  corner brackets; it flickers and glitches now and then) over the rainy city (the camera slowly pans),
   then **PLAY / SETTINGS / QUIT**. The way through:
   ```
   PLAY  ->  SOLO / MULTIPLAYER / TUTORIAL
@@ -219,7 +220,7 @@ Up to **4 players per computer**, each with their own controller (8 in a whole g
 (The in-game HUD is NOT here: it's the sharp overlay in scenes/ui/hud.tscn, §13.)
 Lobby (Control)                   script: ui/main_menu.gd   theme: ui/menu_theme.tres
 ├── Shade (ColorRect)             <- darkens the city a little so the text reads
-├── Title / Subtitle / Tagline (Label)
+├── Logo (Control)                <- script: ui/menu_logo.gd, the drawn CYPURRPUNK logo
 ├── MainScreen (VBoxContainer)    <- PlayButton, SettingsButton, QuitButton
 ├── ModeScreen (VBoxContainer)    <- SoloButton, MultiplayerButton, BackButton
 ├── PlayScreen (PanelContainer) > VBox      <- the MULTIPLAYER screen
@@ -257,8 +258,14 @@ the KEYS tab's rows come from `Controls.ACTIONS`. Make the list taller/shorter w
   HUD, which always hears keys before the game), then settings, then the pause menu, then the
   start menu. (Godot sends keys to the node lowest in the scene tree first, so keep that order
   under PS1Overlay.)
-- **`ui/menu_theme.tres`** — the menu look (dark purple boxes, pink edges, cyan hover).
-  Double-click it in the FileSystem dock to change colours in the Theme editor.
+- **`ui/menu_theme.tres`** — the menu look, matching the in-game HUD: translucent ocean-blue boxes,
+  thin bright-blue edges with brighter corner brackets, chunky Consolas text, soft-pink titles. Used by
+  the start menu, CHOOSE YOUR CAT / MY CAT, pause, settings and the on-screen keyboard. The boxes are
+  **HudStyleBox** (`scripts/ui/hud_style_box.gd`): double-click the theme in the FileSystem dock, open
+  **Button > Styles** (or **Panel**), click a style and change Fill / Border / Corner / Glow colours in
+  the Inspector. Keep it in step with `ui/hud_style.tres` if you retune the HUD's blue.
+- **The logo** — click **PS1Overlay > Lobby > Logo**: the Inspector has the three words (CY / PURR /
+  PUNK), letter size, colours, ear size, glitch timing. It redraws live in the editor.
 - **PS1 wobble** is a *global shader parameter*: Project Settings > **Shader Globals** >
   `psx_wobble` (1 = on). Every `psx_lit` material reads it.
 - **Sound buses:** the game creates **Music** and **SFX** buses (under Master). Sounds played by

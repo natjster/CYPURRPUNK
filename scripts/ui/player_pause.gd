@@ -208,7 +208,7 @@ func _add_setting(label: String, value_text: Callable, adjust: Callable) -> void
 			value.custom_minimum_size = Vector2(80, 0)
 			value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			value.add_theme_font_size_override("font_size", font_size - 4)
-			value.add_theme_color_override("font_color", Color(0.4, 1, 1))
+			value.add_theme_color_override("font_color", Color(0.55, 0.9, 1))
 			row.add_child(value)
 	refresh.call()
 

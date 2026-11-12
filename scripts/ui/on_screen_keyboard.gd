@@ -44,7 +44,7 @@ const ADDRESS: Array[String] = ["1234567890", "ABCDEF", "MOW-.:"]
 const MENU_THEME: Theme = preload("res://ui/menu_theme.tres")
 const KEY_SIZE := Vector2(16, 14)
 const TEXT_COLOR := Color(1, 0.8, 0.45)
-const HINT_COLOR := Color(0.6, 0.55, 0.7)
+const HINT_COLOR := Color(0.5, 0.68, 0.8)
 
 ## The (hidden) text box that keeps the text.
 var target: LineEdit

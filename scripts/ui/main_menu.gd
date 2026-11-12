@@ -4,7 +4,7 @@ extends Control
 ## Attach to the "Lobby" Control under PS1Overlay in main.tscn. Expected node tree:
 ##   Lobby (Control)                 <- this script
 ##   ├── Shade (ColorRect)           <- darkens the city a little so the text reads
-##   ├── Title / Subtitle / Tagline (Label)
+##   ├── Logo (Control, scripts/ui/menu_logo.gd) <- the big drawn CYPURRPUNK logo
 ##   ├── MainScreen (VBoxContainer)  <- PlayButton, SettingsButton, QuitButton
 ##   ├── ModeScreen (VBoxContainer)  <- SoloButton, MultiplayerButton, TutorialButton, BackButton
 ##   ├── CoopScreen (VBoxContainer)  <- made by this script: LOCAL CO-OP / ONLINE CO-OP / BACK
@@ -65,7 +65,7 @@ signal settings_pressed
 ## How much the big CYPURRPUNK title flickers like a neon sign (0 = steady).
 @export var title_flicker: float = 0.25
 
-@onready var title_label: Label = $Title
+@onready var title_label: Control = $Logo  # the big CYPURRPUNK logo (scripts/ui/menu_logo.gd)
 @onready var main_screen: Control = $MainScreen
 @onready var mode_screen: Control = $ModeScreen
 @onready var play_screen: Control = $PlayScreen
@@ -143,7 +143,7 @@ func _ready() -> void:
 	_couch_label.position = Vector2(30, 214)
 	_couch_label.size = Vector2(260, 24)
 	_couch_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_couch_label.add_theme_color_override("font_color", Color(0.4, 1, 1))
+	_couch_label.add_theme_color_override("font_color", Color(0.55, 0.9, 1))
 	_couch_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_couch_label)
 	show_main_screen()
@@ -312,7 +312,7 @@ func _build_landing_screen() -> void:
 	landing_screen.add_theme_constant_override("separation", 2)
 	_landing_title = Label.new()
 	_landing_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_landing_title.add_theme_color_override("font_color", Color(1, 0.35, 0.8))
+	_landing_title.add_theme_color_override("font_color", Color(1, 0.55, 0.85))
 	landing_screen.add_child(_landing_title)
 	# Player 1's row: [<]  [P1  WHISKERS]  [>]  (d-pad moves between them, A presses).
 	var p1_row := HBoxContainer.new()

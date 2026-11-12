@@ -46,9 +46,9 @@ const LABELS: Dictionary = {
 	"fur": "FUR", "markings": "MARKINGS", "eyes": "EYES", "nose": "NOSE",
 	"hat": "HAT", "face": "FACE", "neck": "NECK", "voice": "VOICE",
 }
-const HEADER_COLOR := Color(1, 0.35, 0.8)
-const VALUE_COLOR := Color(0.4, 1, 1)
-const NOTE_COLOR := Color(0.6, 0.55, 0.7)
+const HEADER_COLOR := Color(1, 0.55, 0.85)
+const VALUE_COLOR := Color(0.55, 0.9, 1)
+const NOTE_COLOR := Color(0.5, 0.68, 0.8)
 const WARN_COLOR := Color(1, 0.8, 0.45)
 ## How fast the preview cat turns (radians per second).
 const SPIN_SPEED: float = 0.8
@@ -426,7 +426,7 @@ func _add_row(key: String, y: float, is_color: bool) -> void:
 	row.size = Vector2(152, 16)
 	row.add_theme_constant_override("separation", 3)
 	add_child(row)
-	var name_label := _row_label(LABELS.get(key, key.to_upper()), 60, Color(0.85, 0.85, 0.95))
+	var name_label := _row_label(LABELS.get(key, key.to_upper()), 60, Color(0.78, 0.94, 1))
 	row.add_child(name_label)
 	var left := _button("<", Vector2.ZERO, Vector2(14, 15))
 	remove_child(left)
@@ -473,7 +473,7 @@ func _row_label(text: String, width: float, color: Color) -> Label:
 ## A little 3D stage with its own world: a cat model, a camera and some lights.
 func _build_preview(at: Vector2, preview_size: Vector2) -> void:
 	var frame := ColorRect.new()
-	frame.color = Color(0.1, 0.06, 0.16)
+	frame.color = Color(0.02, 0.09, 0.16)
 	frame.position = at - Vector2.ONE
 	frame.size = preview_size + Vector2.ONE * 2
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -504,7 +504,7 @@ func _build_preview(at: Vector2, preview_size: Vector2) -> void:
 	viewport.add_child(sun)
 	var rim := OmniLight3D.new()  # pink neon from behind, like the city
 	rim.position = Vector3(-0.8, 1.2, -1.0)
-	rim.light_color = Color(1, 0.35, 0.8)
+	rim.light_color = Color(1, 0.55, 0.85)
 	rim.light_energy = 2.0
 	rim.omni_range = 3.0
 	viewport.add_child(rim)
