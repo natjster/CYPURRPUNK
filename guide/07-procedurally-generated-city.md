@@ -13,8 +13,10 @@ number, the **city seed**. Same number = exact same city.
   itself (the test tool prints a city "fingerprint"; host and joined player always match).
 - **What it builds:** a 6x6 grid of blocks with streets between. Each block has 4 lots: a building
   (taller towards downtown, glowing windows, sometimes a rooftop box and a neon sign with coloured
-  light) or an empty yard with crates, a dumpster and a junk pile of trash bins and traffic cones
-  (real Blockbench models, §20; more stand on some sidewalk corners and by Meow-Mart's door). Street lamps sit at every
+  light) or an empty yard with a dumpster and a junk pile of traffic cones, boxes and carts
+  (real Blockbench models, §20; more stand on some sidewalk corners and by Meow-Mart's door). Small
+  trash bins and the plain crate blocks are switched OFF (City > Inspector: **Place Trash Bins**,
+  **Yard Crates**; ticking them brings them back in the same spots): the big DUMPSTER is the only trash. Street lamps sit at every
   crossroads and halfway along each block. Invisible walls stop you driving off the edge.
 - **Always in the same place, whatever the seed:** each gang's **entry manhole** (Catleone
   Family: the south-west corner crossroads, Burrow Gang: the north-east one) and the car, which

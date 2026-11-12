@@ -74,7 +74,8 @@ Godot's **Import** tab stay (the export never overwrites an existing .import fil
 Select **City** in `main.tscn` > Inspector > **Street Props (Blockbench Models)**:
 **Trash Bin Model / Traffic Cone Model** (which .glb files), **Yard Bins Min/Max** and
 **Yard Cones Min/Max** (the junk pile in each empty yard; some cones lie knocked over),
-**Corner Prop Chance** (0-1, per sidewalk corner), **Props At Meow Mart**, **Bins Are Solid**.
+**Corner Prop Chance** (0-1, per sidewalk corner), **Props At Meow Mart**, **Bins Are Solid**,
+**Place Trash Bins** (OFF by default = no small bins at all; the dumpster stays), **Yard Crates** (OFF = no 1 m crate blocks).
 They're placed with the city's own random numbers, so every player's city still comes out identical.
 (This changed the layout of every city seed once: a seed now gives a different city than before.)
 

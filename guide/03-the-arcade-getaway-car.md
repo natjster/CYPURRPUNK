@@ -120,8 +120,9 @@ the bots keep chasing you when you jump in (they hunt the car). Test: `--add_loc
 The car has **300 HP** (click **Health** in `scenes/getaway_car.tscn` > Inspector > *Toughness*).
 VAC-COPs **still chase you in the car**: they ram it instead of you (a ram = the bot's **Bonk Damage
 x Car Damage Multiplier**, set on each bot scene, e.g. `scenes/roomba.tscn` > *Hunting*), SQUIRT-DRONE
-zaps dent it, **crashes** hurt it (losing more than **Crash Speed Loss** m/s almost at once: a wall at
-full speed, the MEGA VAC-COP), and in TURF WAR the other gang's guns hurt it (your own gang's don't).
+zaps dent it, and in TURF WAR the other gang's guns hurt it (your own gang's don't). **Crashing never
+hurts it** (walls, buildings, props): only enemies do. To bring crash damage back, tick **Crashes Hurt**
+(then losing more than **Crash Speed Loss** m/s almost at once = a dent).
 A health bar floats over the car once it's damaged (blue for your gang's car, red for the rival's).
 Under half health it smokes, under a fifth it burns (*Look*: **Smoke Below**, **Fire Below**).
 At 0 HP it **WRECKS**: a fireball, everyone inside is thrown out and loses **Wreck Occupant Damage**

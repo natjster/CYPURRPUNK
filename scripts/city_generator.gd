@@ -82,6 +82,12 @@ signal generated(city_seed: int)
 ## Trash bins are solid for cats (they bump into them; zoomies knock them over). Cars and VAC-COPs
 ## never crash into props (MessProp.SOLID_LAYER), and cones, boxes and posters are never solid.
 @export var bins_are_solid: bool = true
+## Off (the default) = no small trash bins anywhere in the city: the big DUMPSTER is the only trash you
+## can plough into. Tick it to bring the bins back (same spots: the city's random numbers don't change).
+@export var place_trash_bins: bool = false
+## Off (the default) = empty yards have no plain 1 m crate blocks (cars used to crash on them).
+## Tick it to bring them back (same spots either way).
+@export var yard_crates: bool = false
 
 @export_group("Meow-Mart storefront (the way INSIDE)")
 ## On = Meow-Mart has a glass front with sliding doors you can walk through (into the store:
@@ -553,10 +559,13 @@ func _storefront_glow_material() -> Material:
 
 func _build_yard(lot_center: Vector3, lot_size: float) -> void:
 	var spread := lot_size * 0.5 - 2.0
+	# The crate blocks: the random numbers are ALWAYS drawn (so the rest of the city comes out the same),
+	# but the boxes are only built when Yard Crates is ticked.
 	for i in _rng.randi_range(1, 4):
 		var spot := lot_center + Vector3(_rng.randf_range(-spread, spread), 0.5, _rng.randf_range(-spread, spread))
-		LevelKit.add_box(self, spot, Vector3.ONE, crate_material, true)
-		if _rng.randf() < 0.35:  # stack one on top
+		if yard_crates:
+			LevelKit.add_box(self, spot, Vector3.ONE, crate_material, true)
+		if _rng.randf() < 0.35 and yard_crates:  # stack one on top
 			LevelKit.add_box(self, spot + Vector3(0, 1, 0), Vector3.ONE, crate_material, true)
 	var dumpster_at := Vector3.INF
 	if _rng.randf() < yard_dumpster_chance:  # a DUMPSTER (a MESS prop: rummage it)
@@ -733,6 +742,8 @@ func _spot_is_clear(spot: Vector3, room: float) -> bool:
 ## knock it over: scripts/mess_prop.gd). Solid for cats unless bins_are_solid is off. Falls back to
 ## an old trash-bag blob if the model file is missing.
 func _add_bin(at: Vector3, yaw: float) -> void:
+	if not place_trash_bins:
+		return  # (bins are switched off: see Place Trash Bins. No random numbers are drawn in here.)
 	if not ResourceLoader.exists(trash_bin_model):
 		_add_trash_bag(self, at + Vector3(0, 0.22, 0), yaw)
 		return

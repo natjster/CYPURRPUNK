@@ -32,8 +32,8 @@
   `gunner_camera_distance/lift`), mouse/stick look work, `ItemManager._use_held_items`/HUD allow gunners; `HeldItem.own_rids()` =
   holder + car (weapon/melee rays + blasts). Test `--add_local=1 --drive --ride_along=1 --gunner_test`.
 - CAR HEALTH `scripts/car/car_health.gd` (`car.health`, node Health, GameSystems): host `damage(amount, cause)`, `_set_health` rpc,
-  `wrecked` (empty_car + hop + `_boom`, refuses entry, `repair()` after `wreck_seconds` = park). Crashes detected on the car's
-  authority (`_recent_speed` drop, skips `car.teleport_frame`) -> `report_crash`. Rival gunfire: `car.receive_hit` -> `request_shot`.
+  `wrecked` (empty_car + hop + `_boom`, refuses entry, `repair()` after `wreck_seconds` = park). Crashes (only if export
+  `crashes_hurt`, OFF since 12 Nov 2026 = enemies only) detected on the car's authority (`_recent_speed` drop, skips `car.teleport_frame`) -> `report_crash`. Rival gunfire: `car.receive_hit` -> `request_shot`.
   `car.gang()`, `car.health_bar_info()` (car in HudHealthBars group; friend = same gang). Fx helpers `scripts/car/car_fx.gd`.
 - AFTERBURNER `scripts/car/car_boost.gd` (`car.boost`, node Boost): host owns `charges`/`recharge` (`max_charges` = `base_charges` (1) + crew tier of
   "afterburner"; static `test_charges` for tests, never touch real upgrades in tests: they save to test_profiles), action "boost"

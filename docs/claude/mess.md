@@ -25,6 +25,8 @@
   (request_knock checks, then calls it; a rolling cart's `_bowl_along` calls it with `knocked_by`); `_drop_loot` + `_looted_props` (once per prop
   per district, SCAVENGING: weighted `vending/dumpster/bin/box_finds` {id: weight, "" = nothing} via `finds_for`/`roll_find`; every item incl. guns). Geyser: each computer launches its own cats/driven car, host stuns
   `Enemy.GROUP`. Cart stop spot = ray vs city STATIC bodies only (deterministic). Glow parts dim via instance_tint; `powered` false in BLACKOUT.
+  City exports `place_trash_bins` / `yard_crates` both OFF (12 Nov 2026, user: dumpster = the only trash; `_add_bin` returns early,
+  yard crate rng still drawn so layouts don't shift). Hub's west-wall 3-crate stack removed too.
   City: `_add_vending/_add_hydrant/_add_cart/_add_aframe_sign/_add_dumpster` (`_add_neon_sign` is the BUILDING neon), `_add_shopfront_vending`,
   Meow-Mart side-wall layout, yard dumpster + carts, corner `roll` ladder. Test: `--use_prop=KIND [--from_below|--prop_twice|--geyser_jump|--geyser_bot|--cart_bowl]`,
   `--shoot_prop=KIND`, `--instant_props`, `--look_prop=KIND`. Port 7777 busy (user's Godot running)? use `--solo`.

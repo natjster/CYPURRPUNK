@@ -743,7 +743,8 @@ func _build_props() -> void:
 	_build_shanties()
 	# Crates, trash and junk. (The east-wall crate sits in the corner past the litterbox: z -4 on that
 	# wall is the TINKER WORKBENCH's spot now.)
-	for spot in [Vector3(-w + 1.0, 0.5, 10), Vector3(-w + 1.0, 0.5, 11.2), Vector3(-w + 1.0, 1.5, 10.6), Vector3(w - 1.0, 0.5, -17.5), Vector3(-4, 0.5, -17)]:
+	# (The 3-crate stack on the west wall, on your left as you spawn, was taken out on purpose.)
+	for spot in [Vector3(w - 1.0, 0.5, -17.5), Vector3(-4, 0.5, -17)]:
 		LevelKit.add_box(self, spot, Vector3.ONE, _crate, true)
 
 

@@ -8,8 +8,8 @@ extends Node3D
 ##   - VAC-COPs RAMMING it: bots still chase cats who jump in a car (roomba.gd _bonk_car; how hard
 ##     = the bot's Bonk Damage x Car Damage Multiplier, in its scene's Inspector).
 ##   - SQUIRT-DRONE zaps that land on it (squirt_drone.gd).
-##   - CRASHING: losing a lot of speed at once (a wall, the MEGA VAC-COP...). Worked out on the
-##     DRIVER's computer (it runs the car's physics), then sent to the host: report_crash.
+##   - CRASHING (OFF by default: Crashes Hurt): losing a lot of speed at once (a wall...). Worked out on
+##     the DRIVER's computer (it runs the car's physics), then sent to the host: report_crash.
 ##   - The OTHER gang's guns (TURF WAR only: your own gang's bolts never hurt your ride).
 ##
 ## Every computer sees: a health bar over the car once it's damaged (scripts/ui/hud_health_bars.gd,
@@ -21,6 +21,9 @@ extends Node3D
 @export_group("Toughness")
 ## Full health. (A VAC-COP ram takes ~20, a squirt ~9, a pistol bolt ~40.)
 @export var max_health: int = 300
+## Off (the default) = hitting walls, buildings or anything else NEVER dents the car: only enemies
+## (VAC-COP rams, squirt-drone zaps, the other gang's guns) do. Tick it to bring crash damage back.
+@export var crashes_hurt: bool = false
 ## A crash = losing at least this much speed (metres per second) almost at once. Normal braking
 ## never counts; hitting a wall at full speed does.
 @export var crash_speed_loss: float = 9.0
@@ -101,7 +104,7 @@ func _physics_process(delta: float) -> void:
 ## The car's simulator (driver's computer): a sudden loss of speed = a crash. Ask the host to dent it.
 func _check_for_crash(delta: float) -> void:
 	_crash_cooldown = maxf(_crash_cooldown - delta, 0.0)
-	if not car.is_multiplayer_authority() or car.freeze or car.driver_id == 0 or wrecked:
+	if not crashes_hurt or not car.is_multiplayer_authority() or car.freeze or car.driver_id == 0 or wrecked:
 		_recent_speed = 0.0
 		return
 	var speed := Vector3(car.linear_velocity.x, 0, car.linear_velocity.z).length()
