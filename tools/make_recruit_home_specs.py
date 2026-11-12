@@ -251,8 +251,8 @@ frankie_garage = spec("frankie_garage",
     "Glow (espresso machine light).",
     [{"name": "Trim"}, {"name": "Lamp"}, {"name": "Glow"}],
     [
-        cube("pad", "Body", [-42, 0, -21], [42, 0.3, 22], faces={"up": DARK}),
-        cube("stripe", "Body", [-42, 0, -24], [42, 0.4, -21], faces={"up": HAZARD, "north": HAZARD}),
+        cube("pad", "Body", [-42, 0, -21], [42, 1.0, 22], faces={"up": DARK}),  # 6 cm thick: thinner z-fought (flickered) with the hub floor
+        cube("stripe", "Body", [-42, 0, -24], [42, 1.2, -21], faces={"up": HAZARD, "north": HAZARD}),
         cube("door", "Body", [-39, 0, 22], [39, 40, 24], faces={"north": TIN}),
         cube("wallL", "Body", [-42, 0, -24], [-39, 40, 24], faces={"east": DARK, "west": DARK, "north": HAZARD}),
         cube("wallR", "Body", [39, 0, -24], [42, 40, 24], faces={"east": DARK, "west": DARK, "north": HAZARD}),
