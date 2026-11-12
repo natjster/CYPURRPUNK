@@ -14,6 +14,11 @@
   triangles makes textures shear and swim. DevCapture `--no_affine` / `--no_snap` help diagnose.
   Never stack visible surfaces a few cm apart (e.g. sidewalk over street): they z-fight and
   flicker/streak at low camera angles. Ground is a non-overlapping tile grid (`_build_ground`).
+- BUILDING STYLES: `scripts/city_buildings.gd` (static `CityBuildings`, `Style` BOX/SETBACK/SHOPHOUSE/TWIN/CORP). `_build_building`
+  calls `pick_style` (one `_rng` draw, weights = City exports `style_*_weight`, tall styles gated by height) then `build(...)`,
+  which returns the GROUND-FLOOR box {center,size[,awning_on_x]} that neon/poster/vending use (keep every style's ground floor
+  = the full footprint, ≥10 m for SETBACK/TWIN so signs never float). Code-built LevelKit boxes, shared static materials,
+  BLACKOUT -> dead grey + no lights. `building_style_counts` -> `DevCapture buildings:` line.
 - `LevelKit.instantiate_model(path|name, parent, pos, yaw)` (cached PackedScene) + `psx_ify(root)` (shared psx_lit copy per source
   material, keeps albedo texture/colour, world_uv false). City props: `_add_bin` (StaticBody box) / `_add_cone` (no collision,
   `knocked_over`), yard pile = shuffled 4x4 grid, `_place_corner_props` (sidewalk corners, along 9.6-10.2 m: outside loot's ±9 m

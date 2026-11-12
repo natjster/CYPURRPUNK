@@ -40,6 +40,26 @@ signal generated(city_seed: int)
 ## Chance (0-1) of a little box (vents, water tank) on a roof.
 @export_range(0.0, 1.0) var rooftop_chance: float = 0.5
 
+@export_group("Building styles")
+## How COMMON each building style is (scripts/city_buildings.gd). Bigger number = more of them;
+## 0 = never. They're shares, not percentages: 4/1/1/1/1 = half the buildings are plain boxes.
+## Tall styles only go on buildings tall enough for them (the rest become plain boxes).
+## Plain box, the old style.
+@export_range(0.0, 10.0, 0.1) var style_box_weight: float = 2.5
+## Stepped "wedding cake" skyscraper with ledges and a red-tipped antenna (16 m+ tall only).
+@export_range(0.0, 10.0, 0.1) var style_setback_weight: float = 1.5
+## Short noodle-shop walk-up: glowing awning, AC units round the back, water tower on the roof.
+@export_range(0.0, 10.0, 0.1) var style_shophouse_weight: float = 1.5
+## Twin towers on one base, joined by a glowing skybridge (18 m+ tall only).
+@export_range(0.0, 10.0, 0.1) var style_twin_weight: float = 1.0
+## OVERCLEAN office: neon corner strips and a lit slogan billboard on the roof (12 m+ tall only).
+@export_range(0.0, 10.0, 0.1) var style_corp_weight: float = 1.2
+## Walk-up awnings: how high their front edge hangs and how far they stick out over the sidewalk.
+@export var awning_height: float = 2.8
+@export_range(0.3, 0.95) var awning_depth: float = 0.8
+## Chance (0-1) that a walk-up has a water tower on its roof.
+@export_range(0.0, 1.0) var water_tower_chance: float = 0.6
+
 @export_group("Street props (Blockbench models)")
 ## The trash bin model (made in Blockbench: models/blockbench/trash_bin.bbmodel).
 @export_file("*.glb") var trash_bin_model: String = "res://models/trash_bin.glb"
@@ -115,6 +135,8 @@ signal generated(city_seed: int)
 ## signs, dumpsters) in the order they were built: a prop's
 ## place in this list is its id, the same on every computer (scripts/mess_manager.gd).
 var mess_props: Array[MessProp] = []
+## How many buildings of each style this city got (CityBuildings.Style -> count; DevCapture prints it).
+var building_style_counts: Dictionary = {}
 ## Every loudspeaker pole built for this city (scripts/loudspeaker.gd).
 var loudspeakers: Array[Node3D] = []
 ## Spots already used by lamps and corner props, so a loudspeaker pole doesn't stand in them.
@@ -195,6 +217,7 @@ func generate(new_seed: int, showcase: bool = false) -> void:
 	for child in get_children():
 		child.queue_free()
 	mess_props.clear()
+	building_style_counts.clear()
 	loudspeakers.clear()
 	meow_mart_doors.clear()
 	meow_mart_door_spot = Vector3.INF
@@ -298,16 +321,25 @@ func _build_building(lot_center: Vector3, lot_size: float, street_side: Vector2)
 
 	var center := _front_aligned_center(lot_center, lot_size, street_side, width, depth, height)
 	var size := Vector3(width, height, depth)
-	var walls := LevelKit.add_box(self, center, size, building_material, true)
-	walls.set_instance_shader_parameter("instance_tint", BUILDING_TINTS[_rng.randi() % BUILDING_TINTS.size()])
+	var tint := BUILDING_TINTS[_rng.randi() % BUILDING_TINTS.size()]
+	# BUILDING STYLES (scripts/city_buildings.gd): plain box, stepped tower, noodle-shop walk-up,
+	# twin towers or OVERCLEAN office. It hands back the GROUND FLOOR box: the signs, posters and
+	# vending machines below go on that, so they always sit flat on a wall.
+	var style := CityBuildings.pick_style(self, height, size)
+	building_style_counts[style] = building_style_counts.get(style, 0) + 1
+	var ground_floor := CityBuildings.build(self, style, center, size, street_side, tint)
+	center = ground_floor.center
+	size = ground_floor.size
 
-	if _rng.randf() < rooftop_chance:
+	# (The little roof box only goes on the flat-roofed styles: the others have their own roof bits.)
+	if (style == CityBuildings.Style.BOX or style == CityBuildings.Style.SHOPHOUSE) and _rng.randf() < rooftop_chance:
 		var roof_box := Vector3(_rng.randf_range(1.5, 3.0), _rng.randf_range(1.0, 2.0), _rng.randf_range(1.5, 3.0))
-		var roof_spot := center + Vector3(_rng.randf_range(-1, 1) * (width - roof_box.x) * 0.4, height * 0.5 + roof_box.y * 0.5, _rng.randf_range(-1, 1) * (depth - roof_box.z) * 0.4)
+		var roof_spot := center + Vector3(_rng.randf_range(-1, 1) * (width - roof_box.x) * 0.4, size.y * 0.5 + roof_box.y * 0.5, _rng.randf_range(-1, 1) * (depth - roof_box.z) * 0.4)
 		LevelKit.add_box(self, roof_spot, roof_box, building_material, false)
 
 	if _rng.randf() < neon_chance:
-		_add_neon_sign(center, size, street_side)
+		# (A walk-up's sign goes on the wall WITHOUT the awning, so the two never cross.)
+		_add_neon_sign(center, size, street_side, ground_floor.get("awning_on_x", -1))
 	var poster_face := -1  # (0 = the x face, 1 = the z face, -1 = no poster)
 	if _rng.randf() < poster_chance:
 		# An OVERCLEAN poster at cat height on one of the two street-facing walls.
@@ -370,12 +402,15 @@ func _front_aligned_center(lot_center: Vector3, lot_size: float, street_side: Ve
 		lot_center.z + street_side.y * (lot_size * 0.5 - 1.0 - depth * 0.5))
 
 
-func _add_neon_sign(building_center: Vector3, building_size: Vector3, street_side: Vector2) -> void:
+## awning_on_x: 1 / 0 = that building has an awning on its x / z wall (the sign takes the other one), -1 = none.
+func _add_neon_sign(building_center: Vector3, building_size: Vector3, street_side: Vector2, awning_on_x: int = -1) -> void:
 	var color := NEON_COLORS[_rng.randi() % NEON_COLORS.size()]
 	var vertical := _rng.randf() < 0.5
 	var long_side := 3.0 if vertical else 3.5
 	var short_side := 0.9
 	var on_x_face := _rng.randf() < 0.5  # which street-facing wall gets the sign
+	if awning_on_x != -1:
+		on_x_face = awning_on_x == 0
 	var y := _rng.randf_range(3.0, minf(building_size.y - 1.0, 9.0))
 	var sign_size: Vector3
 	var sign_pos: Vector3

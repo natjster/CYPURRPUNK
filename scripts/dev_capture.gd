@@ -1100,6 +1100,11 @@ func _ready() -> void:
 			if not child.is_queued_for_deletion():
 				layout += str((child as Node3D).position.snapped(Vector3.ONE * 0.01))
 		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
+		# BUILDING STYLES (scripts/city_buildings.gd): how many of each this city got.
+		var styles := {}
+		for style in city.building_style_counts:
+			styles[CityBuildings.Style.keys()[style]] = city.building_style_counts[style]
+		print("DevCapture buildings: %s" % styles)
 		# The Blockbench street props (models from res://models/): how many, and a few spots.
 		var props := {}
 		for node in city.find_children("*", "Node3D", true, false):

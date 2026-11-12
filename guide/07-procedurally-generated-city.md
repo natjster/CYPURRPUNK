@@ -28,9 +28,23 @@ number, the **city seed**. Same number = exact same city.
 - **Points of interest, somewhere different every district:** **Meow-Mart** (a random lot), the
   **exit manhole** and the **payphones** (placed by `fish_heist.gd`, see §8).
 
+- **Five building styles** (`scripts/city_buildings.gd`), rolled per lot:
+  - **Plain box** — the original block (still the most common).
+  - **Stepped tower** (16 m+ only) — three shrinking tiers with concrete ledges and a red-tipped antenna.
+  - **Noodle-shop walk-up** — short (6-12 m), a softly glowing coloured awning over the sidewalk
+    (it stops 2 m short of the corner, so it never hits a lamp or loudspeaker), AC units on the back
+    walls, often a water tower on the roof. Its neon sign always goes on the other wall.
+  - **Twin towers** (18 m+ only) — two towers on a 9.5 m base, joined by a skybridge with a glowing strip underneath.
+  - **OVERCLEAN office** (12 m+ only) — neon strips up all four corners and a lit roof billboard with a
+    slogan ("LITTER = CRIME", "OBEY THE VAC"...).
+  The ground floor is always the full footprint, so signs, posters and vending machines sit flat on a wall.
+  In a BLACKOUT the awnings, strips and billboards go dark. Only awnings, skybridges and billboards add a light.
+
 **Tuning** (select **City** in `main.tscn`, Inspector): Blocks Per Side (keep it even), Block
 Size, Street Width, Min/Max Height, Empty Lot Chance, Neon Chance, Rooftop Chance, plus the
-materials. Building looks: the `Mat_building` material's **Texture Glow** controls how bright the
+materials. **Building Styles** group: Style Box / Setback / Shophouse / Twin / Corp **Weight** (how
+common each style is: shares, 0 = never; a tall style on a too-short building becomes a plain box),
+**Awning Height**, **Awning Depth**, **Water Tower Chance**. Building looks: the `Mat_building` material's **Texture Glow** controls how bright the
 windows are.
 
 **Why walls are cut into pieces:** every generated box is split into ~2.5 m squares
