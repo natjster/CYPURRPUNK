@@ -20,8 +20,7 @@
   (`draw_panel(..., alpha)` fades with them). Popup = right-side reward card (anchor 0.36); `Hud.banner` clears the popup.
   No crosshair in `UndergroundHub.is_safe` (item_manager); empty quick slots aren't drawn; sewer title hidden while TutorialBox shows. Feed lines: `feed_seconds` 4 + `feed_fade_seconds`.
   Sewer title (DropOff in the hub) fades after `FishHeist.sewer_title_seconds` (`_show_sewer_title`, per seat; hidden after = bars get the row).
-  TALK CAMERA: `NpcDialog.talking_to` (set by npc.gd before open) -> `CatPlayer._update_talk_camera` (yaw + asin(side/dist) centres the NPC,
-  pitch puts its face at `talk_face_height`; shares `_pitch_before_inventory` with the inventory view). Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
+  Test: `--hud_heat=R,L --hud_buffs=sticky,catnip,catdip` ("DevCapture hud loadout"). `Frame/Top` stays during NPC talk, `Frame/Middle` hides;
   whole HUD hides under full-screen menus (`Hud.menu_open()`). Never reference HUD nodes by path.
   HUD windows `Inventory` (`InventoryScreen`) + `NpcDialog` live in hud.tscn: while `Hud.wants_input()`
   GameScreen keeps that player's input for their HUD.

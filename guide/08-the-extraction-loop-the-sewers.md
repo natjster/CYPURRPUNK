@@ -162,25 +162,29 @@ counter of **THE BLACK MARKITTEN** ("Purr-oletariat Liberation Front") on the we
 the breach tunnel. It's **the only place to get gear**: nothing but fish lies around the city any more.
 Press **E** to talk to him (ask who he is, what this place is...), then pick **SHOW ME THE GOODS** and
 **THE BLACK MARKITTEN shop screen** opens. It's in
-the ocean-blue style, in your own HUD (split screen: everyone shops on their own screen):
+one big window in the ocean-blue style, laid out like THE MAINFRAME and the TINKER WORKBENCH (the sewer
+dims behind it), in your own HUD (split screen: everyone shops on their own screen):
 ```
- [cat + backpack]  PAWS / QUICK USE           ┌ THE BLACK MARKITTEN               $240 ┐
-                   BACKPACK 4/6               │ COMRADE WHISKERS: "Take your pick..."  │
-                   [SELL $50][SELL $400]      │ [ SELL ALL LOOT (+$450) ]              │
-                   [ SCRAP  ][ EMPTY   ]      │ [MELEE] [CONSUMABLES] [FIREARMS]       │
-                   "Click: SELL it ..."       │ [pic] PAW-PISTOL  one shot...  BUY $60 │
-                                              │ [###] HAIRBALL BLASTER  LOCKED — ...    │
-                                              │ what the highlighted thing is          │
+ ┌ THE BLACK MARKITTEN                                              $240 ┐
+ │ COMRADE WHISKERS: "Take your pick..."                                 │
+ │            [ MELEE ] [ CONSUMABLES ] [ FIREARMS ]                     │
+ │      [pic] [pic] [###] [pic] [pic] [pic]       <- item tiles          │
+ │ ┌big pic┐  PAW-PISTOL               ┌ PAW-PISTOL ────────────────┐   │
+ │ │       │  FIREARMS  PRICE $60      │ One shot per click...      │   │
+ │ └───────┘  SELLS BACK FOR $30       │ [ BUY — $60 ]              │   │
+ │ ┌ SELL TO THE FENCE: [fish x3] [koi] [pistol] ...  [SELL ALL LOOT] ┐  │
+ │ what the highlighted thing is / "Bought ..."                          │
+ └───────────────────────────────────────────────────────────────────────┘
 ```
-- **Left half:** your backpack view (§9) in **shop mode**: the camera pushes your cat further left,
-  every slot shows its **SELL** price, and **clicking a slot SELLS it** (paws, quick-use and backpack;
-  right-click still drops).
-- **Right half:** three **tabs** (click them, or **LB / RB**): **MELEE** (Neon Bat, Frozen Tuna),
-  **CONSUMABLES** (Catnip, Catdip), **FIREARMS** (Paw-Pistol, Hairball Blaster, Red Dot, Purr-Tommy,
-  Yarn-Zooka, Cucumber Launcher). Each row: the item's side-view picture, name, description and
-  **BUY $XX**; **click a row to buy**. Guns from a WEAPON CRATE you haven't unlocked show as a **solid
-  black silhouette** with "LOCKED — PURCHASE CRATE N AT WORKBENCH"; clicking one only says where to
-  unlock it (the crates are on the **TINKER WORKBENCH** now, §25, not on him).
+- **Tabs** (click them, or **LB / RB**): **MELEE** (Neon Bat, Frozen Tuna), **CONSUMABLES** (Catnip,
+  Catdip), **FIREARMS** (Paw-Pistol, Hairball Blaster, Red Dot, Purr-Tommy, Yarn-Zooka, Cucumber Launcher).
+- **Item tiles:** each shows the item's side-view picture, name and price. **Click a tile** to show it big in
+  the middle (picture, price, what it sells back for, description), then press **BUY — $XX**. Guns from a
+  WEAPON CRATE you haven't unlocked are a **solid black silhouette** marked LOCKED; their button says
+  "LOCKED — CRATE N" and only tells you where to unlock it (the crates are on the **TINKER WORKBENCH**, §25).
+- **SELL TO THE FENCE** (the strip at the bottom): everything you carry (paws, quick use, then each kind of
+  thing in your backpack, stacked "x3") with its **SELL $XX** price. **Click one to sell ONE.** Scrap and
+  electronics say NO SALE.
 - **SELL ALL LOOT (+$XXX)** sells every piece of street loot in your backpack in one click (scrap and gear stay).
 - **Prices** (`ItemManager.sell_price_for`, the host checks every buy and sale):
 
@@ -189,11 +193,11 @@ the ocean-blue style, in your own HUD (split screen: everyone shops on their own
 | Sardine / Fish / Gourmet Tuna / Fresh Catch / Catnip Treats / Golden Koi | - | **$20 / $50 / $60 / $75 / $80 / $400** (100%, +20% / +40% with GOURMET FENCE) |
 | Neon Bat / Catnip / Catdip / Paw-Pistol / Frozen Tuna | $20 / $25 / $35 / $60 / $80 | half: $10 / $12 / $17 / $30 / $40 |
 | Hairball Blaster / Red Dot / Yarn-Zooka / Purr-Tommy / Cucumber Launcher | $120 / $140 / $160 / $200 / $280 | half: $60 / $70 / $80 / $100 / $140 |
-| SCRAP | - | never (badge says SCRAP): pays for upgrades at the Tinker Workbench |
-| ELECTRONICS | - | never (badge says POWER): feed THE MAINFRAME |
+| SCRAP | - | never (says NO SALE): pays for upgrades at the Tinker Workbench |
+| ELECTRONICS | - | never (says NO SALE): feed THE MAINFRAME |
 
-- **Controller:** the d-pad / stick moves one highlight over BOTH halves (tabs, SELL ALL, rows, your
-  backpack); **A** = click, **X** = drop (backpack), **LB / RB** = tabs, **B / Y / Esc / Tab** = leave.
+- **Controller:** the d-pad / stick moves the highlight (tabs, tiles, BUY, your things, SELL ALL);
+  **A** = click, **LB / RB** = tabs, **B / Y / Esc / Tab** = leave.
   Your cat can't move while the shop is open; it also closes if you walk away or a menu opens.
 
 - **Change a price:** double-click the item card (e.g. `items/pistol.tres`) > **Shop > Price**.

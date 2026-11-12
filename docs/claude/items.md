@@ -28,10 +28,12 @@ lays out ocean-blue boxes on the right (`_layout`), draws callout lines from pro
 `GameScreen.camera_for_seat`), slots = Buttons + `SlotFace` (icon, name, price badge). Hud hides Names/Scoreboard while it's open.
 Test: `--inventory[=0,1]` ("DevCapture inventory"), `--to_stash=pack:0`.
 SHOP (Phase 3): E = normal NPC talk box; his choice action `shop` (SHOW ME THE GOODS) -> `Shopkeeper.open_shop` -> `ShopScreen` (`scripts/ui/shop_screen.gd`, HUD `Frame/Shop`, `for_seat/is_open_for`; in
-`Hud.wants_input` + `cat._menu_open`): right half = 3 tabs (exports melee/consumable/firearm_items, filtered by keeper.stock), rows =
-Button + `RowFace` (icon or black silhouette when `!Upgrades.shop_allows`, BUY pill), SELL ALL; it opens the inventory in `shop_mode`
-(`open_for_shop`: left column at `shop_column_start`, SELL badges, click = `request_sell(pid, where, index)`, cat camera `shop_camera_side`)
-and drives ONE SeatFocus over both (inventory `_input` returns while the shop is open). Prices = `ItemManager.sell_price_for` (loot
+`Hud.wants_input` + `cat._menu_open`): ONE centred window like MainframeScreen/WorkbenchScreen (dims the sewer, own mouse
+mode): 3 tabs (exports melee/consumable/firearm_items, filtered by keeper.stock), item tiles = Button + `ItemTile` (icon or black
+silhouette when `is_locked` = `!Upgrades.shop_allows`); click a tile = `selected` (big picture + detail card), `_buy` buys it
+(`_press_row` = pick + buy, for tests). SELL strip = Button + `SellTile` from `_sellables()` (hands, quick, pack grouped by id;
+meta where/index -> `request_sell(pid, where, index)`), `sell_from(where, n)` for tests, SELL ALL. The backpack view has no
+shop mode any more. Prices = `ItemManager.sell_price_for` (loot
 100% x gourmet, gear max(1, price/2), scrap + electronics 0); `request_sell_all_loot`; `_buy_result`/`_sell_result` -> `ShopScreen.note`. WEAPON CRATES
 moved to the workbench page (`Upgrades.PAGES.workbench`). Test: `--talk=ComradeWhiskers --shop_tab/--shop_buy/--shop_sell/--shop_sell_all/
 --shop_pad/--shop_close` ("DevCapture shop").

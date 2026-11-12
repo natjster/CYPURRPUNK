@@ -70,15 +70,15 @@ func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void
 	var shop := ShopScreen.for_seat(player.slot)
 	var items := ItemManager.instance
 	var report := func(when: String) -> void:
-		var rows := shop._rows.filter(func(r): return r.visible).map(func(r): return "%s%s" % [r.get_node("Face").item_id, "(LOCKED)" if r.get_node("Face").locked else ""])
+		var rows := shop._rows.filter(func(r): return r.visible).map(func(r): return "%s%s" % [r.get_node("Face").item_id, "(LOCKED)" if shop.is_locked(r.get_node("Face").item_id) else ""])
 		var focus: Button = shop._focus.current
 		var focus_name := "-"
 		if focus != null:
 			focus_name = focus.text if focus.text != "" else (focus.get_node("Face").item_id if focus.has_meta("row") else "%s%d:%s" % [focus.get_meta("where", "?"), focus.get_meta("index", 0), focus.get_meta("item", "")])
-		var inventory := InventoryScreen.for_seat(player.slot)
-		print("DevCapture shop (%s): open=%s tab=%d rows=%s cash=$%d pack=%s hands=%s inventory_open=%s shop_mode=%s focus=%s note=\"%s\" sell_all=\"%s\"" % [
-			when, shop.visible, shop.tab, rows, Wallet.instance.cash_of(player.player_id), items.get_inventory(player.player_id).pack,
-			items.get_inventory(player.player_id).hands, inventory.visible, inventory.shop_mode, focus_name, shop._note, shop._sell_all.text])
+		var selling := shop._sell_tiles.filter(func(t): return t.visible).map(func(t): return "%s%s" % [t.get_node("Face").item_id, "x%d" % t.get_node("Face").count if t.get_node("Face").count > 1 else ""])
+		print("DevCapture shop (%s): open=%s tab=%d rows=%s selected=%s buy=\"%s\" cash=$%d pack=%s hands=%s sell_strip=%s focus=%s note=\"%s\" sell_all=\"%s\"" % [
+			when, shop.visible, shop.tab, rows, shop.selected, shop._buy.text, Wallet.instance.cash_of(player.player_id), items.get_inventory(player.player_id).pack,
+			items.get_inventory(player.player_id).hands, selling, focus_name, shop._note, shop._sell_all.text])
 	for i in 30:
 		await get_tree().process_frame
 	print("DevCapture shop: %s used=%s menu_blocks_cat=%s wants_input=%s" % [keeper.name, used, player._menu_open(), Hud.wants_input(player.slot)])
@@ -98,14 +98,9 @@ func _shop_test(player: CatPlayer, keeper: Shopkeeper, args: Dictionary) -> void
 				await get_tree().process_frame
 			report.call("buy " + item_id)
 	if args.has("shop_sell"):
-		var inventory := InventoryScreen.for_seat(player.slot)
 		for slot in str(args["shop_sell"]).split(","):
 			var parts: PackedStringArray = slot.split(":")
-			var list: Array = {"pack": inventory._pack_buttons, "hand": inventory._paw_buttons, "quick": inventory._quick_buttons}[parts[0]]
-			for button in list:
-				if button.get_meta("index") == int(parts[1]):
-					inventory._use_slot(button, parts[0], int(parts[1]), false)
-					break
+			shop.sell_from(parts[0], int(parts[1]))  # (pack:N = the Nth backpack tile in the SELL strip)
 			for i in 20:
 				await get_tree().process_frame
 			report.call("sell " + slot)

@@ -47,30 +47,12 @@ extends CharacterBody3D
 @export var inventory_camera_distance: float = 2.2
 ## How far right the camera slides (metres): more = the cat sits further left.
 @export var inventory_camera_side: float = 0.75
-## ...and at THE BLACK MARKITTEN (the shop has the right half, the backpack the middle): further.
-@export var shop_camera_side: float = 1.5
 ## How far down the camera drops (metres), towards the backpack.
 @export var inventory_camera_lift: float = -0.1
 ## Camera tilt while the inventory is open (degrees; minus = looking down a little).
 @export var inventory_camera_pitch_degrees: float = -12.0
 ## How fast it glides in and out (higher = snappier).
 @export var inventory_camera_speed: float = 7.0
-
-@export_group("Talk Camera")
-## TALKING TO AN NPC (the talk box, scripts/ui/npc_dialog.gd): like the inventory view, the camera
-## glides in over the cat's shoulder and turns to look at the NPC, and the cat turns to face them.
-## The talk box covers the bottom half of the screen, so the camera aims so the NPC's FACE lands
-## at Talk Face Height on screen (above the box), centred left-right.
-## How close the camera comes (metres; normal play is 3.5).
-@export var talk_camera_distance: float = 3.0
-## How far right the camera slides (metres): more = our cat further left, the NPC more in view.
-@export var talk_camera_side: float = 1.5
-## How far up (+) / down (-) the camera moves (metres).
-@export var talk_camera_lift: float = 0.0
-## Where the NPC's face sits on screen: 0 = top edge, 0.5 = the middle (the talk box starts at ~0.5).
-@export_range(0.1, 0.5) var talk_face_height: float = 0.3
-## How fast it glides in and out (higher = snappier).
-@export var talk_camera_speed: float = 6.0
 
 @export_group("Zoomies Juice")
 ## Cat leans its nose forward while sprinting.
@@ -117,9 +99,6 @@ var _air_jump_time_left: float = 0.0
 var _air_jump_seconds: float = 0.0  # how long the current catdip lasted in total (for the HUD timer)
 ## Inventory camera: 0 = normal view, 1 = fully in the backpack view (eases between).
 var _inventory_blend: float = 0.0
-## Talk camera: 0 = normal view, 1 = fully framing the NPC we're talking to (eases between).
-var _talk_blend: float = 0.0
-var _talk_was_open := false
 var _inventory_was_open := false
 var _pitch_before_inventory: float = 0.0
 var _pitch_returning := false
@@ -924,8 +903,7 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	_update_inventory_camera(delta)
 	var b := _inventory_blend
 	# A narrow split-screen pane shows less to the sides: slide less, or the cat drops off the edge.
-	var inventory := InventoryScreen.for_seat(slot)
-	var side := shop_camera_side if inventory != null and inventory.shop_mode else inventory_camera_side
+	var side := inventory_camera_side
 	if b > 0.0 and GameScreen.instance != null:
 		var pane := GameScreen.instance.screen_size_for_seat(slot)
 		side *= clampf((pane.x / maxf(pane.y, 1.0)) / (4.0 / 3.0), 0.35, 1.3)
@@ -935,65 +913,6 @@ func _update_zoomies_juice(is_zooming: bool, strafe: float, delta: float) -> voi
 	spring_arm.position.x = lerp(spring_arm.position.x, lerpf(shoulder_x, side, b), maxf(weight, a))
 	spring_arm.position.y = lerpf(lerpf(0.0, aim.ads_camera_lift, a), inventory_camera_lift, b)
 	spring_arm.spring_length = lerpf(lerpf(_base_spring_length, aim.ads_camera_distance, a), inventory_camera_distance, b)
-	# TALKING: over the shoulder, framing the NPC (on top of all of the above, eased by _talk_blend).
-	var t := _update_talk_camera(delta)
-	if t > 0.0:
-		var talk_side := talk_camera_side
-		if GameScreen.instance != null:  # (narrow split-screen pane: slide less, like the inventory view)
-			var talk_pane := GameScreen.instance.screen_size_for_seat(slot)
-			talk_side *= clampf((talk_pane.x / maxf(talk_pane.y, 1.0)) / (4.0 / 3.0), 0.35, 1.3)
-		spring_arm.position.x = lerpf(spring_arm.position.x, talk_side, t)
-		spring_arm.position.y = lerpf(spring_arm.position.y, talk_camera_lift, t)
-		spring_arm.spring_length = lerpf(spring_arm.spring_length, talk_camera_distance, t)
-
-
-## Who this player is talking to right now (their own talk box is open on an NPC), or null.
-func talk_target() -> Node3D:
-	if not is_multiplayer_authority():
-		return null
-	var dialog := NpcDialog.for_seat(slot)
-	if dialog == null or not dialog.is_open or not is_instance_valid(dialog.talking_to):
-		return null
-	return dialog.talking_to
-
-
-## TALK VIEW: turn the camera (and the cat) towards the NPC, tilt it, and ease the blend in / out.
-## The player's own camera tilt is put back afterwards (like the inventory view). Returns the blend.
-func _update_talk_camera(delta: float) -> float:
-	var npc := talk_target()
-	var open := npc != null
-	if open and not _talk_was_open and not _inventory_was_open:
-		if not _pitch_returning:  # (shared with the inventory view; mid-return = keep the older tilt)
-			_pitch_before_inventory = spring_arm.rotation.x
-		_pitch_returning = false
-	elif not open and _talk_was_open:
-		_pitch_returning = true
-	_talk_was_open = open
-	var weight := 1.0 - exp(-talk_camera_speed * delta)
-	_talk_blend = lerpf(_talk_blend, 1.0 if open else 0.0, weight)
-	if absf(_talk_blend - (1.0 if open else 0.0)) < 0.002:
-		_talk_blend = 1.0 if open else 0.0
-	if open:
-		# The NPC's face: half a metre under its name tag (or a metre up if it has none).
-		var tag := npc.get_node_or_null("NameTag") as Node3D
-		var face := tag.global_position + Vector3.DOWN * 0.5 if tag != null else npc.global_position + Vector3.UP
-		var to_npc := face - camera_pivot.global_position
-		to_npc.y = 0.0
-		var flat := to_npc.length()
-		if flat > 0.1:
-			# The camera looks along -Z of its pivot: this yaw points it (and the cat) at the NPC...
-			var yaw := atan2(-to_npc.x, -to_npc.z)
-			cat_model.rotation.y = lerp_angle(cat_model.rotation.y, yaw, weight)
-			# ...and the camera sits off to the right (talk_camera_side), so turn it a bit further
-			# left: then the NPC is in the middle of the screen, not off to the left.
-			yaw += asin(clampf(spring_arm.position.x / flat, -0.9, 0.9))
-			camera_pivot.rotation.y = lerp_angle(camera_pivot.rotation.y, yaw, weight)
-			# Up / down: look this far under the face so it lands at talk_face_height on screen.
-			var from := camera.global_position
-			var rise := atan2(face.y - from.y, Vector2(face.x - from.x, face.z - from.z).length())
-			var above_middle := atan((1.0 - talk_face_height * 2.0) * tan(deg_to_rad(camera.fov) * 0.5))
-			spring_arm.rotation.x = lerp_angle(spring_arm.rotation.x, clampf(rise - above_middle, -1.2, 0.6), weight)
-	return _talk_blend
 
 
 ## INVENTORY VIEW: glide the camera in behind the cat (and back out when it closes), tilt it, and
@@ -1002,7 +921,7 @@ func _update_talk_camera(delta: float) -> float:
 func _update_inventory_camera(delta: float) -> void:
 	var open := inventory_open()
 	if open and not _inventory_was_open:
-		if not _pitch_returning and not _talk_was_open:  # (straight from the talk box to the shop: keep the tilt from before talking)
+		if not _pitch_returning:
 			_pitch_before_inventory = spring_arm.rotation.x
 		_pitch_returning = false
 	elif not open and _inventory_was_open:
