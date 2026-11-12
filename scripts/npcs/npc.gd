@@ -50,7 +50,7 @@ signal action_chosen(action: String, cat: CatPlayer)
 @export_group("Sewer rebellion")
 ## THE SEWER REBELLION (scripts/upgrades.gd): 0 = always in the sewer (the boss, the shopkeeper,
 ## payphones...). 1-5 = a RECRUIT: hidden (invisible, no collision, can't be talked to, doesn't fight
-## in a breach) until this sewer's gang has recruited that tier at the TINKER WORKBENCH. (NPCs sell no
+## in a breach) until this sewer's gang has recruited this cat (number 1-5 = its workbench tab - 1; any order) at the TINKER WORKBENCH. (NPCs sell no
 ## upgrades any more: everything is bought at the workbench.)
 @export_range(0, 5) var rebellion_tier: int = 0
 ## ONE QUEST AT A TIME: said instead of handing out a quest when you already have one.
@@ -207,9 +207,10 @@ func _process(delta: float) -> void:
 
 
 ## THE SEWER REBELLION: is this cat in the sewer yet? Every computer works it out from the synced
-## upgrades (Upgrades.rebellion_level), so a new recruit appears for everyone at once.
+## upgrades (Upgrades.is_recruited), so a new recruit appears for everyone at once. Recruits can be
+## picked in any order, so this checks THIS cat's number, not "how many".
 func is_recruited() -> bool:
-	return rebellion_tier <= 0 or _home == null or Upgrades.rebellion_level(_home.team) >= rebellion_tier
+	return rebellion_tier <= 0 or _home == null or Upgrades.is_recruited(_home.team, rebellion_tier)
 
 
 ## Show / hide this NPC (and switch its collision and fighting off) to match is_recruited().

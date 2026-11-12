@@ -17,11 +17,15 @@ extends Node
 ##                            ENGINE, NEON ZOOM-BIKE, ARMORED MEOW-VAN (+ choosing your gang's ride)
 ##
 ## THE SEWER REBELLION: each sewer starts with only its boss and its shopkeeper. The other five cats
-## are RECRUITED, one tier at a time, with the "rebellion_tier" upgrade (5 tiers, cash + scrap, bought
-## on the next locked "?" tab). A recruit appears in the sewer (npc.gd rebellion_tier), offers their
-## quest, fights in a SEWER BREACH, and opens their workbench tab. It's a CREW thing: a sewer shows
-## everyone up to the best tier anyone in that gang has recruited (rebellion_level), and buying
-## the next tier continues from there. Saved in your profile like every upgrade.
+## are RECRUITED, in ANY ORDER YOU LIKE: every locked "?" tab on the workbench shows only WHAT KIND of
+## upgrades that cat brings (RECRUIT_TYPES below + the upgrade names; not who they are), and you pick
+## which one to recruit. Each recruit is its own upgrade "recruit_1".."recruit_5" (the number = the
+## cat's npc.gd rebellion_tier = workbench tab - 1). The PRICE goes up with how many your gang already
+## has: costs["rebellion_tier"][0] for the 1st recruit, [1] for the 2nd, and so on.
+## A recruit appears in the sewer (npc.gd), offers their quest, fights in a SEWER BREACH, and opens
+## their workbench tab. It's a CREW thing: a gang has a recruit if ANYONE in it recruited them
+## (is_recruited); rebellion_level = how many the gang has. Saved in your profile like every upgrade
+## (old saves with "rebellion_tier" N turn into recruits 1..N, see _merge_old_upgrades).
 ##
 ## PERSONAL vs CREW: most upgrades only help the cat who bought them. Four are CREW upgrades
 ## (MAINFRAME CAPACITOR, TWIN-TURBO ENGINE, INSIDER TUNNEL, AFTERBURNER): your whole gang gets the BEST tier
@@ -108,7 +112,7 @@ static var instance: Upgrades
 
 ## Names, what they do, and which page sells them. ("crew" = shared by the whole gang.)
 const INFO := {
-	"rebellion_tier": {"name": "REBELLION RECRUIT", "crew": true, "about": "Recruit the next cat to your sewer: they move in, hand out a quest, fight in breaches and open their workbench tab."},
+	"rebellion_tier": {"name": "REBELLION RECRUIT", "crew": true, "about": "Pick a locked cat by the kind of upgrades they bring and recruit them: they move in, hand out a quest, fight in breaches and open their workbench tab."},
 	"shop_crates": {"name": "WEAPON CRATES", "tiers": ["STREET SMUGGLER CRATE", "MOB SYNDICATE CRATE", "EXPERIMENTAL CRATE"],
 		"about": "Unlocks better guns in the shop: 1 = HAIRBALL BLASTER + RED DOT, 2 = TOMMY GUN + FROZEN TUNA, 3 = YARN-ZOOKA + CUCUMBER LAUNCHER."},
 	"bigger_pack": {"name": "BIGGER BACKPACK", "about": "Backpack (loot + gear) 6 -> 8 -> 10 -> 12 slots."},
@@ -142,6 +146,11 @@ const WORKBENCH_TABS := [
 ## A short job title for each tab's cat (shown under their name on the workbench).
 const TAB_ROLES := ["THE BOSS", "THE BLACK MARKITTEN", "STREET RUNNER", "THE MUSCLE", "ENFORCER", "THE KITCHEN & THE FENCE", "WHEELCAT"]
 const REBELLION_TIERS := 5
+## What a locked "?" recruit tab says it brings (by tab; 0 + 1 are never locked). This is ALL you see
+## of a cat before you recruit them: choose by the type of upgrades, the face is a surprise.
+const RECRUIT_TYPES := ["", "", "SNACKS + SHORTCUTS", "TOUGHNESS, SCRAP + BOOST", "MELEE MUSCLE", "BIGGER PAYOUTS", "SPEED + RIDES"]
+## The same, one short word for the small portrait tab on top.
+const RECRUIT_SHORT := ["", "", "SNACKS", "TOUGH", "MELEE", "CASH", "SPEED"]
 
 ## TESTS ONLY (DevCapture --rebellion_tier=N, or --talk on a recruit): pretend every sewer has
 ## recruited this many tiers. -1 = off (the real rule).
@@ -192,6 +201,8 @@ static func best_in_team(team: int, upgrade_id: String) -> int:
 
 ## How many tiers this upgrade has (= how many prices it has).
 func max_tier(upgrade_id: String) -> int:
+	if recruit_role(upgrade_id) > 0:
+		return 1  # a recruit is in or not
 	return (costs.get(upgrade_id, []) as Array).size()
 
 
@@ -199,6 +210,12 @@ func max_tier(upgrade_id: String) -> int:
 func next_cost(player_id: int, upgrade_id: String) -> Array:
 	var tier := current_tier(player_id, upgrade_id)
 	var list: Array = costs.get(upgrade_id, [])
+	if recruit_role(upgrade_id) > 0:
+		if tier > 0:
+			return [0, 0]
+		# A recruit's price = the gang's NEXT recruit price (1st, 2nd, ... whichever cat it is).
+		list = costs.get("rebellion_tier", [])
+		tier = rebellion_level(Teams.team_of(player_id))
 	return list[tier] if tier < list.size() else [0, 0]
 
 
@@ -264,23 +281,44 @@ static func charge_per_electronics_for(team: int, base: float) -> float:
 	return instance.capacitor_charge[mini(tier, instance.capacitor_charge.size() - 1)]
 
 
-## Has this player unlocked this ride? (the INTERCEPTOR is everyone's)
-## THE SEWER REBELLION: how many tiers this gang's sewer has recruited (0-5): the best anyone in the
-## gang has bought. The TUTORIAL always has everyone (its steps need Lil' Mittens).
-static func rebellion_level(team: int) -> int:
+## THE SEWER REBELLION: the upgrade id of recruit number "role" (1-5 = npc.gd rebellion_tier).
+static func recruit_id(role: int) -> String:
+	return "recruit_%d" % role
+
+
+## Is this upgrade id a recruit ("recruit_1".."recruit_5")? Returns its number, or 0 if not.
+static func recruit_role(upgrade_id: String) -> int:
+	if not upgrade_id.begins_with("recruit_"):
+		return 0
+	var role := upgrade_id.trim_prefix("recruit_").to_int()
+	return role if role >= 1 and role <= REBELLION_TIERS else 0
+
+
+## Has this gang recruited cat number "role" (1-5)? Anyone in the gang counts. The TUTORIAL always has
+## everyone (its steps need Lil' Mittens). Tests: rebellion_override = N pretends recruits 1..N are in.
+static func is_recruited(team: int, role: int) -> bool:
 	if rebellion_override >= 0:
-		return rebellion_override
+		return role <= rebellion_override
 	if Game.is_tutorial():
-		return REBELLION_TIERS
-	return best_in_team(team, "rebellion_tier")
+		return true
+	return best_in_team(team, recruit_id(role)) > 0
 
 
-## Is workbench tab "tab" open for this gang? (0 boss and 1 shopkeeper always; 2..6 = tier 1..5.)
+## How many of the 5 recruits this gang has (0-5). Sets the price of the next one.
+static func rebellion_level(team: int) -> int:
+	var count := 0
+	for role in range(1, REBELLION_TIERS + 1):
+		if is_recruited(team, role):
+			count += 1
+	return count
+
+
+## Is workbench tab "tab" open for this gang? (0 boss and 1 shopkeeper always; 2..6 = recruits 1..5.)
 static func tab_unlocked(team: int, tab: int) -> bool:
-	return tab < 2 or rebellion_level(team) >= tab - 1
+	return tab < 2 or is_recruited(team, tab - 1)
 
 
-## Which workbench tab sells this upgrade (-1 = none: rebellion_tier itself).
+## Which workbench tab sells this upgrade (-1 = none: the recruits themselves).
 static func tab_of(upgrade_id: String) -> int:
 	for tab in WORKBENCH_TABS.size():
 		if upgrade_id in WORKBENCH_TABS[tab]:
@@ -288,11 +326,12 @@ static func tab_of(upgrade_id: String) -> int:
 	return -1
 
 
-## The tier a purchase continues from: your own for normal upgrades; for REBELLION RECRUIT the
-## gang's (it's shared: a friend's recruits count, and you buy the NEXT one).
+## The tier a purchase continues from: your own for normal upgrades; for a REBELLION RECRUIT the
+## gang's (it's shared: if a friend recruited that cat, it's 1 = already in).
 func current_tier(player_id: int, upgrade_id: String) -> int:
-	if upgrade_id == "rebellion_tier":
-		return best_in_team(Teams.team_of(player_id), upgrade_id)
+	var role := recruit_role(upgrade_id)
+	if role > 0:
+		return 1 if is_recruited(Teams.team_of(player_id), role) else 0
 	return level(player_id, upgrade_id)
 
 
@@ -316,10 +355,22 @@ func request_buy(player_id: int, upgrade_id: String) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var cat := Game.instance.cat_for(player_id)
-	if cat == null or not costs.has(upgrade_id):
-		return
+	if upgrade_id == "rebellion_tier":
+		# (Old request / tests: "the next recruit" = the lowest-numbered cat the gang hasn't got.)
+		for role in range(1, REBELLION_TIERS + 1):
+			if not is_recruited(Teams.team_of(player_id), role):
+				upgrade_id = recruit_id(role)
+				break
+	var role := recruit_role(upgrade_id)
+	if cat == null or upgrade_id == "rebellion_tier" or not (costs.has(upgrade_id) or role > 0):
+		return  # ("rebellion_tier" still here = all 5 already recruited; it's only a price list now)
 	var peer := PlayerId.peer_of(player_id)
 	var title: String = INFO.get(upgrade_id, {}).get("name", upgrade_id)
+	if role > 0:
+		title = "REBELLION RECRUIT (%s)" % RECRUIT_TYPES[role + 1]
+		if tab_unlocked(Teams.team_of(player_id), role + 1):
+			_buy_result.rpc_id(peer, player_id, false, "Your gang already recruited that cat.")
+			return
 	if not UndergroundHub.is_in_hub(cat.global_position):
 		_buy_result.rpc_id(peer, player_id, false, "Upgrades are bought down in the sewers.")
 		return
@@ -344,12 +395,14 @@ func request_buy(player_id: int, upgrade_id: String) -> void:
 		return
 	_set_tier.rpc(player_id, upgrade_id, tier + 1)
 	print("[Upgrades] Player %d bought %s tier %d for $%d + %d scrap" % [player_id, upgrade_id, tier + 1, cash_cost, scrap_cost])
-	if upgrade_id == "rebellion_tier":
-		_recruited.rpc(Teams.team_of(player_id), tier + 1)
+	if role > 0:
+		_recruited.rpc(Teams.team_of(player_id), role)
+		_buy_result.rpc_id(peer, player_id, true, "%s  %d/%d RECRUITED!" % [title, rebellion_level(Teams.team_of(player_id)), REBELLION_TIERS])
+		return
 	_buy_result.rpc_id(peer, player_id, true, "%s  TIER %d/%d!" % [title, tier + 1, max_tier(upgrade_id)])
 
 
-## Host -> everyone: a gang recruited REBELLION TIER "tier" (the new cat walks into their sewer: npc.gd
+## Host -> everyone: a gang recruited cat number "tier" (1-5 = npc.gd rebellion_tier; the new cat walks into their sewer: npc.gd
 ## notices by itself; the workbench screen celebrates).
 @rpc("authority", "call_local", "reliable")
 func _recruited(team: int, tier: int) -> void:
@@ -395,7 +448,7 @@ func restore(player_id: int, upgrades: Dictionary, vehicle: String) -> void:
 	upgrades = _merge_old_upgrades(upgrades)
 	var clean := {}
 	for upgrade_id in upgrades:
-		if upgrade_id is String and costs.has(upgrade_id):
+		if upgrade_id is String and (costs.has(upgrade_id) or recruit_role(upgrade_id) > 0):
 			var tier := clampi(int(upgrades[upgrade_id]), 0, max_tier(upgrade_id))
 			if tier > 0:
 				clean[upgrade_id] = tier
@@ -411,10 +464,16 @@ func restore(player_id: int, upgrades: Dictionary, vehicle: String) -> void:
 ## Old saves: DEEP POCKETS (the loot bag's own upgrade, before loot moved into the one backpack)
 ## turns into BIGGER BACKPACK tiers, so nobody loses what they paid for. (A copy: the save's own
 ## dictionary isn't changed; the profile saves the merged one next time.)
+## Old saves from before you could PICK recruits: "rebellion_tier" N = recruits 1..N.
 static func _merge_old_upgrades(upgrades: Dictionary) -> Dictionary:
-	if not upgrades.has("deep_pockets"):
+	if not upgrades.has("deep_pockets") and not upgrades.has("rebellion_tier"):
 		return upgrades
 	var merged := upgrades.duplicate()
+	for role in range(1, mini(int(merged.get("rebellion_tier", 0)), REBELLION_TIERS) + 1):
+		merged[recruit_id(role)] = 1
+	merged.erase("rebellion_tier")
+	if not merged.has("deep_pockets"):
+		return merged
 	var pockets := int(merged.get("deep_pockets", 0))
 	merged.erase("deep_pockets")
 	merged["bigger_pack"] = int(merged.get("bigger_pack", 0)) + pockets  # (restore clamps it to the top tier)

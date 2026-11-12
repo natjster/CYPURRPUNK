@@ -15,40 +15,45 @@ to them is only for their quests and their stories (Don / Pawnie also send you u
 ### The workbench screen (`scripts/ui/workbench_screen.gd`, HUD > Frame > Workbench)
 ```
  TINKER WORKBENCH                              scrap = backpack + litterbox   $240   3 SCRAP
- [DON] [WHISKERS] [MITTENS] [RECRUIT ?] [ ? ] [ ? ] [ ? ]        <- 7 portrait tabs (click, or LB / RB)
+ [DON] [WHISKERS] [MITTENS] [? TOUGH] [? MELEE] [? CASH] [? SPEED]   <- 7 portrait tabs (click, or LB / RB)
  ┌portrait┐  LIL' MITTENS               ┌ STUFFED CHEEKS        ■ □  TIER 1/2      BUY — $160 + 1 SCRAP ┐
- │        │  STREET RUNNER (TIER 1)     │ Quick-use snack stacks 3 -> 4 -> 5.                          │
+ │        │  STREET RUNNER (RECRUIT)    │ Quick-use snack stacks 3 -> 4 -> 5.                          │
  └────────┘  "I can SMELL them..."      ├ INSIDER TUNNEL (CREW) □ □  TIER 0/2      BUY — $130 + 1 SCRAP ┤
              QUEST IN SEWER: MITTENS' FISH
  what the highlighted thing does / "UPGRADED! ..." / "NEW RECRUIT! ..."
 ```
 - The 7 tabs are your sewer's 7 cats (portraits from the Icon Studio, §20). A cat you haven't recruited
-  yet is a **"?"** (no face, no name). Clicking an **upgrade card** buys its next tier (green button =
+  yet is a **"?"** (no face, no name: only the KIND of upgrades they bring). Clicking an **upgrade card** buys its next tier (green button =
   you can afford it, red = you can't; MAXED when done). Hover / highlight a card to read it in the
   bottom box. Your cat stands still while the screen is open; Esc / B / Tab / walking away closes it.
 - **Controller:** d-pad / stick moves the highlight, **A** = click, **LB / RB** = tabs.
 
 ### THE SEWER REBELLION (recruit the cats)
 Each sewer **starts with only its boss and its shopkeeper**. The other five are hiding in the pipes and
-join one at a time, in this order, when your gang **recruits** them on the workbench's next "?" tab
-(**RECRUIT TO THE REBELLION — $X + Y SCRAP**):
+join when your gang **recruits** them, **in any order you choose**. Every "?" tab only tells you
+**what type of upgrades** that cat brings (SNACKS / TOUGH / MELEE / CASH / SPEED, plus the upgrade names);
+who they are is a surprise until they join. Pick a "?" tab and press **RECRUIT TO THE REBELLION — $X + Y SCRAP**.
+The price depends on **how many** your gang has already recruited, not on which cat:
+1st $100 + 1 scrap, 2nd $150 + 1, 3rd $200 + 2, 4th $250 + 2, 5th $320 + 3.
 
-| Tier | Cost | Catleone sewer (Hub) | Burrow sewer (GangHub) | Their quest |
+| # (tab) | Brings | Catleone sewer (Hub) | Burrow sewer (GangHub) | Their quest |
 |---|---|---|---|---|
 | (start) | - | Don Catleone, Comrade Whiskers | Pawnie, Clawd | - |
-| 1 | $100 + 1 scrap | Lil' Mittens | Billy the Kitten | MITTENS' FISH |
-| 2 | $150 + 1 scrap | Paulie "No-Brooms" | Bumper-Car Benny | SMASH ROOMBAS |
-| 3 | $200 + 2 scrap | Sal "The Slapper" | Calamity Clara | GANG DISRESPECT |
-| 4 | $250 + 2 scrap | Nonna Catleone | "Gold-Tooth" Gus | GOLDEN KOI HEIST |
-| 5 | $320 + 3 scrap | Frankie "Espresso" | Jittery Jax | DAREDEVIL EXTRACT |
+| 1 (tab 3) | SNACKS + SHORTCUTS | Lil' Mittens | Billy the Kitten | MITTENS' FISH |
+| 2 (tab 4) | TOUGHNESS, SCRAP + BOOST | Paulie "No-Brooms" | Bumper-Car Benny | SMASH ROOMBAS |
+| 3 (tab 5) | MELEE MUSCLE | Sal "The Slapper" | Calamity Clara | GANG DISRESPECT |
+| 4 (tab 6) | BIGGER PAYOUTS | Nonna Catleone | "Gold-Tooth" Gus | GOLDEN KOI HEIST |
+| 5 (tab 7) | SPEED + RIDES | Frankie "Espresso" | Jittery Jax | DAREDEVIL EXTRACT |
 
 - A cat that hasn't joined is **not in the sewer at all** (invisible, can't be bumped into or talked to,
   and doesn't fight in a SEWER BREACH). The moment someone recruits them they appear, offer their quest,
   fight in breaches and open their workbench tab.
-- It's a **crew** thing: a sewer has everyone up to the best tier anyone in that gang has recruited, and
-  the next recruit continues from there. It's saved with your upgrades.
-- To change a recruit's tier: click the NPC's scene root (e.g. `scenes/npcs/lil_mittens.tscn`) > Inspector >
-  **Sewer Rebellion > Rebellion Tier** (0 = always there). Prices: the Upgrades node > Costs > `rebellion_tier`.
+- It's a **crew** thing: a sewer has every cat that anyone in that gang has recruited. It's saved with
+  your upgrades (old saves: "tier N" turns into recruits 1..N).
+- Which tab a recruit sits on: click the NPC's scene root (e.g. `scenes/npcs/lil_mittens.tscn`) > Inspector >
+  **Sewer Rebellion > Rebellion Tier** (0 = always there; 1-5 = the recruit number above). Prices (1st..5th
+  recruit): `scenes/main.tscn` > Upgrades node > Inspector > Costs > `rebellion_tier`. The "type" words are
+  `RECRUIT_TYPES` / `RECRUIT_SHORT` at the top of `scripts/upgrades.gd`.
 
 ### Which tab sells what
 
@@ -102,10 +107,11 @@ gang colour, `Headlight*`, `Taillight*`, `Thrusters`, `Sign` glow white. The wor
 (`request_buy`), then tells everyone. Other scripts just ask it: the backpack size (`ItemManager.pack_size_for`), max HP
 (`CatHealth.max_health_for`), the car (`GetawayCar.set_vehicle`), and so on. The inventory screen grows to match (and
 scrolls when the litterbox gets big).
-The rebellion: `Upgrades.rebellion_level(team)` (best `rebellion_tier` in the gang; 5 in the tutorial),
+The rebellion: each recruit is its own upgrade `recruit_1`..`recruit_5`; `Upgrades.is_recruited(team, n)` (anyone in
+the gang; all in the tutorial), `rebellion_level(team)` (how many),
 `tab_unlocked(team, tab)` (request_buy refuses a locked tab's upgrade), the `recruited` signal; `npc.gd`
 `rebellion_tier` / `is_recruited()` / `present` (checked 4x a second on every computer).
-**Tests:** `--workbench [--workbench_recruit=2 --workbench_buy=stuffed_cheeks --workbench_tab=3]` prints "DevCapture
+**Tests:** `--workbench [--workbench_recruit=2 --workbench_pick=5,3 --workbench_buy=stuffed_cheeks --workbench_tab=3]` prints "DevCapture
 workbench" lines (tabs, cards, which recruits are in the sewer); `--rebellion_tier=5` puts every recruit in the sewers
 (old quest tests: `--talk=<recruit>` does that by itself).
 

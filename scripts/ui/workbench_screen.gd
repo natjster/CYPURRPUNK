@@ -13,10 +13,11 @@ extends Control
 ##   │ what the highlighted thing does / "UPGRADED! ..."                   │
 ##   └──────────────────────────────────────────────────────────────────────┘
 ## TABS (Upgrades.WORKBENCH_TABS): 0 = your boss (Don / Pawnie), 1 = your shopkeeper (Whiskers / Clawd),
-## 2-6 = REBELLION TIERS 1-5. A recruit you haven't got yet is a "?" (no name, no face). The NEXT "?"
-## offers RECRUIT TO THE REBELLION (cash + scrap, Upgrades "rebellion_tier"); the ones after it say
-## to recruit the previous tier first. Recruiting reveals their face here, walks them into the sewer
-## (npc.gd), gives you their quest to take, and opens their upgrades.
+## 2-6 = the 5 REBELLION RECRUITS. A recruit you haven't got yet is a "?" (no name, no face): its tab
+## only says WHAT KIND of upgrades they bring (Upgrades.RECRUIT_TYPES + the upgrade names). EVERY "?"
+## offers RECRUIT TO THE REBELLION (cash + scrap, upgrade "recruit_N"), so you choose who joins first;
+## the price goes up with each recruit your gang already has. Recruiting reveals their face here,
+## walks them into the sewer (npc.gd), gives you their quest to take, and opens their upgrades.
 ## CONTROLLER: d-pad / stick moves the highlight, A = click, LB / RB = tabs, B / Y / Esc / Tab = leave.
 ## The host checks every purchase (Upgrades.request_buy); messages show in the bottom box.
 
@@ -33,7 +34,7 @@ extends Control
 @export var detail_font_size: int = 13
 @export var note_seconds: float = 3.5
 ## The bottom box before anything is highlighted.
-@export var default_info: String = "Pick a cat on top (LB / RB). Click an upgrade card to buy it. Recruit the next \"?\" to grow the Rebellion. Esc / Tab: leave."
+@export var default_info: String = "Pick a cat on top (LB / RB). Click an upgrade card to buy it. Pick a \"?\" by the upgrades it brings and recruit it. Esc / Tab: leave."
 
 const GOOD := Color(0.55, 1.0, 0.6)
 const BAD := Color(1.0, 0.45, 0.4)
@@ -254,11 +255,9 @@ func _team() -> int:
 	return hub.team if hub != null else (owner_cat.team if owner_cat != null else 0)
 
 
-## "open" = recruited (its upgrades show), "next" = the next tier to recruit, "later" = locked behind it.
+## "open" = recruited (its upgrades show), "next" = not recruited yet (any of them can be recruited now).
 func tab_state(index: int) -> String:
-	if Upgrades.tab_unlocked(_team(), index):
-		return "open"
-	return "next" if index - 1 == Upgrades.rebellion_level(_team()) + 1 else "later"
+	return "open" if Upgrades.tab_unlocked(_team(), index) else "next"
 
 
 func _refill() -> void:
@@ -279,7 +278,7 @@ func _refill() -> void:
 		ride.add_theme_color_override("font_color", GOOD if current else (HudStyle.current().text_color if owned else Color(1, 1, 1, 0.35)))
 	_recruit.visible = state == "next"
 	if state == "next" and owner_cat != null:
-		var price: Array = Upgrades.instance.next_cost(owner_cat.player_id, "rebellion_tier")
+		var price: Array = Upgrades.instance.next_cost(owner_cat.player_id, Upgrades.recruit_id(tab - 1))
 		_recruit.text = "RECRUIT TO THE REBELLION — $%d + %d SCRAP" % [price[0], price[1]]
 	for t in _tabs:
 		t.get_node("Face").queue_redraw()
@@ -375,7 +374,7 @@ func _draw() -> void:
 	var text_w := _content.size.x * 0.42 - 16.0
 	if state == "open":
 		_text(font, Vector2(tx, ty), npc.npc_name if npc != null else "?", name_font_size, Color.WHITE, text_w)
-		_text(font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION TIER %d)" % (tab - 1)), detail_font_size, AMBER, text_w)
+		_text(font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION RECRUIT)"), detail_font_size, AMBER, text_w)
 		var quote := ""
 		if npc != null and not npc.pages.is_empty() and not npc.pages[0].lines.is_empty():
 			quote = "\"%s\"" % npc.pages[0].lines[0]
@@ -385,17 +384,20 @@ func _draw() -> void:
 			detail_font_size + 1, GOOD if quest != "" else Color(style.text_color, 0.5), text_w)
 	else:
 		_text(font, Vector2(tx, ty), "? ? ?", name_font_size, Color(style.text_color, 0.5), text_w)
-		_text(font, Vector2(tx, ty + 20), "REBELLION RECRUIT — TIER %d" % (tab - 1), detail_font_size, AMBER, text_w)
+		_text(font, Vector2(tx, ty + 20), "REBELLION RECRUIT — %s" % Upgrades.RECRUIT_TYPES[tab], detail_font_size, AMBER, text_w)
 		# The right side: what to do about it.
 		var cards_x := _content.position.x + _content.size.x * 0.42
 		var cards_w := _content.end.x - cards_x
 		var box := Rect2(cards_x, _content.position.y, cards_w, _content.size.y * 0.42)
-		HudStyle.draw_panel(self, box, state == "later")
-		_text(font, box.position + Vector2(14, 30), "REBELLION RECRUIT — TIER %d" % (tab - 1), name_font_size, AMBER, cards_w - 28)
-		var words := "A new cat is hiding in the pipes. Recruit them and they move into your sewer: their quest, their upgrades, and one more gun when OVERCLEAN breaches." \
-			if state == "next" else "LOCKED — RECRUIT PREVIOUS REBELLION TIER FIRST"
-		draw_multiline_string(font, box.position + Vector2(14, 58), words, HORIZONTAL_ALIGNMENT_LEFT, cards_w - 28, detail_font_size + 1, 4,
-			Color(style.text_color, 0.8) if state == "next" else BAD)
+		HudStyle.draw_panel(self, box)
+		_text(font, box.position + Vector2(14, 30), "RECRUIT: %s" % Upgrades.RECRUIT_TYPES[tab], name_font_size, AMBER, cards_w - 28)
+		# You only get to know WHAT they bring, not who they are.
+		var brings := ", ".join(Array(Upgrades.WORKBENCH_TABS[tab]).map(func(u): return Upgrades.INFO[u].name))
+		_text(font, box.position + Vector2(14, 54), "BRINGS: " + brings, detail_font_size + 1, GOOD, cards_w - 28)
+		var words := "A cat is hiding in the pipes. Recruit them and they move into your sewer: their quest, these upgrades, and one more gun when OVERCLEAN breaches. Recruit #%d of %d for your gang." \
+			% [Upgrades.rebellion_level(_team()) + 1, Upgrades.REBELLION_TIERS]
+		draw_multiline_string(font, box.position + Vector2(14, 78), words, HORIZONTAL_ALIGNMENT_LEFT, cards_w - 28, detail_font_size + 1, 3,
+			Color(style.text_color, 0.8))
 	# The bottom box
 	HudStyle.draw_panel(self, _info_rect, true)
 	var shown := _note if _note != "" else _info
@@ -429,7 +431,7 @@ func _press_card(card: Button) -> void:
 
 func _press_recruit() -> void:
 	if owner_cat != null and _recruit.visible:
-		Upgrades.instance.request_buy.rpc_id(1, owner_cat.player_id, "rebellion_tier")
+		Upgrades.instance.request_buy.rpc_id(1, owner_cat.player_id, Upgrades.recruit_id(tab - 1))
 
 
 func _press_ride(vehicle: String) -> void:
@@ -447,6 +449,7 @@ func _on_recruited(team: int, tier: int) -> void:
 	if not visible or team != _team():
 		return
 	var npc := npc_for_tab(tier + 1)
+	_celebrating_until = 0.0  # (a second recruit right after the first still gets its own news)
 	note("NEW RECRUIT! %s JOINS THE REBELLION! Their quest and upgrades are open." % (npc.npc_name if npc != null else "A CAT"), true)
 	_celebrating_until = Time.get_ticks_msec() / 1000.0 + 1.0
 	Sound.play("koi_grab")  # (a prize jingle)
@@ -473,12 +476,11 @@ func _on_highlight(button: Button) -> void:
 			"open":
 				_info = "%s — %s. Upgrades: %s." % [npc.npc_name if npc != null else "?", Upgrades.TAB_ROLES[i],
 					", ".join(Array(Upgrades.WORKBENCH_TABS[i]).map(func(u): return Upgrades.INFO[u].name))]
-			"next":
-				_info = "? — the next REBELLION RECRUIT (tier %d). Recruit them on this tab." % (i - 1)
 			_:
-				_info = "? — LOCKED: recruit the previous Rebellion tier first."
+				_info = "? — a REBELLION RECRUIT who brings %s: %s. Recruit them on this tab (any order)." % [Upgrades.RECRUIT_TYPES[i],
+					", ".join(Array(Upgrades.WORKBENCH_TABS[i]).map(func(u): return Upgrades.INFO[u].name))]
 	elif button == _recruit:
-		_info = "Recruit REBELLION TIER %d: they move into your sewer, offer a quest, fight in breaches and open their upgrades. Shared with your whole gang." % (tab - 1)
+		_info = "Recruit the %s cat: they move into your sewer, offer a quest, fight in breaches and open their upgrades. Shared with your whole gang." % Upgrades.RECRUIT_TYPES[tab]
 	elif button.has_meta("vehicle"):
 		_info = "Your gang's ride: click to switch to the %s (only while it's parked)." % Upgrades.VEHICLE_NAMES[button.get_meta("vehicle")]
 	else:
@@ -494,7 +496,6 @@ class TabFace extends Control:
 	var index := 0
 
 	func _draw() -> void:
-		var style := HudStyle.current()
 		var font := get_theme_font("font", "Label")
 		var open := screen.tab_state(index) == "open"
 		var npc := screen.npc_for_tab(index)
@@ -503,12 +504,13 @@ class TabFace extends Control:
 		if texture != null:
 			var side := minf(picture.size.x, picture.size.y)
 			draw_texture_rect(texture, Rect2(picture.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false,
-				Color.WHITE if open else Color(1, 1, 1, 0.75 if screen.tab_state(index) == "next" else 0.45))
-		var label: String = (npc.npc_name if npc != null else "?") if open else ("RECRUIT" if screen.tab_state(index) == "next" else "?")
+				Color.WHITE if open else Color(1, 1, 1, 0.75))
+		# Not recruited yet: just the KIND of upgrades they bring (SNACKS / TOUGH / MELEE / CASH / SPEED).
+		var label: String = (npc.npc_name if npc != null else "?") if open else Upgrades.RECRUIT_SHORT[index]
 		label = label.replace("COMRADE ", "").replace("CATLEONE", "").strip_edges()
 		var font_size := 11
 		var w := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-		var color := Color.WHITE if open else (WorkbenchScreen.AMBER if screen.tab_state(index) == "next" else Color(style.text_color, 0.4))
+		var color := Color.WHITE if open else WorkbenchScreen.AMBER
 		draw_string_outline(font, Vector2(maxf(2, (size.x - w) / 2.0), size.y - 5), label, HORIZONTAL_ALIGNMENT_LEFT, size.x - 4, font_size, Hud.outline(3), Color(0, 0.03, 0.06))
 		draw_string(font, Vector2(maxf(2, (size.x - w) / 2.0), size.y - 5), label, HORIZONTAL_ALIGNMENT_LEFT, size.x - 4, font_size, color)
 

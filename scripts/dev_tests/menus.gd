@@ -171,6 +171,14 @@ func _workbench_test(player: CatPlayer, args: Dictionary) -> void:
 		for i in 30:
 			await get_tree().process_frame
 		report.call("recruit %d" % (n + 1))
+	# --workbench_pick=4,6: recruit the cats on THESE tabs, in this order (recruits can be picked in any order).
+	if args.has("workbench_pick"):
+		for pick in str(args["workbench_pick"]).split(","):
+			bench._set_tab(int(pick))
+			bench._press_recruit()
+			for i in 30:
+				await get_tree().process_frame
+			report.call("pick tab %s" % pick)
 	if args.has("workbench_buy"):
 		for upgrade_id in str(args["workbench_buy"]).split(","):
 			bench._set_tab(maxi(0, Upgrades.tab_of(upgrade_id)))
