@@ -4,7 +4,50 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ## GUNNER seat (scripts/cat/cat_ride.gd). Host only, with --drive (we're behind the wheel):
 ##   --car_test     boost + launch + ram + wreck + repair, "DevCapture car_test ..." lines
 ##   --car_chase    a VAC-COP 10 m away: does it chase the car and dent it? "DevCapture car_chase ..."
+##   --car_juice    launch, a handbrake drift, the DRIFT TURBO kick, body lean (scripts/car/car_juice.gd)
 ##   --gunner_test  (with --add_local=1 --ride_along=1) the passenger shoots a bot from the car
+
+
+## --car_juice: floor it, drift left with the handbrake, let go, and print what the juice did.
+func _car_juice_test(player: CatPlayer) -> void:
+	var car := await _wait_for_wheel(player)
+	if car == null:
+		return
+	var juice := car.juice
+	var keys := func(actions: Array, down: bool) -> void:
+		for action in actions:
+			if down:
+				Input.action_press(Seats.action(player.slot, action))
+			else:
+				Input.action_release(Seats.action(player.slot, action))
+	keys.call(["gas"], true)
+	for i in 60:
+		await get_tree().physics_frame
+	var speed_1s := -car.global_basis.z.dot(car.linear_velocity)
+	for i in 60:
+		await get_tree().physics_frame
+	print("DevCapture car_juice launch: %.1f m/s after 1 s, %.1f after 2 s (top %.1f)" % [speed_1s,
+		-car.global_basis.z.dot(car.linear_velocity), car.max_speed])
+	keys.call(["move_left", "handbrake"], true)
+	var best_level := 0
+	var roll := 0.0
+	for i in 110:
+		await get_tree().physics_frame
+		best_level = maxi(best_level, juice.turbo_level(juice._drift_time))
+		var model := car.get_node("Model/CarModel") as Node3D
+		roll = maxf(roll, absf(model.rotation.z))
+		if i % 15 == 0:
+			print("DevCapture car_juice t=%d fwd=%.1f side=%.1f drift_time=%.2f contacts=%d" % [i,
+				-car.global_basis.z.dot(car.linear_velocity), car.global_basis.x.dot(car.linear_velocity), juice._drift_time,
+				car.get_contact_count()])
+	var before := -car.global_basis.z.dot(car.linear_velocity)
+	keys.call(["move_left", "handbrake"], false)
+	for i in 3:
+		await get_tree().physics_frame
+	var after := -car.global_basis.z.dot(car.linear_velocity)
+	print("DevCapture car_juice drift: turbo level %d (1 blue, 2 orange), sparks=%s, body roll %.1f deg, speed %.1f -> %.1f after letting go" % [
+		best_level, juice._sparks[0].emitting or best_level > 0, rad_to_deg(roll), before, after])
+	keys.call(["gas"], false)
 
 
 ## --car_test

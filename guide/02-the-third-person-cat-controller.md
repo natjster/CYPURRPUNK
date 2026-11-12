@@ -70,7 +70,11 @@ Height (the spin point, metres above the feet), Flip Leg Tuck.
   small hop; 1 = off), Fall Gravity (falling pulls harder than rising; 1 = floaty old feel), Max Fall
   Speed, Air Control (steering in mid-air: 1 = like the ground, lower keeps your momentum).
 - **Pounce**: jump during ZOOMIES = a long low leap. Pounce Boost (extra forward speed; 0 = off),
-  Pounce Lift (height compared to a normal jump).
+  Pounce Lift (height compared to a normal jump). BUNNY HOP LIMIT: chaining pounces (landing and
+  pouncing again straight away) gives a smaller boost each time (Chain Pounce Falloff 0.6; running on the
+  ground for Chain Reset Seconds 0.35 makes the next one full strength again) and can never go faster than
+  zoomies speed + Pounce Boost x Pounce Max Stack (1.15 -> about 13 m/s; the car does 26). Raise Pounce Max
+  Stack for faster bunny hops. Test `--moves_test` ("DevCapture moves bhop" line).
 - **Wall Kick**: press jump in mid-air next to a wall = kick off it (claw scratch sound). Wall Kicks
   (per jump, landing refills; 0 = off), Wall Kick Push, Wall Kick Lift, Wall Kick Lock (seconds you
   can't steer after a kick), Wall Kick Reach (how close the wall must be).

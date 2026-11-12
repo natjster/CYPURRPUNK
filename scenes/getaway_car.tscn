@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://models/getaway_car.glb" id="2_model"]
 [ext_resource type="Script" path="res://scripts/car/car_health.gd" id="3_health"]
 [ext_resource type="Script" path="res://scripts/car/car_boost.gd" id="4_boost"]
+[ext_resource type="Script" path="res://scripts/car/car_juice.gd" id="5_juice"]
 
 [sub_resource type="SceneReplicationConfig" id="Sync_car"]
 properties/0/path = NodePath(".:sync_position")
@@ -61,6 +62,9 @@ script = ExtResource("3_health")
 
 [node name="Boost" type="Node3D" parent="."]
 script = ExtResource("4_boost")
+
+[node name="Juice" type="Node3D" parent="."]
+script = ExtResource("5_juice")
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("Sync_car")

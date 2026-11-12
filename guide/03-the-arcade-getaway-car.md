@@ -32,6 +32,7 @@ GetawayCar (RigidBody3D)            script: getaway_car.gd
 │   └── CollisionShape3D             BoxShape3D 5 x 2 x 6
 ├── Health (Node3D)                  script: car/car_health.gd  <- HP, smoke, fire, wrecks
 ├── Boost (Node3D)                   script: car/car_boost.gd   <- the AFTERBURNER (exhaust fire)
+├── Juice (Node3D)                   script: car/car_juice.gd   <- arcade feel: launch, DRIFT TURBO, lean, landings
 ├── CameraRig (Node3D)               Top Level ON  <- follows the car with lag
 │   └── SpringArm3D                  position y=1.2, rotation x=-0.3, Spring Length 7
 │                                    (the cat's Camera3D gets moved here while driving)
@@ -127,6 +128,24 @@ At 0 HP it **WRECKS**: a fireball, everyone inside is thrown out and loses **Wre
 HP, and nobody can get in. After **Wreck Seconds** it's towed back to its parking spot, fixed.
 A new district fixes it too. Test: `--drive --car_test` ("DevCapture car_test" lines), `--drive
 --car_chase` (a VAC-COP chases the car and rams it).
+
+### Arcade feel + feedback (`scripts/car/car_juice.gd`)
+
+All knobs: open `scenes/getaway_car.tscn`, click **Juice** in the Scene panel, look at the Inspector.
+- **Launch**: flooring it from slow speed pulls harder (Launch Accel Bonus 1.8, fades out at top speed).
+- **DRIFT TURBO**: hold the handbrake (Space) through a corner while steering. Sparks fly off the back
+  wheels: BLUE after Turbo Blue Seconds (0.6), ORANGE after Turbo Orange Seconds (1.2). Let go of the
+  handbrake = a speed kick (Turbo Blue Kick 4 / Turbo Orange Kick 7.5 m/s), a whoosh and a camera kick.
+  Drifts keep their speed: Drift Drag Scale (less handbrake slowdown), Drift Carry (sideways slide turned
+  into forward speed) and Drift Max Angle (40 degrees: the car holds a sideways slide instead of spinning out).
+- **Body Lean**: only the model tilts: leans out of turns (Roll Degrees), squats on gas / dips on brakes
+  (Pitch Degrees), Lean Spring = snappiness.
+- **Landing**: after a jump the body squashes and springs back with a thump, a dust puff and a shake.
+- **Tyre smoke** while drifting or wheel-spinning, a **skid sound** (Skid Sound / Volume / Pitch: any name
+  from `sounds/sfx/`), **Speed Camera** (pulls back Camera Pullback metres at top speed, a little road
+  rattle near top speed), and controller **rumble** on drifts, landings and turbos.
+Everything you see is worked out from how the car moves, on every computer (others see your sparks too).
+Test: `--drive --car_juice` ("DevCapture car_juice" lines: launch speeds, turbo level, body roll, kick).
 
 ### The AFTERBURNER boost (`scripts/car/car_boost.gd`)
 Every car starts with **1 charge** (*Base Charges* on the Boost node). The TINKER WORKBENCH (§25, Paulie

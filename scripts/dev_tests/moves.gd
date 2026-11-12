@@ -26,6 +26,26 @@ func _moves_test(player: CatPlayer, args: Dictionary) -> void:
 	var pounce := await _run_jump(player, true)
 	print("DevCapture moves pounce: distance=%.2f m apex=%.2f m (should be further than run_jump)" % [pounce.distance, pounce.apex])
 
+	# 4b. BUNNY HOP: hold zoomies + forward + jump for 4 s (a pounce every landing). Top speed must stay
+	# capped (zoomies 9 + pounce boost * pounce_max_stack), not keep climbing.
+	player.teleport_to(YARD + Vector3(-12, 0.1, -12), PI * 0.75)
+	await _frames(10)
+	_hold(player, ["move_forward", "sprint"], true)
+	await _frames(30)
+	_hold(player, ["jump"], true)
+	var top := 0.0
+	var speeds := []
+	for i in 240:
+		await get_tree().physics_frame
+		var flat := Motion.flat(player.velocity).length()
+		top = maxf(top, flat)
+		if i % 60 == 59:
+			speeds.append("%.1f" % top)
+	_hold(player, ["move_forward", "sprint", "jump"], false)
+	print("DevCapture moves bhop: top speed per second %s (zoomies=%.1f, cap=%.1f)" % [speeds, player.zoomies_speed,
+		player.zoomies_speed + player.moves.pounce_boost * player.moves.pounce_max_stack])
+	await _frames(30)
+
 	# 5. WALL KICK: jump up next to the tall wall (it's 1 m to the north = -Z), press jump again.
 	player.teleport_to(YARD + Vector3(-6, 0.1, -8.1), 0.0)  # facing the wall, 0.4 m from it
 	await _frames(10)

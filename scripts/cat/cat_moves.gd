@@ -41,6 +41,17 @@ extends Node
 @export var pounce_boost: float = 3.5
 ## Pounce height compared to a normal jump (0.9 = a bit lower and longer).
 @export var pounce_lift: float = 0.9
+## SPEED CAP for chained pounces (bunny hopping). A pounce can never go faster than your zoomies
+## speed + Pounce Boost * this. 1 = one pounce's worth on top of running (no stacking at all);
+## higher = chaining pounces builds up a bit more. Before this cap each pounce stacked on the last
+## one and you could outrun the car.
+@export var pounce_max_stack: float = 1.15
+## Each pounce in a row (landing and pouncing again straight away) gets this much of the boost:
+## 1st pounce full, 2nd * this, 3rd * this * this... Landing and running for Chain Reset Seconds
+## resets it. 1 = no falloff.
+@export var chain_pounce_falloff: float = 0.6
+## Seconds on the ground before the pounce chain resets to a full-strength pounce.
+@export var chain_reset_seconds: float = 0.35
 
 @export_group("Wall Kick")
 ## Wall kicks allowed per jump (landing refills them). 0 = no wall kicks.
@@ -82,6 +93,8 @@ var _kicks_left: int = 0        # wall kicks left this jump
 var _lock_left: float = 0.0     # seconds steering is still ignored after a wall kick
 var _pounce_speed: float = 0.0  # > 0 while flying through a pounce: the speed to keep
 var _clamber_cooldown: float = 0.0
+var _chain: int = 0             # pounces in a row (bunny hop chain), resets after chain_reset_seconds on the ground
+var _ground_time: float = 0.0   # seconds on the ground since the last landing
 
 # --- Look state (every computer, every cat) ---
 var _squash: float = 0.0        # + = stretched tall, - = squashed flat
@@ -109,10 +122,14 @@ func jump(delta: float, on_floor: bool, pressed: bool, held: bool, direction: Ve
 		_coyote_left = coyote_seconds
 		_kicks_left = wall_kicks
 		_pounce_speed = 0.0
+		_ground_time += delta
+		if _ground_time >= chain_reset_seconds:
+			_chain = 0  # ran for a bit: next pounce is full strength again
 		if _cat.velocity.y <= 0.0:  # (not while being flung up off the ground: lock_steering)
 			_lock_left = 0.0
 	else:
 		_coyote_left = maxf(_coyote_left - delta, 0.0)
+		_ground_time = 0.0
 	_buffer_left = jump_buffer_seconds if pressed else maxf(_buffer_left - delta, 0.0)
 	# The velocity clamp for falling lives here too (one place that runs every frame).
 	_cat.velocity.y = maxf(_cat.velocity.y, -max_fall_speed)
@@ -133,7 +150,12 @@ func jump(delta: float, on_floor: bool, pressed: bool, held: bool, direction: Ve
 		var flat := Vector3(_cat.velocity.x, 0.0, _cat.velocity.z)
 		if zooming and pounce_boost > 0.0 and direction != Vector3.ZERO:
 			# POUNCE: a long low leap in the direction you're pushing, faster than you were running.
-			_pounce_speed = flat.length() + pounce_boost
+			# Chained pounces (bunny hops) get a smaller and smaller boost, and never pass the cap.
+			var boost := pounce_boost * pow(chain_pounce_falloff, _chain)
+			_chain += 1
+			var run_speed := _cat.zoomies_speed * Upgrades.zoomies_multiplier(_cat.player_id) * maxf(_cat.speed_boost, 1.0)
+			var cap := run_speed + pounce_boost * pounce_max_stack
+			_pounce_speed = minf(flat.length() + boost, maxf(cap, run_speed))
 			var leap := direction * _pounce_speed
 			_cat.velocity = Vector3(leap.x, jump_speed * pounce_lift, leap.z)
 			Sound.play_everywhere("jump", _cat.global_position, -5.0)

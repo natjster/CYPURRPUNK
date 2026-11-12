@@ -9,7 +9,8 @@
   CAT MOVES = child node `Moves` (`scripts/cat/cat_moves.gd`, `CatMoves`, all knobs there): `jump()` (coyote, buffer,
   short hop, POUNCE when zooming, WALL KICK via 8 short rays / is_on_wall), `air_target`/`acceleration_scale`/`steering_locked`,
   `clamber()` (down ray onto ledge + headroom ray), `gravity_multiplier` (fall faster), `air_lean` (pitch; stays < 0.35 rad so
-  `_spin_around_middle` doesn't think it's a flip). `animate()` = squash/stretch `cat_model.scale` on EVERY computer from motion
+  `_spin_around_middle` doesn't think it's a flip). BUNNY HOP cap: chained pounces fall off (`chain_pounce_falloff`) and are
+  capped at zoomies*upgrade*speed_boost + pounce_boost*`pounce_max_stack` (before: each pounce stacked on the last = faster than the car). `animate()` = squash/stretch `cat_model.scale` on EVERY computer from motion
   (nothing else may set CatModel's scale). Catdip air jumps only fire when `jump()` returned "". Test `--moves_test`.
   8-player stress test recipe: SETUP_GUIDE §6 (host `--add_local=3 --heat=95`, clients 2+1+1, `--net_stats`).
 - CARS: one per gang in main.tscn (`GetawayCar` team 0, `GangCar` team 1; car export `team` only picks the parking
@@ -42,3 +43,8 @@
   HUD = `HudBoostBar` (`scripts/ui/hud_boost_bar.gd`, Frame/Middle/Boost, fed by hud.gd `_update_boost`,
   sits above Held): one fixed-width bar split per charge. Test `--drive --car_test [--boost_snap --frames=20]`, `--car_chase`
   (module `scripts/dev_tests/cars.gd`). getaway_car.gd is ~800 lines: put new car features in `scripts/car/`.
+- JUICE `scripts/car/car_juice.gd` (`car.juice`, node Juice): `handling()` called from `_integrate_forces` (on ground, authority
+  only) = launch bonus, drift keeps speed (drag scale, carry, `drift_max_angle` swings the velocity back = no spin-outs), DRIFT TURBO
+  (`_drift_time` -> `turbo_level` 1 blue / 2 orange, kick on handbrake release, `_turbo_fx` unreliable rpc). `_physics_process` on
+  EVERY computer from measured motion: lean/squash on `Model/CarModel` (rotation + scale: nothing else may set those; wrecks use
+  `Model`), sparks/smoke, skid loop, landing thump, `camera_arm.spring_length` pullback, rumble. Test `--drive --car_juice`.

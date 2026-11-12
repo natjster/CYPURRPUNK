@@ -39,7 +39,7 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --ride_along=S,S  (with --drive --add_local) those couch slots get in as passengers
 ##   --ride_exit=S     (with --ride_along) then that passenger gets out again
 ##   --car_mouse=PX    (with --drive) move the mouse PX screen pixels to the right while driving
-##   --car_test / --car_chase / --gunner_test  (with --drive) car health, boost, chasing, gunner seat
+##   --car_test / --car_chase / --gunner_test / --car_juice  (with --drive) car health, boost, chasing, gunner seat
 ##                     (scripts/dev_tests/cars.gd has the details)
 ##                     (the car camera turns); prints the camera's look angle
 ##   --car_watch=N     print the car camera's look angle every N frames until the snap
@@ -798,6 +798,8 @@ func _ready() -> void:
 			await _cars._car_chase(scene, player)
 		if args.has("gunner_test"):
 			await _cars._gunner_test(scene, player)
+		if args.has("car_juice"):
+			await _cars._car_juice_test(player)
 		if args.has("swing_test"):
 			await _fights._swing_test(player, args)
 		if args.has("combo_test"):

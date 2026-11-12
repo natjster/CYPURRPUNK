@@ -15,6 +15,7 @@ extends RigidBody3D
 ##   │   └── CollisionShape3D
 ##   ├── Health (Node3D)        <- scripts/car/car_health.gd: HP, smoke, fire, WRECKS (+ the health bar)
 ##   ├── Boost (Node3D)         <- scripts/car/car_boost.gd: the AFTERBURNER (Shift / pad A), exhaust fire
+##   ├── Juice (Node3D)         <- scripts/car/car_juice.gd: arcade launch, DRIFT TURBO, body lean, landings, smoke
 ##   └── CameraRig (Node3D, Top Level ON)  <- follows the car with a slight lag
 ##       └── SpringArm3D        <- the cat's camera gets moved here while driving
 ##
@@ -157,6 +158,8 @@ const MAX_ENTER_DISTANCE: float = 5.0
 ## The car's HP + wrecking (scripts/car/car_health.gd) and its AFTERBURNER (scripts/car/car_boost.gd).
 @onready var health: CarHealth = get_node_or_null("Health")
 @onready var boost: CarBoost = get_node_or_null("Boost")
+## ARCADE FEEL + FEEDBACK: launch, drift turbo, body lean, landings, smoke (scripts/car/car_juice.gd).
+@onready var juice: CarJuice = get_node_or_null("Juice")
 
 ## Player ID of the cat driving (scripts/player_id.gd), or 0 when the car is empty.
 var driver_id: int = 0
@@ -753,6 +756,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		var angular := state.angular_velocity
 		angular.y = lerp(angular.y, target_turn, min(steer_response * dt, 1.0))
 		state.angular_velocity = angular
+
+		# ARCADE FEEL (scripts/car/car_juice.gd): launch punch, drifts that keep their speed, DRIFT TURBO.
+		if juice != null:
+			velocity = juice.handling(velocity, forward, forward_speed, side_speed, gas, true, dt)
 
 	# --- Crashed into the MEGA VAC-COP: stop dead (like hitting a wall), bounce back a little ---
 	for i in state.get_contact_count():
