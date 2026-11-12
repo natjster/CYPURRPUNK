@@ -54,6 +54,11 @@ static var instance: MessManager
 @export var car_reach: float = 2.0
 ## E reaches this far (metres past the prop's edge).
 @export var interact_reach: float = 1.2
+## How far above/below a cat a prop can be and still be knocked with E (keeps the sewer hub, 200 m under the
+## city, from reaching the street props overhead). Raise it if a prop on a ledge won't take E.
+@export var interact_height: float = 2.5
+## Same idea for cars ploughing through props: how much height difference still counts as a hit.
+@export var car_height: float = 3.0
 ## The [E] prompts for each kind of prop.
 @export var bin_prompt: String = "TIP OVER"
 @export var cone_prompt: String = "KNOCK OVER"
@@ -221,6 +226,8 @@ func car_bump(car: GetawayCar) -> void:
 	var here := car.global_position
 	for p in props():
 		if p.knocked or p.kind == MessProp.Kind.POSTER:
+			continue
+		if absf(p.global_position.y - here.y) > car_height:  # (a car in the sewer garage, under the street)
 			continue
 		if Motion.flat_distance(p.global_position, here) < car_reach + p.radius():
 			knock(car.driver_id, p.id, flat / speed)

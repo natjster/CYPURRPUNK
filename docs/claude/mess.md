@@ -4,7 +4,7 @@
 
 - MESS-MAKING (SETUP_GUIDE §23): `scripts/mess_manager.gd` (`MessManager.instance`, node `Mess` under Main, GameSystems) +
   `scripts/mess_prop.gd` (`MessProp` Kind BIN/CONE/BOX/POSTER: model, `Hitbox` StaticBody (bins `SOLID_LAYER` 8 = cats only, cat
-  mask adds it; others `HIT_ONLY_LAYER` 16 = bullets only), `receive_hit`, Interactable prio -5, `show_knocked/show_standing`,
+  mask adds it; others `HIT_ONLY_LAYER` 16 = bullets only), `receive_hit`, Interactable prio -5 (E reach also checks height `interact_height`, car ploughing `car_height`: the hub is 200 m under the city), `show_knocked/show_standing`,
   bin `Lid` flips, poster `Poster`/`Torn` groups, debris seeded by id). City builds them in order: `CityGenerator.mess_props`
   (index = id, same everywhere; `_add_mess_prop`; pre-knocked cones stay scenery). Anyone noticing -> `MessManager.knock(player_id,
   id, dir)` (deduped 1 s) -> host `request_knock` (sender_owns, up top) -> `_set_knocked` RPC + `add_heat(heat_per_mess)` +
@@ -26,5 +26,5 @@
   per district, SCAVENGING: weighted `vending/dumpster/bin/box_finds` {id: weight, "" = nothing} via `finds_for`/`roll_find`; every item incl. guns). Geyser: each computer launches its own cats/driven car, host stuns
   `Enemy.GROUP`. Cart stop spot = ray vs city STATIC bodies only (deterministic). Glow parts dim via instance_tint; `powered` false in BLACKOUT.
   City: `_add_vending/_add_hydrant/_add_cart/_add_aframe_sign/_add_dumpster` (`_add_neon_sign` is the BUILDING neon), `_add_shopfront_vending`,
-  Meow-Mart side-wall layout, yard dumpster + carts, corner `roll` ladder. Test: `--use_prop=KIND [--prop_twice|--geyser_jump|--geyser_bot|--cart_bowl]`,
+  Meow-Mart side-wall layout, yard dumpster + carts, corner `roll` ladder. Test: `--use_prop=KIND [--from_below|--prop_twice|--geyser_jump|--geyser_bot|--cart_bowl]`,
   `--shoot_prop=KIND`, `--instant_props`, `--look_prop=KIND`. Port 7777 busy (user's Godot running)? use `--solo`.

@@ -180,6 +180,7 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --shoot_prop=KIND hit the nearest standing one of that KIND through the Hit framework (no KIND = any)
 ##   --geyser_jump     (after a hydrant burst) step our cat into the geyser: prints how high it flew
 ##   --geyser_bot      (host, after a hydrant burst) drop the nearest VAC-COP 1.5 m from it: prints its state
+##   --from_below      (with --use_prop) stand 200 m straight under the prop (sewer depth): prompt must be empty
 ##   --cart_bowl       (host) before shoving the cart (--use_prop=cart), put a VAC-COP and a cone in its path
 ##   --prop_twice      (host, after --use_prop) tidy the prop and bust it again: no second payout
 ##   --instant_props   each street-pack kind knocked over the way a LATE JOINER sees it (no animation), then tidied

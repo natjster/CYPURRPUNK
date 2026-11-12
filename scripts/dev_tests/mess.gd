@@ -152,6 +152,8 @@ func _use_prop_test(scene: Node, player: CatPlayer, args: Dictionary) -> MessPro
 	if away == Vector3.ZERO:
 		away = Vector3.BACK
 	var stand := p.global_position + away * (p.radius() + 0.7)
+	if args.has("from_below"):  # (straight under the prop at sewer depth: E must NOT reach it)
+		stand.y += UndergroundHub.DEPTH_LINE * 2.0
 	player.teleport_to(stand + Vector3.UP * 0.2, atan2(away.x, away.z))
 	for f in 12:
 		await get_tree().physics_frame

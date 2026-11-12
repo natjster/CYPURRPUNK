@@ -243,7 +243,12 @@ func receive_hit(hit: Hit) -> bool:
 func interact_distance(cat: CatPlayer) -> float:
 	if knocked or MessManager.instance == null or not cat.visible or cat.is_downed():
 		return -1.0
-	var distance := Motion.flat_distance(cat.global_position, tidy_spot() if kind == Kind.POSTER else global_position)
+	var spot := tidy_spot() if kind == Kind.POSTER else global_position
+	# Height check: the sewer hub is 200 m straight BELOW the city, so a flat (map) distance alone let cats
+	# down there knock over street props right above their heads. Too far up/down = out of reach.
+	if absf(cat.global_position.y - spot.y) > MessManager.instance.interact_height:
+		return -1.0
+	var distance := Motion.flat_distance(cat.global_position, spot)
 	return distance if distance < MessManager.instance.interact_reach + radius() else -1.0
 
 
