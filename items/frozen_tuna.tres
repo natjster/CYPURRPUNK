@@ -7,7 +7,7 @@
 script = ExtResource("1_data")
 id = "frozen_tuna"
 display_name = "FROZEN TUNA"
-description = "Slow, wide, and it hits like a truck. Sends cats and cars sky-high. 2 paws."
+description = "Slow, wide, hits like a truck. Every hit fills its SLAM METER: when it's full, the 3rd swing (or a jump + swing) is a GROUND SLAM. 2 paws."
 kind = 1
 price = 80
 hands = 2

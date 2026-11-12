@@ -52,7 +52,16 @@ owner `_quick_used` calls the scene script's `HeldItem.quick_use(cat)` on a spar
 
 MELEE: `scripts/items/melee_weapon.gd` (`MeleeWeapon extends Weapon`, overrides `_fire` with a forward BoxShape
 query (`swing_radius`/`swing_height`, `max_range` deep, reaches below the feet for flat Roombas), skips own-gang cats,
-rpc `show_swing` tweens `Model`; 3-hit COMBO + slam shockwave: see ui-hud.md MELEE JUICE). `Hit.push_scale` multiplies cat/car shove. Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
+rpc `show_swing` tweens `Model`; COMBO + slam shockwave: see ui-hud.md MELEE JUICE). SLAM = only `can_slam` weapons (frozen
+tuna) with `slam_charge` (owner-side meter, `_add_slam_charge` from connected swings + trickle) full: step 2 / air swing slams,
+else the combo loops 0/1. HUD: paw dict `"charge"` (-1 = none) -> `HudWeaponDisplay._draw_slam_meter`. MELEE BUTTON (action
+`melee`, F / MMB / pad RB): `scripts/cat/cat_melee.gd` (`CatMelee`, node `Player/Melee`, `cat.melee`), ticked from ItemManager
+`_use_held_items` (`melee_tick`). Left paw `throwable` MeleeWeapon -> `_throw` (owner simulates the arc + target, Hit applied on
+arrival via a stand-in MeleeWeapon copy, host `ItemManager.request_throw(pid, hand, land, delay)` empties the paw and drops it
+later, `show_throw` rpc spins a copy of the item scene). Left paw empty (no 2-paw item) -> `_scratch` (stand-in `_claws`
+MeleeWeapon for Hit numbers; `show_scratch` rpc: ImmediateMesh claw marks + `paw_pose(side)` / `body_pitch()` / `body_forward()`
+read by cat_player `_animate_legs_and_tail` + lean). `ItemData.offhand` (bat) = left paw first (`_free_paw_for`, request_equip);
+right paw empty -> "shoot" also uses the left paw. Test: `--melee_test=scratch[:N]|throw`, `--combo_test --slam_charged`. `Hit.push_scale` multiplies cat/car shove. Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
 (100) for new saves / once for older ones (`progress/starter` key; `save_now` forces the first save).
 Weapon extras (exports, all `_make_hit` -> `Hit`): `pellets_per_shot`, `blast_radius` (`_blast`: sphere query, outward direction; replaces the
 direct hit), `stun_seconds` -> `Enemy.take_hit(id, amount, stun, push, city_heat)` -> `_on_stunned`/`_on_pushed`, `enemy_knockback` (`knockback_taken`), `car_launch`

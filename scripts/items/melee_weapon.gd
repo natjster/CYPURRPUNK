@@ -1,6 +1,8 @@
 class_name MeleeWeapon
 extends Weapon
-## CYPURRPUNK — a MELEE weapon (the NEON BAT): a "gun" whose shot is a short SWING.
+## CYPURRPUNK — a MELEE weapon (the NEON BAT, the FROZEN TUNA): a "gun" whose shot is a short SWING.
+## The FROZEN TUNA (Can Slam on) builds a SLAM METER and then GROUND SLAMS. The NEON BAT (Throwable
+## on) can be thrown with the MELEE button from your LEFT paw (scripts/cat/cat_melee.gd).
 ## Put this script on the root of a melee item's scene (scenes/items/neon_bat.tscn) instead of
 ## weapon.gd. It uses the gun's numbers in the Inspector the same way:
 ##   Fire Rate  = swings per second          Automatic = hold the button to keep swinging
@@ -34,6 +36,17 @@ extends Weapon
 ## Camera jolt when the swing CONNECTS (0 = none, 1 = huge). See scripts/feedback.gd.
 @export_range(0.0, 1.0) var hit_shake: float = 0.3
 
+@export_group("Throw")
+## THROWABLE: holding this in your LEFT paw (offhand), the MELEE button (F / RB) throws it. It spins
+## through the air, bonks the first thing it hits and lands on the street for you to pick back up.
+## (The throw's speed / reach live on the cat: Player > Melee in the Inspector.)
+@export var throwable: bool = false
+## A thrown hit does this many times the swing's damage, and shoves this many times as hard.
+@export var throw_damage: float = 1.5
+@export var throw_push: float = 1.6
+## VAC-COPs hit by the thrown weapon are dazed this long (seconds).
+@export var throw_stun: float = 1.0
+
 @export_group("Swing Juice")
 ## How far the bat sweeps sideways across you (radians) on top of the overhead swing: a slash, not a chop.
 @export var swing_sweep: float = 1.1
@@ -52,9 +65,22 @@ extends Weapon
 @export var impact_light: float = 3.0
 
 @export_group("Combo")
-## THE COMBO: keep swinging and the bat goes FOREHAND -> BACKHAND -> overhead SLAM (the finisher).
+## THE COMBO: keep swinging and it goes FOREHAND -> BACKHAND -> FOREHAND... and, on a weapon that
+## CAN SLAM (below) with its SLAM METER full, the 3rd swing is an overhead GROUND SLAM (the finisher).
 ## Wait longer than this between swings (seconds) and the combo starts over at the forehand.
 @export var combo_window: float = 0.9
+## Can this weapon GROUND SLAM at all? Only the FROZEN TUNA can (scenes/items/frozen_tuna.tscn).
+## Off = it just swings forehand / backhand forever, and an air swing is a normal swing.
+@export var can_slam: bool = false
+## THE SLAM METER (so nobody can spam slams): it starts empty and fills as your swings CONNECT.
+## How much one swing that hits something fills it (1 = full in one hit, 0.25 = four hits).
+@export_range(0.0, 1.0) var slam_charge_per_hit: float = 0.25
+## Extra fill for every MORE thing the same swing hits (hit 3 VAC-COPs = this x2 on top).
+@export_range(0.0, 1.0) var slam_charge_per_extra_target: float = 0.05
+## Slow fill on its own while you hold it (per second; 0 = only hitting fills it).
+@export_range(0.0, 0.5) var slam_charge_per_second: float = 0.02
+## The sound when the meter fills up (res://sounds/sfx/, no .wav; "" = none).
+@export var slam_ready_sound: String = "pa_chime"
 ## The SLAM (3rd hit): damage x this, shove x this (VAC-COPs, rival cats and cars all fly further).
 @export var finisher_damage: float = 1.75
 @export var finisher_push: float = 2.2
@@ -79,6 +105,8 @@ var _model: Node3D
 ## The combo: which swing is next (0 forehand, 1 backhand, 2 slam) and until when it carries on.
 var combo_step: int = 0
 var _combo_until: float = 0.0
+## THE SLAM METER, 0 (empty) to 1 (SLAM READY). Owner's computer only (shown on the HUD's weapon box).
+var slam_charge: float = 0.0
 ## Where the last swing's slam hit the ground (for the test line), and the trail's extra reach now.
 var last_slam_spot := Vector3.ZERO
 var _trail_boost: float = 1.0
@@ -112,10 +140,16 @@ func _fire() -> void:
 	if now > _combo_until:
 		combo_step = 0
 	var step := combo_step
-	var air_slam := air_slam_speed > 0.0 and not holder.is_on_floor()
+	var charged := slam_ready()
+	if step == 2 and not charged:
+		step = 0  # no slam ready: the combo just goes round forehand -> backhand again
+	var air_slam := charged and air_slam_speed > 0.0 and not holder.is_on_floor()
 	if air_slam:
-		step = 2  # swinging in mid-air = always the SLAM (and you dive into it)
+		step = 2  # swinging in mid-air with the SLAM READY = the SLAM (and you dive into it)
 	var slam := step == 2
+	if slam:
+		slam_charge = 0.0  # used up: hit things to fill it again
+	# (Next swing: forehand <-> backhand, and the 3rd one tries to be the slam.)
 	combo_step = 0 if slam else step + 1
 	_combo_until = now + combo_window
 	Seats.rumble(holder.player_id, 0.9 if slam else 0.5, 0.35 if slam else 0.2, 0.08)
@@ -176,6 +210,9 @@ func _fire() -> void:
 		if target.receive_hit(info):
 			# (The slam's numbers pop big and yellow, like a crit.)
 			Hud.damage_number(info.position, info.damage, info.crit or slam, holder.slot)  # on OUR HUD
+	if hit_anything and not slam:
+		# THE SLAM METER fills from swings that connect (not from the slam itself).
+		_add_slam_charge(slam_charge_per_hit + slam_charge_per_extra_target * maxi(already.size() - 1, 0))
 	if hit_anything:
 		Feedback.shake(holder.player_id, finisher_shake if slam else hit_shake)  # THWACK (scripts/feedback.gd)
 	elif slam:
@@ -300,6 +337,24 @@ func _make_trail() -> void:
 func _process(delta: float) -> void:
 	super._process(delta)
 	_update_trail(delta)
+	if can_slam and holder != null and holder.is_multiplayer_authority() and slam_charge_per_second > 0.0:
+		_add_slam_charge(slam_charge_per_second * delta)
+
+
+## Is the SLAM METER full (the next combo finisher / air swing is a GROUND SLAM)?
+func slam_ready() -> bool:
+	return can_slam and slam_charge >= 1.0
+
+
+## Owner only: fill the SLAM METER a bit. Full = a chime and a buzz so you know it's ready.
+func _add_slam_charge(amount: float) -> void:
+	if not can_slam or slam_charge >= 1.0:
+		return
+	slam_charge = minf(slam_charge + amount, 1.0)
+	if slam_charge >= 1.0:
+		if slam_ready_sound != "":
+			Sound.play(slam_ready_sound, -6.0)  # (only we hear it: it's our meter)
+		Seats.rumble(holder.player_id, 0.3, 0.6, 0.15)
 
 
 ## Every frame: remember where the bat is while swinging, fade the old bits, redraw the ribbon.

@@ -32,6 +32,10 @@ enum Kind { LOOT, HELD }
 @export var hold_scale: float = 1.0
 ## Over-the-shoulder camera while holding it (nice for aiming weapons).
 @export var shoulder_camera: bool = false
+## OFFHAND item (the NEON BAT): goes in your LEFT paw first, so your right paw stays free for a gun.
+## From the left paw it swings with Right Mouse / LT (or Left Mouse / RT while the right paw is empty),
+## and if it's Throwable (its scene's Throw settings) the MELEE button throws it.
+@export var offhand: bool = false
 ## QUICK USE item (catnip, catdip): picking it up puts it in one of your two QUICK USE slots
 ## (keys 1 / 2, d-pad left / right) instead of your paws, stacked with others of its kind.
 ## Its scene's script must have a quick_use(cat) function (see scripts/items/catnip.gd).

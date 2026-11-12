@@ -5,6 +5,7 @@
 [ext_resource type="Script" path="res://scripts/cat/cat_moves.gd" id="3_moves"]
 [ext_resource type="Script" path="res://scripts/cat/cat_ride.gd" id="4_ride"]
 [ext_resource type="Script" path="res://scripts/cat/cat_aim.gd" id="5_aim"]
+[ext_resource type="Script" path="res://scripts/cat/cat_melee.gd" id="6_melee"]
 
 [sub_resource type="SceneReplicationConfig" id="Sync_cat"]
 properties/0/path = NodePath(".:position")
@@ -53,6 +54,9 @@ script = ExtResource("4_ride")
 
 [node name="Aim" type="Node" parent="."]
 script = ExtResource("5_aim")
+
+[node name="Melee" type="Node3D" parent="."]
+script = ExtResource("6_melee")
 
 [node name="CameraPivot" type="Node3D" parent="."]
 position = Vector3(0, 0.75, 0)

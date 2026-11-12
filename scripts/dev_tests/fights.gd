@@ -263,6 +263,8 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 	var gap_arg := str(args["combo_test"])
 	var gap := float(gap_arg) if gap_arg.is_valid_float() else 0.5
 	var target := _nearest_roomba(Game.instance, player.global_position)
+	if args.has("slam_charged"):
+		bat.slam_charge = 1.0  # --slam_charged: start with the SLAM METER full (frozen tuna)
 	if args.has("air_slam"):
 		player.velocity.y = 9.0
 		await _seconds(0.25)
@@ -272,8 +274,8 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 		bat._fire()
 		await _seconds(0.05)
 		var hp: int = target.health if target != null and is_instance_valid(target) else -1
-		print("DevCapture combo: swing=%d step=%d next=%d vy=%.1f target_hp=%d->%d slam_spot=%s" % [
-			i + 1, step, bat.combo_step, player.velocity.y, hp_before, hp, bat.last_slam_spot])
+		print("DevCapture combo: swing=%d step=%d next=%d vy=%.1f target_hp=%d->%d slam_spot=%s can_slam=%s charge=%.2f" % [
+			i + 1, step, bat.combo_step, player.velocity.y, hp_before, hp, bat.last_slam_spot, bat.can_slam, bat.slam_charge])
 		if i < 2:
 			await _seconds(gap)
 	var rings := Game.instance.find_children("SlamShockwave", "MeshInstance3D", false, false)
@@ -282,3 +284,50 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 		print("DevCapture combo: shockwave at %s scale=%s alpha=%.2f visible=%s" % [r.global_position, r.scale,
 			((r.mesh as PrimitiveMesh).material as StandardMaterial3D).albedo_color.a, r.is_visible_in_tree()])
 	await _seconds(0.06)
+
+
+## --melee_test=scratch[:N] / throw: the MELEE button (scripts/cat/cat_melee.gd). scratch = N claw swipes
+## (default 3: right, left, X RAKE), 0.2 s apart; throw = throw the bat in the LEFT paw (needs
+## --give=neon_bat). Add --bait_roomba=1.5 for something to hit. Prints "DevCapture melee" lines: what
+## each did, the nearest VAC-COP's health, our paws, and (after a throw) where the bat landed.
+func _melee_test(player: CatPlayer, args: Dictionary) -> void:
+	await _seconds(0.8)
+	var melee := player.melee
+	var what := str(args["melee_test"])
+	var target := _nearest_roomba(Game.instance, player.global_position)
+	var items := ItemManager.instance
+	print("DevCapture melee: hands=%s" % [items.get_inventory(player.player_id).hands])
+	if what.begins_with("throw"):
+		var left := items.held_item(player, 1)
+		if not left is MeleeWeapon:
+			print("DevCapture melee: nothing throwable in the LEFT paw")
+			return
+		var hp_before: int = target.health if target != null else -1
+		melee._throw(left as MeleeWeapon)
+		print("DevCapture melee: %s" % melee.last_result)
+		await _seconds(0.15)
+		var flying := Game.instance.get_node_or_null("Thrown")
+		print("DevCapture melee: mid-flight thrown=%s at=%s" % [flying != null, (flying as Node3D).global_position if flying != null else Vector3.ZERO])
+		await _seconds(1.4)
+		print("DevCapture melee: after throw hands=%s target_hp=%d->%d world_bats=%d" % [items.get_inventory(player.player_id).hands,
+			hp_before, target.health if target != null and is_instance_valid(target) else -1,
+			items.world.values().filter(func(w): return w.item == "neon_bat").size()])
+		return
+	var count := int(what.get_slice(":", 1)) if what.contains(":") else 3
+	await _seconds(1.0)  # (let the cat land after popping out of the manhole)
+	for i in count:
+		if target != null and is_instance_valid(target) and args.has("bait_roomba"):
+			# Keep the bot right in front of the claws for every swipe (it gets shoved away).
+			var ahead := -player.camera.global_basis.z
+			target.global_position = player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * float(args["bait_roomba"]) + Vector3(0, 0.1, 0)
+			await _seconds(0.02)
+		var hp_before: int = target.health if target != null and is_instance_valid(target) else -1
+		melee._scratch()
+		await _seconds(0.05)
+		var off := (target.global_position - player.global_position) if target != null and is_instance_valid(target) else Vector3.ZERO
+		var look := -player.camera.global_basis.z
+		print("DevCapture melee: target offset=%s dist=%.2f look=%s" % [off, Vector2(off.x, off.z).length(), Vector3(look.x, 0, look.z).normalized()])
+		print("DevCapture melee: %s target_hp=%d->%d marks=%d pitch=%.2f" % [melee.last_result, hp_before,
+			target.health if target != null and is_instance_valid(target) else -1, melee._marks.size(), melee.body_pitch()])
+		if i < count - 1:
+			await _seconds(0.15)

@@ -17,6 +17,7 @@ bolt_color = Color(0.3, 1, 0.9, 1)
 hot_color = Color(0.3, 1, 0.9, 1)
 hud_name = "NEON BAT"
 neon_parts = {"Barrel": 3.0}
+throwable = true
 
 [node name="Model" type="Node3D" parent="."]
 rotation = Vector3(-0.7, 0, 0)

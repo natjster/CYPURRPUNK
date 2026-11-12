@@ -116,16 +116,41 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   **Trail Color** = leave see-through to use the bat's Bolt Color), and on a hit **Spark Count** +
   **Impact Light** (a burst of sparks and a flash where it lands). The Frozen Tuna has the same settings.
   Test: `--host --pos=0,0,6 --give=neon_bat --swing_test --frames=2` (snaps mid-slash).
-- **Combo** (same Inspector, group **Combo**): keep swinging and the bat goes **forehand → backhand →
-  SLAM**. The slam is an overhead chop that hits harder (**Finisher Damage** x1.75), shoves much
-  further (**Finisher Push** x2.2: VAC-COPs, rival cats and cars), reaches further (**Finisher Reach**),
-  dazes VAC-COPs (**Finisher Stun**, 0.8 s), shakes the camera harder (**Finisher Shake**), freezes
-  longer (**Finisher Hit Stop**) and sends out a neon **SHOCKWAVE** ring that hits everything within
-  **Shockwave Radius** (2.6 m) of where the bat lands, with a boom (**Finisher Sound** / **Volume**).
-  Pause longer than **Combo Window** (0.9 s) and it starts over at the forehand.
-  **AIR SLAM**: swing while in the air and you dive down (**Air Slam Speed**, 16 m/s; 0 = off) and it's
-  always a slam. Test: `--host --deploy --give=neon_bat --bait_roomba=2 --combo_test [--air_slam] --frames=2`
-  (prints a "DevCapture combo" line per swing).
+- **Combo** (same Inspector, group **Combo**): keep swinging and it goes **forehand → backhand →
+  forehand...** Pause longer than **Combo Window** (0.9 s) and it starts over at the forehand.
+- **GROUND SLAM (Frozen Tuna only)**: open `scenes/items/frozen_tuna.tscn`, select **FrozenTuna**, group
+  **Combo**: **Can Slam** is ticked only there (the bat has it off). The tuna has a **SLAM METER** (a bar
+  under the tuna in the bottom-left weapon box) that starts empty and fills as your swings **connect**:
+  **Slam Charge Per Hit** (0.25 = four hits), **Slam Charge Per Extra Target** (bonus for hitting a crowd),
+  **Slam Charge Per Second** (a slow trickle while you hold it; 0 = only hits fill it). Full = a chime
+  (**Slam Ready Sound**), a buzz, and the bar flashes gold with **SLAM READY** over the box. Then the
+  **3rd swing of a combo** (or **jump + swing** = the AIR SLAM dive, **Air Slam Speed** 16 m/s) is the
+  slam, and the meter empties. The slam hits harder (**Finisher Damage** x1.75), shoves much further
+  (**Finisher Push** x2.2), reaches further (**Finisher Reach**), dazes VAC-COPs (**Finisher Stun**),
+  shakes harder (**Finisher Shake** / **Finisher Hit Stop**) and sends out a neon **SHOCKWAVE** hitting
+  everything within **Shockwave Radius** (3.4 m on the tuna) with a boom (**Finisher Sound** / **Volume**).
+  The meter's look: `scenes/ui/hud.tscn` > the weapon box (**HudWeaponDisplay**) > group **Slam Meter**.
+  Test: `--host --deploy --give=frozen_tuna --bait_roomba=2 --combo_test [--slam_charged] [--air_slam] --frames=2`
+  (prints a "DevCapture combo" line per swing with the meter's charge).
+- **THROWING THE BAT (offhand)**: the bat's card (`items/neon_bat.tres`) has **Offhand** ticked, so it goes
+  in your **LEFT paw** first, leaving the right paw free for a gun. From the left paw it swings with
+  **Right Mouse / LT** (or Left Mouse / RT when your right paw is empty). Press the **MELEE** button
+  (**F** / middle mouse / pad **RB**, rebindable in SETTINGS > KEYS) and you **throw** it: it spins end over
+  end with its neon trail, bonks the first VAC-COP / rival cat / car it passes, and lands on the street
+  for you to grab again with E. Its numbers: `neon_bat.tscn` > **NeonBat** > group **Throw**
+  (**Throwable**, **Throw Damage** x1.5, **Throw Push** x1.6, **Throw Stun** 1 s); the flight itself is on
+  the cat (below, **Player > Melee** > group **Throw**: speed, lift, gravity, spin...).
+- **CLAW SCRATCH (bare paws)**: nothing in your LEFT paw (and no 2-paw weapon) = the MELEE button
+  **scratches**: right swipe, left swipe, then a big **X RAKE** with both paws (x2 damage, x2 shove, dazes
+  VAC-COPs). Hold it to keep scratching. Each swipe rips three neon **claw marks** across the air, the cat
+  pounces into it (nose dip + forward slide), its front paw flicks up and rakes down, the camera rolls and
+  punches, and a hit freezes the marks for a split second with sparks. Works next to a gun in your right paw.
+  All the knobs: open `scenes/player.tscn`, click the **Melee** node (script `scripts/cat/cat_melee.gd`):
+  groups **Scratch** (rate 4.5/s, damage 14, reach, shoves, lunge), **Scratch Combo** (window, rake
+  numbers), **Scratch Feel** (shake, hit stop, camera punch, pounce, paw raise, sounds), **Claw Marks**
+  (colour, length, width, how fast they rip and fade) and **Throw**.
+  Test: `--host --deploy --bait_roomba=1.3 --melee_test=scratch:3 --frames=2` or
+  `--host --deploy --give=neon_bat --melee_test=throw --frames=2` ("DevCapture melee" lines).
 - **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
 - **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, swap the
   model under **Model** (the swing rotates **Model**; see "The weapon models" below), change the

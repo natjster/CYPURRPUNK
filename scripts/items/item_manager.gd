@@ -347,7 +347,18 @@ func _use_held_items(delta: float) -> void:
 			if held == null or (safe_zone and held is Weapon):
 				continue  # the hub is a safe zone: guns don't fire down there (catnip still works)
 			var action := "shoot" if hand == 0 else "use_left"
-			held.use_tick(allowed and Seats.is_pressed(cat.slot, action), allowed and Seats.is_just_pressed(cat.slot, action), delta)
+			var pressed := Seats.is_pressed(cat.slot, action)
+			var just := Seats.is_just_pressed(cat.slot, action)
+			if hand == 1 and right == null:
+				# Nothing in the right paw (e.g. just the OFFHAND bat): Left Mouse / RT uses the left paw too.
+				pressed = pressed or Seats.is_pressed(cat.slot, "shoot")
+				just = just or Seats.is_just_pressed(cat.slot, "shoot")
+			held.use_tick(allowed and pressed, allowed and just, delta)
+	# The MELEE button (F / RB): throw the offhand bat, or SCRATCH with bare claws (scripts/cat/cat_melee.gd).
+	for cat in Game.instance.local_cats():
+		if cat.reads_input() and cat.is_controlled and not cat.knocked_out and not cat.is_downed() and cat.melee != null:
+			cat.melee.melee_tick(_can_use_items(cat) and not UndergroundHub.is_safe(cat.global_position),
+				Seats.is_pressed(cat.slot, "melee"), Seats.is_just_pressed(cat.slot, "melee"), delta)
 
 
 ## May this cat's player use their paws right now? Not while a menu or talk box is open, or
@@ -415,7 +426,7 @@ func _put_in_inventory(player_id: int, item_id: String, fallback_spot: Vector3) 
 		if data.hands == 2 and _held_ids(hands).is_empty():
 			hands = [item_id, item_id]                      # free paws: hold it
 		elif data.hands == 1 and not _is_two_handed(hands) and "" in hands:
-			hands[hands.find("")] = item_id                 # a free paw: hold it
+			hands[_free_paw_for(data, hands)] = item_id     # a free paw: hold it (the bat: LEFT first)
 		elif pack_has_room_in(player_id, pack, item_id):
 			pack.append(item_id)                            # paws busy: into the backpack
 		elif data.hands == 2:
@@ -451,6 +462,36 @@ func _add_to_quick(inventory: Dictionary, item_id: String, stack_size: int = -1)
 			inventory.quick = quick
 			return true
 	return false
+
+
+## Which free paw a 1-paw item goes in (hands has at least one ""): the RIGHT one, except an
+## OFFHAND item (the bat), which takes the LEFT paw when it's free.
+func _free_paw_for(data: ItemData, hands: Array) -> int:
+	if data.offhand and hands[1] == "":
+		return 1
+	return hands.find("")
+
+
+## THROW (the MELEE button with a Throwable weapon in the LEFT paw, scripts/cat/cat_melee.gd): the
+## item leaves the paw now, and lands on the street at "land" after "delay" seconds (when the
+## spinning bat gets there). Host only.
+@rpc("any_peer", "call_local", "reliable")
+func request_throw(player_id: int, hand: int, land: Vector3, delay: float) -> void:
+	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
+		return
+	var cat := _cat(player_id)
+	if cat == null or Game.instance.car_of(player_id) != null:
+		return
+	var inventory := get_inventory(player_id).duplicate(true)
+	hand = clampi(hand, 0, 1)
+	var item_id: String = inventory.hands[hand]
+	if item_id == "" or _is_two_handed(inventory.hands):
+		return
+	if Motion.flat_distance(land, cat.global_position) > 40.0:
+		land = cat.global_position  # no throwing things across the map
+	inventory.hands[hand] = ""
+	_set_inventory.rpc(player_id, inventory)
+	get_tree().create_timer(clampf(delay, 0.0, 3.0)).timeout.connect(_spawn_dropped.bind(item_id, land))
 
 
 ## Host: put an item on the street with a brand-new world ID.
@@ -714,7 +755,10 @@ func request_equip(player_id: int, pack_index: int) -> void:
 	if data.hands == 2:
 		hands = [item_id, item_id]
 	elif "" in hands:
-		hands[hands.find("")] = item_id
+		hands[_free_paw_for(data, hands)] = item_id
+	elif data.offhand:
+		put_away.append(hands[1])  # both paws full: an OFFHAND item swaps out the left-paw one
+		hands[1] = item_id
 	else:
 		put_away.append(hands[0])  # both paws full: the right-paw item goes in the backpack
 		hands[0] = item_id
@@ -1263,6 +1307,8 @@ func _update_hud_for(cat: CatPlayer) -> void:
 				"heat": weapon.heat if weapon != null else 0.0,
 				"overheated": weapon != null and weapon.is_overheated,
 				"heats": weapon != null and weapon.heat_per_shot > 0.0,
+				# THE SLAM METER (the frozen tuna): 0..1, or -1 = this weapon has none.
+				"charge": (held as MeleeWeapon).slam_charge if held is MeleeWeapon and (held as MeleeWeapon).can_slam else -1.0,
 				"key": Hud.key_for(keys[hand], cat.slot),
 			})
 			wants_crosshair = wants_crosshair or held.wants_crosshair()
