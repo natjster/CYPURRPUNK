@@ -25,7 +25,7 @@ extends Node
 ##     (heat_per_second_when_all_home) so the next district comes quickly.
 ##   - The HUD shows it as the red/blue flashing HEAT bar, top-right (scripts/ui/hud_heat_bar.gd,
 ##     fed from _process below; down in the sewers the same bar shows THE MAINFRAME's charge).
-##     Players also HEAR it go up (the heat_up / boss_siren sounds).
+##     At 100 everyone hears the boss_siren (no sound for the levels below that).
 ##
 ## MULTIPLAYER: only the HOST changes the heat. It sends the number to everyone a few times a
 ## second (for the HUD); Roombas run on the host, so they read it directly.
@@ -223,10 +223,8 @@ func _process(_delta: float) -> void:
 				bar.set_heat(heat, MAX_HEAT, lvl, mainframe.exit_heat(cat.team))
 			else:
 				bar.set_mainframe(mainframe.charge_of(cat.team), Mainframe.MAX_CHARGE, mainframe.tier_color(cat.team), mainframe.tier(cat.team) == Mainframe.Tier.CRITICAL)
-	# A sound (no text on screen) when the heat goes UP a level.
-	if lvl > _last_level:
-		if lvl < MAX_LEVEL:  # (max level = the DEEP CLEAN, which has its own siren)
-			Sound.play("heat_up")  # sounds/sfx/heat_up.wav
+	# (No sound when the heat goes up a level any more: that siren, heat_up.wav, now plays when a
+	# VAC-COP spots you, see roomba.gd spotted_sound. The DEEP CLEAN at 100 has its own siren.)
 	_last_level = lvl
 	if lvl != _announced_level:
 		_announced_level = lvl

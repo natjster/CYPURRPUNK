@@ -124,6 +124,12 @@ enum State { PATROL, CHASE, STUNNED, TIDY_GO, TIDYING, INVESTIGATE }
 @export var draw_distance: float = 75.0
 ## The vacuum hum only plays within this distance (metres) of a player on this computer.
 @export var hum_distance: float = 35.0
+## The sound it makes the moment it SPOTS a cat (starts a chase). VAC-COPs (and the MEGA VAC-COP)
+## use the police siren (sounds/sfx/heat_up.wav); LINT-TRAPPERs and SQUIRT-DRONEs set "alert" in
+## their scenes. Empty = silent.
+@export var spotted_sound: String = "heat_up"
+## How loud that sound is, in decibels (0 = full file volume, -6 = about half, -12 = a quarter).
+@export var spotted_sound_db: float = -7.0
 
 @export_group("Look")
 ## The two colours its siren flashes (the lights on the model and the glow on the street).
@@ -568,9 +574,10 @@ func _process(delta: float) -> void:
 	if brush_2 != null:
 		brush_2.rotate_object_local(brush_axis, -delta * brush_spin * (3.0 if state == State.TIDYING else 1.0))
 	var chasing := state == State.CHASE
-	# Sounds: a siren whoop when a chase starts, and the hum revs higher while chasing.
-	if chasing and _last_state != State.CHASE:
-		Sound.play_at("alert", global_position, -2.0)
+	# Sounds: the spotted sound (VAC-COPs: the siren) when a chase starts, and the hum revs higher
+	# while chasing.
+	if chasing and _last_state != State.CHASE and spotted_sound != "":
+		Sound.play_at(spotted_sound, global_position, spotted_sound_db)
 	_last_state = state
 	var tidying := state == State.TIDYING
 	_show_status(delta)

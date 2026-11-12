@@ -39,7 +39,7 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `roomba_hum` (loops) | every VAC-COP, revs up while chasing (higher-pitched on a SQUIRT-DRONE) | everyone nearby |
 | `squirt` | a SQUIRT-DRONE fires a water zap | everyone nearby |
 | `splat` | LINT-TRAPPER glue: a lob, its landing, and your paws getting stuck | everyone nearby (paws: only you) |
-| `alert` | a VAC-COP starts chasing | everyone nearby |
+| `alert` | a LINT-TRAPPER or SQUIRT-DRONE starts chasing | everyone nearby |
 | `bonk` | a VAC-COP bonks a cat | everyone nearby |
 | `roomba_hit` | a bolt hits a VAC-COP | everyone nearby |
 | `explode` | a VAC-COP explodes | everyone nearby |
@@ -61,7 +61,7 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `store_alarm` (loops) | the STORE ALARM klaxon, inside and over the street door | everyone nearby |
 | `overclean_mart_alarm` | "Aquatic display breach detected..." | players up top |
 | ambience `meow_mart_hum` | fluorescent + fridge hum while player 1 is inside the store | just you |
-| `heat_up` | the HEAT goes up a level | everyone (2D) |
+| `heat_up` | the police siren: a VAC-COP (or the MEGA VAC-COP) spots you and starts chasing; also the tutorial's exit opening. Which sound and how loud: select the Roomba in `scenes/roomba.tscn` > Inspector > **Spotted Sound** / **Spotted Sound Db** (default -7) | everyone nearby |
 | `boss_siren` | the MEGA VAC-COP comes out | everyone (2D) |
 | `overclean_*` | OVERCLEAN's announcements (chime + robot voice, §21) | players up top (the seal: everyone) |
 | `bin_clatter` / `cone_bounce` / `box_thump` / `poster_scratch` | a bin / cone / box knocked over, a poster scratched (§23) | everyone nearby |
