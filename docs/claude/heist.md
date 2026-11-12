@@ -18,22 +18,27 @@
   chase route replanned 10/s, mesh `visibility_range_end`, siren light distance fade, hum paused when far;
   sync_position/yaw are ON_CHANGE (`delta_interval` 0.05). Health bars show only once shot (`health < max`).
   Test: `--kill_roombas=N [--kill_bosses]`.
-  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100). Exit open + every cat in the hub
+  Heat is the DISTRICT CLOCK (never cools: cooling exports are 0; ~10 min up top to 100). Mainframe heat passed + every cat in the hub
   = `heat_per_second_when_all_home` (5/s) and `_run_deep_clean` ends at once when `_anyone_up_top()` is false.
   Boss is also on collision layer 3; the car's mask = 1+3 and `_integrate_forces` stops it dead on boss contact.
 - ONE TRIP PER DISTRICT: host marks `FishHeist.went_up` (`_mark_went_up` RPC, cleared in `place_items`) when a player is
   up top; `hub.deploy` refuses `has_been_up` (extracted or KO'd). Heat races home (`heat_per_second_when_all_home`) when all
-  are in the hub and (exit open OR `everyone_has_been_up()`). Story: Don's crew digs for a way down; exit at 75 = they broke
-  through; payphone too-early line has NO direction hint. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
+  are in the hub and (`every_payphone_hint_is_on()` OR `everyone_has_been_up()`). Payphone too-early line only with `exit_open_from_start` off. Koi has no `heat_on_pickup`. Test: `--deploy --down=0 --deploy_again=300`.
 - Districts (`fish_heist.gd`): per-gang ENTRY `Manhole` (`scripts/manhole.gd`, code-built disc, textures/manhole_*.png) at
-  `entry_position(team)` (one-way), per-gang EXIT at `exit_for(team)` (street spot from the heist rng), open while
-  `exit_is_open(team)` (heat >= `Mainframe.exit_heat(team)` or sticky `exit_opened[team]`, not `sealed`; `every_exit_is_open()` gates the all-home rush). `Payphone` NPCs (`scenes/props/payphone.tscn`,
-  `scripts/npcs/payphone.gd`, `Npc.prompt_verb` "USE") ring while open + some gang not `is_revealed`; a call ->
-  `request_reveal_exit` -> host `_set_state(sealed, revealed)`; HUD `DropOff` arrow only when revealed.
+  `entry_position(team)` (one-way; `_entries[team]`), per-gang EXIT at `exit_for(team)` (street spot from the heist rng).
+  EXIT OPEN FROM THE START (11 Nov 2026, export `exit_open_from_start`): `exit_is_open(team)` = not `sealed` (off = old
+  heat >= `Mainframe.exit_heat(team)` rule). `Mainframe.exit_heat` now = when the Mainframe's CHEAT kicks in:
+  `payphone_hint_is_on(team)` -> blue arrow to nearest payphone + one feed line (`_announce_hints`); `every_payphone_hint_is_on()`
+  gates the all-home heat rush (heat_meter.gd). HUD heat-bar tick says PHONE. `Payphone` NPCs (`scenes/props/payphone.tscn`,
+  `scripts/npcs/payphone.gd`, look = `scripts/props/payphone_model.gd` on Model, `set_ringing` rattles the handset; `Npc.prompt_verb` "USE") ring while
+  some gang up top is not `is_revealed`; a call -> `request_reveal_exit` -> host `_set_state(sealed, revealed)`.
+  POP-OUT + LID SLAM: `hub.deploy` teleports into the hole and flings the cat (`pop_out_speed`, `moves.lock_steering(air time)`;
+  cat_moves only clears the lock on the floor when velocity.y <= 0). `Events.player_went_up` (every computer, once per player
+  per district) -> `fish_heist._on_player_went_up` -> `Manhole.play_slam()` (tween: lid flies, flips, slams, dust, shake_near).
   Heat 100: host seals, `RoombaPatrol.deep_clean_extra` swarm (spawns near cats, `swarm_sight_multiplier`),
   after `deep_clean_seconds` knocks out everyone up top, then `Game.new_district()` (new seed RPC, heat reset,
   `GameSystems` `start_district`). Hub `deploy` refuses while sealed. place_items `remove_child`s old nodes (names stay
   `Payphone0..`). Test: `--heat=80 --talk=Payphone0`, `--near_exit=D`, `--heat=100 --heat_hold=30 --frames=4800`.
   BLUE ARROW: HUD `Compass` (`HudCompassArrow`, scripts/ui/hud_compass_arrow.gd, software-projected 3D, `point_at(yaw, text, urgent)` /
-  `hide_arrow`), driven by `fish_heist._update_hud_for`: up top + own exit open + not sealed -> nearest payphone (`nearest_payphone`)
-  until `is_revealed(team)`, then `exit_for(team)`; urgent at `seal_warning_at_heat`. DropOff now only = sewers / breach text. `DevCapture compass`.
+  `hide_arrow`), driven by `fish_heist._update_hud_for`: up top + not sealed -> `exit_for(team)` once `is_revealed(team)`, else
+  nearest payphone only if `payphone_hint_is_on` (or tutorial step 8), else hidden; urgent at `seal_warning_at_heat`. DropOff now only = sewers / breach text. `DevCapture compass`.

@@ -5,14 +5,18 @@ extends Npc
 ## fish_heist.gd puts a few in every district (scenes/props/payphone.tscn), in random spots, so
 ## you have to find them by exploring. Both gangs use the same phones.
 ##
-## What the boss says depends on the heat (fish_heist.gd):
-##   - Before YOUR gang's EXIT manhole opens (its Mainframe sets when: scripts/mainframe.gd): their
-##     crew is still digging for a way back down. No hint where - there IS no way down yet.
-##   - Once a gang's exit is open, every payphone in the district RINGS
-##     (sounds/sfx/phone_ring.wav) until that gang has called. A ring can be for the rival: your
-##     boss only answers with a location once YOUR exit is open. That call tells you where your
-##     gang's exit is, and the HUD arrow to it switches on for your gang only.
+## What the boss says (fish_heist.gd):
+##   - Your gang's EXIT manhole is open from the start, so the boss tells you where it is and the
+##     HUD arrow to it switches on for your gang only. Every payphone RINGS
+##     (sounds/sfx/phone_ring.wav) while a gang up top still hasn't called: follow your ears!
+##     (Nobody points you at a phone, unless the heat reaches your MAINFRAME's number: then the
+##     arrow points at the nearest one.)
+##   - (Only if FishHeist "Exit Open From Start" is off: before your exit opens the crew is still
+##     digging, phone_too_early.)
 ##   - After the hatch is sealed: nobody's coming. Good luck.
+##
+## THE LOOK: the Model child is built in code by scripts/props/payphone_model.gd (a cyberpunk
+## phone booth: hood, glowing sign, keypad, a handset on a curly cord that rattles while it rings).
 ##
 ## Picking up NEVER opens a talk box: your cat keeps moving. The boss's line TYPES OUT as floating
 ## outlined text right above the phone (the "Readout" child, scripts/ui/floating_line.gd), and the
@@ -82,6 +86,9 @@ func set_ringing(ringing: bool) -> void:
 		_ring_sound = null
 	if _ring_light != null:
 		_ring_light.visible = ringing
+	var model := get_node_or_null("Model")
+	if model != null and model.has_method("set_ringing"):
+		model.set_ringing(ringing)  # (payphone_model.gd: the handset rattles, the screen flashes)
 
 
 func _process(delta: float) -> void:

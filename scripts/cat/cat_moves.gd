@@ -109,7 +109,8 @@ func jump(delta: float, on_floor: bool, pressed: bool, held: bool, direction: Ve
 		_coyote_left = coyote_seconds
 		_kicks_left = wall_kicks
 		_pounce_speed = 0.0
-		_lock_left = 0.0
+		if _cat.velocity.y <= 0.0:  # (not while being flung up off the ground: lock_steering)
+			_lock_left = 0.0
 	else:
 		_coyote_left = maxf(_coyote_left - delta, 0.0)
 	_buffer_left = jump_buffer_seconds if pressed else maxf(_buffer_left - delta, 0.0)
@@ -163,6 +164,12 @@ func jump(delta: float, on_floor: bool, pressed: bool, held: bool, direction: Ve
 
 
 ## Owner: true just after a wall kick (CatPlayer skips steering then and faces where it flies).
+## Owner: no steering (and no air braking) for this many seconds: the cat keeps the speed it has.
+## Used when you're flung out of the manhole (hub.gd deploy) so you sail clear of the lid.
+func lock_steering(seconds: float) -> void:
+	_lock_left = maxf(_lock_left, seconds)
+
+
 func steering_locked() -> bool:
 	return _lock_left > 0.0
 

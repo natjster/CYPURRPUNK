@@ -2,11 +2,12 @@ class_name Manhole
 extends Node3D
 ## CYPURRPUNK — a sewer manhole in the street: the rebellion's way in and out of the city.
 ## Built by fish_heist.gd for every district (you don't place these by hand):
-##   - the ENTRY manhole in the centre crossroads, where Don Catleone sends you up. It's one-way:
-##     it always looks closed (the rebels slam it shut behind you).
-##   - the EXIT manhole somewhere else in the city. It looks closed until the heat reaches 3/4
-##     (mainframe.gd exit_heat), then the lid slides aside, a green glow comes up out
-##     of the hole, and walking onto it takes you (and your loot) back down to the sewers.
+##   - the ENTRY manhole (your gang's corner; co-op: the centre crossroads), where your boss sends
+##     you up. It's one-way: it always looks closed. Every time a cat comes up, the lid BLASTS off,
+##     flips through the air and SLAMS shut behind it (play_slam: clank, dust, a little screen shake).
+##   - the EXIT manhole somewhere else in the city: lid slid aside, a glow coming up out of the
+##     hole (open from the start: fish_heist.gd exit_open_from_start). Walking onto it takes you
+##     (and your loot) back down to the sewers. Find out where it is with a payphone.
 ##
 ## The lid and the hole are two little pictures you can repaint:
 ##   textures/manhole_closed.png and textures/manhole_open.png (any size, square, round art
@@ -24,6 +25,15 @@ const HEIGHT: float = 0.1
 ## Colour of the glow that comes up out of an open manhole.
 const GLOW_COLOR: Color = Color(0.3, 1, 0.5)
 
+## THE SLAM (play_slam), in seconds: the lid flies up for this long...
+const SLAM_RISE: float = 0.3
+## ...how high it flies (metres)...
+const SLAM_HEIGHT: float = 1.5
+## ...hangs at the top for this long...
+const SLAM_HANG: float = 0.25
+## ...then drops back down this fast and SLAMS.
+const SLAM_DROP: float = 0.18
+
 ## The glow colour for THIS manhole (set before it's added; fish_heist.gd gives each gang's exit
 ## its gang colour, so you can tell yours from the rival's).
 var glow_color: Color = GLOW_COLOR
@@ -34,6 +44,9 @@ var _closed_disc: MeshInstance3D
 var _open_disc: MeshInstance3D
 var _lid_aside: MeshInstance3D  # the lid, slid off to one side, while it's open
 var _glow: OmniLight3D
+var _flying_lid: MeshInstance3D  # the lid while it flies off and slams back (play_slam)
+var _dust: CPUParticles3D
+var _slam_tween: Tween
 
 
 func _ready() -> void:
@@ -51,6 +64,9 @@ func _ready() -> void:
 	_glow.omni_range = 6.0
 	_glow.position = Vector3(0, 0.6, 0)
 	add_child(_glow)
+	# The flying lid for play_slam (hidden until then): a copy of the closed lid.
+	_flying_lid = _add_disc(disc, _material(CLOSED_TEXTURE, 0.0), Vector3.ZERO)
+	_flying_lid.visible = false
 	set_open(is_open)
 
 
@@ -63,6 +79,103 @@ func set_open(open: bool) -> void:
 	_open_disc.visible = open
 	_lid_aside.visible = open
 	_glow.visible = open
+
+
+## Someone just came up through this manhole: the lid blasts off, flips over in the air and SLAMS
+## back down behind them (clank + dust + a shake for cats nearby). Only a look: nothing else
+## changes. Called on every computer by fish_heist.gd for each cat that comes up.
+func play_slam() -> void:
+	if _flying_lid == null:
+		return
+	if _slam_tween != null and _slam_tween.is_valid():
+		_slam_tween.kill()  # someone else came up mid-slam: start over
+	# The hole shows (green glow bursting out), the lid is the flying one now.
+	_closed_disc.visible = false
+	_open_disc.visible = true
+	_lid_aside.visible = false
+	_glow.visible = true
+	_glow.light_energy = 7.0
+	_flying_lid.visible = true
+	_flying_lid.position = Vector3.ZERO
+	_flying_lid.rotation = Vector3.ZERO
+	Sound.play_at("hydrant_burst", global_position, -10.0)  # the whoosh of sewer air
+	var flip_axis := randf_range(0.0, TAU)  # (each slam flips a different way)
+	var t := create_tween()
+	_slam_tween = t
+	# UP: fast, slowing at the top, while the lid tumbles over twice and spins.
+	t.tween_property(_flying_lid, "position", Vector3(cos(flip_axis) * 0.4, SLAM_HEIGHT, sin(flip_axis) * 0.4), SLAM_RISE) 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(_flying_lid, "rotation", Vector3(TAU * 0.9, PI * 0.5, 0.0), SLAM_RISE)
+	t.parallel().tween_property(_glow, "light_energy", 4.0, SLAM_RISE)
+	# A moment in the air (still tumbling)...
+	t.tween_property(_flying_lid, "position:y", SLAM_HEIGHT + 0.1, SLAM_HANG).set_trans(Tween.TRANS_SINE)
+	t.parallel().tween_property(_flying_lid, "rotation", Vector3(TAU * 1.5, PI * 0.85, 0.0), SLAM_HANG)
+	t.parallel().tween_property(_glow, "light_energy", 2.5, SLAM_HANG)
+	# ...then DOWN, speeding up, landing flat, right into the hole.
+	t.tween_property(_flying_lid, "position", Vector3.ZERO, SLAM_DROP).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.parallel().tween_property(_flying_lid, "rotation", Vector3(TAU * 2.0, PI, 0.0), SLAM_DROP)
+	t.tween_callback(_on_slam)
+	# A little bounce and rattle as it settles.
+	t.tween_property(_flying_lid, "position:y", 0.08, 0.07).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(_flying_lid, "rotation:z", 0.12, 0.07)
+	t.tween_property(_flying_lid, "position:y", 0.0, 0.08).set_ease(Tween.EASE_IN)
+	t.parallel().tween_property(_flying_lid, "rotation:z", -0.06, 0.08)
+	t.tween_property(_flying_lid, "rotation:z", 0.0, 0.1)
+	t.tween_callback(_end_slam)
+
+
+## BANG: the lid is back on.
+func _on_slam() -> void:
+	_open_disc.visible = false
+	_glow.visible = false
+	Sound.play_at("bin_clatter", global_position)  # metal on metal
+	Sound.play_at("bonk", global_position, -4.0)
+	Feedback.shake_near(global_position, 0.35, 10.0)
+	_puff_dust()
+
+
+## Back to how it normally looks.
+func _end_slam() -> void:
+	_flying_lid.visible = false
+	_flying_lid.rotation = Vector3.ZERO
+	_glow.light_energy = 2.5
+	set_open(is_open)
+
+
+## A ring of grey dust puffs out from under the lid.
+func _puff_dust() -> void:
+	if _dust == null:
+		_dust = CPUParticles3D.new()
+		_dust.one_shot = true
+		_dust.emitting = false
+		_dust.amount = 18
+		_dust.lifetime = 0.7
+		_dust.explosiveness = 1.0
+		_dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+		_dust.emission_ring_axis = Vector3.UP
+		_dust.emission_ring_radius = RADIUS
+		_dust.emission_ring_inner_radius = RADIUS * 0.8
+		_dust.emission_ring_height = 0.05
+		_dust.direction = Vector3(0, 0.3, 0)
+		_dust.spread = 180.0
+		_dust.flatness = 0.8
+		_dust.initial_velocity_min = 1.5
+		_dust.initial_velocity_max = 3.0
+		_dust.gravity = Vector3(0, 0.6, 0)  # dust drifts up a little
+		_dust.damping_min = 3.0
+		_dust.damping_max = 5.0
+		_dust.scale_amount_min = 0.6
+		_dust.scale_amount_max = 1.2
+		var curve := Curve.new()
+		curve.add_point(Vector2(0, 1))
+		curve.add_point(Vector2(1, 0))
+		_dust.scale_amount_curve = curve
+		var puff := BoxMesh.new()
+		puff.size = Vector3(0.18, 0.18, 0.18)
+		_dust.mesh = puff
+		_dust.material_override = LevelKit.psx_material({"albedo_color": Color(0.55, 0.55, 0.5)})
+		_dust.position = Vector3(0, 0.1, 0)
+		add_child(_dust)
+	_dust.restart()
 
 
 func _add_disc(mesh: Mesh, material: Material, at: Vector3) -> MeshInstance3D:

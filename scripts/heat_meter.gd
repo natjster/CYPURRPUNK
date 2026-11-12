@@ -13,14 +13,15 @@ extends Node
 ##     card has a heat_on_pickup (none do right now; the golden koi used to).
 ##   - Every 25 heat is one HEAT LEVEL (1-4). Each level brings extra Roombas (roomba_patrol.gd)
 ##     that drive faster and spot cats from further away.
-##   - Each gang's EXIT manhole opens at the heat its own MAINFRAME says (60-95, 75 at the start:
-##     mainframe.gd exit_heat, fish_heist.gd).
+##   - Each gang's EXIT manhole is open from the start (you find it via a payphone). At the heat its
+##     own MAINFRAME says (60-95, 75 at the start: mainframe.gd exit_heat, fish_heist.gd) the HUD arrow
+##     starts pointing that gang at the nearest payphone.
 ##   - At 100 heat: level 5. The hatch is SEALED and the DEEP CLEAN begins (fish_heist.gd): the
 ##     MEGA VAC-COP (scenes/roomba_boss.tscn) plus a swarm. Then a new district starts at 0.
 ##   - Heat does NOT go down by itself any more (the cooling numbers below are 0): it's the
 ##     district's clock. Going home doesn't reset it - only a new district does.
-##   - Once the exit is open (or every cat has used its one trip up), if EVERY cat is back in the
-##     hub, the heat races to 100
+##   - Once every gang's Mainframe heat is reached (or every cat has used its one trip up), if EVERY
+##     cat is back in the hub, the heat races to 100
 ##     (heat_per_second_when_all_home) so the next district comes quickly.
 ##   - The HUD shows it as the red/blue flashing HEAT bar, top-right (scripts/ui/hud_heat_bar.gd,
 ##     fed from _process below; down in the sewers the same bar shows THE MAINFRAME's charge).
@@ -180,8 +181,8 @@ func _physics_process(delta: float) -> void:
 		# (A MEOW-MART CLEARANCE, scripts/district_twist.gd, makes it climb faster.)
 		heat = minf(heat + heat_per_second * crowd * _mainframe_multiplier() * DistrictTwist.heat_multiplier() * delta, MAX_HEAT)
 	elif heat < MAX_HEAT and FishHeist.instance != null \
-			and (FishHeist.instance.every_exit_is_open() or FishHeist.instance.everyone_has_been_up()):
-		# Everyone's done (extracted / knocked out) after every gang's exit opened, or every cat has used
+			and (FishHeist.instance.every_payphone_hint_is_on() or FishHeist.instance.everyone_has_been_up()):
+		# Everyone's done (extracted / knocked out) after every gang's Mainframe heat was reached, or every cat has used
 		# its one trip up (all knocked out early): hurry to the next district.
 		heat = minf(heat + heat_per_second_when_all_home * delta, MAX_HEAT)
 	else:

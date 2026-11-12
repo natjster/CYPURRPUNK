@@ -178,7 +178,7 @@ func _draw() -> void:
 		var exit_x := bar_w * (1.0 - clampf(_exit_heat / _max, 0.0, 1.0))
 		draw_line(Vector2(exit_x, bar_top - 5.0), Vector2(exit_x, bar_top + bar_thickness + 5.0), Color.WHITE, Hud.line(2.0))
 		var exit_font := Hud.text_size(exit_tag_size)  # (PS1 look: bigger, so it's readable)
-		var exit_tag_width := font.get_string_size("EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font).x
+		var exit_tag_width := font.get_string_size("PHONE", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font).x
 		var exit_tag_pos := Vector2(exit_x - exit_tag_width * 0.5, bar_top - 7.0)
-		draw_string_outline(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
-		draw_string(font, exit_tag_pos, "EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Color.WHITE)
+		draw_string_outline(font, exit_tag_pos, "PHONE", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Hud.outline(4), Color(0.04, 0.01, 0.08))
+		draw_string(font, exit_tag_pos, "PHONE", HORIZONTAL_ALIGNMENT_LEFT, -1, exit_font, Color.WHITE)

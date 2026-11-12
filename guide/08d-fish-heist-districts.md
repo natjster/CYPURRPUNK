@@ -13,21 +13,30 @@ new district. In the code that just means a new city seed: the whole city is gen
 **How a district plays:**
 1. Talk to Don (or Pawnie) > **SEND ME UP TOP**: you climb out of your gang's **entry manhole**
    (Catleones: the south-west corner, Burrow Gang: the north-east). It's **one-way**: there's no
-   going back down it.
+   going back down it. **You're flung out of the hole** and land a few steps up the street while
+   the lid **blasts off, flips through the air and SLAMS shut behind you** (clank, dust, a little
+   screen shake). It happens for every cat that comes up, and everyone nearby sees it.
+   - How hard you're flung: **Hub** (and **GangHub**) > Inspector > **Spawning** > **Pop Out
+     Speed** (7; 0 = just appear standing there). Where you land: **Surface Distance** (3.5 m).
+   - The slam itself is `play_slam()` in `scripts/manhole.gd` (the SLAM_* numbers at the top:
+     how high / how long the lid flies). Sounds: `hydrant_burst` (whoosh), `bin_clatter` + `bonk` (slam).
    **ONE TRIP PER DISTRICT:** once you've been up, Don won't send you again until the next
    district, whether you extracted or got knocked out ("You had your shot up there, kid..."). The
    sewer HUD line says **THE SEWERS - WAIT FOR THE NEXT DISTRICT**. (Who has been up:
    `went_up` in `fish_heist.gd`, decided by the host.)
 2. Grab loot. The **HEAT** creeps up the whole time anyone is up top (about **15 minutes** from a
    fresh district to max if you cause no trouble; smashing bots and making a mess speed it up a lot).
-3. At **75 heat** (60-95, set by your gang's Mainframe) your crew breaks through: your gang's **exit manhole** opens somewhere random in
-   the city (the lid slides off and a glow in the gang's colour comes out of the hole). At the
-   same moment every **payphone** in the district starts **ringing** (bell sound, blinking light).
-4. Find a payphone (they're scattered on sidewalks; follow the ringing) and press **E** to call
-   your boss. No talk box opens and your cat never stops: the boss's line **types out as floating
-   text right above the phone** (in their voice, coming out of the phone), and the **blue HUD
-   arrow switches from PAYPHONE to EXIT for your whole gang** (not the rival's). (Call before 75 and they say there's no
-   way down yet: the crew is still digging. No hint where.)
+3. Your gang's **exit manhole is OPEN from the start**, somewhere random in the city (lid slid
+   off, a glow in the gang's colour coming out of the hole). You just don't know where. Every
+   **payphone** in the district **rings** (bell sound, blinking light) until your gang has called.
+4. **Find a payphone on your own** (they're scattered on sidewalks; follow the ringing) and press
+   **E** to call your boss. No talk box opens and your cat never stops: the boss's line **types out
+   as floating text right above the phone** (in their voice, coming out of the phone), and the
+   **blue HUD arrow switches on and points at your EXIT for your whole gang** (not the rival's).
+   **THE MAINFRAME'S CHEAT:** once the heat reaches **your gang's Mainframe number** (75 heat at
+   75% charge; 60-95, §8b) the Mainframe tracks a payphone for you: "MAINFRAME: PAYPHONE LOCATED"
+   in the feed and the arrow points at the **nearest payphone**. A fuller Mainframe = help sooner.
+   (Old rule - exit only opens at that heat: untick **Heist** > **Payphones** > **Exit Open From Start**.)
 5. Walk (or drive) onto the open manhole: you're back in the hub WITH your loot (it stays in your
    backpack: nothing is sold at the exit). The popup says what it's worth ("3 LOOT HOME ($150)");
    finished quests pay their bonus now. **Sell the loot at the Black Markitten** (Comrade Whiskers /
@@ -35,7 +44,7 @@ new district. In the code that just means a new city seed: the whole city is gen
    for a job. That was your trip for this district.
 6. Watch the **HEAT bar** (top-right): a MEGA VAC-COP rolls out at every heat level (start, 25, 50, 75).
    **Everyone home?** Once every cat is back in the hub (extracted or knocked out) and either the
-   exit is open or everyone has used their trip, the heat races to 100 (**Heat Per Second When
+   heat has passed every gang's Mainframe number or everyone has used their trip, the heat races to 100 (**Heat Per Second When
    All Home** on the Heat node, 5/s) and the DEEP CLEAN skips its 30-second wait, so the next
    district comes quickly.
 7. At **100 heat** the hatch is **SEALED** and the **DEEP CLEAN** starts: the MEGA VAC-COP plus a
@@ -67,14 +76,16 @@ out: **Heist** node in `main.tscn` > **Sewer Title (HUD)** > Sewer Title Seconds
 **only while you're in the sewers**.
 
 **THE BLUE ARROW ("Crazy Taxi" style, `scripts/ui/hud_compass_arrow.gd`):** a chunky bevelled 3D
-arrow at the top-middle of every player's screen. It appears the moment **your gang's exit opens**
-while you're up in the city:
-1. `PAYPHONE  45m`: it points at the **nearest ringing payphone**. Call your boss on it.
-2. `EXIT  80m`: once anyone in your gang has made that call, it points at **your exit manhole**.
+arrow at the top-middle of every player's screen, while you're up in the city:
+1. Nothing at first: find a payphone yourself.
+2. `PAYPHONE  45m`: once the heat reaches **your Mainframe's number**, it points at the **nearest
+   payphone**. Call your boss on it.
+3. `EXIT  80m`: once anyone in your gang has called (with or without the arrow's help), it points
+   at **your exit manhole**.
 
 It turns to match your camera (on foot or driving), so pointing "up" = straight ahead on screen.
 From **90 heat** it bobs and pulses faster (the hatch is about to seal); it's hidden in the sewers,
-during a Sewer Breach alarm, before your exit opens and once the hatch seals. In the tutorial it
+during a Sewer Breach alarm, before the call / Mainframe heat, and once the hatch seals. In the tutorial it
 slides down under the tutorial box. It's drawn in code (no extra 3D scene), so four split-screen
 arrows cost nothing.
 - **Where:** `scenes/ui/hud.tscn` > HUD > Frame > Top > **Compass** (move it like any Control).
@@ -97,6 +108,11 @@ arrows cost nothing.
   `textures/manhole_closed.png` and `textures/manhole_open.png` - repaint them in any paint
   program (keep them square, round art in the middle).
 - `scenes/props/payphone.tscn` + `scripts/npcs/payphone.gd`: the payphone, an NPC you **USE**.
+  **Its look** is built in code by `scripts/props/payphone_model.gd` on the **Model** child (a
+  booth with a hood, a glowing PHONE sign, a cyan neon strip, screen, 3x4 keypad, coin slot, a
+  handset on a curly cord and a pink MEOW tag; the handset rattles and the screen says RING! while
+  it rings). Select **Payphone > Model** for **Metal / Steel / Dark / Sign / Neon / Screen Color**,
+  **Rattle Amount** and **Rattle Speed**.
   What the boss says lives on the boss's sewer: select **Hub** (Don) or **GangHub** (Pawnie) in
   `main.tscn` > Inspector > **Payphone (the boss on the line)**: **Phone Too Early**, **Phone Exit
   Open**, **Phone Sealed** (short one-liners read best floating in the street; `{where}` still
@@ -110,9 +126,10 @@ arrows cost nothing.
 
 **Tuning:**
 - Select **Heist** in `main.tscn`:
-  - **Manholes**: Exit Opens At Heat (75), Seal Warning At Heat (90), Exit Radius (how close you
-    must get), Exit Min Distance (from the centre).
-  - **Payphones**: Payphones (how many), Payphone Spacing, Payphone Min Distance.
+  - **Manholes**: Exit Radius (how close you must get), Exit Min Distance (from the entries),
+    Exit Spacing. (When the arrow helps with a payphone = your Mainframe, §8b.)
+  - **Payphones**: Exit Open From Start (on), Payphones (how many), Payphone Spacing, Payphone Min Distance.
+  - **The blue arrow (HUD)**: Seal Warning At Heat (90).
   - **The DEEP CLEAN**: Deep Clean Seconds (30), New District Delay.
 - Select **Roombas** > **DEEP CLEAN swarm**: Deep Clean Roombas (40, how many swarm in), Swarm
   Min/Max Distance (how close to you they appear), Swarm Sight Multiplier.
@@ -121,6 +138,9 @@ arrows cost nothing.
 - How much you can carry: **Bag Size** on the **Items** node.
 
 **Test it without playing:**
+- `--host --deploy --frames=30` (no arrow yet) vs `--heat=80` (`compass ... PAYPHONE`): the
+  `DevCapture compass` line. `--deploy --frames=2 --cam_from=6,1.6,5 --cam_to=6,1.6,5 --look_from=0,1,0
+  --look_to=0,1,0 --no_hud --capture=shots/slam.png` photographs the lid mid-flight (co-op entry at 0,0,0).
 - `--deploy --heat=80 --heat_hold=400 --talk=Payphone0` calls Don on the first payphone (prints
   `DevCapture payphone: ... line="..." talk box open=false` and then `revealed=true`).
   `--host --heat=80 --talk=Payphone0 --pitch=-8 --frames=100 --capture=shots/payphone_readout.png`

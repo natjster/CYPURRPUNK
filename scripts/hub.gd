@@ -109,6 +109,10 @@ const MART_MOOD: int = -2
 ## of the city (your gang's car is parked further up that street, right in front of you).
 ## (Where each gang's manhole is: fish_heist.gd entry_position - opposite corners.)
 @export var surface_distance: float = 3.5
+## How hard (metres a second, upwards) you're FLUNG out of the manhole when you go up: you pop
+## out of the hole and land surface_distance up the street, while the lid slams shut behind you
+## (scripts/manhole.gd play_slam). 0 = just appear standing there (the old way).
+@export var pop_out_speed: float = 7.0
 
 @export_group("Stash")
 ## Where you stand to use THE LITTERBOX (your safe stash, on the east wall), relative to the Hub node.
@@ -414,7 +418,17 @@ func deploy(cat: CatPlayer) -> void:
 	var manhole := FishHeist.instance.entry_position(team)
 	var up_street := Vector3(0, 0, -signf(manhole.z) if manhole.z != 0.0 else -1.0)
 	var spread := Vector3(randf_range(-2.5, 2.5), 0, randf_range(-1, 1))  # side by side, not on each other
-	cat.teleport_to(manhole + up_street * surface_distance + spread, atan2(-up_street.x, -up_street.z))
+	var land := up_street * surface_distance + spread
+	var facing := atan2(-up_street.x, -up_street.z)
+	if pop_out_speed > 0.0:
+		# POP! Start in the hole and fly out in an arc that lands on the same spot. Time in the
+		# air = 2 x speed / gravity, so the sideways speed is the distance / that time.
+		var air_time := 2.0 * pop_out_speed / maxf(cat.gravity, 0.1)
+		cat.teleport_to(manhole + Vector3(0, 0.3, 0), facing)
+		cat.velocity = land / air_time + Vector3.UP * pop_out_speed
+		cat.moves.lock_steering(air_time * 0.85)  # sail clear of the hole (steer again just before landing)
+	else:
+		cat.teleport_to(manhole + land, facing)
 	print("[Hub] %s went up to the city" % cat.name)
 
 

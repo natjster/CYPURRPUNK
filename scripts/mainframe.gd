@@ -106,8 +106,9 @@ signal charge_changed
 ## The charge a gang's Mainframe reboots to after THE 1% MIRACLE.
 @export var breach_reboot_charge: float = 25.0
 
-@export_group("Exit opens at heat (your gang's charge)")
-## Heat at which a gang's EXIT opens while its Mainframe is at 100% (OVERCLOCK).
+@export_group("Payphone tracked at heat (your gang's charge)")
+## Heat at which a gang's Mainframe points it at a PAYPHONE (the exit itself is open from the
+## start: fish_heist.gd) while its Mainframe is at 100% (OVERCLOCK).
 @export var exit_at_100: float = 60.0
 ## ...at 75% (SYSTEM ONLINE).
 @export var exit_at_75: float = 75.0
@@ -234,7 +235,8 @@ func tier_color(team: int) -> Color:
 	return TIER_COLORS[tier(team)]
 
 
-## The heat at which this gang's EXIT opens (fish_heist.gd, and the tick on the HUD heat bar).
+## The heat at which this gang's Mainframe points it at a PAYPHONE (fish_heist.gd payphone_hint_is_on,
+## and the PHONE tick on the HUD heat bar). (Old rule, exit_open_from_start off: when its EXIT opens.)
 ## INSIDER TUNNEL (scripts/upgrades.gd, a CREW upgrade) opens it 5 / 10 heat earlier.
 func exit_heat(team: int) -> float:
 	return maxf(_tier_exit_heat(team) - Upgrades.exit_heat_discount(team), 0.0)
@@ -665,7 +667,7 @@ func request_feed(player_id: int) -> void:
 		_hacked.rpc(team, target)
 		text = "HACKED! %s MAINFRAME -%d%%  ->  %d%%" % [Teams.SHORT_NAMES[target], int(hack_per_electronics), percent(target)]
 	else:
-		text = "MAINFRAME +%d%%  ->  %d%%  %s\nYour exit opens at %d heat." % [int(charge_per_electronics_for(team)), percent(team), tier_name(team), int(exit_heat(team))]
+		text = "MAINFRAME +%d%%  ->  %d%%  %s\nIt tracks a payphone for you at %d heat." % [int(charge_per_electronics_for(team)), percent(team), tier_name(team), int(exit_heat(team))]
 	if FishHeist.instance != null and FishHeist.instance.went_up.is_empty():
 		text += "\nThis district starts with %d heat%s." % [int(starting_heat()), " - OVERCLOCKED" if overclock_active else ""]
 	_feed_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, text)
@@ -688,7 +690,7 @@ func _cell_ran_dry(teams: Array) -> void:
 		return
 	for cat in Game.instance.local_cats():
 		if cat.team in teams:
-			Hud.feed("MAINFRAME DRAINED: %s (EXIT AT %d HEAT)" % [tier_name(cat.team), int(exit_heat(cat.team))], tier_color(cat.team))
+			Hud.feed("MAINFRAME DRAINED: %s (PAYPHONE TRACKED AT %d HEAT)" % [tier_name(cat.team), int(exit_heat(cat.team))], tier_color(cat.team))
 			return  # (one line per computer is plenty)
 
 

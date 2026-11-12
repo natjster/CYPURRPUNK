@@ -30,12 +30,14 @@ extends Node3D
 ##       SCRAP isn't lying on the street: smashed bots and dumpsters drop it. It's worth $0 here
 ##       (the shop won't buy it) - it only pays for SEWER UPGRADES (scripts/upgrades.gd).
 ##   - The HEAT is the district's clock: it creeps up while anyone is up top (faster with trouble).
-##   - At the heat its own MAINFRAME says (scripts/mainframe.gd exit_heat: 60 / 75 / 82 / 90 / 95)
-##     a gang's crew breaks through: its EXIT manhole opens, somewhere random, and every PAYPHONE
-##     in the district rings. Once open it stays open for the district. Payphones
-##     (scripts/npcs/payphone.gd) are scattered too: call your boss on one and they tell you where
-##     your exit is; the HUD arrow switches on for your gang. The phones ring until every gang
-##     in the game has called.
+##   - Every gang's EXIT manhole is OPEN from the moment you come up (exit_open_from_start), somewhere
+##     random. You just don't know where: find a PAYPHONE on your own (they ring, so listen!) and
+##     call your boss, who tells you; then the HUD arrow points your gang at the exit.
+##     Payphones (scripts/npcs/payphone.gd) are scattered around; the phones ring until every gang
+##     up top has called.
+##   - THE MAINFRAME'S CHEAT: once the heat reaches what your gang's MAINFRAME says
+##     (scripts/mainframe.gd exit_heat: 60 / 75 / 82 / 90 / 95), it tracks a payphone for you: the
+##     HUD arrow points at the nearest one (payphone_hint_is_on). A fuller Mainframe = earlier help.
 ##   - Walk (or drive) onto the open exit: you climb down to the hub WITH your loot (it stays in
 ##     your backpack: sell it at the Black Markitten, ItemManager.request_sell, or bury it in the
 ##     litterbox), quests done at that moment pay their bonus into YOUR cash (scripts/wallet.gd). That was your trip: wait there for the next district.
@@ -60,6 +62,9 @@ extends Node3D
 @export var exit_spacing: float = 45.0
 
 @export_group("Payphones")
+## On = every gang's exit manhole is open as soon as the district starts (you find it with a
+## payphone). Off = the old rule: it only opens at the heat your MAINFRAME says.
+@export var exit_open_from_start: bool = true
 ## How many payphones each district has (call Don on one to find the exit).
 @export var payphones: int = 3
 ## Payphones are at least this far (metres) from each other...
@@ -117,8 +122,11 @@ var went_up := {}
 
 var _built: Array[Node] = []  # manholes and payphones, so a new district can clear them
 var _exits: Array[Manhole] = []  # by team number
+var _entries: Array[Manhole] = []  # by team number (co-op: both point at the one centre manhole)
 var _payphones: Array[Payphone] = []
 var _clock: float = 0.0
+## Per gang: has this computer already said "the Mainframe found you a payphone"? (So it's said once.)
+var _hint_announced := {}
 ## The sewer title per HUD seat: {"line": what it said, "since": when it first showed (seconds)}.
 var _sewer_title := {}
 ## Host: player ID -> time until we ignore that cat at the exit (it's on its way down).
@@ -136,6 +144,8 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	add_to_group("item_placers")  # the item system calls place_items() for every new city
 	add_to_group(GameSystems.GROUP)  # late joiners / quitting players / new districts (game_systems.gd)
+	# Each cat that comes up: its gang's entry lid slams shut behind it (on every computer).
+	Events.player_went_up.connect(_on_player_went_up)
 
 
 # --- Setting up a district (called by the item system for every new city, on every computer) ---
@@ -147,10 +157,12 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	_built.clear()
 	_payphones.clear()
 	_exits.clear()
+	_entries.clear()
 	exit_positions.clear()
 	revealed.clear()
 	exit_opened.clear()
 	sealed = false
+	_hint_announced.clear()
 	went_up.clear()  # a new district: everyone gets a trip up again
 	_deep_clean_ends_at = -1.0
 	_new_district_at = -1.0
@@ -163,7 +175,9 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 	for team in Teams.count():
 		entries.append(entry_position(team))
 		if team == 0 or entries[team] != entries[0]:  # (co-op: don't stack two lids on one spot)
-			_add_manhole(entries[team], Teams.color_of(team))
+			_entries.append(_add_manhole(entries[team], Teams.color_of(team)))
+		else:
+			_entries.append(_entries[0])
 	# ...and its way back DOWN: a random street far from every entry and from the other exits.
 	# (CO-OP / SOLO: just one exit, the Catleone Family's. exit_for() hands it to anyone who asks.)
 	for team in (Teams.count() if Game.is_turf_war() else 1):
@@ -205,7 +219,7 @@ func place_items(items: ItemManager, city_seed: int) -> void:
 		phone.rotation.y = atan2(outward.x, outward.z)
 		_add_built(phone)
 		_payphones.append(phone)
-	print("[Heist] District #%d: entries %s, exits %s, %d payphones" % [city_seed, entries, exit_positions, _payphones.size()])
+	print("[Heist] District #%d: entries %s, exits %s, payphones at %s" % [city_seed, entries, exit_positions, phone_spots])
 
 
 func _add_manhole(at: Vector3, glow: Color) -> Manhole:
@@ -265,6 +279,14 @@ func _street_side_of(spot: Vector3) -> Vector3:
 
 # --- Questions anyone can ask ---
 
+## A cat just came up top for its trip (Events.player_went_up, every computer): its gang's
+## ENTRY lid pops off behind it and SLAMS shut (manhole.gd play_slam). One per player.
+func _on_player_went_up(player_id: int, _first: bool) -> void:
+	var team := Teams.team_of(player_id)
+	if team >= 0 and team < _entries.size() and is_instance_valid(_entries[team]):
+		_entries[team].play_slam()
+
+
 ## Has this player already had their one trip up in this district?
 func has_been_up(player_id: int) -> bool:
 	return went_up.has(player_id)
@@ -282,21 +304,32 @@ func everyone_has_been_up() -> bool:
 	return true
 
 
-## Can this gang climb down its exit right now? (Heat high enough for ITS Mainframe, or it already
-## opened this district, and the hatch isn't sealed yet.)
+## Can this gang climb down its exit right now? (Open from the start - exit_open_from_start - or,
+## with that off, heat high enough for ITS Mainframe / already opened this district. Never once the
+## hatch is sealed.)
 func exit_is_open(team: int) -> bool:
 	if sealed or HeatMeter.instance == null or Mainframe.instance == null:
 		return false
+	if exit_open_from_start:
+		return true
 	if team >= 0 and team < exit_opened.size() and exit_opened[team]:
 		return true
 	return HeatMeter.instance.heat >= Mainframe.instance.exit_heat(team)
 
 
-## Is the exit open for every gang in the game? (Then a sewer full of cats can hurry the heat on
-## without taking a gang's chance at its later exit away: heat_meter.gd.)
-func every_exit_is_open() -> bool:
+## THE MAINFRAME'S CHEAT: has the heat reached what this gang's Mainframe says
+## (mainframe.gd exit_heat)? Then the HUD arrow points at the nearest payphone.
+func payphone_hint_is_on(team: int) -> bool:
+	if HeatMeter.instance == null or Mainframe.instance == null:
+		return false
+	return HeatMeter.instance.heat >= Mainframe.instance.exit_heat(team)
+
+
+## Has every gang in the game reached its Mainframe heat? (Then a sewer full of cats can hurry the
+## heat on without taking a gang's chance at its later help away: heat_meter.gd.)
+func every_payphone_hint_is_on() -> bool:
 	for team in Mainframe.instance.active_gangs():
-		if not exit_is_open(team):
+		if not payphone_hint_is_on(team):
 			return false
 	return true
 
@@ -345,7 +378,24 @@ func _process(_delta: float) -> void:
 		someone_waiting = someone_waiting or (exit_is_open(team) and not is_revealed(team))
 	for phone in _payphones:
 		phone.set_ringing(someone_waiting)
+	_announce_hints()
 	_update_hud()
+
+
+## Once per gang per district, on this computer: tell this gang's players up top that their
+## Mainframe has tracked down a payphone (the blue arrow comes on).
+func _announce_hints() -> void:
+	if Game.instance == null or sealed:
+		return
+	for cat in Game.instance.playing_cats():
+		var team := cat.team
+		if _hint_announced.has(team) or is_revealed(team) or not payphone_hint_is_on(team):
+			continue
+		if not Game.instance.is_up_top(cat.player_id):
+			continue
+		_hint_announced[team] = true
+		Hud.feed("MAINFRAME: PAYPHONE LOCATED - FOLLOW THE ARROW", Teams.color_of(team))
+		Sound.play("scanner_beep")
 
 
 # --- The referee (host only) ---
@@ -557,9 +607,10 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var mainframe := Mainframe.instance
 	var alarm := mainframe.breach_busy or not mainframe.warning_teams.is_empty()
 	Hud.set_color("DropOff", Mainframe.TIER_COLORS[Mainframe.Tier.POWER_LOW] if alarm else DROP_OFF_COLOR, seat)
-	# THE BLUE ARROW (Hud "Compass", scripts/ui/hud_compass_arrow.gd): up top, once our gang's exit
-	# is open and the hatch isn't sealed. First it points at the nearest ringing payphone; once
-	# someone in our gang has called the boss, at our exit manhole.
+	# THE BLUE ARROW (Hud "Compass", scripts/ui/hud_compass_arrow.gd): up top, while our gang's exit
+	# is open and the hatch isn't sealed. Once someone in our gang has called the boss on a payphone
+	# it points at our exit manhole. Before that you find a payphone ON YOUR OWN - unless the heat
+	# has reached our MAINFRAME's number (payphone_hint_is_on): then it points at the nearest one.
 	var compass := Hud.element("Compass", seat) as HudCompassArrow
 	# THE TUTORIAL (scripts/tutorial.gd) points the arrow itself at every step except 8 (step 8 =
 	# this real payphone -> exit arrow). Then hands off: null = nothing below touches the arrow.
@@ -595,7 +646,7 @@ func _update_hud_for(my_cat: CatPlayer) -> void:
 	var what := "EXIT"
 	if is_revealed(my_cat.team):
 		target = exit_for(my_cat.team)
-	else:
+	elif payphone_hint_is_on(my_cat.team) or (Tutorial.active() and Tutorial.instance.step == 8):
 		target = nearest_payphone(where)
 		what = "PAYPHONE"
 	if target == Vector3.INF or compass == null:

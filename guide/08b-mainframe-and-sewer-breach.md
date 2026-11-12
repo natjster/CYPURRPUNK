@@ -36,10 +36,11 @@ how long until the next cell runs dry, plus a tier table. Its button, with elect
 
 Esc / Tab / B closes it; walking away closes it too.
 
-Your gang's charge sets when **your** exit opens. The **lowest** charge of any gang in the game sets
+Your exit is open from the start (you find it by calling your boss on a payphone, §8). Your gang's
+charge sets when the Mainframe **tracks a payphone for you** (the blue arrow points at the nearest one). The **lowest** charge of any gang in the game sets
 how the shared city starts:
 
-| Cells (charge) | Tier (in its window; the CRT glows this colour and shows only the %) | Your exit opens at | City start (lowest gang) |
+| Cells (charge) | Tier (in its window; the CRT glows this colour and shows only the %) | Payphone tracked at | City start (lowest gang) |
 |---|---|---|---|
 | 4 (75.1-100%) | OVERCLOCK ACTIVE (cyan) | 60 heat | 0 heat, and heat rises 20% slower |
 | 3 (50.1-75%) | SYSTEM ONLINE (green) | 75 heat | 0 heat |
@@ -47,26 +48,24 @@ how the shared city starts:
 | 1 (0.1-25%) | WARNING (orange) | 90 heat | 30 heat |
 | 0 (empty) | CRITICAL (flashing red) | 95 heat | 50 heat, with 1 MEGA VAC-COP already up top |
 
-- Exit timing follows your charge live, so feeding mid-district can open your exit sooner. Once an
-  exit has opened it **stays open** for that district, even if a rival hacks you.
+- The payphone help follows your charge live, so feeding mid-district gets it sooner.
 - Anything that changes the lowest charge **before anyone goes up** (feeding, hacking) changes the
   current district's start straight away.
 - The seal drains just **before** the next district starts, so a district only starts OVERCLOCKED if you
   top up in the sewers before anyone goes up. Every gang in the game must have 4 cells for it.
-- If everyone's home, heat only races to the DEEP CLEAN once **every** gang's exit has opened (or
-  everyone has used their trip), so an early exit can't rob the other gang of its turn.
-- The payphones ring for any gang with an open exit that hasn't called. If it's not your exit yet,
-  your boss still says they're digging.
+- If everyone's home, heat only races to the DEEP CLEAN once the heat has passed **every** gang's
+  number (or everyone has used their trip), so an early exit can't rob the other gang of its turn.
+- The payphones ring for any gang up top that hasn't called yet.
 
 The top-right bar shows **your gang's Mainframe** in the sewers and the **HEAT** up in the city,
-with a white **EXIT** tick where your gang's exit opens.
+with a white **PHONE** tick where the Mainframe will track a payphone for you.
 
 **Where it lives:** `scripts/mainframe.gd` on the **Mainframe** node in `main.tscn` (one node, all
 gangs' charges).
 
 **Tuning:** select **Mainframe** in `main.tscn`: **Charge** (Starting Charge, Drain Per District,
 **Drain Per Minute** (the slow drain, 0 = off), **Drain Only While Raiding** (off = it drains in the
-hub too), **Full At** (90), Charge Per Electronics, Hack Per Electronics), **Exit Opens At Heat**,
+hub too), **Full At** (90), Charge Per Electronics, Hack Per Electronics), **Payphone Tracked At Heat** (when the arrow finds you a payphone),
 **Starting Heat Per Tier**, **Overclock** (Overclock Heat Multiplier). The item card is
 `items/electronics.tres` (model `scenes/items/electronics.tscn`); the MEGA VAC-COP's drops are on
 `scenes/roomba_boss.tscn` (Drop On Destroy = electronics, Drop Also empty). The spot you stand on:

@@ -31,7 +31,7 @@ extends Control
 ## How long a FEED result stays in the bottom box (seconds).
 @export var note_seconds: float = 4.0
 ## The paragraph under WHAT IT DOES. {drain} = the slow drain per minute, {seal} = the drain per sealed district.
-@export_multiline var about_text: String = "We scrounged this thing together from OVERCLEAN junk. It jams the city's sensors: the more charge, the sooner YOUR EXIT opens up top and the calmer the city starts. It slowly drains (-{drain}% a minute while anyone's up top, -{seal}% every time a district is sealed). It only eats ELECTRONICS, and only a MEGA VAC-COP carries those. Empty = one LAST RAID, then OVERCLEAN breaks into the sewer."
+@export_multiline var about_text: String = "We scrounged this thing together from OVERCLEAN junk. It jams the city's sensors: the more charge, the sooner it tracks down a PAYPHONE for you up top (call your boss on one to find your EXIT) and the calmer the city starts. It slowly drains (-{drain}% a minute while anyone's up top, -{seal}% every time a district is sealed). It only eats ELECTRONICS, and only a MEGA VAC-COP carries those. Empty = one LAST RAID, then OVERCLEAN breaks into the sewer."
 ## The bottom box before anything is highlighted.
 @export var default_info: String = "Press FEED with ELECTRONICS in your backpack. SCRAP doesn't go in here: spend it at the TINKER WORKBENCH. Esc / Tab: leave."
 
@@ -280,7 +280,7 @@ func _draw() -> void:
 	_text(font, Vector2(sx, sy), mainframe.tier_name(team), big_font_size + 4, tier_color, sw)
 	_text(font, Vector2(sx, sy + 34), "%d%%   %d/4 CELLS" % [mainframe.percent(team), mainframe.cells(team)], big_font_size, Color.WHITE, sw)
 	var lines := [
-		["YOUR EXIT OPENS AT", "%d HEAT" % int(mainframe.exit_heat(team)), GOOD],
+		["PAYPHONE TRACKED AT", "%d HEAT" % int(mainframe.exit_heat(team)), GOOD],
 		["CITY STARTS AT", "%d HEAT%s" % [int(mainframe.starting_heat()), "  (OVERCLOCK)" if mainframe.overclock_active else ""], AMBER],
 		["SLOW DRAIN", "-%s%% / MIN" % _number(mainframe.drain_per_minute), Color(style.text_color, 0.85)],
 		["NEXT CELL DRY IN", _time_to_next_cell(mainframe, team), Color(style.text_color, 0.85)],
@@ -311,7 +311,7 @@ func _draw() -> void:
 	var ty := _table.position.y + 22.0
 	_text(font, Vector2(tx, ty), "CELLS", detail_font_size, Color(style.text_color, 0.6))
 	_text(font, Vector2(tx + 70, ty), "TIER", detail_font_size, Color(style.text_color, 0.6))
-	_text_right(font, Vector2(_table.end.x - 12, ty), "EXIT AT", detail_font_size, Color(style.text_color, 0.6))
+	_text_right(font, Vector2(_table.end.x - 12, ty), "PHONE AT", detail_font_size, Color(style.text_color, 0.6))
 	for row in 5:
 		var tier_index := 4 - row  # (OVERCLOCK on top)
 		var y := ty + 8.0 + row * row_h
