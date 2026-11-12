@@ -86,6 +86,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --rival_volley=N  (with --shoot_rival) land N hits in one frame, like a scattergun's pellets
 ##   --blast_car       set our gun's blast off right beside the nearest car (prints how it flew)
 ##   --blast_probe     print how many things a blast at our feet finds (street tiles and walls count)
+##   --blast_snap=shots/x.png  fire our held launcher 8 m ahead and save two pictures: x_fly.png
+##                     (shot mid-air) and x_boom.png (the blast) [--blast_dist=M]
 ##   --revive=N        (with --down=S, S > 0) our cat presses E on it and holds the button N frames
 ##                     (a cat of the OTHER gang = we ROB it instead)
 ##                     (180 = the 3 s revive); prints health / downed state before and after
@@ -157,6 +159,8 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --look=N          wear a random cat look made from seed N (as if picked in MY CAT; never saved)
 ##   --heat=N          (host) set the HEAT to N (0-100; 100 = MEGA VAC-COP) at the start and
 ##                     keep it there for --heat_hold frames (default: until the snap)
+##   --heat_delay=N    (with --heat) wait N frames before forcing it (e.g. --deploy --heat=100
+##                     --heat_delay=60: the LAST CALL countdown starts with the cat up top)
 ##   --heat_ramp=S     (host) raise the heat steadily to 100 over S seconds (every level, bosses, the seal)
 ##   --breach_seconds=S (host) a SEWER BREACH lasts S seconds (a short one tests THE 1% MIRACLE)
 ##   --breach_warning=S (host) the siren before a SEWER BREACH lasts S seconds
@@ -452,6 +456,8 @@ func _ready() -> void:
 			var hold := int(args.get("heat_hold", args.get("frames", 90)))
 			var heat_meter := HeatMeter.instance
 			var force_heat := func() -> void:
+				for i in int(args.get("heat_delay", 0)):  # (--heat_delay=N: wait N frames first, e.g. so --deploy is up top)
+					await get_tree().physics_frame
 				for i in hold:
 					heat_meter.heat = float(args["heat"])
 					await get_tree().physics_frame
@@ -796,6 +802,8 @@ func _ready() -> void:
 			await _fights._blast_car(scene, player)
 		if args.has("blast_probe"):
 			_fights._blast_probe(player)
+		if args.has("blast_snap"):
+			await _fights._blast_snap(player, args)
 		if args.has("feedback_test"):
 			await _fights._feedback_test(player)
 		if args.has("car_test"):

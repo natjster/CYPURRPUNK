@@ -86,3 +86,11 @@ bloom (`aim.bloom_degrees`, added to spread x `aim.spread_scale(ads_spread_scale
 (`_gun_model`/`_gun_rest`; NOT `_model`, MeleeWeapon owns that name), `_eject_casing`, `_burst_sparks` (CPUParticles3D, skipped on
 max-range misses). Test: `--deploy --give=tommy_gun --hold=shoot,use_left --keep_holding --hold_delay=120 --hold_frames=25`
 ("DevCapture aim" line: aiming/amount/bloom/fov/arm).
+
+GUN SOUNDS + LAUNCHER JUICE (12 Nov 2026): sounds from `tools/make_gun_sfx.py` (numpy, writes sounds/sfx/gun_*, laser_*, launch_*,
+blast_*, lob_whirr, cucumber_bounce, launcher_ready). weapon.gd exports: `shot_volume_db`, `hum_sound` (loop via `Sound.attach_loop`
+on the gun, `_keep_humming` per drawn shot + `_update_hum` fades it ~1.6 shots after the last; pitch += heat x `hum_heat_pitch`;
+red_dot has shot_sound ""), `hum_start_sound`, `ready_sound` (owner, use_tick when `_cooldown` hits 0), `fire_rumble`; Blast group
+`lob_loop_sound/pitch`, `lob_bounce_sound` (`_lob_bounced` tween callback per hop), `lob_glow`, `lob_trail` (`_dress_lob`); group
+"Launcher Juice": `muzzle_smoke` (`_puff_smoke`), `blast_debris`, `blast_ring` (in `draw_blast`). `_spark_box()` = shared spark mesh.
+Test: `--give=cucumber_launcher --pitch=-12 --blast_snap=shots/x.png --frames=200 --sound_log` (fights.gd `_blast_snap`).

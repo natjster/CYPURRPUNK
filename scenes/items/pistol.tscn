@@ -30,6 +30,9 @@ hot_color = Color(1, 0.35, 0.7, 1)
 bolt_width = 0.1
 damage = 34
 crit_chance = 0.15
+shot_sound = "gun_pistol"
+shot_volume_db = -3.0
+fire_rumble = 0.45
 hud_name = "PAW-PISTOL"
 glow_parts = {"Laser": Color(1, 0.35, 0.7, 1)}
 

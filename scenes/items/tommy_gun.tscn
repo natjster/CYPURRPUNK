@@ -32,6 +32,9 @@ bolt_color = Color(0.2, 0.95, 1, 1)
 hot_color = Color(1, 0.15, 0.1, 1)
 damage = 25
 crit_chance = 0.08
+shot_sound = "gun_tommy"
+shot_volume_db = -6.0
+fire_rumble = 0.3
 hud_name = "PURR-TOMMY"
 
 [node name="Model" type="Node3D" parent="."]

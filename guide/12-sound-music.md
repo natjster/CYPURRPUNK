@@ -35,6 +35,13 @@ The files there now are **placeholder bleeps** made by Claude. Replace them with
 | `meow` (`_1`, `_2`) | a downed cat's sad meow, NPCs | everyone nearby |
 | `radio_squawk` | the walkie-talkie click when someone HECKLES from the CAT-CAM (§24), over the watched cat | everyone nearby |
 | `shoot` | each gun shot (per gun: **Shot Sound** on the gun scene's root) | everyone nearby |
+| `gun_pistol` / `gun_tommy` / `gun_hairball` | the PAW-PISTOL / PURR-TOMMY / HAIRBALL BLASTER shots (crunchy PS1 sounds from `tools/make_gun_sfx.py`; `shoot` is now only the default for new guns) | everyone nearby |
+| `laser_hum` (loops) + `laser_on` | THE RED DOT hums while you hold the trigger, higher as it heats (gun root > **Hum Sound** / **Hum Start Sound**) | everyone nearby |
+| `launch_cucumber` / `launch_zooka` | the CUCUMBER LAUNCHER / YARN-ZOOKA firing | everyone nearby |
+| `lob_whirr` (loops) | a launcher shot spinning through the air (**Lob Loop Sound**) | everyone nearby |
+| `cucumber_bounce` | each hop of a cucumber grenade (**Lob Bounce Sound**) | everyone nearby |
+| `blast_cucumber` / `blast_yarn` | the cucumber boom / the yarn stun zap (**Blast Sound**) | everyone nearby |
+| `launcher_ready` | "chk-CHAK": a launcher is ready to fire again (**Ready Sound**) | just you |
 | `pickup` | grabbing an item / fish | everyone nearby |
 | `roomba_hum` (loops) | every VAC-COP, revs up while chasing (higher-pitched on a SQUIRT-DRONE) | everyone nearby |
 | `squirt` | a SQUIRT-DRONE fires a water zap | everyone nearby |

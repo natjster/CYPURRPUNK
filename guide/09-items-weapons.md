@@ -201,6 +201,18 @@ The settings that make them work, usable on any gun:
   cat and car in range (through walls too) and shoving them outward. **Blast Color**, **Blast
   Time**, **Blast Sound** are the look.
 - **Look > Shots Per Sound**: plays the sound on every Nth shot, for very fast guns.
+- **Look > Shot Volume Db**: how loud the shot is. **Hum Sound** (+ **Hum Volume Db**, **Hum Heat
+  Pitch**, **Hum Start Sound**): a LOOP that plays as long as you keep firing (THE RED DOT's laser
+  hum; leave **Shot Sound** empty then). **Ready Sound**: "chk-CHAK" only you hear when a slow gun can
+  fire again. **Fire Rumble**: how hard your controller kicks per shot (0-1).
+- **Blast > Lob Loop Sound / Lob Loop Pitch / Lob Bounce Sound / Lob Glow / Lob Trail**: the flying
+  shot's whirr, the "boink" on each hop, the light it carries and its glowing trail.
+- **Launcher Juice > Muzzle Smoke** (puffs out of the barrel), **Blast Debris** (chunks thrown up
+  out of the blast), **Blast Ring** (a neon ring racing along the ground).
+- All the gun sounds are made by `python tools/make_gun_sfx.py` (no internet needed): change the
+  numbers in it and run it again to retune them.
+- Test the launcher look: `--give=cucumber_launcher --pitch=-12 --blast_snap=shots/x.png --frames=200
+  --sound_log` saves `x_fly.png` (shot mid-air) and `x_boom.png` (the blast).
 - **Finish Grace Seconds** (on the **Health** node in `main.tscn`, 1.5): shots can't finish off a
   rival for this long after they go down, so a scattergun or the Red Dot can't down and knock out
   a cat in the same instant.

@@ -118,6 +118,28 @@ func _blast_car(scene: Node, player: CatPlayer) -> void:
 		car.global_position.snapped(Vector3.ONE * 0.1), car.linear_velocity.length()])
 
 
+## --blast_snap=shots/x.png: our held gun fires a shot that lands --blast_dist (8) m ahead; pictures
+## of it mid-air (x_fly.png) and of the blast (x_boom.png), to judge the launcher juice.
+func _blast_snap(player: CatPlayer, args: Dictionary) -> void:
+	for i in 40:
+		await get_tree().physics_frame
+	var gun := ItemManager.instance.held_item(player, 0) as Weapon
+	if gun == null:
+		print("DevCapture blast_snap: no gun in the right paw")
+		return
+	var ahead := Motion.flat(-player.camera.global_basis.z).normalized()
+	var target := player.global_position + ahead * float(args.get("blast_dist", "8"))
+	gun.draw_shot(PackedVector3Array([target]), 0.0)
+	var path: String = args["blast_snap"]
+	var flight := minf(gun.global_position.distance_to(target) / gun.lob_speed, gun.lob_max_seconds)
+	for step in [["_fly", flight * 0.5], ["_boom", flight * 0.5 + gun.lob_bounces * gun.lob_bounce_seconds + 0.12]]:
+		await get_tree().create_timer(step[1]).timeout
+		await RenderingServer.frame_post_draw
+		var file: String = path.get_basename() + step[0] + ".png"
+		get_tree().root.get_texture().get_image().save_png("res://" + file)
+		print("DevCapture blast_snap: saved %s" % file)
+
+
 ## --blast_probe: everything a blast's sphere finds at our feet, and how many of those can be hit.
 func _blast_probe(player: CatPlayer) -> void:
 	var sphere := SphereShape3D.new()

@@ -35,6 +35,10 @@ bolt_color = Color(1, 0.3, 0.65, 1)
 hot_color = Color(1, 0.55, 0.1, 1)
 bolt_time = 0.1
 bolt_width = 0.07
+shot_sound = "gun_hairball"
+shot_volume_db = -2.0
+fire_rumble = 0.75
+muzzle_smoke = 6
 hud_name = "HAIRBALL BLASTER"
 neon_parts = {"Vents": 3.0}
 

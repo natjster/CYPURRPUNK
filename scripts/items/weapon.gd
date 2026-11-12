@@ -127,6 +127,24 @@ extends HeldItem
 @export var lob_bounce_seconds: float = 0.3
 ## What flies through the air. Empty = a ball of yarn.
 @export var lob_mesh: Mesh
+## A LOOPING sound riding on the shot while it flies (res://sounds/sfx/, no .wav). Empty = silent.
+@export var lob_loop_sound: String = ""
+## Pitch of that loop (1 = as recorded, 1.5 = higher and faster).
+@export var lob_loop_pitch: float = 1.0
+## The sound of each hop along the floor (Lob Bounces). Empty = silent.
+@export var lob_bounce_sound: String = ""
+## How bright the light the flying shot carries is (0 = no light). Lights up the street as it goes.
+@export var lob_glow: float = 0.0
+## How many glowing bits trail behind the flying shot (0 = no trail).
+@export var lob_trail: int = 0
+
+@export_group("Launcher Juice")
+## Puffs of smoke out of the barrel on every shot (0 = none). Nice on launchers.
+@export var muzzle_smoke: int = 0
+## Chunks that fly up out of the blast (0 = none).
+@export var blast_debris: int = 0
+## A flat ring that races out along the ground from the blast.
+@export var blast_ring: bool = false
 
 @export_group("Look")
 ## Bolt colour (shifts toward hot_color as the gun heats up).
@@ -149,6 +167,21 @@ extends HeldItem
 @export var shot_sound: String = "shoot"
 ## Play the sound on every Nth shot only (for very fast guns: 25 sounds a second is just noise).
 @export var shots_per_sound: int = 1
+## How loud the shot sound is (decibels: 0 = as recorded, -6 = about half).
+@export var shot_volume_db: float = -4.0
+## A LOOPING sound that plays for as long as this gun keeps firing (THE RED DOT's laser hum).
+## Empty = none. Use it instead of Shot Sound on very fast guns.
+@export var hum_sound: String = ""
+## How loud the hum is (decibels).
+@export var hum_volume_db: float = -3.0
+## How much higher the hum gets as the gun heats up (0.5 = up to 50% higher).
+@export var hum_heat_pitch: float = 0.5
+## Plays once when the hum starts (empty = none).
+@export var hum_start_sound: String = ""
+## Plays (only for the shooter) the moment a slow gun can fire again: a reload "chk-CHAK". Empty = none.
+@export var ready_sound: String = ""
+## How hard the shooter's controller rumbles on each shot (0 = none, 1 = full).
+@export_range(0.0, 1.0) var fire_rumble: float = 0.4
 
 ## 0 = cool, 1 = overheated. Only meaningful on the holder's computer.
 var heat: float = 0.0
@@ -173,6 +206,9 @@ var _flash_star: MeshInstance3D           # the muzzle-flash star (built in _rea
 var _flash_material: StandardMaterial3D
 static var _casing_mesh: BoxMesh
 static var _spark_mesh: BoxMesh
+static var _smoke_mesh: BoxMesh
+var _hum: AudioStreamPlayer3D      # the laser hum while it's playing (hum_sound)
+var _hum_until: float = 0.0        # when the hum stops if no more shots come
 
 
 func _ready() -> void:
@@ -231,10 +267,14 @@ func _process(delta: float) -> void:
 		_muzzle_flash.light_energy = 10.0 * _flash_time / 0.05 if _flash_time > 0.0 else 0.0
 	if _flash_star != null:
 		_flash_star.visible = _flash_time > 0.0
+	_update_hum()
 
 
 func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
+	var was_reloading := _cooldown > 0.0
 	_cooldown = maxf(_cooldown - delta, 0.0)
+	if was_reloading and _cooldown <= 0.0 and ready_sound != "":
+		Sound.play(ready_sound, -6.0)  # "chk-CHAK": you can fire again (only the shooter hears it)
 	var wants_fire := trigger_down if automatic else trigger_pressed
 	if wants_fire and not is_overheated and _cooldown <= 0.0:
 		_fire()
@@ -249,7 +289,7 @@ func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
 ## Owner only: aim from the camera through the middle of the screen, hit whatever is there.
 func _fire() -> void:
 	holder.aim_until = Time.get_ticks_msec() / 1000.0 + 0.3  # cat turns to face the shot
-	Seats.rumble(holder.player_id, 0.4, 0.1, 0.06)  # a little kick on the shooter's controller with every shot
+	Seats.rumble(holder.player_id, fire_rumble, fire_rumble * 0.25, 0.06 + fire_rumble * 0.1)  # a kick on the shooter's controller with every shot
 	Feedback.shake(holder.player_id, camera_kick)  # ...and on their camera (scripts/feedback.gd)
 	# RECOIL (scripts/cat/cat_aim.gd): aim climbs, view rolls and thumps, spread blooms. Less when aiming.
 	var aimed := lerpf(1.0, ads_recoil_scale, holder.aim.amount())
@@ -364,8 +404,12 @@ func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 	_kick_model()
 	if eject_casings:
 		_eject_casing()
-	if shots_seen % maxi(shots_per_sound, 1) == 0:
-		Sound.play_at(shot_sound, start, -4.0)  # every computer runs this, so play it just here
+	if muzzle_smoke > 0:
+		_puff_smoke(start, -_muzzle.global_basis.z if _muzzle != null else -global_basis.z)
+	if shot_sound != "" and shots_seen % maxi(shots_per_sound, 1) == 0:
+		Sound.play_at(shot_sound, start, shot_volume_db)  # every computer runs this, so play it just here
+	if hum_sound != "":
+		_keep_humming(shot_heat)
 
 
 ## Every computer: our holder's shot landed. Their computer does the hitting, like any shot.
@@ -393,10 +437,12 @@ func lob(from: Vector3, to: Vector3, height: float, seconds: float, on_landed: C
 	ball.top_level = true
 	add_child(ball)
 	ball.global_position = from
+	_dress_lob(ball)
 	var path := _lob_hops(from, to)
 	var tween := ball.create_tween()
 	tween.tween_method(_fly.bind(ball, from, to, height), 0.0, 1.0, seconds)
 	for i in range(1, path.size()):
+		tween.tween_callback(_lob_bounced.bind(path[i - 1]))
 		tween.tween_method(_fly.bind(ball, path[i - 1], path[i], lob_bounce_height), 0.0, 1.0, lob_bounce_seconds)
 	tween.tween_callback(_lob_landed.bind(ball, path[-1], on_landed))
 
@@ -491,6 +537,10 @@ func draw_blast(centre: Vector3) -> void:
 	tween.tween_property(flash, "light_energy", 0.0, blast_time)
 	tween.chain().tween_callback(ball.queue_free)
 	Sound.play_at(blast_sound, centre)
+	if blast_debris > 0:
+		_blast_debris(centre)
+	if blast_ring:
+		_blast_ring(centre)
 	Feedback.shake_near(centre, 0.45, blast_radius * 2.5)  # the ground shakes near the boom (scripts/feedback.gd)
 
 
@@ -613,15 +663,8 @@ func _fly_casing(t: float, casing: MeshInstance3D, from: Vector3, out: Vector3) 
 func _burst_sparks(where: Vector3, back: Vector3, color: Color) -> void:
 	if impact_sparks <= 0 or not is_inside_tree():
 		return
-	if _spark_mesh == null:
-		_spark_mesh = BoxMesh.new()
-		_spark_mesh.size = Vector3.ONE * 0.05
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.vertex_color_use_as_albedo = true
-		_spark_mesh.material = material
 	var sparks := CPUParticles3D.new()
-	sparks.mesh = _spark_mesh
+	sparks.mesh = _spark_box()
 	sparks.amount = impact_sparks
 	sparks.one_shot = true
 	sparks.explosiveness = 1.0
@@ -639,3 +682,171 @@ func _burst_sparks(where: Vector3, back: Vector3, color: Color) -> void:
 	sparks.global_position = where + back * 0.1
 	sparks.emitting = true
 	get_tree().create_timer(0.6).timeout.connect(sparks.queue_free)
+
+
+## The little glowing box every spark, trail bit and debris chunk is made of (made once, shared).
+static func _spark_box() -> BoxMesh:
+	if _spark_mesh == null:
+		_spark_mesh = BoxMesh.new()
+		_spark_mesh.size = Vector3.ONE * 0.05
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.vertex_color_use_as_albedo = true
+		_spark_mesh.material = material
+	return _spark_mesh
+
+
+# --- LAUNCHER JUICE: flying-shot dress-up, barrel smoke, blast debris + ground ring, laser hum ---
+# (every computer runs these, like the rest of draw_shot)
+
+## The flying shot's extras: a light it carries, a glowing trail and its whirr (all optional).
+func _dress_lob(ball: MeshInstance3D) -> void:
+	if lob_glow > 0.0:
+		var light := OmniLight3D.new()
+		light.light_color = blast_color
+		light.light_energy = lob_glow
+		light.omni_range = 3.0
+		ball.add_child(light)
+	if lob_trail > 0:
+		var trail := CPUParticles3D.new()
+		trail.mesh = _spark_box()
+		trail.amount = lob_trail
+		trail.lifetime = 0.35
+		trail.local_coords = false  # bits stay where they were dropped: a streak behind the shot
+		trail.spread = 180.0
+		trail.initial_velocity_min = 0.2
+		trail.initial_velocity_max = 0.8
+		trail.gravity = Vector3(0, -2, 0)
+		trail.scale_amount_min = 0.8
+		trail.scale_amount_max = 1.8
+		trail.color = blast_color.lerp(Color.WHITE, 0.35)
+		ball.add_child(trail)
+		trail.emitting = true
+	if lob_loop_sound != "":
+		var whirr := Sound.attach_loop(lob_loop_sound, ball, -6.0)
+		if whirr != null:
+			whirr.pitch_scale = lob_loop_pitch
+
+
+## The shot touched the floor and hops on (cucumber grenade): a "boink" and a few sparks.
+func _lob_bounced(where: Vector3) -> void:
+	if lob_bounce_sound != "":
+		Sound.play_at(lob_bounce_sound, where, -3.0)
+	if is_inside_tree():
+		_burst_sparks(where, Vector3.UP, blast_color)
+
+
+## A puff of grey smoke out of the barrel that drifts up and fades ("forward" = where the barrel points).
+func _puff_smoke(where: Vector3, forward: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	if _smoke_mesh == null:
+		_smoke_mesh = BoxMesh.new()
+		_smoke_mesh.size = Vector3.ONE * 0.16
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.vertex_color_use_as_albedo = true
+		_smoke_mesh.material = material
+	var smoke := CPUParticles3D.new()
+	smoke.mesh = _smoke_mesh
+	smoke.amount = muzzle_smoke
+	smoke.one_shot = true
+	smoke.explosiveness = 0.9
+	smoke.lifetime = 0.7
+	smoke.direction = forward
+	smoke.spread = 25.0
+	smoke.initial_velocity_min = 1.5
+	smoke.initial_velocity_max = 4.0
+	smoke.damping_min = 4.0
+	smoke.damping_max = 6.0
+	smoke.gravity = Vector3(0, 0.8, 0)  # smoke rises a little
+	smoke.scale_amount_min = 0.7
+	smoke.scale_amount_max = 1.6
+	var fade := Gradient.new()
+	fade.set_color(0, Color(0.75, 0.75, 0.8, 0.8))
+	fade.set_color(1, Color(0.4, 0.4, 0.45, 0.0))
+	smoke.color_ramp = fade
+	smoke.top_level = true
+	_effects_parent().add_child(smoke)
+	smoke.global_position = where
+	smoke.emitting = true
+	smoke.finished.connect(smoke.queue_free)
+
+
+## Glowing chunks thrown up and out of the blast, raining back down.
+func _blast_debris(centre: Vector3) -> void:
+	var debris := CPUParticles3D.new()
+	debris.mesh = _spark_box()
+	debris.amount = blast_debris
+	debris.one_shot = true
+	debris.explosiveness = 1.0
+	debris.lifetime = 0.9
+	debris.direction = Vector3.UP
+	debris.spread = 75.0
+	debris.initial_velocity_min = 4.0
+	debris.initial_velocity_max = 4.0 + blast_radius * 2.0
+	debris.gravity = Vector3(0, -18, 0)
+	debris.scale_amount_min = 1.5
+	debris.scale_amount_max = 3.5
+	debris.color = blast_color.lerp(Color.WHITE, 0.25)
+	debris.top_level = true
+	_effects_parent().add_child(debris)
+	debris.global_position = centre + Vector3.UP * 0.2
+	debris.emitting = true
+	debris.finished.connect(debris.queue_free)
+
+
+## A flat neon ring racing out along the ground to a bit past the blast's edge.
+func _blast_ring(centre: Vector3) -> void:
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = 0.85
+	mesh.outer_radius = 1.0
+	mesh.rings = 16
+	mesh.ring_segments = 4
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_color = Color(blast_color.lerp(Color.WHITE, 0.3), 0.9)
+	mesh.material = material
+	var ring := MeshInstance3D.new()
+	ring.mesh = mesh
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_effects_parent().add_child(ring)
+	ring.global_position = centre + Vector3.UP * 0.1
+	ring.scale = Vector3(0.3, 0.15, 0.3)  # squashed flat: a ripple, not a doughnut
+	var grow := blast_radius * 1.3
+	var tween := ring.create_tween().set_parallel()
+	tween.tween_property(ring, "scale", Vector3(grow, 0.15, grow), blast_time * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(material, "albedo_color:a", 0.0, blast_time * 1.4)
+	tween.chain().tween_callback(ring.queue_free)
+
+
+## Every shot of a humming gun: start the hum if it isn't playing, keep it going a moment longer,
+## and pitch it up as the gun heats.
+func _keep_humming(shot_heat: float) -> void:
+	_hum_until = Time.get_ticks_msec() / 1000.0 + 1.6 / maxf(fire_rate, 1.0) + 0.05
+	if _hum == null or not is_instance_valid(_hum):
+		_hum = Sound.attach_loop(hum_sound, self, hum_volume_db)
+		if hum_start_sound != "":
+			Sound.play_at(hum_start_sound, global_position, -4.0)
+	if _hum != null:
+		_hum.pitch_scale = 1.0 + shot_heat * hum_heat_pitch
+
+
+## Each frame: no shots for a moment = the hum fades out fast (a quick fade, so it doesn't click).
+func _update_hum() -> void:
+	if _hum == null:
+		return
+	if not is_instance_valid(_hum):
+		_hum = null
+		return
+	if Time.get_ticks_msec() / 1000.0 < _hum_until:
+		return
+	var fading := _hum
+	_hum = null
+	var tween := fading.create_tween()
+	tween.tween_property(fading, "volume_db", -40.0, 0.08)
+	tween.tween_callback(fading.queue_free)
