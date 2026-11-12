@@ -138,7 +138,7 @@ P2 Burrow), `--talk=Pawnie --choose=2` (her side of the story). The `DevCapture 
 
 ### The underground hub ("THE SEWERS")
 Every cat starts here when you HOST or JOIN (Burrow Gang cats in their own copy: see above). It's a sewer tunnel with a murky channel down the
-middle, two bridges, work lights, cardboard-box shanties, **The Mainframe** (a scrounged-together
+middle, two bridges, work lights, **The Mainframe** (a scrounged-together
 computer on the west wall: press E for its window and feed it ELECTRONICS, see **The Mainframe** in §8) and, at the north end of the west
 walkway, the barred **North Breach Tunnel** (see **The Sewer Breach** in §8). The walls are kept clean: the only writing is on The Mainframe and Lil' Mittens'
 sign (every NPC still has its name floating over its head). It's a **safe zone**: guns don't fire down here (catnip and catdip still work), except during a **Sewer Breach** (§8).
@@ -150,7 +150,7 @@ OVERCLEAN IN?** (his side of the story: it was Pawnie & Clawd), **HOW DOES THIS 
 **NEVER MIND** (or Esc).
 
 **Lil' Mittens** — a scrawny grey kitten with huge blue eyes and a "WILL PURR FOR FISH" sign,
-by the cardboard shanties on the east wall. Extremely needy. Gives you the **MITTENS' FISH**
+by the east wall (once she's recruited her cardboard home moves in with her). Extremely needy. Gives you the **MITTENS' FISH**
 quest (see **Quests** below): bring 3 fish down at once for a **$100 bonus**.
 
 **The quest givers:** each sewer has five, in matching spots, and both casts hand out the same five
@@ -216,9 +216,11 @@ dims behind it), in your own HUD (split screen: everyone shops on their own scre
   **Repaint / reshape it:** open `models/blockbench/black_markitten.bbmodel` in Blockbench, then
   File > Export > Export glTF Model over `models/black_markitten.glb` (or edit the recipe
   `tools/model_specs/black_markitten.json` and run `python tools/cypurr_models.py all tools/model_specs/black_markitten.json`).
-- **The cardboard-box homes** on the east wall are the model `models/box_shanty.glb` (doorway,
-  blanket curtain, lit window, tin-can chimney; recipe `tools/model_specs/box_shanty.json`), placed by
-  `_build_shanties()` in `scripts/hub.gd`. Add or move homes: edit `SHANTY_SPOTS` there (metres along the wall).
+- **The cardboard-box shanty** (`models/box_shanty.glb`: doorway, blanket curtain, lit window, tin-can chimney;
+  recipe `tools/model_specs/box_shanty.json`). In the Catleone sewer there's just ONE and it belongs to Lil' Mittens: it's
+  the **Extra Piece** of **MittensHome** (`scenes/main.tscn` > Hub > MittensHome > Inspector > Extra Piece), so it only
+  appears once she's recruited. The Burrow sewer still has three: click **GangHub** > Inspector > **Shanty Spots** (metres along
+  the east wall; empty = none).
 - **How it works:** he runs `scripts/npcs/shopkeeper.gd` (an NPC: E opens his talk box, and SHOW ME THE GOODS opens
   `scripts/ui/shop_screen.gd`, `ShopScreen`, at **HUD > Frame > Shop**). BUY asks the host
   (`ItemManager.request_buy`: price, crate unlock, room, cash); SELL asks `request_sell(player, where,

@@ -76,7 +76,7 @@ until that cat is recruited, then drops in with a little bounce. **Catleone sewe
 
 | Recruit | Their thing (model) | Where (Hub) |
 |---|---|---|
-| Lil' Mittens | **HOME SWEET BOX**: her cardboard box, blanket, fairy lights, food bowl (`mittens_box`) | east wall, between the box shanties |
+| Lil' Mittens | **HOME SWEET BOX**: her cardboard box, blanket, fairy lights, food bowl (`mittens_box`) + a big cardboard shanty with a lit window (`box_shanty`, the home's **Extra Piece**) | east wall |
 | Paulie "No-Brooms" | **COLLECTIONS**: a drum of smashed VAC-COP junk, squashed Roombas, a snapped broom, NO BROOMS sign (`paulie_scrapheap`) | south-east corner |
 | Sal "The Slapper" | **SAL'S GYM**: a heavy bag with a Roomba face taped on (it sways), tyre, dumbbell (`sal_heavy_bag`) | west wall, by Sal |
 | Nonna Catleone | **NONNA'S KITCHEN**: stove, steaming pot of Sunday Gravy, checked-cloth table (`nonna_kitchen`) | east wall, north end |

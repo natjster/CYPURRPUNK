@@ -69,6 +69,17 @@ extends Node3D
 ## How much the ride slowly rocks on its springs, like a showroom (metres). 0 = still.
 @export var ride_bob: float = 0.02
 
+@export_group("Extra Piece")
+## A SECOND model that belongs to this home and moves in with it (Lil' Mittens: the big cardboard-box
+## shanty, models/box_shanty.glb). "" = none. Its "Window" part glows like a lit window.
+@export var extra_model: String = ""
+## Where it sits (metres, this node's space) and how much it's turned (degrees).
+@export var extra_offset: Vector3 = Vector3.ZERO
+@export var extra_yaw_degrees: float = 0.0
+## Its own box cats bump into (metres, the extra piece's space; 0,0,0 = walk-through).
+@export var extra_solid_size: Vector3 = Vector3.ZERO
+@export var extra_solid_offset: Vector3 = Vector3.ZERO
+
 @export_group("Press E")
 ## The HUD line (after "[E] "). "" = can't be used. Using it opens the TINKER WORKBENCH on this
 ## recruit's tab.
@@ -83,6 +94,7 @@ var present: bool = true
 ## the furniture pops in together with its cat while the camera is watching. Used once.
 var pop_delay: float = 0.0
 var _model: Node3D
+var _extra: Node3D
 var _swing: Node3D
 var _ride: Node3D
 var _ride_id: String = ""
@@ -105,6 +117,8 @@ func _ready() -> void:
 		LevelKit.add_collision(body, solid_offset, solid_size)
 		for shape in body.find_children("*", "CollisionShape3D", true, false):
 			_shapes.append(shape)
+	if extra_model != "":
+		_build_extra()
 	if sign_text != "":
 		# A Label3D reads from its +Z side; the room is on our -Z side, so turn it round.
 		LevelKit.add_sign(self, sign_text, sign_offset, sign_color, sign_size, PI)
@@ -152,12 +166,42 @@ func _update_presence() -> void:
 	if now and not first and pop_seconds > 0.0 and _model != null:
 		# Moving in: drops in a little squashed and bounces up to full size.
 		var tween := create_tween()
+		var popping: Array[Node3D] = [_model]  # (the extra piece, e.g. Mittens' shanty, pops too)
+		if _extra != null:
+			popping.append(_extra)
 		if pop_delay > 0.0:
-			_model.scale = Vector3(0.001, 0.001, 0.001)  # (too small to see until the pop)
+			for piece in popping:
+				piece.scale = Vector3(0.001, 0.001, 0.001)  # (too small to see until the pop)
 			tween.tween_interval(pop_delay)
 			pop_delay = 0.0
-		tween.tween_callback(func(): _model.scale = Vector3(1.3, 0.2, 1.3))
-		tween.tween_property(_model, "scale", Vector3.ONE, pop_seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_callback(func():
+			for piece in popping:
+				piece.scale = Vector3(1.3, 0.2, 1.3))
+		for i in popping.size():
+			var step := tween.tween_property(popping[i], "scale", Vector3.ONE, pop_seconds) if i == 0 \
+				else tween.parallel().tween_property(popping[i], "scale", Vector3.ONE, pop_seconds)
+			step.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## The Extra Piece: its own model (+ solid box), parented to this home so it hides/pops with it.
+func _build_extra() -> void:
+	var holder := Node3D.new()
+	holder.name = "Extra"
+	holder.position = extra_offset
+	holder.rotation.y = deg_to_rad(extra_yaw_degrees)
+	add_child(holder)
+	_extra = LevelKit.instantiate_model(extra_model, holder)
+	if _extra != null:
+		_extra.name = "ExtraModel"
+		_light_up(_extra)
+		LevelKit.make_neon_paint_glow(_extra, {"Window": 2.5})  # someone's home: the window's lit
+	if extra_solid_size != Vector3.ZERO:
+		var body := StaticBody3D.new()
+		body.name = "ExtraSolid"
+		holder.add_child(body)
+		LevelKit.add_collision(body, extra_solid_offset, extra_solid_size)
+		for shape in body.find_children("*", "CollisionShape3D", true, false):
+			_shapes.append(shape)
 
 
 # --- The glowing parts ---

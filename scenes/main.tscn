@@ -221,6 +221,7 @@ position = Vector3(0, -200, 0)
 script = ExtResource("17_hub")
 leader = NodePath("DonCatleone")
 shopkeeper = NodePath("ComradeWhiskers")
+shanty_spots = Array[float]([])
 
 [node name="DonCatleone" parent="Hub" instance=ExtResource("18_don")]
 position = Vector3(8, 0, -16)
@@ -298,6 +299,11 @@ light_color = Color(1, 0.7, 0.5, 1)
 light_energy = 1.2
 light_range = 3.0
 light_offset = Vector3(0, 1.1, -0.9)
+extra_model = "box_shanty"
+extra_offset = Vector3(-2.5, 0, -0.15)
+extra_yaw_degrees = 3.4
+extra_solid_size = Vector3(2.6, 1.2, 2.0)
+extra_solid_offset = Vector3(0, 0.6, 0)
 
 [node name="PaulieHome" type="Node3D" parent="Hub" node_paths=PackedStringArray("npc")]
 position = Vector3(10, 0, 18.6)

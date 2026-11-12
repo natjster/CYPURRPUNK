@@ -28,7 +28,8 @@ RECRUIT HOMES (`scripts/recruit_home.gd`, `RecruitHome`, Node3D children of a hu
 `npc` export -> hidden + collision off until `npc.is_recruited()` (polled 0.25 s, pop tween on join). Catleone only so far:
 MittensHome/PaulieHome/SalHome/NonnaHome/FrankieHome, models from `tools/make_recruit_home_specs.py` (mittens_box,
 paulie_scrapheap, sal_heavy_bag, nonna_kitchen, frankie_garage). Part names: Glow/Lamp/Burner lit, Sign soft, Trim gang colour,
-Swing sways. `show_ride` (Frankie) parks `Upgrades.vehicle_of(hub.team)` (RIDE_MODELS) and swaps it live; `prompt` set = an
+Swing sways. `extra_model` (+offset/yaw/solid) = a 2nd model that hides/pops with it (Mittens: `box_shanty`;
+the Catleone Hub's own `shanty_spots` export is empty, GangHub keeps 3). `show_ride` (Frankie) parks `Upgrades.vehicle_of(hub.team)` (RIDE_MODELS) and swaps it live; `prompt` set = an
 Interactable that opens WorkbenchScreen on tab `rebellion_tier + 1`. Burrow recruits have no homes yet.
 RECRUIT REVEAL (`scripts/recruit_reveal.gd`, `RecruitReveal`, one per hub, added in hub `_ready`): on `Upgrades.recruited` (every
 computer) for its gang -> `Npc.pop_in(delay, tag_hidden)` (squash/elastic + `_pop_burst`: sparks parented to Game, OmniLight flash,

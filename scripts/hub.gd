@@ -885,12 +885,14 @@ func _build_shop() -> void:
 ## CARDBOARD-BOX SHANTIES along the east wall: the "homes" of sewer cats. Each is one 3D model,
 ## models/box_shanty.glb (made by tools/model_specs/box_shanty.json; open models/blockbench/box_shanty.bbmodel
 ## in Blockbench to repaint it): a big box with a cat-sized doorway, a blanket curtain, a lit window,
-## a box on the roof and a tin-can chimney. Add/move homes by changing SHANTY_SPOTS (along the wall, metres).
-const SHANTY_SPOTS: Array[float] = [4.0, 9.0, 14.0]
+## a box on the roof and a tin-can chimney. Add/move homes with Shanty Spots (Inspector, on the hub node).
+## The Catleone Hub has NONE of its own: its one shanty belongs to Lil' Mittens' home (MittensHome in
+## main.tscn, "Extra Piece"), so it only appears once she's recruited.
+@export var shanty_spots: Array[float] = [4.0, 9.0, 14.0]
 func _build_shanties() -> void:
 	var x := half_width - 1.4  # 2 m deep, backed against the east wall
-	for i in SHANTY_SPOTS.size():
-		var z := SHANTY_SPOTS[i]
+	for i in shanty_spots.size():
+		var z := shanty_spots[i]
 		# The doorway (-Z in the model) faces west, into the room; a tiny skew so they don't look stamped out.
 		var home := LevelKit.instantiate_model("box_shanty", self, Vector3(x, 0, z), PI / 2 + [0.0, 0.06, -0.05][i % 3])
 		if home != null:
