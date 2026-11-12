@@ -25,6 +25,12 @@ func use_tick(_trigger_down: bool, _trigger_pressed: bool, _delta: float) -> voi
 	pass
 
 
+## Owner only, every physics frame while a TWO-PAW item is held: the RIGHT MOUSE / LT button (a 2-paw
+## item has no left paw of its own to use). E.g. the frozen tuna's SPIN ATTACK (melee_weapon.gd).
+func alt_use_tick(_trigger_down: bool, _trigger_pressed: bool, _delta: float) -> void:
+	pass
+
+
 ## QUICK USE items (ItemData.quick_use, e.g. catnip): what happens when the player presses
 ## its quick-use key. Runs on the cat's OWNER only, after the host has taken one out of the
 ## slot. (This copy of the script isn't in anyone's paw: use "cat", not holder.)

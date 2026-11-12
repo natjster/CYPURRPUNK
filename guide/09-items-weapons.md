@@ -134,16 +134,24 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   Test: `--host --deploy --give=frozen_tuna --bait_roomba=2 --combo_test [--slam_charged] [--air_slam] --frames=2`
   (prints a "DevCapture combo" line per swing; `--slam_charged` makes the 3rd swing a real HOLD and prints
   "DevCapture slam_hold" lines as the meter fills).
-- **THROWING THE BAT (offhand)**: the bat's card (`items/neon_bat.tres`) has **Offhand** ticked, so it goes
-  in your **LEFT paw** first, leaving the right paw free for a gun. From the left paw it swings with
-  **Right Mouse / LT** (or Left Mouse / RT when your right paw is empty). Press the **MELEE** button
-  (**F** / middle mouse / pad **RB**, rebindable in SETTINGS > KEYS) and you **throw** it like a
-  **BOOMERANG**: it spins end over end with its neon trail, bonks the first VAC-COP / rival cat / car it
-  passes (or a wall), turns round, swoops back to you (it chases you if you run) and lands back in your
-  paw, bonking anything it passes on the way back too. It never leaves your backpack, and you can't throw
-  or swing it again until it's back. Its numbers: `neon_bat.tscn` > **NeonBat** > group **Throw**
-  (**Throwable**, **Throw Damage** x1.5, **Throw Push** x1.6, **Throw Stun** 1 s); the flight itself is on
-  the cat (below, **Player > Melee** > group **Throw**: **Throw Speed** 24 + **Throw Out Seconds** 0.45 =
+- **SPIN ATTACK (Frozen Tuna, RIGHT CLICK / LT)**: the cat whirls round once with the fish held out flat,
+  hitting **everything around you** and shoving it all **away** (a ring of light races out across the street).
+  `frozen_tuna.tscn` > **FrozenTuna** > group **Spin Attack**: **Can Spin** (only the tuna), **Spin Radius**
+  3.2 m, **Spin Damage** x0.6, **Spin Push** x2.4, **Spin Stun** 0.5 s, **Spin Time** 0.4 s, **Spin Turns**,
+  **Spin Cooldown** 1.5 s, **Spin Shake**, **Spin Sound**. It cancels a slam you were charging.
+  Test: `--host --deploy --give=frozen_tuna --bait_roomba=1.8 --spin_test --frames=2` ("DevCapture spin").
+- **THROWING THE BAT (offhand) = RIGHT CLICK**: the bat's card (`items/neon_bat.tres`) has **Offhand** ticked,
+  so it goes in your **LEFT paw** first, leaving the right paw free for a gun. **Right Mouse / LT** (or the
+  **MELEE** button, **F** / middle mouse / pad **RB**) **throws** it like a **BOOMERANG**; it swings with
+  **Left Mouse / RT** when your right paw is empty. It spins end over end with its neon trail, bonks the first
+  VAC-COP / rival cat / car it passes (or a wall), turns round, swoops back to you (it chases you if you run)
+  and lands back in your paw, bonking anything it passes on the way back too. It never leaves your backpack.
+  **TWO BATS** (buy a second one: it goes in the right paw): right click throws the left one, and right
+  click again throws the right one while the first is still coming back. Left click swings the right-paw
+  bat. A thrown bat can't be swung or thrown again until it's back. Its numbers: `neon_bat.tscn` > **NeonBat**
+  > group **Throw** (**Throwable**, **Throw Damage** x1.5, **Throw Push** x1.6, **Throw Stun** 1 s); the flight
+  itself is on the cat (below, **Player > Melee** > group **Throw**: **Throw Cooldown** 0.5 s between two
+  throws, **Throw Speed** 24 + **Throw Out Seconds** 0.45 =
   how far it goes, **Throw Return Speed** 20, **Throw Curve** = how wide it swoops back, **Throw Catch
   Distance**, **Throw Return Max Seconds**, **Throw Return Damage** x0.6 on the way back, lift, gravity, spin).
 - **CLAW SCRATCH (bare paws)**: nothing in your LEFT paw (and no 2-paw weapon) = the MELEE button
@@ -156,7 +164,8 @@ side both get it), tall enough to reach the ground even while you're bouncing or
   numbers), **Scratch Feel** (shake, hit stop, camera punch, pounce, paw raise, sounds), **Claw Marks**
   (colour, length, width, how fast they rip and fade) and **Throw**.
   Test: `--host --deploy --bait_roomba=1.3 --melee_test=scratch:3 --frames=2` or
-  `--host --deploy --give=neon_bat --melee_test=throw --frames=2` ("DevCapture melee" lines).
+  `--host --deploy --give=neon_bat --melee_test=throw --frames=2` (two bats: `--give=neon_bat,neon_bat
+  --melee_test=throw2`) ("DevCapture melee" lines).
 - **Price** is on its card: `items/neon_bat.tres` (> Shop > Price, $20).
 - **A new melee weapon** (a pipe, claws...): duplicate `neon_bat.tscn` + `neon_bat.tres`, swap the
   model under **Model** (the swing rotates **Model**; see "The weapon models" below), change the

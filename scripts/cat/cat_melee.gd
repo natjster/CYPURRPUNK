@@ -3,9 +3,10 @@ extends Node3D
 ## CYPURRPUNK — the MELEE button (F / middle mouse / pad RB): node Player > Melee.
 ##
 ## What the button does depends on your paws:
-##   * A THROWABLE weapon (the NEON BAT) in your LEFT paw (offhand) -> THROW it like a BOOMERANG. It
-##     spins out, bonks the first VAC-COP / rival cat / car it hits (dazing VAC-COPs), turns round and
-##     swoops back into your paw (bonking things on the way back too). No throwing again until it's back.
+##   * A THROWABLE weapon (the NEON BAT) -> THROW it like a BOOMERANG (also RIGHT MOUSE / LT, sent here by
+##     ItemManager as throw_next). It spins out, bonks the first VAC-COP / rival cat / car it hits (dazing
+##     VAC-COPs), turns round and swoops back into your paw (bonking things on the way back too). Two bats
+##     = throw the left one, then the right one while the first is still out.
 ##   * Nothing in your LEFT paw -> SCRATCH with your bare claws: fast swipes, right paw, left paw, then
 ##     a big X RAKE with both. Hold the button to keep scratching. Neon claw marks rip across the air
 ##     in front of you, the cat lunges and pounces into each swipe, the camera punches, and a hit
@@ -104,7 +105,7 @@ extends Node3D
 @export var throw_radius: float = 0.5
 ## Spins per second while it flies.
 @export var throw_spin: float = 3.0
-## Seconds before you can scratch again after the bat is caught.
+## Seconds between two throws (or a throw and a scratch).
 @export var throw_cooldown: float = 0.5
 
 ## The cat this belongs to (the Player node).
@@ -165,21 +166,44 @@ func _exit_tree() -> void:
 ## allowed = not in a menu / the safe zone.
 func melee_tick(allowed: bool, pressed: bool, just_pressed: bool, delta: float) -> void:
 	_cooldown -= delta
-	if is_throw_out():
-		_cooldown = maxf(_cooldown, throw_cooldown)  # wait for the boomerang to come back
-		return
 	if not allowed or not pressed or _cooldown > 0.0 or cat.riding_car != null:
 		return
 	var items := ItemManager.instance
 	var left := items.held_item(cat, 1)
 	var right := items.held_item(cat, 0)
 	var two_paws := right != null and right.data != null and right.data.hands == 2
-	if left is MeleeWeapon and (left as MeleeWeapon).throwable:
+	if _is_throwable(left) or _is_throwable(right):
 		if just_pressed:
-			_throw(left as MeleeWeapon)
-		return
+			throw_next()  # (the MELEE button throws a bat too, like right click)
+		if left != null:
+			return
 	if left == null and not two_paws:
 		_scratch()
+
+
+## Is this a BOOMERANG weapon (Throwable ticked) that's in our paw right now (not out flying)?
+func _is_throwable(item: HeldItem) -> bool:
+	return item is MeleeWeapon and (item as MeleeWeapon).throwable and not (item as MeleeWeapon).in_flight
+
+
+## Owner only: RIGHT MOUSE / LT (or the MELEE button) with a bat. Throws the LEFT paw's bat first; if
+## that one is already out flying, the RIGHT paw's (two bats = throw one, then the other while the
+## first is still coming back). The right paw's bat only flies when the left paw is free or a bat
+## (a gun in the left paw keeps right click for itself). Returns true if something was thrown.
+func throw_next() -> bool:
+	if _cooldown > 0.0 or cat.riding_car != null:
+		return false
+	var items := ItemManager.instance
+	var left := items.held_item(cat, 1)
+	var right := items.held_item(cat, 0)
+	if _is_throwable(left):
+		_throw(left as MeleeWeapon, 1)
+		return true
+	var left_ok := left == null or (left is MeleeWeapon and (left as MeleeWeapon).throwable)
+	if _is_throwable(right) and left_ok:
+		_throw(right as MeleeWeapon, 0)
+		return true
+	return false
 
 
 # --- SCRATCH ---
@@ -430,8 +454,9 @@ func _sparks(where: Vector3) -> void:
 ## the first thing it passes close to gets bonked and it turns round there, or at a wall, or at the end
 ## of its reach), then everyone's computer flies it back to our paw (show_throw / _update_flights).
 ## The bat never leaves our inventory: it's just hidden while it's out.
-func _throw(weapon: MeleeWeapon) -> void:
+func _throw(weapon: MeleeWeapon, hand: int = 1) -> void:
 	_cooldown = throw_cooldown
+	weapon.in_flight = true  # (right away on our side, so the next press throws the OTHER paw)
 	var look := -cat.camera.global_basis.z
 	var flat := Vector3(look.x, 0, look.z).normalized()
 	if flat == Vector3.ZERO:
@@ -468,7 +493,7 @@ func _throw(weapon: MeleeWeapon) -> void:
 	Seats.rumble(cat.player_id, 0.4, 0.2, 0.08)
 	cat.aim.kick(-1.0, 0.0, 1.0, camera_roll_degrees, camera_fov_punch, 0.0, 0.0)
 	cat.aim_until = Time.get_ticks_msec() / 1000.0 + 0.4
-	show_throw.rpc(weapon.data.id, points, time, target != null)
+	show_throw.rpc(weapon.data.id, hand, points, time, target != null)
 
 
 ## Owner only: the first enemy / rival cat / car within throw_radius of `where` (not us, not our gang,
@@ -519,13 +544,13 @@ func _copy_weapon_numbers(from: MeleeWeapon, to: MeleeWeapon) -> void:
 ## Everyone: hide the bat in our paw, fly a spinning copy OUT along `points` (bonk at the end if it hit
 ## something), then _update_flights curves it BACK to our paw.
 @rpc("any_peer", "call_local", "reliable")
-func show_throw(item_id: String, points: PackedVector3Array, seconds: float, hit_something: bool) -> void:
+func show_throw(item_id: String, hand: int, points: PackedVector3Array, seconds: float, hit_something: bool) -> void:
 	if cat == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(cat.player_id) or points.size() < 2:
 		return
 	var data: ItemData = ItemManager.instance.catalog.get(item_id)
 	if data == null or data.scene == null:
 		return
-	var held := ItemManager.instance.held_item(cat, 1)
+	var held := ItemManager.instance.held_item(cat, clampi(hand, 0, 1))
 	if held != null:
 		held.visible = false  # it's out flying
 		if held is MeleeWeapon:
@@ -627,7 +652,7 @@ func _catch(flight: Dictionary) -> void:
 		last_result += " caught=true"
 
 
-## Is a throw of ours still out flying? (melee_tick: no new throw / scratch until it's back.)
+## Is a throw of ours still out flying? (For tests.)
 func is_throw_out() -> bool:
 	return not _flights.is_empty()
 

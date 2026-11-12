@@ -77,7 +77,9 @@ extends "res://scripts/dev_tests/dev_test.gd"
 ##   --combo_test[=GAP] (with --give=neon_bat [--bait_roomba=2] [--air_slam]) 3 real bat swings GAP s apart:
 ##                     forehand, backhand, SLAM + shockwave (only weapons that CAN slam, with the meter full:
 ##                     --slam_charged fills it). "DevCapture combo" lines
-##   --melee_test=scratch[:N] / throw  the MELEE button: N claw swipes, or throw the LEFT-paw bat
+##   --spin_test       (with --give=frozen_tuna [--bait_roomba=2]) the tuna's right-click SPIN ATTACK. "DevCapture spin"
+##   --melee_test=scratch[:N] / throw / throw2  N claw swipes, or throw the boomerang bat (throw2 = both bats,
+##                     with --give=neon_bat,neon_bat)
 ##                     (--give=neon_bat). "DevCapture melee" lines
 ##   --shoot_rival=N   walk up to the nearest cat of the other gang and hit it N times with our gun
 ##                     (needs --give=pistol); prints its health after each hit (PvP, cat_health.gd)
@@ -802,6 +804,8 @@ func _ready() -> void:
 			await _fights._combo_test(player, args)
 		if args.has("melee_test"):
 			await _fights._melee_test(player, args)
+		if args.has("spin_test"):
+			await _fights._spin_test(player, args)
 		if args.has("moves_test"):
 			await _moves._moves_test(player, args)
 		if args.has("deploy_again"):

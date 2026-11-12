@@ -23,6 +23,7 @@ swing_time = 0.26
 hit_sound = "fish_slap"
 neon_parts = {"Ice": 1.5}
 can_slam = true
+can_spin = true
 shockwave_radius = 3.4
 
 [node name="Model" type="Node3D" parent="."]

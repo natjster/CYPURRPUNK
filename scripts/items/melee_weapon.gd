@@ -102,7 +102,29 @@ extends Weapon
 ## 0 = no dive (it slams wherever you are).
 @export var air_slam_speed: float = 16.0
 
+@export_group("Spin Attack")
+## SPIN ATTACK (right mouse / LT): the cat whirls round once with the weapon held out, hitting EVERYTHING
+## around it and shoving it all away. Only weapons with this ticked (the FROZEN TUNA).
+@export var can_spin: bool = false
+## How far round the cat it reaches (metres), its damage (x the normal swing), and how hard it shoves
+## things away (x the normal knockback; VAC-COPs, rival cats and cars all fly out).
+@export var spin_radius: float = 3.2
+@export var spin_damage: float = 0.6
+@export var spin_push: float = 2.4
+## VAC-COPs hit by the spin are dazed this long (seconds).
+@export var spin_stun: float = 0.5
+## How long the whirl takes (seconds), how many times round, and seconds before you can spin again.
+@export var spin_time: float = 0.4
+@export var spin_turns: float = 1.0
+@export var spin_cooldown: float = 1.5
+## Camera jolt when it hits something (0..1), and the whoosh (res://sounds/sfx/, no .wav).
+@export_range(0.0, 1.0) var spin_shake: float = 0.4
+@export var spin_sound: String = "swing"
+
 var _model: Node3D
+var _spin_wait: float = 0.0  # owner: seconds until the next spin
+## For the test line: how many things the last spin hit.
+var last_spin_hits: int = 0
 ## The combo: which swing is next (0 forehand, 1 backhand, 2 slam) and until when it carries on.
 var combo_step: int = 0
 var _combo_until: float = 0.0
@@ -382,6 +404,86 @@ func use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
 		_wait_release = true
 
 
+## Owner only, every physics frame while held: the RIGHT MOUSE / LT button (ItemManager _use_held_items
+## sends it here for a 2-paw weapon, which has no left paw to use). Can Spin = a SPIN ATTACK.
+func alt_use_tick(trigger_down: bool, trigger_pressed: bool, delta: float) -> void:
+	_spin_wait = maxf(_spin_wait - delta, 0.0)
+	if not can_spin or in_flight or not trigger_pressed or _spin_wait > 0.0 or _cooldown > 0.0:
+		return
+	_spin()
+
+
+## Owner only: SPIN ATTACK. Hit everything within spin_radius of us and shove it straight AWAY from us.
+func _spin() -> void:
+	_spin_wait = spin_cooldown
+	_cooldown = maxf(_cooldown, spin_time)  # (no normal swing in the middle of the whirl)
+	_holding = false  # (cancels a slam you were charging)
+	slam_charge = 0.0
+	var ball := SphereShape3D.new()
+	ball.radius = spin_radius
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = ball
+	query.transform = Transform3D(Basis.IDENTITY, holder.global_position + Vector3.UP * 0.4)
+	query.exclude = own_rids()
+	var already := {}
+	var hit_spots := PackedVector3Array()
+	var paws := Upgrades.melee_multiplier(holder.player_id)  # HEAVY PAWS upgrade
+	for result in get_world_3d().direct_space_state.intersect_shape(query, 64):
+		var target := Hit.target_of(result.collider)
+		if target == null or already.has(target) or target == holder:
+			continue
+		if target is CatPlayer and (target as CatPlayer).team == holder.team:
+			continue  # our own gang: no hit
+		already[target] = true
+		var spot: Vector3 = (target as Node3D).global_position if target is Node3D else holder.global_position
+		var away := Vector3(spot.x - holder.global_position.x, 0, spot.z - holder.global_position.z)
+		away = away.normalized() if away.length() > 0.1 else -holder.cat_model.global_basis.z
+		var info := _make_hit(away, spot + Vector3.UP * 0.5)
+		info.damage = roundi(info.damage * spin_damage * paws)
+		info.enemy_push = (away + Vector3.UP * 0.5) * enemy_knockback * spin_push * paws
+		info.push_scale = spin_push
+		info.stun_seconds = maxf(info.stun_seconds, spin_stun)
+		hit_spots.append(info.position)
+		if target.receive_hit(info):
+			Hud.damage_number(info.position, info.damage, info.crit, holder.slot)
+	last_spin_hits = already.size()
+	Seats.rumble(holder.player_id, 0.6, 0.3, spin_time)
+	if not already.is_empty():
+		Feedback.shake(holder.player_id, spin_shake)
+	# WHIRL: cat_player.gd turns the whole cat round (and the turn reaches the other players with
+	# its normal sync).
+	holder.spin_left = spin_time
+	holder.spin_speed = TAU * spin_turns / maxf(spin_time, 0.05)
+	show_spin.rpc(hit_spots)
+
+
+@rpc("any_peer", "call_local", "unreliable_ordered")
+## Everyone: draw the spin. The fish swings out flat, its neon trail draws a circle, a ring of light
+## races out along the street, and sparks fly off everything it hit.
+func show_spin(hit_spots: PackedVector3Array) -> void:
+	if holder == null or multiplayer.get_remote_sender_id() != PlayerId.peer_of(holder.player_id):
+		return
+	shots_seen += 1
+	Sound.play_at(spin_sound, global_position, -1.0)
+	if not hit_spots.is_empty():
+		Sound.play_at(hit_sound, hit_spots[0], 0.0)
+	for spot in hit_spots:
+		_impact(spot, false)
+	_shockwave(_ground_below(holder.global_position), spin_radius)
+	if _model == null:
+		return
+	if _swing_tween != null and _swing_tween.is_valid():
+		_swing_tween.kill()
+	# Held straight out to the side (flat) for the whirl, then back home.
+	_model.rotation = _model_home + Vector3(-swing_angle * 0.35, swing_sweep, 0)
+	_trail_points.clear()
+	_trail_boost = 1.35
+	_trail_until = Time.get_ticks_msec() / 1000.0 + spin_time
+	_swing_tween = create_tween()
+	_swing_tween.tween_interval(spin_time)
+	_swing_tween.tween_property(_model, "rotation", _model_home, swing_time * 1.5).set_trans(Tween.TRANS_SINE)
+
+
 ## Owner's view: while charging, lift the fish up over the head (more meter = higher, with a shiver).
 func _raise_for_charge() -> void:
 	if _model == null or (_swing_tween != null and _swing_tween.is_running()):
@@ -471,8 +573,10 @@ func _impact(where: Vector3, big: bool = false) -> void:
 
 ## The SLAM's SHOCKWAVE (every computer): a glowing neon ring wall that races out across the ground from
 ## "where" to Shockwave Radius and fades, plus a quick flash of light.
-func _shockwave(where: Vector3) -> void:
-	if shockwave_radius <= 0.0:
+func _shockwave(where: Vector3, radius: float = -1.0) -> void:
+	if radius < 0.0:
+		radius = shockwave_radius  # (the SPIN ATTACK passes its own size)
+	if radius <= 0.0:
 		return
 	var world: Node = Game.instance if Game.instance != null else get_tree().root
 	var tint := trail_color if trail_color.a > 0.0 else bolt_color
@@ -501,14 +605,14 @@ func _shockwave(where: Vector3) -> void:
 	ring.global_position = where + Vector3.UP * 0.2
 	ring.scale = Vector3(0.2, 1.0, 0.2)
 	var grow := ring.create_tween().set_parallel(true)
-	grow.tween_property(ring, "scale", Vector3(shockwave_radius, 0.3, shockwave_radius), 0.28).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	grow.tween_property(ring, "scale", Vector3(radius, 0.3, radius), 0.28).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 	grow.tween_property(glow, "albedo_color:a", 0.0, 0.35).set_delay(0.08)
 	grow.chain().tween_callback(ring.queue_free)
 	if impact_light > 0.0:
 		var light := OmniLight3D.new()
 		light.light_color = tint
 		light.light_energy = impact_light * 1.5
-		light.omni_range = shockwave_radius * 2.0
+		light.omni_range = radius * 2.0
 		world.add_child(light)
 		light.global_position = where + Vector3.UP * 0.5
 		var fade := light.create_tween()

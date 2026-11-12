@@ -342,6 +342,14 @@ func _use_held_items(delta: float) -> void:
 		var right := held_item(cat, 0)
 		var can_aim := right is Weapon and not right is MeleeWeapon and held_item(cat, 1) == null and not safe_zone
 		cat.aim.wants_aim = can_aim and allowed and Seats.is_pressed(cat.slot, "use_left")
+		# BOOMERANG BATS (scripts/cat/cat_melee.gd throw_next): right mouse / LT THROWS a bat instead of
+		# swinging it: the left paw's first, then the right paw's while the first is still out.
+		var left := held_item(cat, 1)
+		var left_is_bat := left is MeleeWeapon and (left as MeleeWeapon).throwable
+		var right_is_bat := right is MeleeWeapon and (right as MeleeWeapon).throwable
+		if allowed and not safe_zone and cat.melee != null and cat.is_controlled and (left_is_bat or (right_is_bat and left == null)):
+			if Seats.is_just_pressed(cat.slot, "use_left"):
+				cat.melee.throw_next()
 		for hand in 2:
 			var held := held_item(cat, hand)
 			if held == null or (safe_zone and held is Weapon):
@@ -349,11 +357,17 @@ func _use_held_items(delta: float) -> void:
 			var action := "shoot" if hand == 0 else "use_left"
 			var pressed := Seats.is_pressed(cat.slot, action)
 			var just := Seats.is_just_pressed(cat.slot, action)
+			if hand == 1 and left_is_bat:
+				pressed = false  # (right click THROWS the left bat: above)
+				just = false
 			if hand == 1 and right == null:
 				# Nothing in the right paw (e.g. just the OFFHAND bat): Left Mouse / RT uses the left paw too.
 				pressed = pressed or Seats.is_pressed(cat.slot, "shoot")
 				just = just or Seats.is_just_pressed(cat.slot, "shoot")
 			held.use_tick(allowed and pressed, allowed and just, delta)
+			if hand == 0 and held.data != null and held.data.hands == 2:
+				# A 2-paw item: right mouse / LT is its OTHER move (the tuna's SPIN ATTACK).
+				held.alt_use_tick(allowed and Seats.is_pressed(cat.slot, "use_left"), allowed and Seats.is_just_pressed(cat.slot, "use_left"), delta)
 	# The MELEE button (F / RB): throw the offhand bat, or SCRATCH with bare claws (scripts/cat/cat_melee.gd).
 	for cat in Game.instance.local_cats():
 		if cat.reads_input() and cat.is_controlled and not cat.knocked_out and not cat.is_downed() and cat.melee != null:

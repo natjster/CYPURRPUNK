@@ -287,6 +287,41 @@ func _combo_test(player: CatPlayer, args: Dictionary) -> void:
 	await _seconds(0.06)
 
 
+## Is the item in this paw showing? (false = none, or it's out flying)
+func _paw_visible(items: ItemManager, player: CatPlayer, hand: int) -> bool:
+	var held := items.held_item(player, hand)
+	return held != null and held.visible
+
+
+## --spin_test (with --give=frozen_tuna, add --bait_roomba=2): the tuna's SPIN ATTACK (right click).
+## Prints how many things it hit, the nearest VAC-COP's health and how far it got shoved, and the cat's
+## turn during the whirl.
+func _spin_test(player: CatPlayer, _args: Dictionary) -> void:
+	await _seconds(1.0)
+	var tuna := ItemManager.instance.held_item(player, 0) as MeleeWeapon
+	if tuna == null or not tuna.can_spin:
+		print("DevCapture spin: no spin weapon in the right paw (add --give=frozen_tuna)")
+		return
+	var target := _nearest_roomba(Game.instance, player.global_position)
+	if target != null and _args.has("bait_roomba"):
+		# Put the bot BESIDE us (not in front: the spin hits all the way round).
+		var side := player.camera.global_basis.x
+		target.global_position = player.global_position + Vector3(side.x, 0, side.z).normalized() * float(_args["bait_roomba"]) + Vector3(0, 0.1, 0)
+		await _seconds(0.02)
+	var hp_before: int = target.health if target != null else -1
+	var dist_before := Motion.flat_distance(target.global_position, player.global_position) if target != null else -1.0
+	var yaw_before := player.cat_model.rotation.y
+	tuna._cooldown = 0.0
+	tuna.alt_use_tick(true, true, 0.016)
+	await _seconds(0.2)
+	print("DevCapture spin: mid-whirl yaw %.2f -> %.2f spin_left=%.2f" % [yaw_before, player.cat_model.rotation.y, player.spin_left])
+	await _seconds(0.6)
+	print("DevCapture spin: hits=%d target_hp=%d->%d dist=%.1f->%.1f wait=%.2f" % [tuna.last_spin_hits, hp_before,
+		target.health if target != null and is_instance_valid(target) else -1, dist_before,
+		Motion.flat_distance(target.global_position, player.global_position) if target != null and is_instance_valid(target) else -1.0,
+		tuna._spin_wait])
+
+
 ## Hold the trigger on a SLAM weapon frame by frame (like a player holding the button) until it slams,
 ## printing the meter as it fills. Gives up after 3 s.
 func _hold_for_slam(bat: MeleeWeapon) -> void:
@@ -320,23 +355,24 @@ func _melee_test(player: CatPlayer, args: Dictionary) -> void:
 	var items := ItemManager.instance
 	print("DevCapture melee: hands=%s" % [items.get_inventory(player.player_id).hands])
 	if what.begins_with("throw"):
-		var left := items.held_item(player, 1)
-		if not left is MeleeWeapon:
-			print("DevCapture melee: nothing throwable in the LEFT paw")
-			return
+		# throw = one bat; throw2 = (with --give=neon_bat,neon_bat) the left one, then the right one
+		# 0.55 s later while the first is still out (right click = cat_melee.gd throw_next).
 		var hp_before: int = target.health if target != null else -1
-		melee._throw(left as MeleeWeapon)
+		var throws := 2 if what == "throw2" else 1
+		for i in throws:
+			if not melee.throw_next():
+				print("DevCapture melee: nothing to throw (paws=%s)" % [items.get_inventory(player.player_id).hands])
+				return
+			print("DevCapture melee: throw %d %s" % [i + 1, melee.last_result])
+			await _seconds(0.15)
+			print("DevCapture melee: mid-flight flights=%d left_visible=%s right_visible=%s" % [melee._flights.size(),
+				_paw_visible(items, player, 1), _paw_visible(items, player, 0)])
+			if i + 1 < throws:
+				await _seconds(0.4)
+		await _seconds(2.2)
 		print("DevCapture melee: %s" % melee.last_result)
-		await _seconds(0.15)
-		var flying := Game.instance.get_node_or_null("Thrown")
-		print("DevCapture melee: mid-flight thrown=%s at=%s" % [flying != null, (flying as Node3D).global_position if flying != null else Vector3.ZERO])
-		await _seconds(0.5)
-		var paw_bat := items.held_item(player, 1)
-		print("DevCapture melee: coming back thrown=%s paw_visible=%s in_flight=%s" % [Game.instance.get_node_or_null("Thrown") != null,
-			paw_bat.visible if paw_bat != null else false, (paw_bat as MeleeWeapon).in_flight if paw_bat is MeleeWeapon else false])
-		await _seconds(1.6)
-		print("DevCapture melee: %s" % melee.last_result)
-		print("DevCapture melee: after throw paw_visible=%s hands=%s target_hp=%d->%d world_bats=%d" % [paw_bat.visible if paw_bat != null else false,
+		print("DevCapture melee: after throw flights=%d left_visible=%s right_visible=%s hands=%s target_hp=%d->%d world_bats=%d" % [
+			melee._flights.size(), _paw_visible(items, player, 1), _paw_visible(items, player, 0),
 			items.get_inventory(player.player_id).hands,
 			hp_before, target.health if target != null and is_instance_valid(target) else -1,
 			items.world.values().filter(func(w): return w.item == "neon_bat").size()])

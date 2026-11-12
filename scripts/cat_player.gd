@@ -87,6 +87,10 @@ var nearby_car: GetawayCar = null
 var riding_car: GetawayCar = null
 ## Items (see scripts/items/): weapons set this while firing, so the cat turns to face the shot.
 var aim_until: float = 0.0
+## SPIN ATTACK (the frozen tuna's right click, melee_weapon.gd _spin): owner only. Seconds of whirl left
+## and how fast the cat turns (radians per second) while it lasts.
+var spin_left: float = 0.0
+var spin_speed: float = 0.0
 ## Set by the item system while a held item wants the over-the-shoulder camera.
 var shoulder_view: bool = false
 ## Catnip etc.: speed multiplier and how long it lasts (see start_boost).
@@ -748,7 +752,10 @@ func _physics_process(delta: float) -> void:
 	# Smoothly turn the cat model to face where it's going. (Godot's "forward" is -Z.)
 	# While firing a weapon, face where the camera looks instead, so the gun points at the target.
 	var is_aiming := Time.get_ticks_msec() / 1000.0 < aim_until or aim.is_aiming()
-	if is_aiming:
+	if spin_left > 0.0:
+		spin_left -= delta  # SPIN ATTACK: whirl round (beats every other facing rule)
+		cat_model.rotation.y = wrapf(cat_model.rotation.y + spin_speed * delta, -PI, PI)
+	elif is_aiming:
 		cat_model.rotation.y = lerp_angle(cat_model.rotation.y, camera_pivot.rotation.y, 1.0 - exp(-turn_speed * 2.0 * delta))
 	elif moves.steering_locked() and Vector2(velocity.x, velocity.z).length() > 0.5:
 		# Just kicked off a wall: face where we're flying.

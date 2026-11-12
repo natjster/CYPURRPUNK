@@ -57,10 +57,15 @@ tuna): HOLD TO CHARGE, MeleeWeapon `use_tick` override (press = normal `_fire`, 
 after `slam_hold_delay` over `slam_hold_seconds`; full -> `_fire` with charge 1 = step 2 slam (air = dive), then `_wait_release`;
 release early = 0). Combo loops 0/1 otherwise. HUD: paw dict `"charge"` (-1 = none) -> `HudWeaponDisplay._draw_slam_meter`. MELEE BUTTON (action
 `melee`, F / MMB / pad RB): `scripts/cat/cat_melee.gd` (`CatMelee`, node `Player/Melee`, `cat.melee`), ticked from ItemManager
-`_use_held_items` (`melee_tick`). Left paw `throwable` MeleeWeapon -> `_throw` = BOOMERANG (owner simulates the OUT path + first target, Hit
+`_use_held_items` (`melee_tick`). SPIN ATTACK: 2-paw items get right click via `HeldItem.alt_use_tick` (ItemManager loop, hand 0); MeleeWeapon `can_spin`
+(tuna) -> `_spin` (sphere query, outward Hit, sets `cat.spin_left/spin_speed` = cat_player whirls the model yaw, synced as
+usual) + rpc `show_spin` (`_shockwave(spot, spin_radius)`). Test `--spin_test`. BOOMERANG = RIGHT CLICK (ItemManager calls
+`cat.melee.throw_next()`; also the MELEE button): left bat first, then the right-paw bat (needs left empty / a bat); left-bat
+"use_left" never swings. `_throw(weapon, hand)`, `show_throw(item, hand, ...)`, `weapon.in_flight` set at once on the owner.
+Test `--melee_test=throw2 --give=neon_bat,neon_bat`. Throwable MeleeWeapon -> `_throw` = BOOMERANG (owner simulates the OUT path + first target, Hit
 applied on arrival via the `_thrown` stand-in; the bat NEVER leaves the inventory: `show_throw` rpc hides HeldL + sets
 `MeleeWeapon.in_flight` (use_tick skips) on every computer, `_flights` + `_update_flights` fly the copy out then home on the cat;
-owner bonks return-path targets (`throw_return_damage`); `_catch` unhides. `is_throw_out()` blocks melee_tick). Left paw empty (no 2-paw item) -> `_scratch` (stand-in `_claws`
+owner bonks return-path targets (`throw_return_damage`); `_catch` unhides.). Left paw empty (no 2-paw item) -> `_scratch` (stand-in `_claws`
 MeleeWeapon for Hit numbers; `show_scratch` rpc: ImmediateMesh claw marks + `paw_pose(side)` / `body_pitch()` / `body_forward()`
 read by cat_player `_animate_legs_and_tail` + lean). `ItemData.offhand` (bat) = left paw first (`_free_paw_for`, request_equip);
 right paw empty -> "shoot" also uses the left paw. Test: `--melee_test=scratch[:N]|throw`, `--combo_test --slam_charged`. `Hit.push_scale` multiplies cat/car shove. Item `neon_bat` ($20, in `Shopkeeper.stock`). Starting money: `PlayerProfile.starting_cash`
