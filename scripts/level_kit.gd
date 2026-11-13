@@ -276,3 +276,22 @@ static func add_sign(parent: Node3D, text: String, at: Vector3, color: Color, fo
 	label.rotation.y = facing
 	parent.add_child(label)
 	return label
+
+
+## Unshaded, additive, vertex-colored ImmediateMesh in world space (speed streaks, claw marks, swing trails).
+static func add_trail_mesh(parent: Node, node_name: String) -> Dictionary:
+	var mesh := ImmediateMesh.new()
+	var node := MeshInstance3D.new()
+	node.name = node_name
+	node.mesh = mesh
+	node.top_level = true
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.vertex_color_use_as_albedo = true
+	node.material_override = material
+	parent.add_child(node)
+	return {"mesh": mesh, "node": node}

@@ -341,20 +341,9 @@ func _find_bat_ends() -> void:
 func _make_trail() -> void:
 	if trail_fade <= 0.0:
 		return
-	_trail_mesh = ImmediateMesh.new()
-	_trail_node = MeshInstance3D.new()
-	_trail_node.name = "SwingTrail"
-	_trail_node.mesh = _trail_mesh
-	_trail_node.top_level = true  # drawn in world space: the trail stays where the bat WAS
-	_trail_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD  # glows on top of the dark street
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.vertex_color_use_as_albedo = true
-	_trail_node.material_override = material
-	add_child(_trail_node)
+	var trail := LevelKit.add_trail_mesh(self, "SwingTrail")
+	_trail_mesh = trail["mesh"]
+	_trail_node = trail["node"]
 
 
 func _process(delta: float) -> void:

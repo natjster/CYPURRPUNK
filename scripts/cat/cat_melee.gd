@@ -140,20 +140,9 @@ func _ready() -> void:
 	_rng.randomize()
 	_claws = MeleeWeapon.new()
 	_thrown = MeleeWeapon.new()
-	_mesh = ImmediateMesh.new()
-	_mesh_node = MeshInstance3D.new()
-	_mesh_node.name = "ClawMarks"
-	_mesh_node.mesh = _mesh
-	_mesh_node.top_level = true  # world space: the marks stay where they were ripped
-	_mesh_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD  # glows on the dark street
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.vertex_color_use_as_albedo = true
-	_mesh_node.material_override = material
-	add_child(_mesh_node)
+	var trail := LevelKit.add_trail_mesh(self, "ClawMarks")
+	_mesh = trail["mesh"]
+	_mesh_node = trail["node"]
 
 
 func _exit_tree() -> void:

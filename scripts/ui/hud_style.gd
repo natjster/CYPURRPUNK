@@ -176,3 +176,45 @@ static func draw_icon(canvas: CanvasItem, texture: Texture2D, box: Rect2, color:
 	var dest := Rect2(box.get_center() - size / 2.0, size)
 	canvas.draw_texture_rect_region(texture, dest, src, color)
 	return dest
+
+
+## StyleBoxFlat for ocean-blue popup buttons (shop, workbench, mainframe). lit = hovered / pressed.
+static func button_box(lit: bool) -> StyleBoxFlat:
+	var style := current()
+	var box := StyleBoxFlat.new()
+	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
+	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
+	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
+	box.set_content_margin_all(4)
+	return box
+
+
+## Creates an ocean-blue popup button (SeatFocus moves the highlight, so FOCUS_NONE).
+static func make_button(parent: Node, text: String, font_size: int) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.clip_text = true
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_color_override("font_color", current().text_color)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", button_box(false))
+	button.add_theme_stylebox_override("hover", button_box(true))
+	button.add_theme_stylebox_override("pressed", button_box(true))
+	parent.add_child(button)
+	return button
+
+
+## Puts a drawing Control ("Face") over a button, filling it, letting clicks through.
+static func attach_face(button: Button, face: Control) -> void:
+	face.name = "Face"
+	face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(face)
+
+
+## Re-captures player 1's mouse when closing a popup screen if their cat is in control.
+static func restore_game_mouse(seat_number: int) -> void:
+	var first := Game.instance.my_cat() if Game.instance != null else null
+	if seat_number == 0 and first != null and first.is_controlled:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

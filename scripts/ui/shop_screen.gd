@@ -118,71 +118,36 @@ func _ready() -> void:
 
 func _build() -> void:
 	for i in TAB_TITLES.size():
-		var tab_button := _button(TAB_TITLES[i])
+		var tab_button := HudStyle.make_button(self, TAB_TITLES[i], button_font_size)
 		tab_button.pressed.connect(_set_tab.bind(i))
 		tab_button.mouse_entered.connect(_on_highlight.bind(tab_button))
 		_tab_buttons.append(tab_button)
 	for i in 6:
-		var row := _button("")
+		var row := HudStyle.make_button(self, "", button_font_size)
 		row.set_meta("row", i)
 		var face := ItemTile.new()
 		face.screen = self
-		_face(row, face)
+		HudStyle.attach_face(row, face)
 		row.pressed.connect(_pick_row.bind(row))
 		row.mouse_entered.connect(_on_highlight.bind(row))
 		_rows.append(row)
-	_buy = _button("BUY")
-	_buy.add_theme_font_size_override("font_size", button_font_size + 2)
+	_buy = HudStyle.make_button(self, "BUY", button_font_size + 2)
 	_buy.pressed.connect(_press_buy)
 	_buy.mouse_entered.connect(_on_highlight.bind(_buy))
 	for i in max_sell_tiles:
-		var tile := _button("")
+		var tile := HudStyle.make_button(self, "", button_font_size)
 		var face := SellTile.new()
 		face.screen = self
-		_face(tile, face)
+		HudStyle.attach_face(tile, face)
 		tile.pressed.connect(_press_sell.bind(tile))
 		tile.mouse_entered.connect(_on_highlight.bind(tile))
 		_sell_tiles.append(tile)
-	_sell_all = _button("SELL ALL LOOT")
-	_sell_all.add_theme_font_size_override("font_size", button_font_size - 2)
+	_sell_all = HudStyle.make_button(self, "SELL ALL LOOT", button_font_size - 2)
 	_sell_all.pressed.connect(_sell_all_loot)
 	_sell_all.mouse_entered.connect(_on_highlight.bind(_sell_all))
 	_focus.press_on_accept = false
 	_focus.highlighted.connect(_on_highlight)
 	_built = true
-
-
-func _button(text: String) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.focus_mode = Control.FOCUS_NONE  # (the d-pad moves a highlight: _focus, seat_focus.gd)
-	button.clip_text = true
-	button.add_theme_font_size_override("font_size", button_font_size)
-	button.add_theme_color_override("font_color", HudStyle.current().text_color)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_stylebox_override("normal", _box(false))
-	button.add_theme_stylebox_override("hover", _box(true))
-	button.add_theme_stylebox_override("pressed", _box(true))
-	add_child(button)
-	return button
-
-
-## Puts a drawing Control ("Face") over a button, filling it, letting the clicks through.
-func _face(button: Button, face: Control) -> void:
-	face.name = "Face"
-	face.set_anchors_preset(Control.PRESET_FULL_RECT)
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(face)
-
-
-func _box(lit: bool) -> StyleBoxFlat:
-	var style := HudStyle.current()
-	var box := StyleBoxFlat.new()
-	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
-	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
-	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
-	box.set_content_margin_all(4)
-	return box
 
 
 # --- Opening / closing ---
@@ -215,9 +180,7 @@ func close() -> void:
 	visible = false
 	_focus.clear()
 	owner_cat = null
-	var first := Game.instance.my_cat() if Game.instance != null else null
-	if seat == 0 and first != null and first.is_controlled:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	HudStyle.restore_game_mouse(seat)
 
 
 func _input(event: InputEvent) -> void:
@@ -276,11 +239,11 @@ func _fill_rows() -> void:
 		var face := row.get_node("Face") as ItemTile
 		row.visible = i < items.size()
 		face.item_id = items[i] if i < items.size() else ""
-		row.add_theme_stylebox_override("normal", _box(face.item_id != "" and face.item_id == selected))
+		row.add_theme_stylebox_override("normal", HudStyle.button_box(face.item_id != "" and face.item_id == selected))
 		face.queue_redraw()
 	for i in _tab_buttons.size():
 		_tab_buttons[i].add_theme_color_override("font_color", Color.WHITE if i == tab else Color(HudStyle.current().text_color, 0.6))
-		_tab_buttons[i].add_theme_stylebox_override("normal", _box(i == tab))
+		_tab_buttons[i].add_theme_stylebox_override("normal", HudStyle.button_box(i == tab))
 	# The BUY button follows the picked item.
 	var data: ItemData = ItemManager.instance.catalog.get(selected)
 	_buy.visible = data != null

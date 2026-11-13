@@ -86,31 +86,30 @@ func _ready() -> void:
 
 func _build() -> void:
 	for i in Upgrades.WORKBENCH_TABS.size():
-		var button := _button("")
+		var button := HudStyle.make_button(self, "", card_title_size)
 		button.set_meta("tab", i)
 		var face := TabFace.new()
 		face.screen = self
 		face.index = i
-		_face(button, face)
+		HudStyle.attach_face(button, face)
 		button.pressed.connect(_set_tab.bind(i))
 		button.mouse_entered.connect(_on_highlight.bind(button))
 		_tabs.append(button)
 	for i in 4:
-		var card := _button("")
+		var card := HudStyle.make_button(self, "", card_title_size)
 		var face := CardFace.new()
 		face.screen = self
-		_face(card, face)
+		HudStyle.attach_face(card, face)
 		card.pressed.connect(_press_card.bind(card))
 		card.mouse_entered.connect(_on_highlight.bind(card))
 		_cards.append(card)
 	for vehicle in Upgrades.VEHICLE_UNLOCKS:
-		var ride := _button(Upgrades.VEHICLE_NAMES[vehicle])
+		var ride := HudStyle.make_button(self, Upgrades.VEHICLE_NAMES[vehicle], card_title_size)
 		ride.set_meta("vehicle", vehicle)
 		ride.pressed.connect(_press_ride.bind(vehicle))
 		ride.mouse_entered.connect(_on_highlight.bind(ride))
 		_rides.append(ride)
-	_recruit = _button("RECRUIT")
-	_recruit.add_theme_font_size_override("font_size", card_title_size + 2)
+	_recruit = HudStyle.make_button(self, "RECRUIT", card_title_size + 2)
 	_recruit.pressed.connect(_press_recruit)
 	_recruit.mouse_entered.connect(_on_highlight.bind(_recruit))
 	_focus.press_on_accept = false
@@ -118,38 +117,6 @@ func _build() -> void:
 	if Upgrades.instance != null:
 		Upgrades.instance.recruited.connect(_on_recruited)
 	_built = true
-
-
-func _button(text: String) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.focus_mode = Control.FOCUS_NONE  # (the d-pad moves a highlight: _focus, seat_focus.gd)
-	button.clip_text = true
-	button.add_theme_font_size_override("font_size", card_title_size)
-	button.add_theme_color_override("font_color", HudStyle.current().text_color)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_stylebox_override("normal", _box(false))
-	button.add_theme_stylebox_override("hover", _box(true))
-	button.add_theme_stylebox_override("pressed", _box(true))
-	add_child(button)
-	return button
-
-
-func _face(button: Button, face: Control) -> void:
-	face.name = "Face"
-	face.set_anchors_preset(Control.PRESET_FULL_RECT)
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	button.add_child(face)
-
-
-func _box(lit: bool) -> StyleBoxFlat:
-	var style := HudStyle.current()
-	var box := StyleBoxFlat.new()
-	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
-	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
-	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
-	box.set_content_margin_all(4)
-	return box
 
 
 # --- Opening / closing ---
@@ -174,9 +141,7 @@ func close() -> void:
 	visible = false
 	_focus.clear()
 	owner_cat = null
-	var first := Game.instance.my_cat() if Game.instance != null else null
-	if seat == 0 and first != null and first.is_controlled:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	HudStyle.restore_game_mouse(seat)
 
 
 func _input(event: InputEvent) -> void:
@@ -282,7 +247,7 @@ func _refill() -> void:
 		_recruit.text = "RECRUIT TO THE REBELLION — $%d + %d SCRAP" % [price[0], price[1]]
 	for t in _tabs:
 		t.get_node("Face").queue_redraw()
-		t.add_theme_stylebox_override("normal", _box(t.get_meta("tab") == tab))
+		t.add_theme_stylebox_override("normal", HudStyle.button_box(t.get_meta("tab") == tab))
 
 
 # --- Every frame ---
