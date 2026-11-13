@@ -204,7 +204,7 @@ func _layout() -> void:
 	_stats = Rect2(_gauge.end.x + gap * 1.5, top, inner_w * 0.32, body_h)
 	var right_x := _stats.end.x + gap
 	var right_w := _panel.end.x - 14.0 - right_x
-	_about = Rect2(right_x, top, right_w, body_h * 0.46)
+	_about = Rect2(right_x, top, right_w, body_h * 0.52)
 	_table = Rect2(right_x, _about.end.y + gap, right_w, body_h - _about.size.y - gap)
 	if _feed != null:
 		_place(_feed, Rect2(_stats.position.x, buttons_y, _stats.size.x + gap + right_w * 0.55, button_height))
@@ -272,9 +272,14 @@ func _draw() -> void:
 	HudStyle.draw_panel(self, _about, true)
 	_text(font, _about.position + Vector2(12, 24), "WHAT IT DOES", big_font_size - 2, AMBER, _about.size.x - 24)
 	var about := about_text.format({"drain": _number(mainframe.drain_per_minute), "seal": _number(mainframe.drain_per_district)})
-	var about_lines := maxi(1, int((_about.size.y - 40.0) / (detail_font_size + 4)))
-	draw_multiline_string(font, _about.position + Vector2(12, 46), about, HORIZONTAL_ALIGNMENT_LEFT, _about.size.x - 24,
-		detail_font_size, about_lines, Color(style.text_color, 0.85))
+	var about_w := _about.size.x - 24.0
+	var about_h := _about.size.y - 36.0
+	var about_fs := detail_font_size
+	while about_fs > 10 and font.get_multiline_string_size(about, HORIZONTAL_ALIGNMENT_LEFT, about_w, about_fs).y > about_h:
+		about_fs -= 1
+	var about_lines := maxi(1, int(about_h / font.get_height(about_fs)))
+	draw_multiline_string(font, _about.position + Vector2(12, 42), about, HORIZONTAL_ALIGNMENT_LEFT, about_w,
+		about_fs, about_lines, Color(style.text_color, 0.85))
 
 	# The tier table: which cells, what it's called, when your exit opens. Your row is lit.
 	HudStyle.draw_panel(self, _table, true)

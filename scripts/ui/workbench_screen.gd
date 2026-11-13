@@ -324,7 +324,7 @@ func _draw() -> void:
 	var money := "$%d    %d SCRAP" % [Wallet.instance.cash_of(me), ItemManager.instance.scrap_count_of(me)]
 	_text_right(font, Vector2(_panel.end.x - 14, _panel.position.y + 30), money, title_font_size - 2, GOOD)
 	var money_w := font.get_string_size(money, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size - 2).x
-	_text_right(font, Vector2(_panel.end.x - 24 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
+	_text_right(font, Vector2(_panel.end.x - 34 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
 	# The selected cat (left of the content area)
 	var npc := npc_for_tab(tab)
 	var state := tab_state(tab)
@@ -497,9 +497,12 @@ class CardFace extends Control:
 		var top := upgrades.max_tier(upgrade_id)
 		var maxed := tier >= top
 		var title: String = info.get("name", upgrade_id) + (" (CREW)" if info.get("crew", false) else "")
-		var buy_w := 190.0
+		var buy_w := minf(190.0, size.x * 0.40)
 		var text_w := size.x - buy_w - 24.0
-		_text(font, Vector2(10, 6 + screen.card_title_size), title, screen.card_title_size, Color.WHITE, text_w)
+		var title_fs := screen.card_title_size
+		while title_fs > 12 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_fs).x > text_w:
+			title_fs -= 1
+		_text(font, Vector2(10, 6 + title_fs), title, title_fs, Color.WHITE, text_w)
 		# Tier pips: [■ ■ □] TIER 2/3
 		var pip := 9.0
 		var px := 10.0
@@ -527,8 +530,11 @@ class CardFace extends Control:
 			fill = Color(0.1, 0.45, 0.25, 0.85) if can else Color(0.35, 0.1, 0.1, 0.8)
 		draw_rect(pill, fill)
 		draw_rect(pill, Color(style.border_color, 0.6), false, Hud.line(1.0))
-		var lw := minf(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.detail_font_size + 1).x, buy_w - 8)
-		_text(font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + 5), label, screen.detail_font_size + 1, Color.WHITE, buy_w - 8)
+		var pill_fs := screen.detail_font_size + 1
+		while pill_fs > 10 and font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pill_fs).x > buy_w - 10:
+			pill_fs -= 1
+		var lw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pill_fs).x
+		_text(font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + pill_fs * 0.35), label, pill_fs, Color.WHITE, buy_w - 8)
 
 	func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
 		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))

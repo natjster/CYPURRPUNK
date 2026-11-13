@@ -375,9 +375,12 @@ func _draw() -> void:
 	if job.size.y > 0.0:
 		HudStyle.draw_panel(self, job)
 		var cash_right := job.end.x - (134.0 if _abandon_button.visible else 10.0)
+		var cash_w := 0.0
 		if owner_cat != null and is_instance_valid(owner_cat):
-			_text_right(font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, Color(0.55, 1, 0.6))
-		_text(font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, cash_right - job.position.x - 62.0)
+			var cash_text := "$%d" % Wallet.instance.cash_of(owner_cat.player_id)
+			cash_w = font.get_string_size(cash_text, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size).x
+			_text_right(font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), cash_text, title_font_size, Color(0.55, 1, 0.6))
+		_text(font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, maxf(40.0, cash_right - job.position.x - cash_w - 20.0))
 	# Row titles
 	var paw_rect := _paw_buttons[0].get_rect()
 	_text(font, paw_rect.position + Vector2(2, -5), "PAWS", title_font_size - 3, style.text_color)
@@ -468,7 +471,7 @@ func _show_job(cat: CatPlayer) -> void:
 	var data: QuestData = quests.catalog.get(quest_id)
 	if data == null:
 		_abandon_armed = false
-		_job_text = "JOB: none - talk to the cats in the sewers"
+		_job_text = "JOB: none - talk to cats in sewers"
 		return
 	var line := "%d/%d" % [mini(quests.progress(cat.player_id, quest_id), data.count), data.count]
 	if quests.is_in_state(cat.player_id, quest_id, "ready"):

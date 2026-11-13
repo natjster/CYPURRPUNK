@@ -308,7 +308,7 @@ func _build_coop_screen() -> void:
 
 
 func _build_landing_screen() -> void:
-	landing_screen = _screen_box("LandingScreen", Vector2(40, 82), Vector2(280, 236))
+	landing_screen = _screen_box("LandingScreen", Vector2(40, 76), Vector2(280, 236))
 	landing_screen.add_theme_constant_override("separation", 2)
 	_landing_title = Label.new()
 	_landing_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -322,6 +322,7 @@ func _build_landing_screen() -> void:
 	_p1_left.custom_minimum_size.x = 16
 	_p1_button = _menu_button(p1_row, "P1", _on_p1_cat_pressed, 14)
 	_p1_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_p1_button.clip_text = true
 	_p1_button.add_theme_color_override("font_color", Seats.color(0))
 	_p1_right = _menu_button(p1_row, ">", Seats.cycle_p1_cat.bind(1), 14)
 	_p1_right.custom_minimum_size.x = 16
@@ -334,20 +335,25 @@ func _build_landing_screen() -> void:
 	_mode_left.custom_minimum_size.x = 16
 	_mode_button = _menu_button(mode_row, "MODE", _on_mode_pressed, 13)
 	_mode_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mode_button.clip_text = true
 	_mode_right = _menu_button(mode_row, ">", _on_mode_pressed, 13)
 	_mode_right.custom_minimum_size.x = 16
 	# Player 1's gang (scripts/teams.gd): A on it switches Catleone Family <-> Burrow Gang.
 	# (TURF WAR only: hidden in CO-OP.)
 	_p1_team_button = _menu_button(landing_screen, "", _on_p1_team_pressed, 13)
+	_p1_team_button.clip_text = true
 	for seat in range(1, PlayerId.MAX_LOCAL):
 		var row := Label.new()
-		row.custom_minimum_size = Vector2(0, 13)
+		row.custom_minimum_size = Vector2(240, 13)
 		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.clip_text = true
 		row.add_theme_color_override("font_color", Seats.color(seat))
 		landing_screen.add_child(row)
 		_seat_labels.append(row)
 	_landing_hint = Label.new()
 	_landing_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_landing_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_landing_hint.custom_minimum_size.x = 240
 	_landing_hint.modulate = Color(1, 1, 1, 0.6)
 	landing_screen.add_child(_landing_hint)
 	var buttons := HBoxContainer.new()
@@ -384,15 +390,15 @@ func _refresh_landing() -> void:
 		_seat_labels[i].modulate.a = 1.0 if cat != "" else 0.55
 	# (Players 2-4 have no highlight on this page, so their left / right picks their cat.)
 	var gang_keys := "  %s/%s = GANG" % [Controls.display_name("Pad LB"), Controls.display_name("Pad RB")] if turf_war else ""
-	_landing_hint.text = "P2-4: LEFT/RIGHT = CAT%s  %s = EDIT  %s = LEAVE" % [gang_keys,
+	_landing_hint.text = "P2-4: L/R = CAT%s  %s = EDIT  %s = LEAVE" % [gang_keys,
 		Controls.display_name("Pad A"), Controls.display_name("Pad B")]
 	if not turf_war:
 		# (Room for one more line in CO-OP: in TURF WAR the gang button takes that space.)
-		_landing_hint.text += "\nCO-OP = ONE CREW.  TURF WAR = GANG VS GANG (BEST WITH 4+)"
+		_landing_hint.text += "\nCO-OP = ONE CREW.  TURF WAR = GANGS (4+)"
 	_link_landing_focus()
 	if Seats.pads[0] != -1:
 		# Player 1 has been using a controller: its START hands it to a new player (scripts/seats.gd).
-		_landing_hint.text += "\nP1: %s ON YOUR CONTROLLER = GIVE IT TO A NEW PLAYER (YOU KEEP THE KEYBOARD)" % \
+		_landing_hint.text += "\nP1: %s ON PAD = GIVE TO NEW PLAYER" % \
 			Controls.display_name("Pad Start")
 
 

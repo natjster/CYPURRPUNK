@@ -354,15 +354,18 @@ func _layout() -> void:
 		_place(shown[i], Rect2(tile_x + i * (tile + gap), y, tile, tile * 0.72 + 20.0))
 	y += tile * 0.72 + 20.0 + gap * 2
 	# Bottom up: the info box, the SELL strip, then the picked item fills the middle.
-	var info_h := 56.0
+	var compact := size.y < 640.0
+	var info_h := 46.0 if compact else 56.0
+	var sell_h_box := minf(sell_strip_height, 78.0) if compact else sell_strip_height
 	_info_rect = Rect2(x, _panel.end.y - info_h - 10.0, inner_w, info_h)
-	_sell_rect = Rect2(x, _info_rect.position.y - gap - sell_strip_height, inner_w, sell_strip_height)
+	_sell_rect = Rect2(x, _info_rect.position.y - gap - sell_h_box, inner_w, sell_h_box)
 	var middle_h := _sell_rect.position.y - gap - y
 	var picture_w := minf(inner_w * 0.24, middle_h * 1.3)
 	_picture = Rect2(x, y, picture_w, middle_h)
 	var card_x := x + inner_w * 0.5
 	_card = Rect2(card_x, y, _panel.end.x - 12.0 - card_x, middle_h)
-	_place(_buy, Rect2(_card.position.x + 12, _card.end.y - button_height - 12, _card.size.x - 24, button_height))
+	var buy_h := minf(button_height, 34.0) if middle_h < 140.0 else button_height
+	_place(_buy, Rect2(_card.position.x + 12, _card.end.y - buy_h - 10, _card.size.x - 24, buy_h))
 	# The SELL strip: your things, then SELL ALL LOOT on the right.
 	var all_w := 236.0
 	_place(_sell_all, Rect2(_sell_rect.end.x - all_w - 10, _sell_rect.position.y + 30, all_w, _sell_rect.size.y - 40))
@@ -399,22 +402,28 @@ func _draw() -> void:
 		draw_item_picture(self, selected, _picture.grow(-14), locked, 2.0)
 		var tx := _picture.end.x + 14
 		var tw := _card.position.x - tx - 12
-		var ty := _picture.position.y + 26
+		var ty := _picture.position.y + 24
+		var step := minf(46.0, maxf(30.0, (_picture.size.y - 44.0) * 0.5))
 		_text(font, Vector2(tx, ty), data.display_name, name_font_size, Color(style.text_color, 0.55) if locked else Color.WHITE, tw)
-		_text(font, Vector2(tx, ty + 22), TAB_TITLES[tab], detail_font_size, AMBER, tw)
-		_text(font, Vector2(tx, ty + 52), "PRICE", detail_font_size, Color(style.text_color, 0.6), tw)
-		_text(font, Vector2(tx, ty + 70), "$%d" % data.price, detail_font_size + 3, GOOD, tw)
-		_text(font, Vector2(tx, ty + 98), "SELLS BACK FOR", detail_font_size, Color(style.text_color, 0.6), tw)
-		_text(font, Vector2(tx, ty + 116), "$%d" % ItemManager.instance.sell_price_for(owner_cat.player_id, selected), detail_font_size + 3,
+		_text(font, Vector2(tx, ty + 20), TAB_TITLES[tab], detail_font_size, AMBER, tw)
+		var price_y := ty + 20 + step * 0.65
+		_text(font, Vector2(tx, price_y), "PRICE", detail_font_size, Color(style.text_color, 0.6), tw)
+		_text(font, Vector2(tx, price_y + 17), "$%d" % data.price, detail_font_size + 3, GOOD, tw)
+		var sell_y := price_y + step
+		_text(font, Vector2(tx, sell_y), "SELLS BACK FOR", detail_font_size, Color(style.text_color, 0.6), tw)
+		_text(font, Vector2(tx, sell_y + 17), "$%d" % ItemManager.instance.sell_price_for(owner_cat.player_id, selected), detail_font_size + 3,
 			Color(style.text_color, 0.85), tw)
 		HudStyle.draw_panel(self, _card)
 		var cw := _card.size.x - 28
-		_text(font, _card.position + Vector2(14, 30), data.display_name, name_font_size, AMBER, cw)
+		_text(font, _card.position + Vector2(14, 28), data.display_name, name_font_size, AMBER, cw)
 		if locked:
-			_text(font, _card.position + Vector2(14, 54), locked_text % Upgrades.crate_for(selected), detail_font_size + 1, AMBER, cw)
-		var lines := maxi(1, int((_buy.position.y - _card.position.y - 84.0) / (detail_font_size + 5)))
-		draw_multiline_string(font, _card.position + Vector2(14, 80 if locked else 56), data.description, HORIZONTAL_ALIGNMENT_LEFT, cw,
-			detail_font_size + 1, lines, Color(style.text_color, 0.8))
+			_text(font, _card.position + Vector2(14, 50), locked_text % Upgrades.crate_for(selected), detail_font_size + 1, AMBER, cw)
+		var desc_y := 74.0 if locked else 52.0
+		var avail_h := _buy.position.y - (_card.position.y + desc_y) - 4.0
+		var lines := int(floor(avail_h / float(detail_font_size + 5)))
+		if lines >= 1:
+			draw_multiline_string(font, _card.position + Vector2(14, desc_y), data.description, HORIZONTAL_ALIGNMENT_LEFT, cw,
+				detail_font_size + 1, lines, Color(style.text_color, 0.8))
 
 	# The SELL strip.
 	HudStyle.draw_panel(self, _sell_rect, true)
