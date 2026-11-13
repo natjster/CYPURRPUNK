@@ -274,9 +274,16 @@ func _physics_process(delta: float) -> void:
 				_back_to_patrol()
 			else:
 				var to_noise := Motion.flat(_noise_spot - global_position)
-				if to_noise.length() > 1.5 and not _is_stuck(delta):
-					move = to_noise
-					speed = patrol_speed * 1.6
+				if to_noise.length() > 1.5:
+					if _is_stuck(delta):
+						_back_to_patrol()
+					else:
+						_replan_left -= delta
+						if _replan_left <= 0.0:
+							_replan_left = 1.0 / replans_per_second
+							_route_point = _route_to(_noise_spot)
+						move = Motion.flat(_route_point - global_position)
+						speed = patrol_speed * 1.6
 				else:
 					model.rotation.y += delta * 2.5  # there: spin round looking for the cat
 		State.CHASE:
@@ -365,10 +372,13 @@ func _find_cat_to_chase(sight: float = 1.0) -> CatPlayer:
 ## crossing in the cat's row/column, turn, and repeat. Without this the MEGA VAC-COP (which
 ## spots you from across town) drove straight into the first building and stayed there.
 func _chase_point(cat: CatPlayer) -> Vector3:
-	var goal := cat.global_position
+	return _route_to(cat.global_position, cat)
+
+
+func _route_to(goal: Vector3, skip_cat: CatPlayer = null) -> Vector3:
 	if breach_hub != null:
 		return breach_hub.next_stop(global_position, goal)  # (no streets down here)
-	if _clear_line_to(cat):
+	if _clear_line_to_point(goal, skip_cat):
 		return goal
 	var city := Game.instance.city
 	var pitch := city.block_size + city.street_width  # streets run along every multiple of this
@@ -406,11 +416,17 @@ func _chase_point(cat: CatPlayer) -> Vector3:
 
 ## True if nothing solid (buildings, crates, the car) is between us and the cat.
 func _clear_line_to(cat: CatPlayer) -> bool:
+	return _clear_line_to_point(cat.global_position, cat)
+
+
+func _clear_line_to_point(goal: Vector3, skip_cat: CatPlayer = null) -> bool:
 	var from := global_position + Vector3(0, 0.5, 0)
-	var skip: Array[RID] = [get_rid(), cat.get_rid()]
-	if cat.riding_car != null:
-		skip.append(cat.riding_car.get_rid())  # chasing a car: the car itself isn't "in the way"
-	var query := PhysicsRayQueryParameters3D.create(from, cat.global_position + Vector3(0, 0.5, 0), 1, skip)
+	var skip: Array[RID] = [get_rid()]
+	if skip_cat != null:
+		skip.append(skip_cat.get_rid())
+		if skip_cat.riding_car != null:
+			skip.append(skip_cat.riding_car.get_rid())  # chasing a car: the car itself isn't "in the way"
+	var query := PhysicsRayQueryParameters3D.create(from, goal + Vector3(0, 0.5, 0), 1, skip)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
@@ -516,6 +532,7 @@ func hear(spot: Vector3) -> bool:
 	_drop_mess()
 	_noise_spot = spot
 	_busy_left = investigate_seconds
+	_replan_left = 0.0
 	state = State.INVESTIGATE
 	_stuck_time = 0.0
 	_stuck_check_at = global_position

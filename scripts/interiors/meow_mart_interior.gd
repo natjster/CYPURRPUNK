@@ -135,6 +135,8 @@ static var instance: MeowMartInterior
 ## OVERCLEAN's line (res://sounds/sfx/<sound>.wav) and its words.
 @export var alarm_sound: String = "overclean_mart_alarm"
 @export var alarm_line: String = "AQUATIC DISPLAY BREACH DETECTED. ALL UNITS DISPATCHED TO MEOW-MART."
+## Loudness of the store klaxon (dB; negative is quieter).
+@export var alarm_volume_db: float = -12.0
 
 # --- The layout (metres, from the store's own middle; the floor is at 0) ---
 ## (Store coordinates: x = east, z = south = out of the front door, 0 = the middle of the floor.
@@ -1125,7 +1127,7 @@ func _animate_lights(delta: float) -> void:
 func _alarm_sounds(on: bool) -> void:
 	if on:
 		if _alarm_loop == null or not is_instance_valid(_alarm_loop):
-			_alarm_loop = Sound.attach_loop("store_alarm", _alarm_speaker, 2.0)
+			_alarm_loop = Sound.attach_loop("store_alarm", _alarm_speaker, alarm_volume_db)
 	else:
 		if _alarm_loop != null and is_instance_valid(_alarm_loop):
 			_alarm_loop.queue_free()
@@ -1145,7 +1147,7 @@ func _update_street_alarm() -> void:
 	_street_alarm.global_position = door + street_outward() * 0.6 + Vector3(0, 3.4, 0)
 	_street_alarm_light.light_energy = 4.0 * (0.5 + 0.5 * sin(_clock * TAU * 1.6))
 	if _street_alarm_loop == null or not is_instance_valid(_street_alarm_loop):
-		_street_alarm_loop = Sound.attach_loop("store_alarm", _street_alarm, 0.0)
+		_street_alarm_loop = Sound.attach_loop("store_alarm", _street_alarm, alarm_volume_db - 2.0)
 
 
 static func _smooth(t: float) -> float:
@@ -1203,7 +1205,6 @@ func _build() -> void:
 	_build_front(shell)
 	_build_back_wall(shell)
 	_build_lights()
-	_build_signs()
 	_build_checkouts(shell)
 	for aisle in AISLE_X.size():
 		_build_aisle(aisle)
@@ -1293,7 +1294,6 @@ func _build_back_wall(shell: StaticBody3D) -> void:
 	# The push bar on the back room side (E: OPEN DOOR), with a green light.
 	var bar := LevelKit.add_box(self, EXIT_BUTTON_SPOT - Vector3(0, 0, 0.05), Vector3(0.6, 0.15, 0.1), _neon_mat, false)
 	bar.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.4))
-	LevelKit.add_sign(self, "PUSH TO EXIT", EXIT_BUTTON_SPOT + Vector3(0, 0.35, -0.12), Color(0.2, 1, 0.4), 18, PI)
 
 
 func _build_lights() -> void:
@@ -1304,18 +1304,8 @@ func _build_lights() -> void:
 		tube.set_instance_shader_parameter("instance_tint", light_color)
 		_tubes.append(tube)
 		_lights.append(LevelKit.add_light(self, Vector3(spot.x, ROOM.y - 0.5, spot.z), light_color, light_energy, light_range))
-
-
-func _build_signs() -> void:
-	LevelKit.add_sign(self, "MEOW-MART", Vector3(-4.0, 3.6, BACK_WALL_Z + WALL * 0.5 + 0.05), Color(1, 0.1, 0.65), 72, 0.0)
 	LevelKit.add_light(self, Vector3(-4.0, 3.4, BACK_WALL_Z + 1.0), Color(1, 0.15, 0.6), 1.5, 6.0)
-	LevelKit.add_sign(self, "CHECKOUT", Vector3((CHECKOUT_X[0] + CHECKOUT_X[1]) * 0.5, 3.4, CHECKOUT_Z + 1.2), Color(0.2, 0.9, 1), 40, 0.0)
-	LevelKit.add_sign(self, "FRESH CATCH", Vector3(ROOM.x * 0.5 - 0.05, 2.9, (COUNTER_Z.x + COUNTER_Z.y) * 0.5), Color(0.3, 0.85, 1), 48, -PI / 2)
 	LevelKit.add_light(self, Vector3(COUNTER_X - 1.2, 2.6, (COUNTER_Z.x + COUNTER_Z.y) * 0.5), Color(0.3, 0.8, 1), 1.4, 6.0)
-	LevelKit.add_sign(self, "EMPLOYEES ONLY", Vector3(SECURITY_DOOR_X, SECURITY_DOOR_HEIGHT + 0.5, BACK_WALL_Z + WALL * 0.5 + 0.05), Color(1, 0.15, 0.1), 28, 0.0)
-	LevelKit.add_sign(self, "SECURITY SCALE\nSTAND HERE", Vector3(-ROOM.x * 0.5 + 0.05, 1.9, PLATE_SPOT.z), Color(1, 0.75, 0.15), 22, PI / 2)
-	for aisle in AISLE_X.size():
-		LevelKit.add_sign(self, "AISLE %d" % (aisle + 1), Vector3(AISLE_X[aisle], 3.3, AISLE_Z + AISLE_LENGTH * 0.5 + 0.2), Color(0.3, 1, 0.5), 32, 0.0)
 
 
 func _build_checkouts(shell: StaticBody3D) -> void:
