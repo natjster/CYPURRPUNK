@@ -58,32 +58,3 @@ func _nearest_roomba(scene: Node, from: Vector3) -> Roomba:
 		if best == null or from.distance_to(roomba.global_position) < from.distance_to(best.global_position):
 			best = roomba
 	return best
-
-
-## How many of this item lie on the street / sewer floors right now.
-func _count_world_items(item_id: String) -> int:
-	var count := 0
-	for id in ItemManager.instance.world:
-		count += 1 if ItemManager.instance.world[id].item == item_id else 0
-	return count
-
-
-## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all
-## the way (pressed) or let go (not pressed). Same names as Controls.PAD_BUTTONS / PAD_AXES.
-func _pad_event(pad_name: String, pressed: bool) -> InputEvent:
-	var event := Controls._event_from_name("Pad " + pad_name)
-	assert(event != null, "unknown controller name: " + pad_name)
-	event.device = int(_args.get("pad_device", "0"))
-	if event is InputEventJoypadButton:
-		event.pressed = pressed
-	elif not pressed:
-		event.axis_value = 0.0
-	return event
-
-
-## "Button 'RESUME'" for the focus printout (or "-" when nothing is highlighted).
-func _describe_focus(control: Control) -> String:
-	if control == null:
-		return "-"
-	var text: String = control.get("text") if control.get("text") != null else ""
-	return "%s '%s'" % [control.get_class(), text]

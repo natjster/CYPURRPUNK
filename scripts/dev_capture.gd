@@ -391,7 +391,7 @@ func _ready() -> void:
 			await _tutorial._tutorial_auto(player)
 			return
 		if args.has("twist") or args.has("twist_rolls"):
-			_spectate_report._print_twist(scene, args)
+			_print_twist(scene, args)
 		Events.player_extracted.connect(func(id: int, loot: int, bonus: int) -> void:
 			print("DevCapture extracted: player %d loot $%d bonus $%d (twist %s) cash now $%d" % [id, loot, bonus,
 				DistrictTwist.name_of(DistrictTwist.current_kind()), Wallet.instance.cash_of(id)]))
@@ -626,8 +626,52 @@ func _ready() -> void:
 			await _announce(args)
 		if args.has("portrait"):
 			_lineups._portrait(player, args)
-		if args.has("drive") or args.has("car_watch"):
-			await _cars._drive_and_ride(scene, player, args)
+		if args.has("drive"):
+			for i in 20:
+				await get_tree().process_frame  # let the host see our new position first
+			# Walk up to our gang's car first (each gang's car parks in its own corner).
+			var my_car := _car_for(player)
+			if my_car.global_position.distance_to(player.global_position) > 4.0:
+				player.teleport_to(my_car.global_position + my_car.global_basis.x * -2.5, 0.0)
+				for i in 20:
+					await get_tree().process_frame
+			my_car.request_enter.rpc_id(1, player.player_id)
+			if args.has("ride_along"):
+				# Split screen: these couch slots walk up to the car and press E too (passenger seats).
+				var car := _car_for(player)
+				for i in 20:
+					await get_tree().process_frame  # the driver gets in first
+				for ride_slot in args["ride_along"].split(","):
+					var rider: CatPlayer = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(ride_slot)))
+					if rider == null:
+						continue
+					rider.teleport_to(car.global_position + Vector3(2.5, 0.5, 0), 0.0)
+					for i in 10:
+						await get_tree().physics_frame
+					car.interact(rider)
+					for i in 10:
+						await get_tree().process_frame
+				print("DevCapture ride_along: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
+				if args.has("ride_exit"):
+					# --ride_exit=S: that passenger hops out again.
+					car.request_exit.rpc_id(1, PlayerId.make(multiplayer.get_unique_id(), int(args["ride_exit"])))
+					for i in 20:
+						await get_tree().process_frame
+					print("DevCapture ride_exit: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
+			if args.has("car_mouse"):
+				for i in 20:
+					await get_tree().process_frame  # wait until we're behind the wheel
+				var car := _car_for(player)
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+				var motion := InputEventMouseMotion.new()
+				motion.relative = Vector2(float(args["car_mouse"]), 0)
+				motion.position = Vector2(get_window().size) / 2.0
+				Input.parse_input_event(motion)
+				for i in 3:
+					await get_tree().process_frame
+				print("DevCapture car_mouse: driver=%d look_yaw=%.2f look_pitch=%.2f" % [car.driver_id, car.look_yaw, car.look_pitch])
+		if args.has("car_watch"):
+			_watch_car_camera(_car_for(player), int(args["car_watch"]))
 		if args.has("grab"):
 			# For each item named: stand next to the nearest one and press E (send what E sends).
 			var items := ItemManager.instance
@@ -661,8 +705,91 @@ func _ready() -> void:
 			ItemManager.instance.request_drop_item.rpc_id(1, player.player_id, parts[0], int(parts[1]), ItemManager.instance.ground_in_front_of(player))
 			for i in 10:
 				await get_tree().process_frame
-		if args.has("bait_roomba") or args.has("zap_roomba") or args.has("eye_test") or args.has("stun_roomba") or args.has("kill_roombas"):
-			await _fights._roomba_actions(scene, player, args)
+		if args.has("bait_roomba"):
+			# --bait_roomba=4: 4 m in front of the cat.  --bait_roomba=aim: right under the crosshair
+			# (where the camera's centre line meets the ground), stunned so it stays put a moment.
+			for i in 20:
+				await get_tree().process_frame  # let the camera settle (over-the-shoulder slide)
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			if args.has("no_boss_sign") and roomba.has_node("BossSign"):
+				roomba.get_node("BossSign").visible = false  # --no_boss_sign: no "MEGA VAC-COP" over it (thumbnails)
+			if not multiplayer.is_server():
+				# A client can't move the host's Roombas, so walk our cat up to one instead.
+				player.teleport_to(roomba.global_position + Vector3(float(args["bait_roomba"]), 0, 0), 0.0)
+			elif args["bait_roomba"] == "aim":
+				var camera := player.camera
+				var aim := -camera.global_basis.z
+				var t := (camera.global_position.y - 0.15) / maxf(-aim.y, 0.01)
+				roomba.global_position = camera.global_position + aim * t - Vector3(0, 0.05, 0)
+				roomba.state = Roomba.State.STUNNED
+				roomba._stun_left = 3.0
+			else:
+				var ahead := -player.camera_pivot.global_basis.z
+				roomba.global_position = player.global_position + Vector3(ahead.x, 0, ahead.z).normalized() * float(args["bait_roomba"]) + Vector3(0, 0.1, 0)
+			print("DevCapture bait: %s placed at %s" % [roomba.name, roomba.global_position.snapped(Vector3.ONE * 0.1)])
+		if args.has("zap_roomba"):
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			for i in int(args["zap_roomba"]):
+				# Through the hit framework (hit.gd), like a real bolt: works on a client too.
+				var hit := Hit.new()
+				hit.shooter = player
+				hit.damage = 34
+				roomba.receive_hit(hit)
+		if args.has("eye_test"):
+			# --eye_test: two real physics rays at the picked bot (add --roomba=boss/drone/trapper):
+			# one straight into its glowing Eye from 2.5 m in front, one into its side. Both go through
+			# the hit framework with damage 40 and NO rolled crit (like a gun with Crit Chance 0), so
+			# only the EYE WEAK SPOT can make one a crit. Prints a "DevCapture eye_test" line each.
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			await get_tree().physics_frame
+			var centre := roomba.eye_centre()
+			var looking := -roomba.model.global_basis.z.normalized()
+			var shots := {
+				"eye": [centre + looking * 2.5, centre],
+				"body": [roomba.global_position + roomba.model.global_basis.x.normalized() * 4.0 + Vector3.UP * 0.12 * roomba.model.scale.x,
+					roomba.global_position + Vector3.UP * 0.12 * roomba.model.scale.x],
+			}
+			for kind in shots:
+				var from: Vector3 = shots[kind][0]
+				var to: Vector3 = shots[kind][1]
+				var query := PhysicsRayQueryParameters3D.create(from, from + (to - from).normalized() * 8.0)
+				query.exclude = [player.get_rid()]
+				var ray := player.get_world_3d().direct_space_state.intersect_ray(query)
+				var target := Hit.target_of(ray.get("collider")) if not ray.is_empty() else null
+				if target != roomba:
+					print("DevCapture eye_test %s: MISSED (hit %s)" % [kind, ray.get("collider")])
+					continue
+				var hit := Hit.new()
+				hit.shooter = player
+				hit.damage = 40
+				hit.crit = false
+				hit.direction = (to - from).normalized()
+				hit.position = ray["position"]
+				roomba.receive_hit(hit)
+				print("DevCapture eye_test %s: bot=%s crit=%s damage=%d at=%s eye_flash=%s" % [kind, roomba.display_name,
+					hit.crit, hit.damage, hit.position.snapped(Vector3.ONE * 0.01), roomba.eye_flashing()])
+		if args.has("stun_roomba") and multiplayer.is_server():
+			# --stun_roomba=S: (host) stun the picked enemy for S seconds, like a YARN-ZOOKA hit.
+			var roomba: Roomba = await _pick_roomba(scene, player.global_position, args)
+			roomba._on_stunned(float(args["stun_roomba"]))
+		if args.has("kill_roombas") and multiplayer.is_server():
+			# (host) destroy N regular Roombas as if shot to death (every 3 calls in the MEGA VAC-COP).
+			for i in int(args["kill_roombas"]):
+				for node in scene.get_node("Roombas").get_children():
+					var victim := node as Roomba  # (any patrol unit: drones and Lint-Trappers count too)
+					if victim != null and (not victim.is_boss or args.has("kill_bosses")) and not victim.is_queued_for_deletion():
+						victim.take_hit.rpc_id(1, player.player_id, 500)  # (credited to us, like a real shot)
+						break
+				await get_tree().physics_frame
+			if args.has("kill_bosses"):
+				for i in 5:
+					await get_tree().physics_frame
+				print("DevCapture kill_bosses: ELECTRONICS on the street=%d SCRAP=%d" % [_count_world_items(Mainframe.FUEL_ID), _count_world_items("scrap")])
+			if args.has("twist"):
+				for i in 5:
+					await get_tree().physics_frame
+				print("DevCapture twist scrap: %d regular kills -> %d SCRAP on the street (twist %s)" % [int(args["kill_roombas"]),
+					_count_world_items("scrap"), DistrictTwist.name_of(DistrictTwist.current_kind()) if DistrictTwist.current_kind() != 0 else "NONE"])
 		if args.has("mess") or args.has("ram_prop") or args.has("scratch") or args.has("shoot_prop") or args.has("meow") or args.has("mess_log") or args.has("ghost") or args.has("use_prop") or args.has("look_prop") or args.has("instant_props"):
 			await _mess._mess_tests(scene, player, args)
 		if args.has("spectate") or args.has("spectate_ko"):
@@ -707,8 +834,85 @@ func _ready() -> void:
 				await get_tree().physics_frame
 			print("DevCapture deploy_again: went_up=%s in_hub=%s heat=%.1f" % [FishHeist.instance.has_been_up(player.player_id),
 				UndergroundHub.is_in_hub(player.global_position), HeatMeter.instance.heat])
-		if args.has("hold") or args.has("pad") or args.has("drop_after") or args.has("jump_test"):
-			await _moves._input_and_jump_actions(scene, player, args)
+		if args.has("hold"):
+			# Pretend a key is held down, e.g. --hold=move_forward --hold_frames=60
+			for i in int(args.get("hold_delay", "30")):
+				await get_tree().process_frame
+			# Several at once with a comma list, e.g. --hold=shoot,use_left (fire both pistols).
+			# --hold_all = every player on this computer holds them (split-screen trailer shots).
+			var slots: Array = [player.slot]
+			if args.has("hold_all"):
+				slots = scene.local_cats().map(func(c): return c.slot)
+			for action in args["hold"].split(","):
+				for slot in slots:
+					Input.action_press(Seats.action(slot, action))  # the test player's own controls
+			for i in int(args.get("hold_frames", "60")):
+				await get_tree().process_frame
+			if not args.has("keep_holding"):  # --keep_holding = still held when the snap is taken
+				for action in args["hold"].split(","):
+					for slot in slots:
+						Input.action_release(Seats.action(slot, action))
+		if args.has("pad"):
+			# Push the controller like a player would, e.g. --pad=Right_Stick_Right --hold_frames=30
+			for i in int(args.get("hold_delay", "30")):
+				await get_tree().process_frame
+			var yaw_before := player.camera_pivot.rotation.y
+			var pos_before := player.global_position
+			var all_before := {}
+			for cat in scene.local_cats():
+				all_before[cat] = cat.global_position
+			var pads: PackedStringArray = args["pad"].replace("_", " ").split(",")
+			if player.slot == 0:
+				Seats.claim_for_p1(int(args.get("pad_device", "0")))  # (as if used in the start menu)
+			for pad in pads:
+				Input.parse_input_event(_pad_event(pad, true))
+			for i in int(args.get("hold_frames", "60")):
+				await get_tree().process_frame
+			var car := _car_for(player)
+			var held: Array = []
+			for entry in Controls.ACTIONS:
+				if Input.is_action_pressed(entry.action):
+					held.append(entry.action)
+			print("DevCapture pad held: %s" % [held])
+			for cat in all_before:
+				print("DevCapture pad moved: %s (slot %d) %.2f m" % [cat.name, cat.slot, cat.global_position.distance_to(all_before[cat])])
+			print("DevCapture pad %s: using_pad=%s yaw turned %.2f rad, cat moved %.2f m, car throttle %.2f steer %.2f, speed %.1f, prompt key=%s" % [
+				args["pad"], Controls.using_pad, player.camera_pivot.rotation.y - yaw_before,
+				player.global_position.distance_to(pos_before), car.throttle, car.steer,
+				car.linear_velocity.length(), Controls.key_text("interact")])
+			if not args.has("keep_holding"):
+				for pad in pads:
+					Input.parse_input_event(_pad_event(pad, false))
+		if args.has("drop_after"):
+			# Wait, then drop what's in the paws (what G does).
+			for i in int(args["drop_after"]):
+				await get_tree().process_frame
+			ItemManager.instance.drop_from(player)
+		if args.has("jump_test"):
+			# Jump, press jump again in mid-air, and report the highest point reached.
+			# (Catdip in a QUICK USE slot from --give=catdip? Use it first, like pressing its key.)
+			var quick := ItemManager.instance.quick_slots(player.player_id)
+			for slot in 2:
+				if player.air_jumps == 0 and not quick[slot].is_empty() and quick[slot][0] == "catdip":
+					ItemManager.instance.request_quick_use.rpc_id(1, player.player_id, slot)
+					for f in 20:
+						await get_tree().physics_frame
+			var ground_y := player.global_position.y
+			var peak := ground_y
+			var spin := 0.0  # how far the model turned nose-first (the double jump FRONT FLIP)
+			for i in 100:
+				if i == 0 or i == 18:
+					Input.action_press(Seats.action(player.slot, "jump"))
+				elif i == 2 or i == 20:
+					Input.action_release(Seats.action(player.slot, "jump"))
+				await get_tree().physics_frame
+				peak = maxf(peak, player.global_position.y)
+				spin = minf(spin, player.cat_model.rotation.x)
+				if args.has("flip_snap") and i == int(args.get("flip_frame", "26")):
+					# --flip_snap=shots/x.png [--flip_frame=N]: a picture mid-flip
+					await RenderingServer.frame_post_draw
+					get_tree().root.get_texture().get_image().save_png("res://" + args["flip_snap"])
+			print("DevCapture jump: peak height %.2f m (air jumps active: %d) flip %d degrees" % [peak - ground_y, player.air_jumps, roundi(rad_to_deg(-spin))])
 		if args.has("exit_after"):
 			for i in int(args["exit_after"]):
 				await get_tree().process_frame
@@ -732,7 +936,117 @@ func _ready() -> void:
 
 	if player == null:
 		await _lineups._apply_look(args)  # (no game: e.g. the start menu's cat preview)
-	await _menus._open_menus_and_pads(scene, player, args)
+	if args.has("inventory"):
+		# --inventory = player 1's (same as pressing Tab); --inventory=0,1 = those split-screen seats'.
+		var seats: Array = [0] if args["inventory"] == "true" else Array(args["inventory"].split(",")).map(func(v): return int(v))
+		for seat in seats:
+			var screen := InventoryScreen.for_seat(seat)
+			var seat_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
+			if screen != null:
+				screen._set_open(true, seat_cat)
+		_menus._inventory_report.call_deferred(seats, int(args.get("frames", "90")))
+	if args.has("press_key"):
+		# --press_key=Tab: a REAL key press + release (goes through the game screen like a player's).
+		for i in 10:
+			await get_tree().physics_frame  # after --pos, let areas notice the cat (the car's DoorZone)
+		for pressed in [true, false]:
+			var key := InputEventKey.new()
+			key.physical_keycode = OS.find_keycode_from_string(args["press_key"])
+			key.keycode = key.physical_keycode
+			key.pressed = pressed
+			Input.parse_input_event(key)
+			await get_tree().process_frame
+		for i in 20:
+			await get_tree().physics_frame  # (a quick-use key asks the host first)
+		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s quick=%s speed_boost=%.1f air_jumps=%d" % [args["press_key"], InventoryScreen.for_seat(0).visible, NpcDialog.is_open_for(0), PauseMenu.is_open, ItemManager.instance.quick_slots(player.player_id), player.speed_boost, player.air_jumps])
+	# --menu=play / settings / pause   open that menu before the snap
+	# --settings_tab=N                  which settings tab to show (0 = DISPLAY)
+	if args.has("menu") and scene is Game:
+		match args["menu"]:
+			"play": scene.main_menu.show_play_screen()
+			"mode": scene.main_menu.show_mode_screen()
+			"coop": scene.main_menu.show_coop_screen()
+			"local": scene.main_menu.show_landing(false)
+			"online": scene.main_menu.show_landing(true)
+			"settings": scene.settings_menu.open()
+			"pause": scene.pause_menu.open()
+			"cat": scene.cat_creator.open(scene.pause_menu.enabled)
+			"keyboard":
+				# The address keyboard, tested with a REAL Ctrl+V and with the PASTE CODE button.
+				scene.main_menu.show_play_screen()
+				DisplayServer.clipboard_set(" meow-499a-21b0 ")
+				scene.main_menu._on_paste_pressed()
+				print("DevCapture paste button: '%s' -> %s" % [scene.main_menu.address_input.text, Net.code_to_ip(scene.main_menu.address_input.text)])
+				scene.main_menu.address_input.text = ""
+				DisplayServer.clipboard_set(" meow-499a-21b0! ")  # (the keyboard drops the !)
+				scene.main_menu._address_keyboard.open()
+				await get_tree().process_frame
+				for pressed in [true, false]:
+					var key := InputEventKey.new()
+					key.keycode = KEY_V
+					key.physical_keycode = KEY_V
+					key.ctrl_pressed = true
+					key.pressed = pressed
+					Input.parse_input_event(key)
+					await get_tree().process_frame
+				print("DevCapture keyboard Ctrl+V: '%s'" % scene.main_menu.address_input.text)
+		if args.has("settings_tab"):
+			scene.settings_menu._show_tab(int(args["settings_tab"]))
+		# --rebind=ACTION,SLOT,KEY   click a box on the KEYS tab and press KEY (e.g. jump,1,J)
+		if args.has("rebind"):
+			var parts: PackedStringArray = args["rebind"].split(",")
+			scene.settings_menu._start_listening(parts[0], int(parts[1]))
+			await get_tree().process_frame
+			if parts[2].begins_with("Pad_"):
+				Input.parse_input_event(_pad_event(parts[2].trim_prefix("Pad_").replace("_", " "), true))
+			else:
+				var press := InputEventKey.new()
+				press.physical_keycode = OS.find_keycode_from_string(parts[2])
+				press.keycode = press.physical_keycode
+				press.pressed = true
+				Input.parse_input_event(press)
+			await get_tree().process_frame
+			print("DevCapture rebind %s -> %s | hint: %s" % [parts[0], Controls.bindings[parts[0]], scene.settings_menu.hint_label.text])
+			for entry in Controls.ACTIONS:
+				print("DevCapture key %s = %s" % [entry.action, Controls.bindings[entry.action]])
+
+	if args.has("unplug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), false)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture unplug %s: own_pause=%s big_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), PauseMenu.is_open, Seats._unplugged])
+	if args.has("pad_press"):
+		# --pad_press=Start,D-Pad_Down,A : real controller presses, one every few frames.
+		# "1:Start" = START on fake controller 1 (otherwise --pad_device, default 0).
+		for i in int(args.get("pad_press_delay", "0")):  # --pad_press_delay=N: wait N frames first
+			await get_tree().process_frame
+		for pad in args["pad_press"].replace("_", " ").split(","):
+			for pressed in [true, false]:
+				var event := _pad_event(pad.get_slice(":", 1) if ":" in pad else pad, pressed)
+				if ":" in pad:
+					event.device = int(pad.get_slice(":", 0))
+				Input.parse_input_event(event)
+				for i in 4:
+					await get_tree().process_frame
+			await get_tree().process_frame  # (a join happens a moment later)
+			var game_focus := GameScreen.instance.menu_viewport.gui_get_focus_owner()  # the menus' viewport
+			var hud_focus := get_viewport().gui_get_focus_owner()
+			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s own_pause=%s lobby=%s" % [
+				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.for_seat(0).visible,
+				NpcDialog.is_open_for(0), Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus),
+				range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats.lobby_text().replace("\n", " | ")])
+
+	if args.has("remove_local") and Game.instance != null:
+		Game.instance.remove_local_player(int(args["remove_local"]))
+		print("DevCapture remove_local: slot %s dropped out" % args["remove_local"])
+
+	if args.has("replug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), true)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture replug %s: own_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats._unplugged])
 
 	for i in int(args.get("frames", "90")):
 		await get_tree().process_frame
@@ -740,7 +1054,138 @@ func _ready() -> void:
 
 	# The scene may have been reloaded meanwhile (e.g. the host quit), so look it up again.
 	scene = Game.instance
-	await _spectate_report._print_snapshot_summary(scene, _mess, args)
+	if args.has("track"):
+		await _track_other_cats(scene, int(args["track"]))
+
+	if args.has("net_stats") and multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+		# --net_stats=N: how much network data this computer sends / receives, over N frames.
+		var connection := (multiplayer.multiplayer_peer as ENetMultiplayerPeer).host
+		connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
+		connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
+		var started := Time.get_ticks_msec()
+		var peer := multiplayer.multiplayer_peer
+		for i in int(args["net_stats"]):
+			await get_tree().process_frame
+			if multiplayer.multiplayer_peer != peer:
+				break  # the game ended under us (e.g. the host quit first): stop measuring
+		var seconds := (Time.get_ticks_msec() - started) / 1000.0
+		if multiplayer.multiplayer_peer != peer or peer.get_connection_status() != MultiplayerPeer.CONNECTION_CONNECTED:
+			print("DevCapture net: the game ended after %.1f s (host left?), no measurement" % seconds)
+		else:
+			var sent := connection.pop_statistic(ENetConnection.HOST_TOTAL_SENT_DATA)
+			var received := connection.pop_statistic(ENetConnection.HOST_TOTAL_RECEIVED_DATA)
+			print("DevCapture net: sent %.1f KB/s, received %.1f KB/s over %.1f s | players=%d roombas=%d computers=%d" % [
+				sent / 1024.0 / seconds, received / 1024.0 / seconds, seconds, Game.instance.player_count(),
+				Game.instance.get_node("Roombas").get_child_count(), multiplayer.get_peers().size() + 1])
+		scene = Game.instance  # (a fresh one if the game ended and the start menu came back)
+	print("DevCapture fps=%d process=%.1fms physics=%.1fms objects=%d" % [Engine.get_frames_per_second(),
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+	# Which players' HUDs still show a middle-of-screen message / popup (split screen).
+	var showing: Array = []
+	for seat in PlayerId.MAX_LOCAL:
+		var message := Hud.element("Message", seat)
+		if message != null:
+			showing.append("P%d message=%s popup=%s" % [seat + 1, message.visible, Hud.element("Popup", seat).visible])
+	print("DevCapture hud: %s" % [showing])
+	if scene.main_menu.visible and scene.main_menu.status_label.text != "":
+		print("DevCapture menu status: %s" % scene.main_menu.status_label.text)
+	if scene.main_menu.visible and scene.main_menu.play_screen.visible:
+		print("DevCapture found games: %s" % [Net.found_games])
+	var city := scene.get_node_or_null("City") as CityGenerator
+	if city != null:
+		# Fingerprint of where every city object is: identical cities print identical numbers.
+		var layout := ""
+		for child in city.get_children():
+			if not child.is_queued_for_deletion():
+				layout += str((child as Node3D).position.snapped(Vector3.ONE * 0.01))
+		print("DevCapture city: seed=%d objects=%d fingerprint=%d meow_mart=%s" % [city.city_seed, layout.count("("), layout.hash(), city.meow_mart_position.snapped(Vector3.ONE * 0.1)])
+		# BUILDING STYLES (scripts/city_buildings.gd): how many of each this city got.
+		var styles := {}
+		for style in city.building_style_counts:
+			styles[CityBuildings.Style.keys()[style]] = city.building_style_counts[style]
+		print("DevCapture buildings: %s" % styles)
+		# The Blockbench street props (models from res://models/): how many, and a few spots.
+		var props := {}
+		for node in city.find_children("*", "Node3D", true, false):
+			var file := node.scene_file_path.get_file().get_basename()
+			if file in ["trash_bin", "traffic_cone"]:
+				if not props.has(file):
+					props[file] = []
+				props[file].append((node as Node3D).global_position.snapped(Vector3.ONE * 0.1))
+		for file in props:
+			print("DevCapture props: %d x %s, e.g. %s" % [props[file].size(), file, props[file].slice(0, 4)])
+		_mess._print_mess("snap")
+	var heist := scene.get_node_or_null("Heist") as FishHeist
+	if heist != null:
+		# --mode: which mode this computer is playing, every cat's gang, and the layout it made.
+		var manholes := heist.get_children().filter(func(n): return n is Manhole and not n.is_queued_for_deletion()).size()
+		var cats_teams := []
+		for cat_node in scene.players.get_children():
+			cats_teams.append("%s:%d" % [cat_node.name, (cat_node as CatPlayer).team])
+		var live_cars: Array = scene.cars().filter(func(c): return not c.is_queued_for_deletion())
+		print("DevCapture mode: %s cats=%s entries=%d exits=%d manholes=%d cars=%s" % [
+			"TURF WAR" if Game.is_turf_war() else "CO-OP", cats_teams,
+			1 if heist.entry_position(0) == heist.entry_position(1) else 2, heist.exit_positions.size(), manholes,
+			live_cars.map(func(c): return "%s(team %d)" % [c.name, c.team])])
+		print("DevCapture heist: entries=%s exits=%s open=%s revealed=%s sealed=%s cash=%s" % [[heist.entry_position(0), heist.entry_position(1)], heist.exit_positions, [heist.exit_is_open(0), heist.exit_is_open(1)], heist.revealed, heist.sealed, Wallet.instance.cash])
+	if HeatMeter.instance != null:
+		var regulars := 0
+		var bosses := 0
+		for roomba in scene.get_node("Roombas").get_children():
+			if roomba is Roomba and not roomba.is_queued_for_deletion():
+				if (roomba as Roomba).is_boss:
+					bosses += 1
+				else:
+					regulars += 1
+		print("DevCapture heat: %.1f level=%d roombas=%d bosses=%d" % [HeatMeter.instance.heat, HeatMeter.instance.level(), regulars, bosses])
+	var items := scene.get_node_or_null("Items") as ItemManager
+	if items != null:
+		var lying := {}
+		for id in items.world:
+			lying[items.world[id].item] = lying.get(items.world[id].item, 0) + 1
+		print("DevCapture items: on street=%s inventories=%s" % [lying, items.inventories])
+		for cat in scene.get_node("Players").get_children():
+			for hand in 2:
+				var weapon := items.held_item(cat, hand) as Weapon
+				if weapon != null:
+					print("DevCapture weapon: cat %s hand %d shots_seen=%d heat=%.2f overheated=%s" % [cat.name, hand, weapon.shots_seen, weapon.heat, weapon.is_overheated])
+	var roombas := scene.get_node_or_null("Roombas")
+	if roombas != null:
+		var lines := PackedStringArray()
+		for roomba in roombas.get_children():
+			if roomba is Roomba and not roomba.is_queued_for_deletion():
+				lines.append("%s %s %s %s hp=%d stomach=%s" % [roomba.name, roomba.display_name, Roomba.State.keys()[roomba.state], roomba.global_position.snapped(Vector3.ONE * 0.1), roomba.health, roomba.stomach])
+		print("DevCapture roombas (%d): %s" % [lines.size(), " | ".join(lines)])
+		for cat in scene.get_node("Players").get_children():
+			print("DevCapture sticky: cat %s paws=%.1f s, patches=%d, speed=%.1f, hp=%d" % [cat.name, cat._sticky_left,
+				StickyPatch.count(), Motion.flat(cat.velocity).length(), CatHealth.instance.get_health(cat.player_id)])
+	for seat in 4:
+		var compass := Hud.element("Compass", seat) as HudCompassArrow
+		if compass != null:
+			print("DevCapture compass seat %d: shown=%s text='%s' yaw=%.0f deg urgent=%s top=%.0f" % [seat, compass.visible,
+				compass._text, rad_to_deg(compass._target_yaw), compass._urgent, compass.offset_top])
+	for car in (scene as Game).cars():
+		print("DevCapture car %s (gang %d): position=%s driver=%d passengers=%s frozen=%s" % [car.name, car.team,
+			car.global_position.snapped(Vector3.ONE * 0.1), car.driver_id, car.passenger_ids, car.freeze])
+		print("DevCapture car_look %s: trim=%s wheels=%d spin=%.2f steer=%.1f deg (input %.2f) speed=%.1f" % [car.name,
+			car.trim_color().to_html(false), car._wheels.size(), car._wheel_spin, rad_to_deg(car._wheel_steer), car.steer, car._rolling_speed])
+	var players := scene.get_node_or_null("Players")
+	if players != null:
+		for cat in players.get_children():
+			print("DevCapture cat %s: name=\"%s\" tag=\"%s\" visible=%s position=%s in_hub=%s speed_boost=%.1f hp=%d knocked_out=%s team=%d" % [cat.name, cat.player_name, cat.get_node("NameTag").text, cat.visible, cat.position.snapped(Vector3.ONE * 0.1), UndergroundHub.is_in_hub(cat.global_position), cat.speed_boost, CatHealth.instance.get_health(cat.player_id), cat.knocked_out, cat.team])
+			# AIM DOWN SIGHTS + recoil (scripts/cat/cat_aim.gd).
+			print("DevCapture aim %s: aiming=%s amount=%.2f bloom=%.2f fov=%.1f arm_len=%.2f arm_x=%.2f pitch=%.1f" % [cat.name,
+				cat.aim.is_aiming(), cat.aim.amount(), cat.aim.bloom_degrees, cat.camera.fov, cat.spring_arm.spring_length,
+				cat.spring_arm.position.x, rad_to_deg(cat.spring_arm.rotation.x)])
+			# What it's wearing, as seen on THIS computer (fur colour as hex + accessories).
+			var model: Node3D = cat.cat_model
+			var worn := PackedStringArray()
+			for slot in CatLook.SLOTS:
+				var part := model.get_node_or_null("Look_" + slot.capitalize())
+				worn.append("%s=%s" % [slot, part.get_meta("part_id") if part != null else "-"])
+			var fur: Color = ((model.get_node("Body") as MeshInstance3D).get_surface_override_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
+			print("DevCapture look %s: fur=#%s %s voice=%s" % [cat.name, fur.to_html(false), " ".join(worn), CatLook.voice_of(cat.look)])
 
 	# Headless runs have no picture to save (no real renderer): all the DevCapture lines
 	# above are printed already, so just quit instead of crashing on an empty image.
@@ -762,6 +1207,46 @@ func _ready() -> void:
 	image.save_png(path)
 	print("DevCapture saved: ", path)
 	get_tree().quit()
+
+
+## Watches every OTHER player's cat for a number of frames and prints how smoothly it
+## moved on screen, next to how the raw network updates arrived.
+## "still" = frames where it didn't move at all; "jump" = biggest single-frame move.
+func _track_other_cats(scene: Node, frame_count: int) -> void:
+	var cats: Array[CatPlayer] = []
+	for node in scene.get_node("Players").get_children():
+		if not node.is_multiplayer_authority():
+			cats.append(node)
+	var last_shown := {}
+	var last_raw := {}
+	var shown_steps := {}
+	var raw_steps := {}
+	for cat in cats:
+		last_shown[cat] = cat.position
+		last_raw[cat] = cat.sync_position
+		shown_steps[cat] = []
+		raw_steps[cat] = []
+	for i in frame_count:
+		await get_tree().process_frame
+		for cat in cats:
+			shown_steps[cat].append(cat.position.distance_to(last_shown[cat]))
+			raw_steps[cat].append(cat.sync_position.distance_to(last_raw[cat]))
+			last_shown[cat] = cat.position
+			last_raw[cat] = cat.sync_position
+	for cat in cats:
+		print("DevCapture track cat %s: on screen %s | raw network %s" % [cat.name, _describe(shown_steps[cat]), _describe(raw_steps[cat])])
+
+
+func _describe(steps: Array) -> String:
+	var still := 0
+	var biggest := 0.0
+	var total := 0.0
+	for step in steps:
+		if step < 0.0005:
+			still += 1
+		biggest = maxf(biggest, step)
+		total += step
+	return "still %d/%d frames, avg %.3f m, jump %.3f m" % [still, steps.size(), total / maxf(steps.size(), 1), biggest]
 
 
 ## Test only (a client's --give): the host's test tool puts the items in that player's paws.
@@ -810,6 +1295,112 @@ func _announce(args: Dictionary) -> void:
 		if (node as FloatingLine).is_talking():
 			talking += 1
 	print("DevCapture speaker: announced \"%s\" on %d poles, subtitle shown=%s" % [a.last_text.left(50), talking, (Hud.element("Subtitle") as Control).visible if Hud.element("Subtitle") != null else false])
+
+
+## --car_watch=N: every N frames, print where the car camera is looking (runs alongside the rest).
+func _watch_car_camera(car: GetawayCar, every: int) -> void:
+	while is_instance_valid(car):
+		for i in every:
+			await get_tree().process_frame
+		if is_instance_valid(car):
+			print("DevCapture car_watch: look_yaw=%.2f look_pitch=%.2f speed=%.1f" % [car.look_yaw, car.look_pitch, -car.global_basis.z.dot(car.linear_velocity)])
+
+
+## DISTRICT TWISTS (scripts/district_twist.gd): what this district's twist did to the city.
+func _print_twist(scene: Node, args: Dictionary) -> void:
+	var twist := DistrictTwist.instance
+	if args.has("twist_rolls"):
+		# What 1000 districts in a row (district 2 onwards) would roll, from seeds 1..1000.
+		var counts := {}
+		var saved := twist.kind
+		var saved_forced := DistrictTwist.forced_kind
+		DistrictTwist.forced_kind = -1
+		var repeats := 0
+		for city_seed in range(1, 1001):
+			var rolled := twist.roll(city_seed, 2)
+			if rolled != DistrictTwist.Kind.NONE and rolled == twist.kind:
+				repeats += 1
+			twist.kind = rolled
+			counts[DistrictTwist.name_of(rolled) if rolled != 0 else "NONE"] = int(counts.get(DistrictTwist.name_of(rolled) if rolled != 0 else "NONE", 0)) + 1
+		twist.kind = saved
+		DistrictTwist.forced_kind = saved_forced
+		print("DevCapture twist rolls (1000 districts): %s back-to-back repeats=%d district1=%s tutorial-safe" % [counts, repeats,
+			DistrictTwist.name_of(twist.roll(42, 1)) if DistrictTwist.forced_kind < 0 else "(forced)"])
+	var bots := 0  # (counted now, before any --kill_roombas)
+	var sight := 0.0
+	for node in scene.get_node("Roombas").get_children():
+		var bot := node as Roomba
+		if bot != null and not bot.is_boss:
+			bots += 1
+			sight = bot.sight_range * DistrictTwist.sight_multiplier()
+	for i in 30:
+		await get_tree().physics_frame
+	var city := scene.get_node("City") as CityGenerator
+	var lamps_lit := 0
+	var lamps := 0
+	for child in city.get_children():
+		var cone := child.get_node_or_null("LightCone") as Light3D
+		if cone != null:
+			lamps += 1
+			lamps_lit += 1 if cone.visible else 0
+	var door := city.meow_mart_position
+	var mart_fish := 0
+	var mart_koi := 0
+	for id in ItemManager.instance.world:
+		var entry: Dictionary = ItemManager.instance.world[id]
+		if (entry.pos as Vector3).distance_to(door) < 7.0:
+			mart_fish += 1 if entry.item == "fish" else 0
+			mart_koi += 1 if entry.item == "golden_koi" else 0
+	var kinds := {}
+	for p in city.mess_props:
+		var key: String = MessProp.Kind.keys()[p.kind]
+		kinds[key] = int(kinds.get(key, 0)) + 1
+	var intel: Array = [DistrictTwist.intel_line()]  # (the line itself: the CRT only shows the % now)
+	print("DevCapture twist: %s district=%d city=#%d lamps lit %d/%d ambient=%.2f moon=%.2f bot sight=%.1f m (x%.2f) mess props=%d %s" % [
+		DistrictTwist.name_of(twist.kind) if twist.kind != 0 else "NONE", twist.district_number, city.city_seed, lamps_lit, lamps,
+		(scene.get_node("WorldEnvironment") as WorldEnvironment).environment.ambient_light_energy,
+		(scene.get_node("Moonlight") as Light3D).light_energy, sight, DistrictTwist.sight_multiplier(), city.mess_props.size(), kinds])
+	print("DevCapture twist: meow-mart fish=%d koi=%d | regular bots=%d (x%.2f) | heat x%.2f | CRT intel %s | boss news \"%s\" | send-off \"%s\"" % [
+		mart_fish, mart_koi, bots, DistrictTwist.bot_multiplier(), DistrictTwist.heat_multiplier(), intel, twist.news_line(),
+		DistrictTwist.send_off_line("(usual)")])
+	if args.has("twist_heat") and multiplayer.is_server():
+		var frames := int(args["twist_heat"])
+		var before := HeatMeter.instance.heat
+		for i in frames:
+			await get_tree().physics_frame
+		var rise := HeatMeter.instance.heat - before
+		print("DevCapture twist heat: +%.2f in %d frames = %.3f/s (base %.3f/s, twist x%.2f, up top %d)" % [rise, frames,
+			rise / (frames / float(Engine.physics_ticks_per_second)), HeatMeter.instance.heat_per_second,
+			DistrictTwist.heat_multiplier(), Game.instance.players_up_top()])
+
+
+## How many of this item lie on the street / sewer floors right now.
+func _count_world_items(item_id: String) -> int:
+	var count := 0
+	for id in ItemManager.instance.world:
+		count += 1 if ItemManager.instance.world[id].item == item_id else 0
+	return count
+
+
+## A fake controller event: "A" / "Start" press or release, or a stick / trigger pushed all
+## the way (pressed) or let go (not pressed). Same names as Controls.PAD_BUTTONS / PAD_AXES.
+func _pad_event(pad_name: String, pressed: bool) -> InputEvent:
+	var event := Controls._event_from_name("Pad " + pad_name)
+	assert(event != null, "unknown controller name: " + pad_name)
+	event.device = int(_args.get("pad_device", "0"))
+	if event is InputEventJoypadButton:
+		event.pressed = pressed
+	elif not pressed:
+		event.axis_value = 0.0
+	return event
+
+
+## "Button 'RESUME'" for the focus printout (or "-" when nothing is highlighted).
+func _describe_focus(control: Control) -> String:
+	if control == null:
+		return "-"
+	var text: String = control.get("text") if control.get("text") != null else ""
+	return "%s '%s'" % [control.get_class(), text]
 
 
 ## --test-room-code (headless): every way of writing a code must give the same address back.

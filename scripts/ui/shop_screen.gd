@@ -118,36 +118,71 @@ func _ready() -> void:
 
 func _build() -> void:
 	for i in TAB_TITLES.size():
-		var tab_button := HudStyle.make_button(self, TAB_TITLES[i], button_font_size)
+		var tab_button := _button(TAB_TITLES[i])
 		tab_button.pressed.connect(_set_tab.bind(i))
 		tab_button.mouse_entered.connect(_on_highlight.bind(tab_button))
 		_tab_buttons.append(tab_button)
 	for i in 6:
-		var row := HudStyle.make_button(self, "", button_font_size)
+		var row := _button("")
 		row.set_meta("row", i)
 		var face := ItemTile.new()
 		face.screen = self
-		HudStyle.attach_face(row, face)
+		_face(row, face)
 		row.pressed.connect(_pick_row.bind(row))
 		row.mouse_entered.connect(_on_highlight.bind(row))
 		_rows.append(row)
-	_buy = HudStyle.make_button(self, "BUY", button_font_size + 2)
+	_buy = _button("BUY")
+	_buy.add_theme_font_size_override("font_size", button_font_size + 2)
 	_buy.pressed.connect(_press_buy)
 	_buy.mouse_entered.connect(_on_highlight.bind(_buy))
 	for i in max_sell_tiles:
-		var tile := HudStyle.make_button(self, "", button_font_size)
+		var tile := _button("")
 		var face := SellTile.new()
 		face.screen = self
-		HudStyle.attach_face(tile, face)
+		_face(tile, face)
 		tile.pressed.connect(_press_sell.bind(tile))
 		tile.mouse_entered.connect(_on_highlight.bind(tile))
 		_sell_tiles.append(tile)
-	_sell_all = HudStyle.make_button(self, "SELL ALL LOOT", button_font_size - 2)
+	_sell_all = _button("SELL ALL LOOT")
+	_sell_all.add_theme_font_size_override("font_size", button_font_size - 2)
 	_sell_all.pressed.connect(_sell_all_loot)
 	_sell_all.mouse_entered.connect(_on_highlight.bind(_sell_all))
 	_focus.press_on_accept = false
 	_focus.highlighted.connect(_on_highlight)
 	_built = true
+
+
+func _button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE  # (the d-pad moves a highlight: _focus, seat_focus.gd)
+	button.clip_text = true
+	button.add_theme_font_size_override("font_size", button_font_size)
+	button.add_theme_color_override("font_color", HudStyle.current().text_color)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", _box(false))
+	button.add_theme_stylebox_override("hover", _box(true))
+	button.add_theme_stylebox_override("pressed", _box(true))
+	add_child(button)
+	return button
+
+
+## Puts a drawing Control ("Face") over a button, filling it, letting the clicks through.
+func _face(button: Button, face: Control) -> void:
+	face.name = "Face"
+	face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(face)
+
+
+func _box(lit: bool) -> StyleBoxFlat:
+	var style := HudStyle.current()
+	var box := StyleBoxFlat.new()
+	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
+	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
+	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
+	box.set_content_margin_all(4)
+	return box
 
 
 # --- Opening / closing ---
@@ -180,7 +215,9 @@ func close() -> void:
 	visible = false
 	_focus.clear()
 	owner_cat = null
-	HudStyle.restore_game_mouse(seat)
+	var first := Game.instance.my_cat() if Game.instance != null else null
+	if seat == 0 and first != null and first.is_controlled:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _input(event: InputEvent) -> void:
@@ -239,11 +276,11 @@ func _fill_rows() -> void:
 		var face := row.get_node("Face") as ItemTile
 		row.visible = i < items.size()
 		face.item_id = items[i] if i < items.size() else ""
-		row.add_theme_stylebox_override("normal", HudStyle.button_box(face.item_id != "" and face.item_id == selected))
+		row.add_theme_stylebox_override("normal", _box(face.item_id != "" and face.item_id == selected))
 		face.queue_redraw()
 	for i in _tab_buttons.size():
 		_tab_buttons[i].add_theme_color_override("font_color", Color.WHITE if i == tab else Color(HudStyle.current().text_color, 0.6))
-		_tab_buttons[i].add_theme_stylebox_override("normal", HudStyle.button_box(i == tab))
+		_tab_buttons[i].add_theme_stylebox_override("normal", _box(i == tab))
 	# The BUY button follows the picked item.
 	var data: ItemData = ItemManager.instance.catalog.get(selected)
 	_buy.visible = data != null
@@ -343,7 +380,7 @@ func _layout() -> void:
 	var tabs_x := _panel.position.x + (w - (tab_w * 3 + gap * 2)) / 2.0
 	var y := _panel.position.y + 64.0
 	for i in _tab_buttons.size():
-		HudStyle.place(_tab_buttons[i], Rect2(tabs_x + i * (tab_w + gap), y, tab_w, 32))
+		_place(_tab_buttons[i], Rect2(tabs_x + i * (tab_w + gap), y, tab_w, 32))
 	y += 32 + gap
 	# The item tiles, centred like the workbench's portraits.
 	var shown := _rows.filter(func(r): return r.visible)
@@ -351,30 +388,32 @@ func _layout() -> void:
 	var tiles_w := tile * shown.size() + gap * maxf(shown.size() - 1, 0)
 	var tile_x := _panel.position.x + (w - tiles_w) / 2.0
 	for i in shown.size():
-		HudStyle.place(shown[i], Rect2(tile_x + i * (tile + gap), y, tile, tile * 0.72 + 20.0))
+		_place(shown[i], Rect2(tile_x + i * (tile + gap), y, tile, tile * 0.72 + 20.0))
 	y += tile * 0.72 + 20.0 + gap * 2
 	# Bottom up: the info box, the SELL strip, then the picked item fills the middle.
-	var compact := size.y < 640.0
-	var info_h := 46.0 if compact else 56.0
-	var sell_h_box := minf(sell_strip_height, 78.0) if compact else sell_strip_height
+	var info_h := 56.0
 	_info_rect = Rect2(x, _panel.end.y - info_h - 10.0, inner_w, info_h)
-	_sell_rect = Rect2(x, _info_rect.position.y - gap - sell_h_box, inner_w, sell_h_box)
+	_sell_rect = Rect2(x, _info_rect.position.y - gap - sell_strip_height, inner_w, sell_strip_height)
 	var middle_h := _sell_rect.position.y - gap - y
 	var picture_w := minf(inner_w * 0.24, middle_h * 1.3)
 	_picture = Rect2(x, y, picture_w, middle_h)
 	var card_x := x + inner_w * 0.5
 	_card = Rect2(card_x, y, _panel.end.x - 12.0 - card_x, middle_h)
-	var buy_h := minf(button_height, 34.0) if middle_h < 140.0 else button_height
-	HudStyle.place(_buy, Rect2(_card.position.x + 12, _card.end.y - buy_h - 10, _card.size.x - 24, buy_h))
+	_place(_buy, Rect2(_card.position.x + 12, _card.end.y - button_height - 12, _card.size.x - 24, button_height))
 	# The SELL strip: your things, then SELL ALL LOOT on the right.
 	var all_w := 236.0
-	HudStyle.place(_sell_all, Rect2(_sell_rect.end.x - all_w - 10, _sell_rect.position.y + 30, all_w, _sell_rect.size.y - 40))
+	_place(_sell_all, Rect2(_sell_rect.end.x - all_w - 10, _sell_rect.position.y + 30, all_w, _sell_rect.size.y - 40))
 	var sell_x := _sell_rect.position.x + 10
 	var sell_room := _sell_rect.size.x - all_w - 30
 	var sell_h := _sell_rect.size.y - 40
 	var sell_w := minf(sell_h * 1.3, (sell_room - gap * (max_sell_tiles - 1)) / max_sell_tiles)
 	for i in _sell_tiles.size():
-		HudStyle.place(_sell_tiles[i], Rect2(sell_x + i * (sell_w + gap), _sell_rect.position.y + 30, sell_w, sell_h))
+		_place(_sell_tiles[i], Rect2(sell_x + i * (sell_w + gap), _sell_rect.position.y + 30, sell_w, sell_h))
+
+
+func _place(button: Control, rect: Rect2) -> void:
+	button.position = rect.position
+	button.size = rect.size
 
 
 func _draw() -> void:
@@ -384,10 +423,10 @@ func _draw() -> void:
 	var font := get_theme_font("font", "Label")
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0.02, 0.05, 0.45))  # dim the sewer behind
 	HudStyle.draw_panel(self, _panel)
-	HudStyle.draw_text(self, font, _panel.position + Vector2(14, 30), "THE BLACK MARKITTEN", title_font_size, title_color)
-	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 14, _panel.position.y + 30), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, GOOD)
+	_text(font, _panel.position + Vector2(14, 30), "THE BLACK MARKITTEN", title_font_size, title_color)
+	_text_right(font, Vector2(_panel.end.x - 14, _panel.position.y + 30), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, GOOD)
 	var who := (keeper.npc_name + ": ") if keeper != null else ""
-	HudStyle.draw_text(self, font, _panel.position + Vector2(14, 52), "%s\"%s\"" % [who, _line], detail_font_size, Color(style.text_color, 0.75), _panel.size.x - 28)
+	_text(font, _panel.position + Vector2(14, 52), "%s\"%s\"" % [who, _line], detail_font_size, Color(style.text_color, 0.75), _panel.size.x - 28)
 
 	# The picked item: big picture (left), its name / kind / prices (middle), its card + BUY (right).
 	var data: ItemData = ItemManager.instance.catalog.get(selected)
@@ -397,35 +436,29 @@ func _draw() -> void:
 		draw_item_picture(self, selected, _picture.grow(-14), locked, 2.0)
 		var tx := _picture.end.x + 14
 		var tw := _card.position.x - tx - 12
-		var ty := _picture.position.y + 24
-		var step := minf(46.0, maxf(30.0, (_picture.size.y - 44.0) * 0.5))
-		HudStyle.draw_text(self, font, Vector2(tx, ty), data.display_name, name_font_size, Color(style.text_color, 0.55) if locked else Color.WHITE, tw)
-		HudStyle.draw_text(self, font, Vector2(tx, ty + 20), TAB_TITLES[tab], detail_font_size, AMBER, tw)
-		var price_y := ty + 20 + step * 0.65
-		HudStyle.draw_text(self, font, Vector2(tx, price_y), "PRICE", detail_font_size, Color(style.text_color, 0.6), tw)
-		HudStyle.draw_text(self, font, Vector2(tx, price_y + 17), "$%d" % data.price, detail_font_size + 3, GOOD, tw)
-		var sell_y := price_y + step
-		HudStyle.draw_text(self, font, Vector2(tx, sell_y), "SELLS BACK FOR", detail_font_size, Color(style.text_color, 0.6), tw)
-		HudStyle.draw_text(self, font, Vector2(tx, sell_y + 17), "$%d" % ItemManager.instance.sell_price_for(owner_cat.player_id, selected), detail_font_size + 3,
+		var ty := _picture.position.y + 26
+		_text(font, Vector2(tx, ty), data.display_name, name_font_size, Color(style.text_color, 0.55) if locked else Color.WHITE, tw)
+		_text(font, Vector2(tx, ty + 22), TAB_TITLES[tab], detail_font_size, AMBER, tw)
+		_text(font, Vector2(tx, ty + 52), "PRICE", detail_font_size, Color(style.text_color, 0.6), tw)
+		_text(font, Vector2(tx, ty + 70), "$%d" % data.price, detail_font_size + 3, GOOD, tw)
+		_text(font, Vector2(tx, ty + 98), "SELLS BACK FOR", detail_font_size, Color(style.text_color, 0.6), tw)
+		_text(font, Vector2(tx, ty + 116), "$%d" % ItemManager.instance.sell_price_for(owner_cat.player_id, selected), detail_font_size + 3,
 			Color(style.text_color, 0.85), tw)
 		HudStyle.draw_panel(self, _card)
 		var cw := _card.size.x - 28
-		HudStyle.draw_text(self, font, _card.position + Vector2(14, 28), data.display_name, name_font_size, AMBER, cw)
+		_text(font, _card.position + Vector2(14, 30), data.display_name, name_font_size, AMBER, cw)
 		if locked:
-			HudStyle.draw_text(self, font, _card.position + Vector2(14, 50), locked_text % Upgrades.crate_for(selected), detail_font_size + 1, AMBER, cw)
-		var desc_y := 74.0 if locked else 52.0
-		var avail_h := _buy.position.y - (_card.position.y + desc_y) - 4.0
-		var lines := int(floor(avail_h / float(detail_font_size + 5)))
-		if lines >= 1:
-			draw_multiline_string(font, _card.position + Vector2(14, desc_y), data.description, HORIZONTAL_ALIGNMENT_LEFT, cw,
-				detail_font_size + 1, lines, Color(style.text_color, 0.8))
+			_text(font, _card.position + Vector2(14, 54), locked_text % Upgrades.crate_for(selected), detail_font_size + 1, AMBER, cw)
+		var lines := maxi(1, int((_buy.position.y - _card.position.y - 84.0) / (detail_font_size + 5)))
+		draw_multiline_string(font, _card.position + Vector2(14, 80 if locked else 56), data.description, HORIZONTAL_ALIGNMENT_LEFT, cw,
+			detail_font_size + 1, lines, Color(style.text_color, 0.8))
 
 	# The SELL strip.
 	HudStyle.draw_panel(self, _sell_rect, true)
-	HudStyle.draw_text(self, font, _sell_rect.position + Vector2(12, 21), "SELL TO THE FENCE", detail_font_size + 1, AMBER)
-	HudStyle.draw_text(self, font, _sell_rect.position + Vector2(172, 21), "click one of your things to sell ONE", detail_font_size - 1, Color(style.text_color, 0.45))
+	_text(font, _sell_rect.position + Vector2(12, 21), "SELL TO THE FENCE", detail_font_size + 1, AMBER)
+	_text(font, _sell_rect.position + Vector2(172, 21), "click one of your things to sell ONE", detail_font_size - 1, Color(style.text_color, 0.45))
 	if _sell_tiles.filter(func(t): return t.visible).is_empty():
-		HudStyle.draw_text(self, font, _sell_rect.position + Vector2(12, _sell_rect.size.y * 0.5 + 18), "Nothing on you to sell. Go loot!", detail_font_size, Color(style.text_color, 0.5))
+		_text(font, _sell_rect.position + Vector2(12, _sell_rect.size.y * 0.5 + 18), "Nothing on you to sell. Go loot!", detail_font_size, Color(style.text_color, 0.5))
 
 	# The bottom box: a message, or what the highlighted thing is.
 	HudStyle.draw_panel(self, _info_rect, true)
@@ -445,6 +478,16 @@ func draw_item_picture(canvas: CanvasItem, item_id: String, box: Rect2, locked: 
 		HudStyle.draw_icon(canvas, texture, box, silhouette_color)
 	else:
 		HudStyle.draw_icon(canvas, texture, box, HudStyle.current().cool_color.lightened(0.2))
+
+
+func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
+
+
+func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	_text(font, at - Vector2(width, 0), text, font_size, color)
 
 
 # --- Buying / selling ---
@@ -583,7 +626,11 @@ class SellTile extends Control:
 		HudStyle.draw_icon(self, HudStyle.item_icon(item_id), Rect2(5, 4, size.x - 10, size.y - 20),
 			HudStyle.current().cool_color.lightened(0.2) if price > 0 else Color(0.5, 0.55, 0.6, 0.6))
 		if count > 1:
-			HudStyle.draw_text(self, font, Vector2(size.x - 22, 15), "x%d" % count, 11, Color.WHITE, size.x - 4, 3.0)
+			_text(font, Vector2(size.x - 22, 15), "x%d" % count, 11, Color.WHITE)
 		var label := "SELL $%d" % price if price > 0 else "NO SALE"
 		var w := minf(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x, size.x - 4)
-		HudStyle.draw_text(self, font, Vector2(maxf(2, (size.x - w) / 2.0), size.y - 4), label, 10, ShopScreen.GOOD if price > 0 else Color(0.6, 0.65, 0.7), size.x - 4, 3.0)
+		_text(font, Vector2(maxf(2, (size.x - w) / 2.0), size.y - 4), label, 10, ShopScreen.GOOD if price > 0 else Color(0.6, 0.65, 0.7))
+
+	func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
+		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, size.x - 4, font_size, Hud.outline(3), Color(0, 0.03, 0.06))
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, size.x - 4, font_size, color)

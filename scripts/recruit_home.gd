@@ -209,10 +209,29 @@ func _build_extra() -> void:
 func _light_up(root: Node) -> void:
 	var gang := Teams.color_of(_team())
 	for part in ["Glow", "Lamp", "Burner"]:
-		LevelKit.glow_part(root, part, Color.WHITE, glow_energy, false)
-	LevelKit.glow_part(root, "Sign", Color.WHITE, 1.2, false)
+		_glow(root, part, Color.WHITE, glow_energy, false)
+	_glow(root, "Sign", Color.WHITE, 1.2, false)
 	for trim in root.find_children("Trim*", "MeshInstance3D", true, false):
-		LevelKit.glow_part(root, trim.name, gang, 2.5, true)
+		_glow(root, trim.name, gang, 2.5, true)
+
+
+## (the same trick as getaway_car.gd _glow) tinted = glow in that colour; else the paint glows.
+func _glow(root: Node, part_name: String, tint: Color, energy: float, tinted: bool) -> void:
+	var part := root.find_child(part_name, true, false) as MeshInstance3D
+	if part == null or part.mesh == null:
+		return
+	for surface in part.mesh.get_surface_count():
+		var material := part.get_active_material(surface)
+		if not material is ShaderMaterial:
+			continue
+		var copy := material.duplicate() as ShaderMaterial
+		copy.set_shader_parameter("albedo_color", tint)
+		if tinted:
+			copy.set_shader_parameter("emission_color", tint)
+			copy.set_shader_parameter("emission_energy", energy)
+		else:
+			copy.set_shader_parameter("texture_glow", energy)
+		part.set_surface_override_material(surface, copy)
 
 
 func _team() -> int:
@@ -235,7 +254,7 @@ func _update_ride() -> void:
 	_ride.name = "Ride"
 	_light_up(_ride)
 	for part in ["HeadlightL", "HeadlightR", "TaillightL", "TaillightR", "Thrusters", "Sign"]:
-		LevelKit.glow_part(_ride, part, Color.WHITE, 2.0, false)
+		_glow(_ride, part, Color.WHITE, 2.0, false)
 	if _checked_once and pop_seconds > 0.0:
 		_ride.scale = Vector3(0.6, 0.6, 0.6)
 		create_tween().tween_property(_ride, "scale", Vector3.ONE, pop_seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

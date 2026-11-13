@@ -464,11 +464,6 @@ func clear_trip_messes(player_id: int) -> void:
 	_trip_messes.erase(player_id)
 
 
-## Host: a player left (game_systems.gd) — drop their trip mess count.
-func player_left(player_id: int, _last_position: Vector3) -> void:
-	_trip_messes.erase(player_id)
-
-
 ## Host: a new district (the city was rebuilt just before this, so the props are fresh).
 func start_district() -> void:
 	_trip_messes.clear()

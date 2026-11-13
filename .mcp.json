@@ -20,15 +20,6 @@
       "args": [
         "tools/icon_mcp.py"
       ]
-    },
-    "graphify": {
-      "type": "stdio",
-      "command": "c:\\Users\\Nathaniel\\graphify-godot\\.venv\\Scripts\\python.exe",
-      "args": [
-        "-m",
-        "graphify.serve",
-        "graphify-out/graph.json"
-      ]
     }
   }
 }

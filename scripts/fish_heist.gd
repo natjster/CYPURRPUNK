@@ -646,18 +646,6 @@ func send_state_to(peer: int) -> void:
 		_mark_went_up.rpc_id(peer, player_id, false)
 
 
-## Host: a player left (game_systems.gd) — drop their per-district tracking.
-func player_left(player_id: int, _last_position: Vector3) -> void:
-	_extract_wait.erase(player_id)
-	_forget_player.rpc(player_id)
-
-
-@rpc("authority", "call_local", "reliable")
-func _forget_player(player_id: int) -> void:
-	went_up.erase(player_id)
-	escaped.erase(player_id)
-
-
 # --- HUD (the arrow to the exit: scenes/ui/hud.tscn. Everyone's cash is the Wallet's.) ---
 
 ## Every player on this computer gets their own lines on their own HUD (split screen).

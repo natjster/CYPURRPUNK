@@ -24,7 +24,3 @@ __pycache__/
 
 # Claude Code's working copies of the project (one per side session). Not part of the game.
 .claude/worktrees/
-
-# Graphify knowledge graph output (regenerated locally).
-graphify-out/
-

@@ -121,7 +121,7 @@ const MART_MOOD: int = -2
 ## How close (metres) you must be to the litterbox spot to open it.
 @export var stash_radius: float = 2.5
 ## The HUD line after "[E] " when you're at the litterbox.
-@export var stash_prompt: String = "STORE YOUR CRAP"
+@export var stash_prompt: String = "STORE YOUR SHIT"
 ## The litterbox's plastic colour.
 @export var litterbox_color: Color = Color(0.55, 0.2, 0.6)
 ## Its neon strip, sign and light.
@@ -789,7 +789,12 @@ func _build_mainframe() -> void:
 	var body := StaticBody3D.new()
 	body.name = "MainframeBody"
 	for part in [[Vector3(wall_x + 0.6, 2.0, z), Vector3(1.2, 4.0, 6.0)], [Vector3(wall_x + 1.3, 0.35, z), Vector3(0.4, 0.7, 1.0)]]:
-		LevelKit.add_collision(body, part[0], part[1])
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = part[1]
+		shape.shape = box
+		shape.position = part[0]
+		body.add_child(shape)
 	add_child(body)
 	var terminal := MainframeTerminal.new()
 	terminal.name = "MainframeTerminal"
@@ -912,14 +917,27 @@ func _build_workbench() -> void:
 	spot.used.connect(func(cat: CatPlayer): WorkbenchScreen.for_seat(cat.slot).open(cat, self))  # (scripts/ui/workbench_screen.gd)
 	# The bench's front (-Z in the model) faces west, out into the room: a quarter turn.
 	var bench := LevelKit.instantiate_model("workbench", self, Vector3(half_width - 0.55, 0, at.z), PI / 2)
-	if bench != null:
-		bench.name = "Workbench"
-		LevelKit.make_neon_paint_glow(bench, {"Lamp": 3.0, "Glow": 3.0})
+	bench.name = "Workbench"
+	LevelKit.psx_ify(bench)
+	for part in ["Lamp", "Glow"]:
+		var mesh := bench.find_child(part, true, false) as MeshInstance3D
+		if mesh == null or mesh.mesh == null:
+			continue
+		for surface in mesh.mesh.get_surface_count():
+			var material := mesh.get_active_material(surface) as ShaderMaterial
+			if material != null:
+				var lit := material.duplicate() as ShaderMaterial
+				lit.set_shader_parameter("texture_glow", 3.0)
+				mesh.set_surface_override_material(surface, lit)
 	# Solid, so cats bump into it instead of walking through.
 	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(1.0, 0.95, 2.0)
+	shape.shape = box
+	body.add_child(shape)
 	body.position = Vector3(half_width - 0.55, 0.47, at.z)
 	add_child(body)
-	LevelKit.add_collision(body, Vector3.ZERO, Vector3(1.0, 0.95, 2.0))
 	LevelKit.add_sign(self, "TINKER\nWORKBENCH", Vector3(half_width - 0.05, 2.5, at.z), workbench_light * 0.4, 28, -PI / 2)
 	LevelKit.add_light(self, Vector3(half_width - 1.4, 1.9, at.z - 0.4), workbench_light, 2.5, 5.0)
 

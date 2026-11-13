@@ -86,30 +86,31 @@ func _ready() -> void:
 
 func _build() -> void:
 	for i in Upgrades.WORKBENCH_TABS.size():
-		var button := HudStyle.make_button(self, "", card_title_size)
+		var button := _button("")
 		button.set_meta("tab", i)
 		var face := TabFace.new()
 		face.screen = self
 		face.index = i
-		HudStyle.attach_face(button, face)
+		_face(button, face)
 		button.pressed.connect(_set_tab.bind(i))
 		button.mouse_entered.connect(_on_highlight.bind(button))
 		_tabs.append(button)
 	for i in 4:
-		var card := HudStyle.make_button(self, "", card_title_size)
+		var card := _button("")
 		var face := CardFace.new()
 		face.screen = self
-		HudStyle.attach_face(card, face)
+		_face(card, face)
 		card.pressed.connect(_press_card.bind(card))
 		card.mouse_entered.connect(_on_highlight.bind(card))
 		_cards.append(card)
 	for vehicle in Upgrades.VEHICLE_UNLOCKS:
-		var ride := HudStyle.make_button(self, Upgrades.VEHICLE_NAMES[vehicle], card_title_size)
+		var ride := _button(Upgrades.VEHICLE_NAMES[vehicle])
 		ride.set_meta("vehicle", vehicle)
 		ride.pressed.connect(_press_ride.bind(vehicle))
 		ride.mouse_entered.connect(_on_highlight.bind(ride))
 		_rides.append(ride)
-	_recruit = HudStyle.make_button(self, "RECRUIT", card_title_size + 2)
+	_recruit = _button("RECRUIT")
+	_recruit.add_theme_font_size_override("font_size", card_title_size + 2)
 	_recruit.pressed.connect(_press_recruit)
 	_recruit.mouse_entered.connect(_on_highlight.bind(_recruit))
 	_focus.press_on_accept = false
@@ -117,6 +118,38 @@ func _build() -> void:
 	if Upgrades.instance != null:
 		Upgrades.instance.recruited.connect(_on_recruited)
 	_built = true
+
+
+func _button(text: String) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE  # (the d-pad moves a highlight: _focus, seat_focus.gd)
+	button.clip_text = true
+	button.add_theme_font_size_override("font_size", card_title_size)
+	button.add_theme_color_override("font_color", HudStyle.current().text_color)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_stylebox_override("normal", _box(false))
+	button.add_theme_stylebox_override("hover", _box(true))
+	button.add_theme_stylebox_override("pressed", _box(true))
+	add_child(button)
+	return button
+
+
+func _face(button: Button, face: Control) -> void:
+	face.name = "Face"
+	face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(face)
+
+
+func _box(lit: bool) -> StyleBoxFlat:
+	var style := HudStyle.current()
+	var box := StyleBoxFlat.new()
+	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
+	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
+	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
+	box.set_content_margin_all(4)
+	return box
 
 
 # --- Opening / closing ---
@@ -141,7 +174,9 @@ func close() -> void:
 	visible = false
 	_focus.clear()
 	owner_cat = null
-	HudStyle.restore_game_mouse(seat)
+	var first := Game.instance.my_cat() if Game.instance != null else null
+	if seat == 0 and first != null and first.is_controlled:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _input(event: InputEvent) -> void:
@@ -247,7 +282,7 @@ func _refill() -> void:
 		_recruit.text = "RECRUIT TO THE REBELLION — $%d + %d SCRAP" % [price[0], price[1]]
 	for t in _tabs:
 		t.get_node("Face").queue_redraw()
-		t.add_theme_stylebox_override("normal", HudStyle.button_box(t.get_meta("tab") == tab))
+		t.add_theme_stylebox_override("normal", _box(t.get_meta("tab") == tab))
 
 
 # --- Every frame ---
@@ -284,7 +319,7 @@ func _layout() -> void:
 	var tab_x := _panel.position.x + (w - tabs_w) / 2.0
 	var tab_y := _panel.position.y + 44.0
 	for i in _tabs.size():
-		HudStyle.place(_tabs[i], Rect2(tab_x + i * (tab_size + gap), tab_y, tab_size, tab_size + 16.0))
+		_place(_tabs[i], Rect2(tab_x + i * (tab_size + gap), tab_y, tab_size, tab_size + 16.0))
 	var top := tab_y + tab_size + 16.0 + gap * 2
 	var info_h := 62.0
 	_info_rect = Rect2(x, _panel.end.y - info_h - 10.0, w - 24.0, info_h)
@@ -298,13 +333,18 @@ func _layout() -> void:
 	var y := _content.position.y
 	for card in _cards:
 		if card.visible:
-			HudStyle.place(card, Rect2(cards_x, y, cards_w, h))
+			_place(card, Rect2(cards_x, y, cards_w, h))
 			y += h + gap * 0.75
 	if ride_h > 0.0:
 		var rw := (cards_w - gap * (_rides.size() - 1)) / _rides.size()
 		for i in _rides.size():
-			HudStyle.place(_rides[i], Rect2(cards_x + i * (rw + gap), y + 2.0, rw, ride_h - 4.0))
-	HudStyle.place(_recruit, Rect2(cards_x, _content.position.y + _content.size.y * 0.45, cards_w, 54.0))
+			_place(_rides[i], Rect2(cards_x + i * (rw + gap), y + 2.0, rw, ride_h - 4.0))
+	_place(_recruit, Rect2(cards_x, _content.position.y + _content.size.y * 0.45, cards_w, 54.0))
+
+
+func _place(button: Control, rect: Rect2) -> void:
+	button.position = rect.position
+	button.size = rect.size
 
 
 func _draw() -> void:
@@ -314,12 +354,12 @@ func _draw() -> void:
 	var font := get_theme_font("font", "Label")
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0.02, 0.05, 0.45))  # dim the sewer behind
 	HudStyle.draw_panel(self, _panel)
-	HudStyle.draw_text(self, font, _panel.position + Vector2(14, 30), "TINKER WORKBENCH", title_font_size, AMBER)
+	_text(font, _panel.position + Vector2(14, 30), "TINKER WORKBENCH", title_font_size, AMBER)
 	var me := owner_cat.player_id
 	var money := "$%d    %d SCRAP" % [Wallet.instance.cash_of(me), ItemManager.instance.scrap_count_of(me)]
-	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 14, _panel.position.y + 30), money, title_font_size - 2, GOOD)
+	_text_right(font, Vector2(_panel.end.x - 14, _panel.position.y + 30), money, title_font_size - 2, GOOD)
 	var money_w := font.get_string_size(money, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size - 2).x
-	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 34 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
+	_text_right(font, Vector2(_panel.end.x - 24 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
 	# The selected cat (left of the content area)
 	var npc := npc_for_tab(tab)
 	var state := tab_state(tab)
@@ -333,27 +373,27 @@ func _draw() -> void:
 	var ty := portrait_rect.end.y + 26.0
 	var text_w := _content.size.x * 0.42 - 16.0
 	if state == "open":
-		HudStyle.draw_text(self, font, Vector2(tx, ty), npc.npc_name if npc != null else "?", name_font_size, Color.WHITE, text_w)
-		HudStyle.draw_text(self, font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION RECRUIT)"), detail_font_size, AMBER, text_w)
+		_text(font, Vector2(tx, ty), npc.npc_name if npc != null else "?", name_font_size, Color.WHITE, text_w)
+		_text(font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION RECRUIT)"), detail_font_size, AMBER, text_w)
 		var quote := ""
 		if npc != null and not npc.pages.is_empty() and not npc.pages[0].lines.is_empty():
 			quote = "\"%s\"" % npc.pages[0].lines[0]
 		draw_multiline_string(font, Vector2(tx, ty + 42), quote, HORIZONTAL_ALIGNMENT_LEFT, text_w, detail_font_size, 3, Color(style.text_color, 0.75))
 		var quest := quest_title(npc)
-		HudStyle.draw_text(self, font, Vector2(tx, ty + 42 + detail_font_size * 3.6 + 8), ("QUEST IN SEWER: %s" % quest) if quest != "" else "NO QUEST: %s" % ("DEPLOY + LORE" if tab == 0 else "THE SHOP"),
+		_text(font, Vector2(tx, ty + 42 + detail_font_size * 3.6 + 8), ("QUEST IN SEWER: %s" % quest) if quest != "" else "NO QUEST: %s" % ("DEPLOY + LORE" if tab == 0 else "THE SHOP"),
 			detail_font_size + 1, GOOD if quest != "" else Color(style.text_color, 0.5), text_w)
 	else:
-		HudStyle.draw_text(self, font, Vector2(tx, ty), "? ? ?", name_font_size, Color(style.text_color, 0.5), text_w)
-		HudStyle.draw_text(self, font, Vector2(tx, ty + 20), "REBELLION RECRUIT — %s" % Upgrades.RECRUIT_TYPES[tab], detail_font_size, AMBER, text_w)
+		_text(font, Vector2(tx, ty), "? ? ?", name_font_size, Color(style.text_color, 0.5), text_w)
+		_text(font, Vector2(tx, ty + 20), "REBELLION RECRUIT — %s" % Upgrades.RECRUIT_TYPES[tab], detail_font_size, AMBER, text_w)
 		# The right side: what to do about it.
 		var cards_x := _content.position.x + _content.size.x * 0.42
 		var cards_w := _content.end.x - cards_x
 		var box := Rect2(cards_x, _content.position.y, cards_w, _content.size.y * 0.42)
 		HudStyle.draw_panel(self, box)
-		HudStyle.draw_text(self, font, box.position + Vector2(14, 30), "RECRUIT: %s" % Upgrades.RECRUIT_TYPES[tab], name_font_size, AMBER, cards_w - 28)
+		_text(font, box.position + Vector2(14, 30), "RECRUIT: %s" % Upgrades.RECRUIT_TYPES[tab], name_font_size, AMBER, cards_w - 28)
 		# You only get to know WHAT they bring, not who they are.
 		var brings := ", ".join(Array(Upgrades.WORKBENCH_TABS[tab]).map(func(u): return Upgrades.INFO[u].name))
-		HudStyle.draw_text(self, font, box.position + Vector2(14, 54), "BRINGS: " + brings, detail_font_size + 1, GOOD, cards_w - 28)
+		_text(font, box.position + Vector2(14, 54), "BRINGS: " + brings, detail_font_size + 1, GOOD, cards_w - 28)
 		var words := "A cat is hiding in the pipes. Recruit them and they move into your sewer: their quest, these upgrades, and one more gun when OVERCLEAN breaches. Recruit #%d of %d for your gang." \
 			% [Upgrades.rebellion_level(_team()) + 1, Upgrades.REBELLION_TIERS]
 		draw_multiline_string(font, box.position + Vector2(14, 78), words, HORIZONTAL_ALIGNMENT_LEFT, cards_w - 28, detail_font_size + 1, 3,
@@ -364,6 +404,16 @@ func _draw() -> void:
 	var color := (GOOD if _note_good else BAD) if _note != "" else style.text_color
 	draw_multiline_string(font, _info_rect.position + Vector2(10, 22), shown, HORIZONTAL_ALIGNMENT_LEFT, _info_rect.size.x - 20,
 		detail_font_size + 1, 3, color)
+
+
+func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
+
+
+func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	_text(font, at - Vector2(width, 0), text, font_size, color)
 
 
 # --- Buying ---
@@ -482,10 +532,9 @@ class CardFace extends Control:
 		var top := upgrades.max_tier(upgrade_id)
 		var maxed := tier >= top
 		var title: String = info.get("name", upgrade_id) + (" (CREW)" if info.get("crew", false) else "")
-		var buy_w := minf(190.0, size.x * 0.40)
+		var buy_w := 190.0
 		var text_w := size.x - buy_w - 24.0
-		var title_fs := HudStyle.fit_font_size(font, title, screen.card_title_size, 12, text_w)
-		HudStyle.draw_text(self, font, Vector2(10, 6 + title_fs), title, title_fs, Color.WHITE, text_w)
+		_text(font, Vector2(10, 6 + screen.card_title_size), title, screen.card_title_size, Color.WHITE, text_w)
 		# Tier pips: [■ ■ □] TIER 2/3
 		var pip := 9.0
 		var px := 10.0
@@ -498,7 +547,7 @@ class CardFace extends Control:
 		var tier_text := ("UNLOCKED" if top == 1 else "TIER %d/%d" % [tier, top]) if tier > 0 else ("NOT OWNED" if top == 1 else "TIER 0/%d" % top)
 		if info.has("tiers") and not maxed:
 			tier_text += "   NEXT: " + str(info.tiers[tier])
-		HudStyle.draw_text(self, font, Vector2(px + top * (pip + 4) + 6, py + pip), tier_text, screen.detail_font_size, WorkbenchScreen.AMBER, text_w - top * (pip + 4))
+		_text(font, Vector2(px + top * (pip + 4) + 6, py + pip), tier_text, screen.detail_font_size, WorkbenchScreen.AMBER, text_w - top * (pip + 4))
 		if size.y > 56:
 			draw_multiline_string(font, Vector2(10, py + pip + 6 + screen.detail_font_size), str(info.get("about", "")), HORIZONTAL_ALIGNMENT_LEFT,
 				text_w, screen.detail_font_size, 2, Color(style.text_color, 0.7))
@@ -513,6 +562,9 @@ class CardFace extends Control:
 			fill = Color(0.1, 0.45, 0.25, 0.85) if can else Color(0.35, 0.1, 0.1, 0.8)
 		draw_rect(pill, fill)
 		draw_rect(pill, Color(style.border_color, 0.6), false, Hud.line(1.0))
-		var pill_fs := HudStyle.fit_font_size(font, label, screen.detail_font_size + 1, 10, buy_w - 10)
-		var lw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pill_fs).x
-		HudStyle.draw_text(self, font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + pill_fs * 0.35), label, pill_fs, Color.WHITE, buy_w - 8)
+		var lw := minf(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.detail_font_size + 1).x, buy_w - 8)
+		_text(font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + 5), label, screen.detail_font_size + 1, Color.WHITE, buy_w - 8)
+
+	func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
+		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)

@@ -141,9 +141,9 @@ func _build() -> void:
 	_abandon_button.add_theme_font_size_override("font_size", name_font_size + 1)
 	_abandon_button.add_theme_color_override("font_color", ABANDON_COLOR)
 	_abandon_button.add_theme_color_override("font_hover_color", Color.WHITE)
-	_abandon_button.add_theme_stylebox_override("normal", HudStyle.button_box(false))
-	_abandon_button.add_theme_stylebox_override("hover", HudStyle.button_box(true))
-	_abandon_button.add_theme_stylebox_override("pressed", HudStyle.button_box(true))
+	_abandon_button.add_theme_stylebox_override("normal", _box_style(false))
+	_abandon_button.add_theme_stylebox_override("hover", _box_style(true))
+	_abandon_button.add_theme_stylebox_override("pressed", _box_style(true))
 	_abandon_button.gui_input.connect(_on_slot_input.bind(_abandon_button, "quest", 0))
 	add_child(_abandon_button)
 	_info = Label.new()
@@ -172,7 +172,7 @@ func _input(event: InputEvent) -> void:
 		var cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if visible:
 			_set_open(false)
-		elif cat != null and cat.reads_input() and cat.riding_car == null:
+		elif cat != null and cat.reads_input():
 			_set_open(true, cat)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
@@ -194,12 +194,6 @@ func open(cat: CatPlayer) -> void:
 		_set_open(true, cat)
 
 
-## Close the inventory screen if it's open.
-func close() -> void:
-	if visible:
-		_set_open(false)
-
-
 func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 	if not _built:
 		return  # not built yet (the very first frame)
@@ -219,7 +213,9 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 		_refocus()
 	else:
 		_focus.clear()
-		HudStyle.restore_game_mouse(seat)
+		var first := Game.instance.my_cat() if Game.instance != null else null
+		if seat == 0 and first != null and first.is_controlled:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 ## A highlighted slot for the d-pad / arrows to move around from (the backpack's first slot).
@@ -233,8 +229,8 @@ func _process(_delta: float) -> void:
 		return
 	var items := ItemManager.instance
 	var cat := owner_cat
-	if cat == null or not is_instance_valid(cat) or not cat.is_inside_tree() or cat.riding_car != null:
-		_set_open(false)  # (the cat left: knocked out of the game, a new game, the player quit, or got in a car)
+	if cat == null or not is_instance_valid(cat) or not cat.is_inside_tree():
+		_set_open(false)  # (the cat left: knocked out of the game, a new game, the player quit)
 		return
 	var at_stash := UndergroundHub.of(cat).near_stash(cat)
 	if _match_sizes():
@@ -299,11 +295,11 @@ func _layout(cat: CatPlayer, at_stash: bool) -> void:
 	var row_h := minf(paw_box_size.y, maxf(paw_w * 0.7, 56.0))
 	var x := col_x
 	for i in 2:
-		HudStyle.place(_paw_buttons[i], Rect2(x, y, paw_w, row_h))
+		_place(_paw_buttons[i], Rect2(x, y, paw_w, row_h))
 		x += paw_w + gap
 	x = maxf(x, col_x + col_w - 2.0 * quick_w - gap)
 	for i in 2:
-		HudStyle.place(_quick_buttons[i], Rect2(x, y, quick_w, row_h))
+		_place(_quick_buttons[i], Rect2(x, y, quick_w, row_h))
 		x += quick_w + gap
 	y += row_h + gap
 	# BACKPACK panel: title + grid, slots shrink to fit what's left above the info box
@@ -317,7 +313,7 @@ func _layout(cat: CatPlayer, at_stash: bool) -> void:
 	_rects.pack = pack_rect
 	for i in _pack_buttons.size():
 		var cell := Vector2(i % columns, i / columns)
-		HudStyle.place(_pack_buttons[i], Rect2(pack_rect.position + Vector2(8, 30) + cell * Vector2(slot_w + 6, slot_h + 6), Vector2(slot_w, slot_h)))
+		_place(_pack_buttons[i], Rect2(pack_rect.position + Vector2(8, 30) + cell * Vector2(slot_w + 6, slot_h + 6), Vector2(slot_w, slot_h)))
 	# INFO box under it
 	var info := Rect2(col_x, pack_rect.end.y + gap, col_w, info_h)
 	_rects.info = info
@@ -336,7 +332,7 @@ func _layout(cat: CatPlayer, at_stash: bool) -> void:
 		_rects.stash = stash_rect
 		for i in _stash_buttons.size():
 			var cell := Vector2(i % stash_cols, i / stash_cols)
-			HudStyle.place(_stash_buttons[i], Rect2(stash_rect.position + Vector2(8, 30) + cell * Vector2(cell_w + 6, cell_h + 6), Vector2(cell_w, cell_h)))
+			_place(_stash_buttons[i], Rect2(stash_rect.position + Vector2(8, 30) + cell * Vector2(cell_w + 6, cell_h + 6), Vector2(cell_w, cell_h)))
 	# Where the lines start: the 3D backpack, the paws, the belt, the litterbox (projected).
 	_rects.anchor_pack = _project(items.backpack_anchor(cat))
 	_rects.anchor_paws = [
@@ -346,6 +342,11 @@ func _layout(cat: CatPlayer, at_stash: bool) -> void:
 	_rects.anchor_belt = _project(cat.cat_model.to_global(Vector3(0.12, 0.3, -0.12)))
 	var hub := UndergroundHub.of(cat)
 	_rects.anchor_stash = _project(hub.to_global(hub.stash_spot)) if at_stash else null
+
+
+func _place(button: Button, rect: Rect2) -> void:
+	button.position = rect.position
+	button.size = rect.size
 
 
 ## A 3D spot -> this screen (HUD units), using THIS player's camera. null = behind the camera.
@@ -374,16 +375,13 @@ func _draw() -> void:
 	if job.size.y > 0.0:
 		HudStyle.draw_panel(self, job)
 		var cash_right := job.end.x - (134.0 if _abandon_button.visible else 10.0)
-		var cash_w := 0.0
 		if owner_cat != null and is_instance_valid(owner_cat):
-			var cash_text := "$%d" % Wallet.instance.cash_of(owner_cat.player_id)
-			cash_w = font.get_string_size(cash_text, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size).x
-			HudStyle.draw_text_right(self, font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), cash_text, title_font_size, Color(0.55, 1, 0.6))
-		HudStyle.draw_text(self, font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, maxf(40.0, cash_right - job.position.x - cash_w - 20.0))
+			_text_right(font, Vector2(cash_right, job.position.y + job.size.y / 2.0 + 5), "$%d" % Wallet.instance.cash_of(owner_cat.player_id), title_font_size, Color(0.55, 1, 0.6))
+		_text(font, job.position + Vector2(10, job.size.y / 2.0 + 5), _job_text, name_font_size + 1, JOB_COLOR, cash_right - job.position.x - 62.0)
 	# Row titles
 	var paw_rect := _paw_buttons[0].get_rect()
-	HudStyle.draw_text(self, font, paw_rect.position + Vector2(2, -5), "PAWS", title_font_size - 3, style.text_color)
-	HudStyle.draw_text(self, font, _quick_buttons[0].get_rect().position + Vector2(2, -5), "QUICK USE", title_font_size - 3, style.text_color)
+	_text(font, paw_rect.position + Vector2(2, -5), "PAWS", title_font_size - 3, style.text_color)
+	_text(font, _quick_buttons[0].get_rect().position + Vector2(2, -5), "QUICK USE", title_font_size - 3, style.text_color)
 	# BACKPACK
 	var pack: Rect2 = _rects.pack
 	HudStyle.draw_panel(self, pack)
@@ -392,10 +390,10 @@ func _draw() -> void:
 	if cat != null and is_instance_valid(cat):
 		var used: int = items.pack_slots_used(cat.player_id, items.get_inventory(cat.player_id).pack)
 		var total := items.pack_size_for(cat.player_id)
-		HudStyle.draw_text(self, font, pack.position + Vector2(10, 22), "BACKPACK  %d/%d" % [used, total], title_font_size, style.text_color)
+		_text(font, pack.position + Vector2(10, 22), "BACKPACK  %d/%d" % [used, total], title_font_size, style.text_color)
 		var worth := items.pack_sell_value(cat.player_id)
 		if worth > 0:
-			HudStyle.draw_text_right(self, font, pack.position + Vector2(pack.size.x - 10, 22), "LOOT $%d" % worth, title_font_size - 2, Color(0.55, 1, 0.6))
+			_text_right(font, pack.position + Vector2(pack.size.x - 10, 22), "LOOT $%d" % worth, title_font_size - 2, Color(0.55, 1, 0.6))
 	# INFO
 	HudStyle.draw_panel(self, _rects.info)
 	# LITTERBOX
@@ -403,7 +401,7 @@ func _draw() -> void:
 		var stash: Rect2 = _rects.stash
 		HudStyle.draw_panel(self, stash)
 		if cat != null and is_instance_valid(cat):
-			HudStyle.draw_text(self, font, stash.position + Vector2(10, 22), "LITTERBOX  %d/%d   (safe, kept between games)" % [items.get_stash(cat.player_id).size(), items.stash_size_for(cat.player_id)],
+			_text(font, stash.position + Vector2(10, 22), "LITTERBOX  %d/%d   (safe, kept between games)" % [items.get_stash(cat.player_id).size(), items.stash_size_for(cat.player_id)],
 				title_font_size - 2, style.text_color, stash.size.x - 20)
 	# CALLOUT LINES (fade in with the camera glide)
 	var line_color := style.border_color
@@ -449,6 +447,18 @@ func _callout(from: Variant, to: Vector2, color: Color, from_below: bool = false
 	draw_circle(to, width * 1.5, color)
 
 
+func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
+	if text == "":
+		return
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
+
+
+func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	_text(font, at - Vector2(width, 0), text, font_size, color)
+
+
 # --- Filling the slots ---
 
 ## The JOB strip: "JOB: MITTENS' FISH  1/3  +$100" (the hover line has room for the long version).
@@ -458,7 +468,7 @@ func _show_job(cat: CatPlayer) -> void:
 	var data: QuestData = quests.catalog.get(quest_id)
 	if data == null:
 		_abandon_armed = false
-		_job_text = "JOB: none - talk to cats in sewers"
+		_job_text = "JOB: none - talk to the cats in the sewers"
 		return
 	var line := "%d/%d" % [mini(quests.progress(cat.player_id, quest_id), data.count), data.count]
 	if quests.is_in_state(cat.player_id, quest_id, "ready"):
@@ -531,19 +541,40 @@ func _resize(list: Array[Button], where: String, count: int) -> bool:
 
 ## One slot: a Button (clicks, highlight) with a SlotFace on it that draws the picture.
 func _slot(where: String, index: int) -> Button:
-	var button := HudStyle.make_button(self, "", name_font_size)
+	var button := Button.new()
 	button.name = "%s%d" % [where.capitalize(), index]
+	button.focus_mode = Control.FOCUS_NONE  # (the d-pad moves a highlight: _focus, seat_focus.gd)
 	button.set_meta("where", where)
 	button.set_meta("index", index)
 	button.set_meta("item", "")
+	button.add_theme_stylebox_override("normal", _box_style(false))
+	button.add_theme_stylebox_override("hover", _box_style(true))
+	button.add_theme_stylebox_override("pressed", _box_style(true))
 	button.gui_input.connect(_on_slot_input.bind(button, where, index))
 	button.mouse_entered.connect(_on_slot_hover.bind(button))
 	var face := SlotFace.new()
+	face.name = "Face"
 	face.where = where
 	face.index = index
 	face.screen = self
-	HudStyle.attach_face(button, face)
+	face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(face)
+	add_child(button)
 	return button
+
+
+## A slot's box: translucent ocean blue, brighter with a thicker edge when highlighted.
+func _box_style(lit: bool) -> StyleBoxFlat:
+	var style := HudStyle.current()
+	var box := StyleBoxFlat.new()
+	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
+	if lit:
+		box.bg_color.a = minf(1.0, style.panel_color.a + 0.12)
+	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
+	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
+	box.set_content_margin_all(4)
+	return box
 
 
 # --- Clicking ---
@@ -667,11 +698,11 @@ class SlotFace extends Control:
 		var badge_w := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.price_font_size).x + 14.0 if badge != "" and item_id != "" else 0.0
 		var title_w := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size - 1).x
 		if title != "" and title_w + badge_w + 8.0 <= size.x:  # (a narrow box: the price badge wins)
-			HudStyle.draw_text(self, font, Vector2(5, name_size + 3), title, name_size - 1, Color(style.text_color, 0.6))
+			_text(font, Vector2(5, name_size + 3), title, name_size - 1, Color(style.text_color, 0.6))
 		if item_id == "":
 			var empty_text := "EMPTY" if where in ["hand", "pack"] and size.y > 50 else "-"
 			var w := font.get_string_size(empty_text, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size).x
-			HudStyle.draw_text(self, font, Vector2((size.x - w) / 2.0, size.y / 2.0 + name_size * 0.35), empty_text, name_size, Color(style.text_color, 0.3))
+			_text(font, Vector2((size.x - w) / 2.0, size.y / 2.0 + name_size * 0.35), empty_text, name_size, Color(style.text_color, 0.3))
 			return
 		var items := ItemManager.instance
 		var data: ItemData = items.catalog.get(item_id)
@@ -686,15 +717,19 @@ class SlotFace extends Control:
 		HudStyle.draw_icon(self, HudStyle.item_icon(item_id), icon_box, tint)
 		if show_name:
 			var shown := label if label != "" else data.display_name
-			HudStyle.draw_text(self, font, Vector2(6, size.y - 6), shown, name_size, style.text_color, size.x - 12)
+			_text(font, Vector2(6, size.y - 6), shown, name_size, style.text_color, size.x - 12)
 		if badge != "":
 			var w := font.get_string_size(badge, HORIZONTAL_ALIGNMENT_LEFT, -1, screen.price_font_size).x
 			var box := Rect2(size.x - w - 10, 3, w + 7, screen.price_font_size + 4)
 			var colors: Array = [[Color(0.05, 0.22, 0.36, 0.85), style.text_color], [Color(0.1, 0.45, 0.2, 0.85), Color(0.6, 1, 0.65)],
 				[Color(0.15, 0.18, 0.22, 0.85), Color(0.7, 0.75, 0.8)]][clampi(badge_kind, 0, 2)]
 			draw_rect(box, colors[0])
-			HudStyle.draw_text(self, font, box.position + Vector2(3.5, screen.price_font_size + 1), badge, screen.price_font_size, colors[1])
+			_text(font, box.position + Vector2(3.5, screen.price_font_size + 1), badge, screen.price_font_size, colors[1])
 		if count > 1:
 			var count_text := "x%d" % count
 			var cw := font.get_string_size(count_text, HORIZONTAL_ALIGNMENT_LEFT, -1, name_size + 1).x
-			HudStyle.draw_text(self, font, Vector2(size.x - cw - 5, size.y - 5), count_text, name_size + 1, Color.WHITE)
+			_text(font, Vector2(size.x - cw - 5, size.y - 5), count_text, name_size + 1, Color.WHITE)
+
+	func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
+		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
+		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)

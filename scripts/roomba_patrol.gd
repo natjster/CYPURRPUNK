@@ -260,11 +260,11 @@ func ambush(spot: Vector3, count: int, reach: float) -> void:
 		var roomba := _pick_scene().instantiate() as Roomba
 		roomba.name = "Roomba%d" % _next_number
 		_next_number += 1
-		var where := spot + Vector3(_rng.randf_range(-10.0, 10.0), 0.1, _rng.randf_range(4.0, 10.0))
-		for attempt in 40:  # a sidewalk spot 10-30 m from the door, never behind the store
+		var where := _spawn_spot()
+		for attempt in 40:  # a sidewalk spot 10-30 m from the door (not right on top of it)
 			var maybe := ItemManager.instance.random_sidewalk_spot(_rng) + Vector3(0, 0.1, 0)
 			var distance := Motion.flat_distance(maybe, spot)
-			if distance > 10.0 and distance < 30.0 and maybe.z >= spot.z - 4.0:
+			if distance > 10.0 and distance < 30.0:
 				where = maybe
 				break
 		roomba.position = where
