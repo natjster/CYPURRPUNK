@@ -172,7 +172,7 @@ func _input(event: InputEvent) -> void:
 		var cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat))
 		if visible:
 			_set_open(false)
-		elif cat != null and cat.reads_input():
+		elif cat != null and cat.reads_input() and cat.riding_car == null:
 			_set_open(true, cat)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("ui_cancel"):
@@ -214,7 +214,7 @@ func _set_open(open_it: bool, cat: CatPlayer = null) -> void:
 	else:
 		_focus.clear()
 		var first := Game.instance.my_cat() if Game.instance != null else null
-		if seat == 0 and first != null and first.is_controlled:
+		if seat == 0 and first != null and (first.is_controlled or first.is_gunner()):
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -229,8 +229,8 @@ func _process(_delta: float) -> void:
 		return
 	var items := ItemManager.instance
 	var cat := owner_cat
-	if cat == null or not is_instance_valid(cat) or not cat.is_inside_tree():
-		_set_open(false)  # (the cat left: knocked out of the game, a new game, the player quit)
+	if cat == null or not is_instance_valid(cat) or not cat.is_inside_tree() or cat.riding_car != null:
+		_set_open(false)  # (the cat left: knocked out of the game, a new game, the player quit, or got in a car)
 		return
 	var at_stash := UndergroundHub.of(cat).near_stash(cat)
 	if _match_sizes():

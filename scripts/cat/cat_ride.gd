@@ -44,6 +44,10 @@ func enter(car: GetawayCar) -> void:
 	if not cat.is_multiplayer_authority():
 		return
 
+	var inventory := InventoryScreen.for_seat(cat.slot)
+	if inventory != null and inventory.visible:
+		inventory._set_open(false)
+
 	cat.is_controlled = false
 	cat.velocity = Vector3.ZERO
 	cat.cat_model.rotation.x = 0.0
@@ -105,3 +109,6 @@ func follow() -> void:
 	cat.global_position = car.global_position + Vector3.UP * ride_height
 	cat.velocity = Vector3.ZERO
 	cat.sync_position = cat.position
+	if is_gunner():
+		cat.cat_model.rotation.y = cat.camera_pivot.rotation.y
+		cat.sync_model_rotation = cat.cat_model.rotation

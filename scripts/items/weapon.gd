@@ -606,8 +606,25 @@ func _show_flash_star(color: Color) -> void:
 	if _flash_star == null:
 		return
 	_flash_material.albedo_color = Color(color.lerp(Color.WHITE, 0.45), 0.95)
-	_flash_star.rotation = Vector3(0, 0, _rng.randf() * TAU)  # a new spin every shot
-	_flash_star.scale = Vector3.ONE * muzzle_flash_size * _rng.randf_range(0.75, 1.3)
+	var roll := _rng.randf() * TAU
+	var star_scale := Vector3.ONE * muzzle_flash_size * _rng.randf_range(0.75, 1.3)
+	if not is_visible_in_tree() and _muzzle != null and is_inside_tree():
+		# Hidden inside a car (gunner): spawn a brief world-space flash at the muzzle.
+		var world_star := MeshInstance3D.new()
+		world_star.mesh = _flash_star.mesh
+		world_star.material_override = _flash_material
+		world_star.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		world_star.top_level = true
+		_effects_parent().add_child(world_star)
+		world_star.global_transform = _muzzle.global_transform
+		world_star.rotate_object_local(Vector3.FORWARD, roll)
+		world_star.scale = star_scale
+		get_tree().create_timer(0.05).timeout.connect(func():
+			if is_instance_valid(world_star):
+				world_star.queue_free())
+		return
+	_flash_star.rotation = Vector3(0, 0, roll)  # a new spin every shot
+	_flash_star.scale = star_scale
 	_flash_star.visible = true
 
 

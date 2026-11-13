@@ -121,7 +121,7 @@ const MART_MOOD: int = -2
 ## How close (metres) you must be to the litterbox spot to open it.
 @export var stash_radius: float = 2.5
 ## The HUD line after "[E] " when you're at the litterbox.
-@export var stash_prompt: String = "STORE YOUR SHIT"
+@export var stash_prompt: String = "STORE YOUR CRAP"
 ## The litterbox's plastic colour.
 @export var litterbox_color: Color = Color(0.55, 0.2, 0.6)
 ## Its neon strip, sign and light.
