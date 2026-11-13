@@ -1006,13 +1006,17 @@ func receive_hit(hit: Hit) -> bool:
 	return standing  # a damage number, unless they were already down
 
 
+const MAX_ZAP_PUSH: float = 30.0
+
+
 @rpc("any_peer", "call_local", "unreliable")
 func get_zapped(push: Vector3) -> void:
-	if not is_multiplayer_authority() or not is_controlled:
+	if not is_multiplayer_authority() or not is_controlled or not push.is_finite():
 		return
-	velocity.x += push.x
-	velocity.z += push.z
-	velocity.y = maxf(velocity.y, push.y)  # a little hop, but never cancel a jump
+	var clamped := push.limit_length(MAX_ZAP_PUSH)
+	velocity.x += clamped.x
+	velocity.z += clamped.z
+	velocity.y = maxf(velocity.y, clamped.y)  # a little hop, but never cancel a jump
 
 
 ## Called by the car on EVERY computer when this cat gets in (driver or passenger) / out.

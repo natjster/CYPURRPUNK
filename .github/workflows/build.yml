@@ -1,6 +1,6 @@
 # CYPURRPUNK automatic builds.
-# Every push to main builds Windows, Linux and Android, then replaces the files on the rolling
-# "latest" GitHub Release. The README's download links always point at that release.
+# Every push to main builds Windows, Linux, macOS, Android and iOS, then replaces the files on
+# the rolling "latest" GitHub Release. The README's download links always point at that release.
 # Plain-English explanation: SETUP_GUIDE.md section 18.
 
 name: Build
@@ -127,6 +127,97 @@ jobs:
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)apksigner
           "$apksigner" verify --print-certs build/android/CYPURRPUNK-Android.apk
 
+      - name: Upload Windows, Linux, and Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-android-builds
+          path: |
+            build/CYPURRPUNK-Windows.zip
+            build/CYPURRPUNK-Linux.zip
+            build/android/CYPURRPUNK-Android.apk
+
+  build-apple:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Get the game files
+        uses: actions/checkout@v4
+
+      - name: Restore Godot (macOS) from the cache
+        id: godot_cache_macos
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/Library/Application Support/Godot/export_templates
+          key: godot-macos-${{ env.GODOT_VERSION }}-stable
+
+      - name: Download Godot and the Apple export templates
+        if: steps.godot_cache_macos.outputs.cache-hit != 'true'
+        run: |
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -fsSL --retry 3 -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          curl -fsSL --retry 3 -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          templates="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          unzip -q -j /tmp/templates.tpz -d "$templates" \
+            'templates/macos*' 'templates/ios*'
+
+      - name: Import the project
+        run: ~/godot/Godot.app/Contents/MacOS/Godot --headless --path . --import
+
+      - name: Export macOS (universal, ad-hoc signed)
+        run: |
+          mkdir -p build/macos
+          ~/godot/Godot.app/Contents/MacOS/Godot --headless --path . --export-release "macOS" build/macos/CYPURRPUNK.app
+          test -d build/macos/CYPURRPUNK.app
+          # Apple Silicon Macs require at least a free ad-hoc signature to launch.
+          codesign --force --deep --sign - build/macos/CYPURRPUNK.app
+          ditto -c -k --sequesterRsrc --keepParent build/macos/CYPURRPUNK.app build/CYPURRPUNK-macOS.zip
+          test -s build/CYPURRPUNK-macOS.zip
+
+      - name: Export and package iOS (unsigned .ipa for sideloading)
+        run: |
+          mkdir -p build/ios/xcode_build build/ios/Payload
+          ~/godot/Godot.app/Contents/MacOS/Godot --headless --path . --export-release "iOS" build/ios/CYPURRPUNK.xcodeproj
+          xcodebuild -project build/ios/CYPURRPUNK.xcodeproj \
+            -scheme CYPURRPUNK \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY="" \
+            build \
+            SYMROOT="$(pwd)/build/ios/xcode_build"
+          app_path=$(find build/ios/xcode_build -name "CYPURRPUNK.app" -type d | head -n 1)
+          test -n "$app_path"
+          cp -R "$app_path" build/ios/Payload/CYPURRPUNK.app
+          (cd build/ios && zip -r -9 ../CYPURRPUNK-iOS.ipa Payload)
+          test -s build/CYPURRPUNK-iOS.ipa
+
+      - name: Upload macOS and iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-builds
+          path: |
+            build/CYPURRPUNK-macOS.zip
+            build/CYPURRPUNK-iOS.ipa
+
+  release:
+    needs: [build, build-apple]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the game files
+        uses: actions/checkout@v4
+
+      - name: Download all platform builds
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
       - name: Update the rolling "latest" release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -147,15 +238,19 @@ jobs:
 
           if gh release view latest > /dev/null 2>&1; then
             gh release upload latest \
-              build/CYPURRPUNK-Windows.zip \
-              build/CYPURRPUNK-Linux.zip \
-              build/android/CYPURRPUNK-Android.apk \
+              release-artifacts/CYPURRPUNK-Windows.zip \
+              release-artifacts/CYPURRPUNK-Linux.zip \
+              release-artifacts/CYPURRPUNK-macOS.zip \
+              release-artifacts/CYPURRPUNK-Android.apk \
+              release-artifacts/CYPURRPUNK-iOS.ipa \
               --clobber
             gh release edit latest --title "CYPURRPUNK (latest build)" --notes-file /tmp/release_notes.md --latest
           else
             gh release create latest \
-              build/CYPURRPUNK-Windows.zip \
-              build/CYPURRPUNK-Linux.zip \
-              build/android/CYPURRPUNK-Android.apk \
+              release-artifacts/CYPURRPUNK-Windows.zip \
+              release-artifacts/CYPURRPUNK-Linux.zip \
+              release-artifacts/CYPURRPUNK-macOS.zip \
+              release-artifacts/CYPURRPUNK-Android.apk \
+              release-artifacts/CYPURRPUNK-iOS.ipa \
               --title "CYPURRPUNK (latest build)" --notes-file /tmp/release_notes.md --latest
           fi

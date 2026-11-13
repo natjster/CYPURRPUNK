@@ -639,11 +639,18 @@ func receive_hit(hit: Hit) -> bool:
 	return true  # a damage number
 
 
+const MAX_HIT_IMPULSE: float = 40.0
+const MAX_HIT_OFFSET: float = 6.0
+
+
 ## A tommy gun bolt hit the car. Sent to whoever simulates the car, who applies the push.
 @rpc("any_peer", "call_local", "unreliable")
 func take_hit(impulse: Vector3, hit_position: Vector3) -> void:
-	if is_multiplayer_authority() and not freeze:
-		apply_impulse(impulse, hit_position - global_position)
+	if not is_multiplayer_authority() or freeze:
+		return
+	if not impulse.is_finite() or not hit_position.is_finite():
+		return
+	apply_impulse(impulse.limit_length(MAX_HIT_IMPULSE), (hit_position - global_position).limit_length(MAX_HIT_OFFSET))
 
 
 func _process(delta: float) -> void:

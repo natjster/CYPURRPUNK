@@ -1,9 +1,9 @@
-# 18. Automatic builds and download links (Windows, Linux, Android)
+# 18. Automatic builds and download links (Windows, Linux, macOS, Android, iOS)
 
 [Back to the contents page](../SETUP_GUIDE.md)
 
 
-Every time you push to `main` with GitHub Desktop, GitHub builds all three versions by itself and
+Every time you push to `main` with GitHub Desktop, GitHub builds all five versions by itself and
 puts them on the download page. You don't need Godot open, and your PC can be off.
 
 ### Where the downloads are
@@ -12,7 +12,9 @@ puts them on the download page. You don't need Godot open, and your PC can be of
 - **Direct links:**
   - https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Windows.zip
   - https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Linux.zip
+  - https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-macOS.zip
   - https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Android.apk
+  - https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-iOS.ipa
 - **What changed:** the release page shows the date and your commit message for the newest build.
 
 ### Watching a build

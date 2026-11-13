@@ -11,7 +11,9 @@ These links always give you the newest build:
 
 - **[Download for Windows (64-bit)](https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Windows.zip)**
 - **[Download for Linux (64-bit)](https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Linux.zip)**
+- **[Download for macOS (Intel & Apple Silicon)](https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-macOS.zip)**
 - **[Download for Android (Controller required)](https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-Android.apk)**
+- **[Download for iOS (Sideload `.ipa`, controller required)](https://github.com/natjster/CYPURRPUNK/releases/latest/download/CYPURRPUNK-iOS.ipa)**
 
 The game updates here every time new work lands. The badge at the top shows if a new build is
 being made right now. See [what changed in the latest build](https://github.com/natjster/CYPURRPUNK/releases/latest).
@@ -29,10 +31,22 @@ being made right now. See [what changed in the latest build](https://github.com/
 2. Double-click `cypurrpunk.x86_64`. If nothing happens, right-click it, open **Properties >
    Permissions**, and tick **Allow executing file as program**.
 
+**macOS**
+1. Unzip `CYPURRPUNK-macOS.zip` to get `CYPURRPUNK.app`.
+2. Right-click (or Control-click) `CYPURRPUNK.app` and click **Open** (first launch only, since the
+   app is not Apple-notarized). If macOS blocks it in Sequoia or newer, open **System Settings >
+   Privacy & Security** and click **Open Anyway**.
+
 **Android**
 1. Pair a Bluetooth controller with your phone. There are no touch controls yet.
 2. Download `CYPURRPUNK-Android.apk` on the phone and tap it.
 3. If asked, allow your browser to install apps. Then tap **Install**.
+
+**iOS (iPhone / iPad)**
+1. Pair a Bluetooth controller (Xbox, PlayStation, or MFi). There are no touch controls yet.
+2. Because Apple requires a paid Developer account for App Store / TestFlight, `CYPURRPUNK-iOS.ipa`
+   is an unsigned build you can sideload for free using **AltStore**, **SideStore**, or
+   **Sideloadly** with a regular Apple ID (needs refreshing every 7 days).
 
 ## 🐾 Play together online
 

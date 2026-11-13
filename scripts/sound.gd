@@ -71,6 +71,24 @@ func _ready() -> void:
 	get_tree().node_added.connect(_on_node_added)
 
 
+func _exit_tree() -> void:
+	# Stop and free any still-playing audio players before ObjectDB cleanup so streamed WAV
+	# playbacks and cached AudioStreamWAV resources don't report as leaked on quit.
+	for player in _loops:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	_loops.clear()
+	for child in get_children():
+		if child is AudioStreamPlayer or child is AudioStreamPlayer3D:
+			child.stop()
+			child.stream = null
+			child.free()
+	_channels.clear()
+	_loop_copies.clear()
+	_sounds.clear()
+
+
 # --- Playing sounds ---
 
 ## Play a sound that isn't anywhere in the world (menus, "you got hurt", "SOLD!").
