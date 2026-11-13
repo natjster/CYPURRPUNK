@@ -45,8 +45,8 @@ func enter(car: GetawayCar) -> void:
 		return
 
 	var inventory := InventoryScreen.for_seat(cat.slot)
-	if inventory != null and inventory.visible:
-		inventory._set_open(false)
+	if inventory != null:
+		inventory.close()
 
 	cat.is_controlled = false
 	cat.velocity = Vector3.ZERO

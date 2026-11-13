@@ -207,13 +207,8 @@ func _layout() -> void:
 	_about = Rect2(right_x, top, right_w, body_h * 0.52)
 	_table = Rect2(right_x, _about.end.y + gap, right_w, body_h - _about.size.y - gap)
 	if _feed != null:
-		_place(_feed, Rect2(_stats.position.x, buttons_y, _stats.size.x + gap + right_w * 0.55, button_height))
-		_place(_leave, Rect2(_feed.position.x + _feed.size.x + gap, buttons_y, _panel.end.x - 14.0 - (_feed.position.x + _feed.size.x + gap), button_height))
-
-
-func _place(button: Control, rect: Rect2) -> void:
-	button.position = rect.position
-	button.size = rect.size
+		HudStyle.place(_feed, Rect2(_stats.position.x, buttons_y, _stats.size.x + gap + right_w * 0.55, button_height))
+		HudStyle.place(_leave, Rect2(_feed.position.x + _feed.size.x + gap, buttons_y, _panel.end.x - 14.0 - (_feed.position.x + _feed.size.x + gap), button_height))
 
 
 func _draw() -> void:
@@ -226,9 +221,9 @@ func _draw() -> void:
 	var tier_color := mainframe.tier_color(team)
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0.02, 0.05, 0.45))  # dim the sewer behind
 	HudStyle.draw_panel(self, _panel)
-	_text(font, _panel.position + Vector2(14, 32), "THE MAINFRAME — %s" % Teams.name_of(team), title_font_size, tier_color, _panel.size.x * 0.6)
+	HudStyle.draw_text(self, font, _panel.position + Vector2(14, 32), "THE MAINFRAME — %s" % Teams.name_of(team), title_font_size, tier_color, _panel.size.x * 0.6)
 	var have := _electronics()
-	_text_right(font, Vector2(_panel.end.x - 14, _panel.position.y + 32), "%d ELECTRONICS IN PACK" % have, title_font_size - 4, PURPLE if have > 0 else Color(style.text_color, 0.5))
+	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 14, _panel.position.y + 32), "%d ELECTRONICS IN PACK" % have, title_font_size - 4, PURPLE if have > 0 else Color(style.text_color, 0.5))
 
 	# The 4 battery cells, bottom to top. The top one with juice shows how full it still is.
 	HudStyle.draw_panel(self, _gauge, true)
@@ -250,8 +245,8 @@ func _draw() -> void:
 	var sx := _stats.position.x
 	var sy := _stats.position.y + 22.0
 	var sw := _stats.size.x
-	_text(font, Vector2(sx, sy), mainframe.tier_name(team), big_font_size + 4, tier_color, sw)
-	_text(font, Vector2(sx, sy + 34), "%d%%   %d/4 CELLS" % [mainframe.percent(team), mainframe.cells(team)], big_font_size, Color.WHITE, sw)
+	HudStyle.draw_text(self, font, Vector2(sx, sy), mainframe.tier_name(team), big_font_size + 4, tier_color, sw)
+	HudStyle.draw_text(self, font, Vector2(sx, sy + 34), "%d%%   %d/4 CELLS" % [mainframe.percent(team), mainframe.cells(team)], big_font_size, Color.WHITE, sw)
 	var lines := [
 		["PAYPHONE TRACKED AT", "%d HEAT" % int(mainframe.exit_heat(team)), GOOD],
 		["CITY STARTS AT", "%d HEAT%s" % [int(mainframe.starting_heat()), "  (OVERCLOCK)" if mainframe.overclock_active else ""], AMBER],
@@ -260,17 +255,17 @@ func _draw() -> void:
 	]
 	var ly := sy + 72.0
 	for line in lines:
-		_text(font, Vector2(sx, ly), line[0], detail_font_size, Color(style.text_color, 0.6), sw)
-		_text(font, Vector2(sx, ly + 18), line[1], detail_font_size + 3, line[2], sw)
+		HudStyle.draw_text(self, font, Vector2(sx, ly), line[0], detail_font_size, Color(style.text_color, 0.6), sw)
+		HudStyle.draw_text(self, font, Vector2(sx, ly + 18), line[1], detail_font_size + 3, line[2], sw)
 		ly += 42.0
 	if mainframe.breach_busy:
-		_text(font, Vector2(sx, ly), "LOCKED DOWN: SEWER BREACH", detail_font_size + 1, BAD, sw)
+		HudStyle.draw_text(self, font, Vector2(sx, ly), "LOCKED DOWN: SEWER BREACH", detail_font_size + 1, BAD, sw)
 	elif mainframe.tier(team) == Mainframe.Tier.CRITICAL:
-		_text(font, Vector2(sx, ly), "EMPTY! LAST RAID, THEN A BREACH", detail_font_size + 1, BAD if critical_flash else AMBER, sw)
+		HudStyle.draw_text(self, font, Vector2(sx, ly), "EMPTY! LAST RAID, THEN A BREACH", detail_font_size + 1, BAD if critical_flash else AMBER, sw)
 
 	# What it does.
 	HudStyle.draw_panel(self, _about, true)
-	_text(font, _about.position + Vector2(12, 24), "WHAT IT DOES", big_font_size - 2, AMBER, _about.size.x - 24)
+	HudStyle.draw_text(self, font, _about.position + Vector2(12, 24), "WHAT IT DOES", big_font_size - 2, AMBER, _about.size.x - 24)
 	var about := about_text.format({"drain": _number(mainframe.drain_per_minute), "seal": _number(mainframe.drain_per_district)})
 	var about_w := _about.size.x - 24.0
 	var about_h := _about.size.y - 36.0
@@ -287,9 +282,9 @@ func _draw() -> void:
 	var row_h := minf(24.0, (_table.size.y - 34.0) / 5.0)
 	var tx := _table.position.x + 12.0
 	var ty := _table.position.y + 22.0
-	_text(font, Vector2(tx, ty), "CELLS", detail_font_size, Color(style.text_color, 0.6))
-	_text(font, Vector2(tx + 70, ty), "TIER", detail_font_size, Color(style.text_color, 0.6))
-	_text_right(font, Vector2(_table.end.x - 12, ty), "PHONE AT", detail_font_size, Color(style.text_color, 0.6))
+	HudStyle.draw_text(self, font, Vector2(tx, ty), "CELLS", detail_font_size, Color(style.text_color, 0.6))
+	HudStyle.draw_text(self, font, Vector2(tx + 70, ty), "TIER", detail_font_size, Color(style.text_color, 0.6))
+	HudStyle.draw_text_right(self, font, Vector2(_table.end.x - 12, ty), "PHONE AT", detail_font_size, Color(style.text_color, 0.6))
 	for row in 5:
 		var tier_index := 4 - row  # (OVERCLOCK on top)
 		var y := ty + 8.0 + row * row_h
@@ -300,9 +295,9 @@ func _draw() -> void:
 		for c in 4:
 			var pip := Rect2(tx + c * 13.0, y + row_h * 0.5 - 3.0, 10.0, 8.0)
 			draw_rect(pip, colour if c < tier_index else Color(colour, 0.15), c < tier_index)
-		_text(font, Vector2(tx + 70, y + row_h - 5), Mainframe.TIER_NAMES[tier_index], detail_font_size + (1 if mine else 0),
+		HudStyle.draw_text(self, font, Vector2(tx + 70, y + row_h - 5), Mainframe.TIER_NAMES[tier_index], detail_font_size + (1 if mine else 0),
 			colour if mine else Color(colour, 0.65))
-		_text_right(font, Vector2(_table.end.x - 12, y + row_h - 5), "%d HEAT" % int(maxf(exits[tier_index] - Upgrades.exit_heat_discount(team), 0.0)),
+		HudStyle.draw_text_right(self, font, Vector2(_table.end.x - 12, y + row_h - 5), "%d HEAT" % int(maxf(exits[tier_index] - Upgrades.exit_heat_discount(team), 0.0)),
 			detail_font_size, Color.WHITE if mine else Color(style.text_color, 0.6))
 
 	# The bottom box.
@@ -326,16 +321,6 @@ func _time_to_next_cell(mainframe: Mainframe, team: int) -> String:
 ## 1.0 -> "1", 1.5 -> "1.5".
 static func _number(value: float) -> String:
 	return str(int(value)) if is_equal_approx(value, roundf(value)) else "%.1f" % value
-
-
-func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
-
-
-func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	_text(font, at - Vector2(width, 0), text, font_size, color)
 
 
 # --- Feeding ---

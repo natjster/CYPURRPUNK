@@ -176,8 +176,7 @@ func close() -> void:
 	_for_unplug = false
 	hide()
 	_focus.clear()
-	if seat == 0:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	HudStyle.restore_game_mouse(seat)
 
 
 ## A setting row: "STICK SPEED  [<] 100% [>]". value_text() gives the value's text; adjust(-1 / +1)

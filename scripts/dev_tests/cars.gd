@@ -223,3 +223,60 @@ func _wait_for_wheel(player: CatPlayer) -> GetawayCar:
 		await get_tree().physics_frame
 	print("DevCapture car: never got behind the wheel")
 	return null
+
+
+## --drive / --ride_along / --ride_exit / --car_mouse / --car_watch: hop in the car, seat passengers,
+## turn the car camera, and optionally watch it.
+func _drive_and_ride(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	if args.has("drive"):
+		for i in 20:
+			await get_tree().process_frame  # let the host see our new position first
+		var my_car := _car_for(player)
+		if my_car.global_position.distance_to(player.global_position) > 4.0:
+			player.teleport_to(my_car.global_position + my_car.global_basis.x * -2.5, 0.0)
+			for i in 20:
+				await get_tree().process_frame
+		my_car.request_enter.rpc_id(1, player.player_id)
+		if args.has("ride_along"):
+			var car := _car_for(player)
+			for i in 20:
+				await get_tree().process_frame  # the driver gets in first
+			for ride_slot in args["ride_along"].split(","):
+				var rider: CatPlayer = scene.cat_for(PlayerId.make(multiplayer.get_unique_id(), int(ride_slot)))
+				if rider == null:
+					continue
+				rider.teleport_to(car.global_position + Vector3(2.5, 0.5, 0), 0.0)
+				for i in 10:
+					await get_tree().physics_frame
+				car.interact(rider)
+				for i in 10:
+					await get_tree().process_frame
+			print("DevCapture ride_along: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
+			if args.has("ride_exit"):
+				car.request_exit.rpc_id(1, PlayerId.make(multiplayer.get_unique_id(), int(args["ride_exit"])))
+				for i in 20:
+					await get_tree().process_frame
+				print("DevCapture ride_exit: driver=%d passengers=%s" % [car.driver_id, car.passenger_ids])
+		if args.has("car_mouse"):
+			for i in 20:
+				await get_tree().process_frame  # wait until we're behind the wheel
+			var car := _car_for(player)
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			var motion := InputEventMouseMotion.new()
+			motion.relative = Vector2(float(args["car_mouse"]), 0)
+			motion.position = Vector2(get_window().size) / 2.0
+			Input.parse_input_event(motion)
+			for i in 3:
+				await get_tree().process_frame
+			print("DevCapture car_mouse: driver=%d look_yaw=%.2f look_pitch=%.2f" % [car.driver_id, car.look_yaw, car.look_pitch])
+	if args.has("car_watch"):
+		_watch_car_camera(_car_for(player), int(args["car_watch"]))
+
+
+## --car_watch=N: every N frames, print where the car camera is looking (runs alongside the rest).
+func _watch_car_camera(car: GetawayCar, every: int) -> void:
+	while is_instance_valid(car):
+		for i in every:
+			await get_tree().process_frame
+		if is_instance_valid(car):
+			print("DevCapture car_watch: look_yaw=%.2f look_pitch=%.2f speed=%.1f" % [car.look_yaw, car.look_pitch, -car.global_basis.z.dot(car.linear_velocity)])

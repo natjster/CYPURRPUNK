@@ -1,101 +1,46 @@
 class_name ItemManager
 extends Node3D
 ## THE ITEM SYSTEM. One of these lives in main.tscn as the "Items" node.
-## It handles every item in the game the same way, so new items need no new plumbing:
-##   - loads every item card (ItemData .tres) from res://items/
-##   - places the LOOT TABLE (res://loot/city.tres: fish, sardines, the koi) in each city,
-##     lying on the street, and makes it grow back (gear is BOUGHT in the sewers, see request_buy)
-##   - buying from the shop down in the sewers (request_buy, prices on the item cards)
-##   - pickups (E), drops (G), using up (catnip)
-##   - each cat's PAWS (right + left; a 2-paw item takes both) and ONE BACKPACK (6 slots, more with
-##     the BIGGER BACKPACK upgrade) that holds EVERYTHING else: fish and other loot, spare gear, scrap.
-##     Full backpack = no more loot. Loot comes home in it (nothing is sold at the exit): sell it at
-##     the Black Markitten (request_sell), bury it in the litterbox, or keep it for a quest.
-##   - two QUICK USE slots per cat (keys 1 / 2, d-pad left / right): catnip and catdip go
-##     there when picked up or bought (ItemData.quick_use), stacked, and are used with one press
-##   - each player's STASH: safe lockers in the sewers, saved between games (player_profile.gd)
-##   - shows held items in paws and the BACKPACK on every cat's back (models/cat_backpack.glb), on
-##     every computer; its light strip shows how full it is
-##   - Left Mouse uses the right-paw item, Right Mouse the left-paw item
-##
-## MULTIPLAYER: the HOST is the referee. Clients ask (request_pickup / request_drop_item /
-## request_consume / ...); the host checks and then tells everyone the result. Everyone keeps
-## a copy of "world" (items on the street) and "inventories" (paws + backpack per player).
-## Players are PLAYER IDs (scripts/player_id.gd): every request_* says which player it's for
-## (one computer can have several in split screen), and the host checks that player really
-## belongs to the computer that asked (PlayerId.sender_owns).
-##
-## World item IDs: items placed when the city is built get IDs 0, 1, 2... in the same order
-## on every computer. Items dropped later get IDs from 100000 up, chosen by the host.
+## Handles every item card (ItemData .tres) from res://items/, city loot placement and regrowth,
+## sewer shop purchases/sales, pickups (E), drops (G), paws + backpack + quick-use slots + stash,
+## and authoritative host-to-client synchronization.
+## Visuals, HUD loadout updates, and city loot spawning live in ItemVisuals (scripts/items/item_visuals.gd).
 
-## The one Items node (so items and cats can find it easily).
 static var instance: ItemManager
 
 const ITEMS_FOLDER: String = "res://items/"
 const FIRST_DROPPED_ID: int = 100000
-## Mixed into the city seed so item placement has its own random numbers.
 const LOOT_SEED_SALT: int = 4242
-## The backpack model every cat wears (tools/make_backpack_spec.py), and where it sits on the cat
-## (CatModel space: between the shoulders, -Z is the nose). Its "PackAnchor" marker is where the
-## inventory screen's callout line starts (scripts/ui/inventory_ui.gd).
 const BACKPACK_MODEL := "res://models/cat_backpack.glb"
 const BACKPACK_SPOT := Vector3(0, 0.37, 0.12)
-## A cat can't grab an item more than this many metres above or below it (see _reach_distance).
 const MAX_REACH_HEIGHT: float = 3.0
 
 @export_group("Rules")
-## BACKPACK slots: ONE backpack holds everything you aren't holding in your paws (fish, the koi,
-## scrap, spare guns...). Every item takes one slot, except CONSUMABLES (catnip, catdip), which
-## stack like in a QUICK USE slot (see pack_stacks_of). Upgrades add more (pack_size_for).
 @export var pack_size: int = 6
-## How many of the same item stack in one QUICK USE slot (3 = up to 3 catnip on key 1).
 @export var quick_stack_size: int = 3
-## Slots in each player's STASH (THE LITTERBOX) down in the sewers. Anything can go in it (gear,
-## fish, scrap). What's in it never drops when you're knocked out, and is saved between games.
 @export var stash_size: int = 9
-## How close (metres) a cat must be to grab an item with E.
 @export var interact_radius: float = 2.5
-## How close (metres) you must be to see the floating label over a street item.
 @export var item_tag_distance: float = 18.0
-
-## Show the backpack model on every cat's back? OFF for now (user's call, 12 Nov 2026): the
-## model is still made and kept on the cat (hidden), so the inventory screen's callout line still
-## knows where to start. Tick this back on to see the backpacks again.
 @export var show_backpack: bool = false
-## The light strip on a cat's backpack: empty / some room / full.
 @export var pack_light_empty: Color = Color(0.25, 0.95, 1.0)
 @export var pack_light_half: Color = Color(1.0, 0.8, 0.25)
 @export var pack_light_full: Color = Color(1.0, 0.25, 0.3)
 
 @export_group("Placed in every city")
-## What lies around every district: a list of "N of this item, here, grows back after S
-## seconds" lines (scripts/items/loot_table.gd). Double-click it to edit the lines.
 @export var loot_table: LootTable = preload("res://loot/city.tres")
-## More players = loot grows back faster, so there's enough to go round: every player beyond
-## the first makes it this much faster (0.15 = 15%; 8 players = about twice as fast).
 @export var regrow_faster_per_player: float = 0.15
 
 @onready var city: CityGenerator = $"../City"
 @onready var players: Node3D = $"../Players"
 
-## Item id -> ItemData, for every card in res://items/.
 var catalog := {}
-## World item ID -> {"item": item id, "pos": Vector3}. Items lying on the street.
 var world := {}
-## Player ID -> {"hands": [right, left], "pack": [item ids], "stash": [item ids],
-##                "quick": [[ids in slot 1], [ids in slot 2]]}.
-## "" = empty paw. A 2-paw item is stored in BOTH paws. "pack" is THE BACKPACK: loot AND spare gear.
-## "stash" is the litterbox in the sewers (see request_to_stash / player_profile.gd).
-## "quick" = the two QUICK USE slots: each a stack of the SAME item, e.g. ["catnip", "catnip"].
 var inventories := {}
-
-var _world_nodes := {}   # world item ID -> Node3D on the street
-var _spawns: Array = []  # host: [{"item", "pos", "respawn", "back_at"}], index = world item ID
+var _world_nodes := {}
+var _spawns: Array = []
 var _next_id: int = FIRST_DROPPED_ID
-var _mart_spots_used := {}  # Meow-Mart loot spots already taken while building this city's loot
+var _mart_spots_used := {}
 var _clock: float = 0.0
-## Item id -> a spare copy of its scene's script, NOT in the world: quick-use items call its
-## quick_use(cat) (so catnip's speed/duration still come from its own Inspector numbers).
 var _quick_effects := {}
 
 
@@ -136,74 +81,10 @@ func _on_city_generated(city_seed: int) -> void:
 			_remove_world_local(id)
 	_spawns.clear()
 	_mart_spots_used.clear()
-
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(city_seed * 31 + LOOT_SEED_SALT)
-	if loot_table != null:
-		for line in loot_table.spawns:
-			if line != null:
-				_place_loot_line(line, rng)
-	# MEOW-MART CLEARANCE (scripts/district_twist.gd): a prize right in front of the door.
-	var twist := DistrictTwist.instance
-	if DistrictTwist.is_clearance() and twist.clearance_prize_item != "" and catalog.has(twist.clearance_prize_item):
-		add_spawn_point(twist.clearance_prize_item, city.meow_mart_position + city.meow_mart_outward * 3.0, 0.0)
+	ItemVisuals.place_city_loot(self, city_seed)
 	# Anything else that places things per city (the heist's manholes and payphones) goes now,
 	# in a fixed order.
 	get_tree().call_group("item_placers", "place_items", self, city_seed)
-
-
-## One line of the loot table: "count" of an item, where the line says (loot_spawn.gd).
-func _place_loot_line(line: LootSpawn, rng: RandomNumberGenerator) -> void:
-	if not catalog.has(line.item_id):
-		push_warning("[Items] Loot table: no item card called '%s' in res://items/" % line.item_id)
-		return
-	var door := city.meow_mart_position
-	var count := line.count
-	# THE MEOW-MART HEIST (scripts/interiors/meow_mart_interior.gd): the golden koi lives in the
-	# tank in Meow-Mart's back room now, so the old "somewhere on a sidewalk" koi isn't placed.
-	if line.where == LootSpawn.Where.SIDEWALK and MeowMartInterior.koi_in_tank(line.item_id):
-		return
-	if line.where == LootSpawn.Where.OUTSIDE_MEOW_MART and line.item_id == "fish" and DistrictTwist.is_clearance():
-		count *= DistrictTwist.instance.clearance_fish_multiplier  # CLEARANCE SALE: more fish (district_twist.gd)
-	for i in count:
-		var spot := Vector3.ZERO
-		match line.where:
-			LootSpawn.Where.OUTSIDE_MEOW_MART:
-				# A row along the sidewalk outside the door, 1.3 m apart, centred on it. (More than a
-				# row's worth, in a CLEARANCE: the extra rows line up further out in the street.)
-				var row := i / line.count
-				var in_row := i % line.count
-				spot = door + Vector3((in_row - (line.count - 1) / 2.0) * 1.3, 0, -0.5) + city.meow_mart_outward * 1.3 * row
-			LootSpawn.Where.FIXED_SPOT:
-				spot = line.spot + Vector3(i * 0.8, 0, 0)
-			LootSpawn.Where.MEOW_MART_SHELF, LootSpawn.Where.MEOW_MART_COUNTER:
-				# Inside Meow-Mart: a free spot from the store's own list (the store is the same in
-				# every district, the loot's random numbers pick which spots get something).
-				var free := _free_mart_spots(line.where)
-				if free.is_empty():
-					push_warning("[Items] Meow-Mart has no free spot left for '%s'" % line.item_id)
-					return
-				spot = free[rng.randi_range(0, free.size() - 1)]
-				_mart_spots_used[spot] = true
-			_:  # SIDEWALK
-				spot = random_sidewalk_spot(rng)
-				for attempt in 20:  # far enough from Meow-Mart? (a few tries, then take what we got)
-					if spot.distance_to(door) >= line.min_distance_from_meow_mart:
-						break
-					spot = random_sidewalk_spot(rng)
-		add_spawn_point(line.item_id, spot, line.respawn_seconds)
-
-
-## The Meow-Mart loot spots (shelves or seafood counter) nothing has been put on yet this city.
-func _free_mart_spots(where: LootSpawn.Where) -> Array[Vector3]:
-	var free: Array[Vector3] = []
-	if MeowMartInterior.instance == null:
-		return free
-	var counter := where == LootSpawn.Where.MEOW_MART_COUNTER
-	for spot in MeowMartInterior.instance.loot_spots(counter):
-		if not _mart_spots_used.has(spot):
-			free.append(spot)
-	return free
 
 
 ## Put an item on the street. respawn_seconds > 0 = it grows back that long after it's taken.
@@ -216,14 +97,7 @@ func add_spawn_point(item_id: String, at: Vector3, respawn_seconds: float) -> vo
 
 ## A random spot on a sidewalk, along the street edge of a random block.
 func random_sidewalk_spot(rng: RandomNumberGenerator) -> Vector3:
-	var pitch := city.block_size + city.street_width
-	var blocks := city.blocks_per_side
-	var block_center := Vector3(
-		(rng.randi_range(0, blocks - 1) + 0.5 - blocks / 2.0) * pitch, 0,
-		(rng.randi_range(0, blocks - 1) + 0.5 - blocks / 2.0) * pitch)
-	var outward: Vector3 = [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK][rng.randi_range(0, 3)]
-	var along := Vector3(outward.z, 0, outward.x)
-	return block_center + outward * (city.block_size * 0.5 - 0.5) + along * rng.randf_range(-9.0, 9.0)
+	return ItemVisuals.random_sidewalk_spot(city, rng)
 
 
 # --- Items lying on the street ---
@@ -235,42 +109,7 @@ func _add_world_local(id: int, item_id: String, at: Vector3) -> void:
 		return
 	_remove_world_local(id)
 	world[id] = {"item": item_id, "pos": at}
-	var spot := Node3D.new()
-	spot.position = at
-	add_child(spot)
-	var model := data.scene.instantiate() as Node3D
-	model.name = "Model"
-	model.scale = Vector3.ONE * data.world_scale
-	spot.add_child(model)
-	if data.glow_color.a > 0.0:
-		var glow := OmniLight3D.new()
-		glow.light_color = data.glow_color
-		glow.light_energy = 1.5
-		glow.omni_range = 3.0
-		glow.distance_fade_enabled = true
-		glow.distance_fade_begin = 35.0
-		glow.position.y = 0.4
-		spot.add_child(glow)
-	spot.add_child(_make_item_tag(data))
-	_world_nodes[id] = spot
-
-
-## The floating label over a street item. It's only a MARKER: the HUD draws the real, sharp text
-## (scripts/ui/hud_name_tags.gd reads the Text, Modulate and metadata set here).
-func _make_item_tag(data: ItemData) -> Label3D:
-	var tag := Label3D.new()
-	tag.add_to_group(HudNameTags.GROUP)
-	tag.text = data.display_name
-	tag.transparency = 1.0  # see-through from its first frame, before the HUD has noticed it
-	tag.position.y = 1.25
-	tag.set_meta("max_distance", item_tag_distance)
-	if data.kind == ItemData.Kind.LOOT:
-		# Loot: its glow colour (gold koi, cyan scrap) or warm white.
-		tag.modulate = data.glow_color.lightened(0.25) if data.glow_color.a > 0.0 else Color(0.95, 0.95, 1.0)
-	else:
-		# Gear: plain white. The button is on the HUD prompt ("[E] PICKUP", interact_prompt).
-		tag.modulate = Color(1, 1, 1, 0.9)
-	return tag
+	_world_nodes[id] = ItemVisuals.spawn_world_node(self, data, at)
 
 
 func _remove_world_local(id: int) -> void:
@@ -305,14 +144,14 @@ func _process(delta: float) -> void:
 		model.rotation.y += delta * 1.5
 		model.position.y = 0.45 + sin(_clock * 3.0 + id) * 0.08
 	for node in players.get_children():
-		_sync_cat_visuals(node as CatPlayer)
-	_update_hud()
+		ItemVisuals.sync_cat(self, node as CatPlayer)
+	ItemVisuals.update_hud(self)
 
 
 func _physics_process(delta: float) -> void:
 	if multiplayer.is_server():
 		_host_tick()
-	_use_held_items(delta)
+	ItemVisuals.use_held_items(self, delta)
 
 
 ## Host only: grow items back.
@@ -322,75 +161,6 @@ func _host_tick() -> void:
 		if spawn.back_at >= 0.0 and _clock >= spawn.back_at:
 			spawn.back_at = -1.0
 			_add_world.rpc(i, spawn.item, spawn.pos)
-
-
-## The owner's computer: press the use buttons for whatever is in our cats' paws
-## (every player on this computer, each with their own buttons: scripts/seats.gd).
-func _use_held_items(delta: float) -> void:
-	if Game.instance == null:
-		return
-	for cat in Game.instance.local_cats():
-		# (Walking, or a GUNNER in a car's passenger seat: scripts/cat/cat_ride.gd. Drivers keep their
-		# paws on the wheel.)
-		if not cat.reads_input() or not (cat.is_controlled or cat.is_gunner()) or cat.knocked_out or cat.is_downed():
-			cat.aim.wants_aim = false  # (no aiming down sights either)
-			continue  # (downed cats can't shoot or sniff catnip: they can only crawl and meow)
-		var safe_zone := UndergroundHub.is_safe(cat.global_position)  # (a SEWER BREACH: fight!)
-		var allowed := _can_use_items(cat)
-		# QUICK USE keys (1 / 2, d-pad left / right): the host takes one out and we use it.
-		for slot in 2:
-			if allowed and Seats.is_just_pressed(cat.slot, "quick_%d" % (slot + 1)) and not quick_slots(cat.player_id)[slot].is_empty():
-				request_quick_use.rpc_id(1, cat.player_id, slot)
-		# AIM DOWN SIGHTS (scripts/cat/cat_aim.gd): a gun in the right paw (or a two-paw gun) and
-		# NOTHING in the left paw = the left-paw button (right mouse / LT) aims instead.
-		var right := held_item(cat, 0)
-		var can_aim := right is Weapon and not right is MeleeWeapon and held_item(cat, 1) == null and not safe_zone
-		cat.aim.wants_aim = can_aim and allowed and Seats.is_pressed(cat.slot, "use_left")
-		# BOOMERANG BATS (scripts/cat/cat_melee.gd throw_next): right mouse / LT THROWS a bat instead of
-		# swinging it: the left paw's first, then the right paw's while the first is still out.
-		var left := held_item(cat, 1)
-		var left_is_bat := left is MeleeWeapon and (left as MeleeWeapon).throwable
-		var right_is_bat := right is MeleeWeapon and (right as MeleeWeapon).throwable
-		if allowed and not safe_zone and cat.melee != null and cat.is_controlled and (left_is_bat or (right_is_bat and left == null)):
-			if Seats.is_just_pressed(cat.slot, "use_left"):
-				cat.melee.throw_next()
-		for hand in 2:
-			var held := held_item(cat, hand)
-			if held == null or (safe_zone and held is Weapon):
-				continue  # the hub is a safe zone: guns don't fire down there (catnip still works)
-			var action := "shoot" if hand == 0 else "use_left"
-			var pressed := Seats.is_pressed(cat.slot, action)
-			var just := Seats.is_just_pressed(cat.slot, action)
-			if hand == 1 and left_is_bat:
-				pressed = false  # (right click THROWS the left bat: above)
-				just = false
-			if hand == 1 and right == null:
-				# Nothing in the right paw (e.g. just the OFFHAND bat): Left Mouse / RT uses the left paw too.
-				pressed = pressed or Seats.is_pressed(cat.slot, "shoot")
-				just = just or Seats.is_just_pressed(cat.slot, "shoot")
-			held.use_tick(allowed and pressed, allowed and just, delta)
-			if hand == 0 and held.data != null and held.data.hands == 2:
-				# A 2-paw item: right mouse / LT is its OTHER move (the tuna's SPIN ATTACK).
-				held.alt_use_tick(allowed and Seats.is_pressed(cat.slot, "use_left"), allowed and Seats.is_just_pressed(cat.slot, "use_left"), delta)
-	# The MELEE button (F / RB): throw the offhand bat, or SCRATCH with bare claws (scripts/cat/cat_melee.gd).
-	for cat in Game.instance.local_cats():
-		if cat.reads_input() and cat.is_controlled and not cat.knocked_out and not cat.is_downed() and cat.melee != null:
-			cat.melee.melee_tick(_can_use_items(cat) and not UndergroundHub.is_safe(cat.global_position),
-				Seats.is_pressed(cat.slot, "melee"), Seats.is_just_pressed(cat.slot, "melee"), delta)
-
-
-## May this cat's player use their paws right now? Not while a menu or talk box is open, or
-## their own inventory. Player 1 on the mouse: only while the game has the mouse (not while
-## clicking a menu).
-func _can_use_items(cat: CatPlayer) -> bool:
-	if cat._menu_open():
-		return false
-	var inventory := InventoryScreen.for_seat(cat.slot)
-	if inventory != null and inventory.visible:
-		return false
-	if cat.slot == 0 and not Controls.using_pad:
-		return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-	return true
 
 
 # --- Host decisions ---
@@ -592,30 +362,11 @@ func request_sell(player_id: int, where: String, index: int) -> void:
 	if cat == null or not UndergroundHub.is_in_hub(cat.global_position):
 		return  # the fence is down in the sewers
 	var inventory := get_inventory(player_id).duplicate(true)
-	var item_id := ""
-	match where:
-		"pack":
-			if index >= 0 and index < inventory.pack.size():
-				item_id = inventory.pack[index]
-		"hand":
-			item_id = inventory.hands[clampi(index, 0, 1)]
-		"quick":
-			var stack: Array = quick_slots_of(inventory)[clampi(index, 0, 1)]
-			item_id = stack[0] if not stack.is_empty() else ""
+	var item_id := _take_slot(inventory, where, index)
 	var price := sell_price_for(player_id, item_id)
 	if item_id == "" or price <= 0:
 		_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, false, "I don't buy that, comrade.")
 		return
-	match where:
-		"pack":
-			inventory.pack.remove_at(index)
-		"hand":
-			if _is_two_handed(inventory.hands):
-				inventory.hands = ["", ""]
-			else:
-				inventory.hands[clampi(index, 0, 1)] = ""
-		"quick":
-			_pop_quick(inventory, index)
 	_set_inventory.rpc(player_id, inventory)
 	_paid_for(player_id, [item_id], price)
 
@@ -655,19 +406,7 @@ func _paid_for(player_id: int, sold: Array, earned: int) -> void:
 	Events.loot_sold.emit(player_id, sold, earned)  # (host only: scripts/events.gd)
 	print("[Items] Player %d sold %s for $%d" % [player_id, sold, earned])
 	var what: String = (catalog[sold[0]] as ItemData).display_name if sold.size() == 1 else "%d items" % sold.size()
-	_sell_result.rpc_id(PlayerId.peer_of(player_id), player_id, "Sold %s for $%d." % [what, earned])
-
-
-## Host -> the seller: the sale went through (cash sound; the shop screen shows the words, or the
-## middle of their screen if it's closed).
-@rpc("authority", "call_local", "reliable")
-func _sell_result(player_id: int, text: String) -> void:
-	Sound.play("buy")
-	var shop := ShopScreen.for_seat(PlayerId.slot_of(player_id))
-	if shop != null and shop.visible:
-		shop.note("SOLD! " + text, true)
-	else:
-		Hud.show_message("SOLD! " + text, 3.0, PlayerId.slot_of(player_id))
+	_buy_result.rpc_id(PlayerId.peer_of(player_id), player_id, true, "SOLD! Sold %s for $%d." % [what, earned])
 
 
 ## The holder used up the item in this paw (catnip). Host only.
@@ -676,10 +415,7 @@ func request_consume(player_id: int, hand: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var inventory := get_inventory(player_id).duplicate(true)
-	if _is_two_handed(inventory.hands):
-		inventory.hands = ["", ""]
-	else:
-		inventory.hands[clampi(hand, 0, 1)] = ""
+	_clear_hand(inventory, hand)
 	_set_inventory.rpc(player_id, inventory)
 
 
@@ -774,15 +510,9 @@ func request_put_away(player_id: int, hand: int) -> void:
 	if not multiplayer.is_server() or not PlayerId.sender_owns(player_id):
 		return
 	var inventory := get_inventory(player_id).duplicate(true)
-	var hands: Array = inventory.hands
-	var item_id: String = hands[clampi(hand, 0, 1)]
+	var item_id := _clear_hand(inventory, hand)
 	if item_id == "" or not pack_has_room_in(player_id, inventory.pack, item_id):
 		return
-	if _is_two_handed(hands):
-		hands = ["", ""]
-	else:
-		hands[clampi(hand, 0, 1)] = ""
-	inventory.hands = hands
 	inventory.pack.append(item_id)
 	_set_inventory.rpc(player_id, inventory)
 
@@ -799,17 +529,7 @@ func request_drop_item(player_id: int, where: String, index: int, ground: Vector
 	if ground.distance_to(cat.global_position) > 3.0:
 		ground = cat.global_position  # no dropping things across the map
 	var inventory := get_inventory(player_id).duplicate(true)
-	var item_id := ""
-	if where == "hand":
-		item_id = inventory.hands[clampi(index, 0, 1)]
-		if _is_two_handed(inventory.hands):
-			inventory.hands = ["", ""]
-		else:
-			inventory.hands[clampi(index, 0, 1)] = ""
-	elif where == "pack" and index >= 0 and index < inventory.pack.size():
-		item_id = inventory.pack.pop_at(index)
-	elif where == "quick":
-		item_id = _pop_quick(inventory, index)  # one off the top of that stack
+	var item_id := _take_slot(inventory, where, index)
 	if item_id == "":
 		return
 	_spawn_dropped(item_id, ground)
@@ -848,101 +568,57 @@ func loot_value(player_id: int) -> int:
 	return total
 
 
-## --- Per-player sizes (SEWER UPGRADES, scripts/upgrades.gd) ---
-## The numbers in the Inspector above (Pack Size, Stash Size...) are the BASE sizes; a cat's
-## upgrades add to them. Always ask these instead of reading pack_size etc. directly.
+# --- Per-player sizes (SEWER UPGRADES, scripts/upgrades.gd) ---
 
-## (Old name from when loot had its own bag: it's all the backpack now.)
 func bag_size_for(player_id: int) -> int:
 	return pack_size_for(player_id)
 
 
-## How many backpack slots are free right now.
 func pack_free(player_id: int) -> int:
 	return pack_size_for(player_id) - pack_slots_used(player_id, get_inventory(player_id).pack)
 
 
-## Backpack slots: 6, +2 per BIGGER BACKPACK tier (6 -> 8 -> 10 -> 12).
 func pack_size_for(player_id: int) -> int:
 	var per_tier: int = Upgrades.instance.pack_slots_per_tier if Upgrades.instance != null else 2
 	return pack_size + per_tier * Upgrades.level(player_id, "bigger_pack")
 
 
-## Litterbox (stash) slots: 9, +6 per DELUXE LITTERBOX tier (the Tinker Workbench).
 func stash_size_for(player_id: int) -> int:
 	var per_tier: int = Upgrades.instance.stash_slots_per_tier if Upgrades.instance != null else 6
 	return stash_size + per_tier * Upgrades.level(player_id, "deluxe_litterbox")
 
 
-## How many snacks stack in one QUICK USE slot: 3, +1 per STUFFED CHEEKS tier.
 func quick_stack_size_for(player_id: int) -> int:
 	return quick_stack_size + Upgrades.level(player_id, "stuffed_cheeks")
 
 
-## --- CONSUMABLES STACK IN THE BACKPACK TOO ---
-## Catnip, catdip (any item card with "Quick Use" ticked) stack in the backpack the same way they
-## do in a QUICK USE slot: up to quick_stack_size_for(player) of the same one share ONE backpack
-## slot. Everything else still takes a slot each.
-## The backpack is still stored as a plain list of item ids (one entry per item, so counting,
-## selling, robbing and saving all work as before); these helpers work out how those items fill
-## the slots. ALWAYS check room with pack_has_room / pack_slots_used, never pack.size().
+# --- Consumables stack in the backpack too (ItemData.quick_use) ---
+# ALWAYS check room with pack_has_room / pack_slots_used, never pack.size().
 
-## Does this item stack in the backpack? (= a consumable: ItemData.quick_use)
 func is_stackable(item_id: String) -> bool:
 	return catalog.has(item_id) and (catalog[item_id] as ItemData).quick_use
 
 
-## How many of one consumable share a backpack slot (the same as a QUICK USE slot).
 func pack_stack_size_for(player_id: int) -> int:
 	return maxi(1, quick_stack_size_for(player_id))
 
 
-## The backpack as SLOTS, in order: [{"id", "count", "index"}], where "index" is the place in
-## the item list of the stack's top item (what the inventory screen sends when you click it).
-## A consumable joins the first stack of the same item that has room, else starts a new slot.
 func pack_stacks_of(pack: Array, stack_size: int) -> Array:
-	var stacks: Array = []
-	var open := {}  # item id -> the stacks entry of that item that still has room
-	for i in pack.size():
-		var item_id: String = pack[i]
-		if open.has(item_id):
-			var stack: Dictionary = stacks[open[item_id]]
-			stack.count += 1
-			stack.index = i
-			if stack.count >= stack_size:
-				open.erase(item_id)  # full: the next one starts a new slot
-			continue
-		stacks.append({"id": item_id, "count": 1, "index": i})
-		if is_stackable(item_id) and stack_size > 1:
-			open[item_id] = stacks.size() - 1
-	return stacks
+	return ItemVisuals.pack_stacks_of(self, pack, stack_size)
 
 
-## A player's backpack as slots (see pack_stacks_of).
 func pack_stacks(player_id: int) -> Array:
 	return pack_stacks_of(get_inventory(player_id).pack, pack_stack_size_for(player_id))
 
 
-## How many backpack SLOTS this item list fills for this player (stacks count once).
 func pack_slots_used(player_id: int, pack: Array) -> int:
 	return pack_stacks_of(pack, pack_stack_size_for(player_id)).size()
 
 
-## Would one more of this item fit in this backpack item list? (A free slot, or for a consumable
-## a stack of the same one with room.)
 func pack_has_room_in(player_id: int, pack: Array, item_id: String) -> bool:
-	var size := pack_stack_size_for(player_id)
-	var stacks := pack_stacks_of(pack, size)
-	if stacks.size() < pack_size_for(player_id):
-		return true
-	if is_stackable(item_id):
-		for stack in stacks:
-			if stack.id == item_id and stack.count < size:
-				return true
-	return false
+	return ItemVisuals.pack_has_room_in(self, player_id, pack, item_id)
 
 
-## Would one more of this item fit in this player's backpack right now?
 func pack_has_room(player_id: int, item_id: String) -> bool:
 	return pack_has_room_in(player_id, get_inventory(player_id).pack, item_id)
 
@@ -1070,17 +746,7 @@ func request_to_stash(player_id: int, where: String, index: int) -> void:
 	var stash: Array = inventory.get("stash", [])
 	if cat == null or not UndergroundHub.of(cat).near_stash(cat) or stash.size() >= stash_size_for(player_id):
 		return
-	var item_id := ""
-	if where == "hand":
-		item_id = inventory.hands[clampi(index, 0, 1)]
-		if _is_two_handed(inventory.hands):
-			inventory.hands = ["", ""]
-		else:
-			inventory.hands[clampi(index, 0, 1)] = ""
-	elif where == "pack" and index >= 0 and index < inventory.pack.size():
-		item_id = inventory.pack.pop_at(index)
-	elif where == "quick":
-		item_id = _pop_quick(inventory, index)
+	var item_id := _take_slot(inventory, where, index)
 	if item_id == "":
 		return
 	stash.append(item_id)
@@ -1201,129 +867,10 @@ func drop_from(cat: CatPlayer) -> void:
 
 # --- Showing items on cats (every computer) ---
 
-func _sync_cat_visuals(cat: CatPlayer) -> void:
-	var inventory := get_inventory(cat.player_id)
-	var hands_key := str(inventory.hands)
-	if cat.get_meta("hands_key", "") != hands_key:
-		cat.set_meta("hands_key", hands_key)
-		_rebuild_paws(cat, inventory.hands)
-	var used := pack_slots_used(cat.player_id, inventory.pack)  # (a stack of catnip = one slot)
-	var pack_key := "%d/%d" % [used, pack_size_for(cat.player_id)]
-	if cat.get_meta("pack_key", "") != pack_key or cat.cat_model.get_node_or_null("BackPack") == null:
-		cat.set_meta("pack_key", pack_key)
-		_update_backpack(cat, used, pack_size_for(cat.player_id))
-	# Over-the-shoulder camera if anything held asks for it.
-	var shoulder := false
-	for item_id in _held_ids(inventory.hands):
-		shoulder = shoulder or catalog[item_id].shoulder_camera
-	cat.shoulder_view = shoulder
-
-
-func _rebuild_paws(cat: CatPlayer, hands: Array) -> void:
-	for slot in ["HeldR", "HeldL"]:
-		_free_now(cat.cat_model.get_node_or_null(slot))
-	for hand in 2:
-		var item_id: String = hands[hand]
-		if item_id == "" or (hand == 1 and _is_two_handed(hands)):
-			continue
-		var data: ItemData = catalog[item_id]
-		var node := data.scene.instantiate() as Node3D
-		# Same name on every computer, so RPCs sent from the item reach all copies.
-		node.name = "HeldR" if hand == 0 else "HeldL"
-		var offset := data.hold_offset
-		if hand == 1:
-			offset.x = -offset.x  # mirror for the left paw
-		node.position = offset
-		node.scale = Vector3.ONE * data.hold_scale
-		var held := node as HeldItem
-		if held != null:
-			held.data = data
-			held.holder = cat
-			held.hand = hand
-		cat.cat_model.add_child(node)
-
-
-## The BACKPACK on a cat's back (made once, kept): its light strip goes cyan (empty) -> amber ->
-## red (full), so anyone can see who's carrying a haul.
-func _update_backpack(cat: CatPlayer, used: int, size: int) -> void:
-	var pack := cat.cat_model.get_node_or_null("BackPack") as Node3D
-	if pack == null:
-		pack = LevelKit.instantiate_model(BACKPACK_MODEL)
-		if pack == null:
-			return
-		pack.name = "BackPack"
-		pack.position = BACKPACK_SPOT
-		cat.cat_model.add_child(pack)
-	pack.visible = show_backpack  # hidden for now; see show_backpack at the top
-	var fill := clampf(float(used) / maxf(size, 1), 0.0, 1.0)
-	var light := pack_light_empty.lerp(pack_light_half, fill * 2.0) if fill < 0.5 else pack_light_half.lerp(pack_light_full, (fill - 0.5) * 2.0)
-	LevelKit.make_parts_glow(pack, {"Strip": light}, 1.5 + fill * 2.0)
-
-
 ## Where the inventory callout line starts: the PackAnchor marker on a cat's backpack (world
 ## space), or a spot on its back if the model isn't there.
 func backpack_anchor(cat: CatPlayer) -> Vector3:
-	var anchor := cat.cat_model.get_node_or_null("BackPack/PackAnchor") as Node3D
-	if anchor == null:
-		var pack := cat.cat_model.get_node_or_null("BackPack")
-		anchor = pack.find_child("PackAnchor", true, false) as Node3D if pack != null else null
-	if anchor != null:
-		return anchor.global_position
-	return cat.cat_model.to_global(BACKPACK_SPOT + Vector3(0, 0.15, 0.15))
-
-
-func _free_now(node: Node) -> void:
-	if node != null:
-		node.get_parent().remove_child(node)  # frees the name right away for the new one
-		node.queue_free()
-
-
-## The bottom-left gun box (HUD "Held", scripts/ui/hud_weapon_display.gd) and crosshair, for
-## whatever each of OUR players holds (on their own HUD: split screen).
-func _update_hud() -> void:
-	if Game.instance == null:
-		return
-	for cat in Game.instance.playing_cats():
-		_update_hud_for(cat)
-
-
-func _update_hud_for(cat: CatPlayer) -> void:
-	var paws: Array = []   # [right paw, left paw]: what each holds (see HudWeaponDisplay.show_loadout)
-	var quick: Array = []  # the two QUICK USE slots
-	var wants_crosshair := false
-	if cat.is_controlled or cat.is_gunner():
-		var keys := ["shoot", "use_left"]  # right paw fires with LMB / RT, left with RMB / LT (SETTINGS > KEYS)
-		for hand in 2:
-			var held := held_item(cat, hand)
-			if held == null or held.data == null:
-				continue
-			var weapon := held as Weapon
-			paws.append({
-				"id": held.data.id,
-				"name": weapon.hud_name if weapon != null else held.data.display_name,
-				"heat": weapon.heat if weapon != null else 0.0,
-				"overheated": weapon != null and weapon.is_overheated,
-				"heats": weapon != null and weapon.heat_per_shot > 0.0,
-				# THE SLAM METER (the frozen tuna): 0..1, or -1 = this weapon has none.
-				"charge": (held as MeleeWeapon).slam_charge if held is MeleeWeapon and (held as MeleeWeapon).can_slam else -1.0,
-				"key": Hud.key_for(keys[hand], cat.slot),
-			})
-			wants_crosshair = wants_crosshair or held.wants_crosshair()
-		var slots := quick_slots(cat.player_id)
-		for slot in 2:  # QUICK USE slots (keys 1 / 2, d-pad left / right)
-			var stack: Array = slots[slot]
-			quick.append({
-				"id": stack[0] if not stack.is_empty() else "",
-				"count": stack.size(),
-				"key": Hud.key_for("quick_%d" % (slot + 1), cat.slot),
-			})
-	var display := Hud.element("Held", cat.slot) as HudWeaponDisplay
-	if display != null:
-		display.show_loadout(paws, quick)
-	# (No crosshair in the sewer's SAFE ZONE: guns don't fire there, so it's just clutter.)
-	if UndergroundHub.is_safe(cat.global_position):
-		wants_crosshair = false
-	Hud.show_element("Crosshair", wants_crosshair, cat.slot)
+	return ItemVisuals.backpack_anchor(cat)
 
 
 # --- Helpers anyone can use ---
@@ -1356,6 +903,29 @@ func _pop_quick(inventory: Dictionary, slot: int) -> String:
 	return item_id
 
 
+## Take the item out of paw "hand" (0 = right, 1 = left), clearing both paws if two-handed.
+func _clear_hand(inventory: Dictionary, hand: int) -> String:
+	var slot := clampi(hand, 0, 1)
+	var item_id: String = inventory.hands[slot]
+	if _is_two_handed(inventory.hands):
+		inventory.hands = ["", ""]
+	else:
+		inventory.hands[slot] = ""
+	return item_id
+
+
+## Take one item out of "hand", "pack", or "quick" in this inventory (changes it). "" = nothing there.
+func _take_slot(inventory: Dictionary, where: String, index: int) -> String:
+	match where:
+		"hand":
+			return _clear_hand(inventory, index)
+		"pack":
+			return inventory.pack.pop_at(index) if index >= 0 and index < inventory.pack.size() else ""
+		"quick":
+			return _pop_quick(inventory, index)
+	return ""
+
+
 ## What's in a player's stash (the safe lockers in the sewers).
 func get_stash(player_id: int) -> Array:
 	return get_inventory(player_id).get("stash", [])
@@ -1363,27 +933,15 @@ func get_stash(player_id: int) -> Array:
 
 ## A spot on the ground a step in front of the cat (where dropped things land).
 func ground_in_front_of(cat: CatPlayer) -> Vector3:
-	var spot := cat.global_position - cat.cat_model.global_basis.z * 0.8
-	var query := PhysicsRayQueryParameters3D.create(spot + Vector3.UP, spot + Vector3.DOWN * 20.0)
-	query.exclude = [cat.get_rid()]
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	return hit.position if hit else spot
+	return ItemVisuals.ground_in_front_of(self, cat)
 
 
 ## The floor straight below a spot (ignoring cats), or the spot itself if there's no floor.
 func _ground_below(at: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.5, at + Vector3.DOWN * 20.0)
-	query.collision_mask = 1  # the city and the hub only (Roombas are on layer 2)
-	var skip: Array[RID] = []
-	for cat in players.get_children():
-		skip.append((cat as CollisionObject3D).get_rid())
-	query.exclude = skip
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	return hit.position if hit else at
+	return ItemVisuals.ground_below(self, at)
 
 
 ## Speed multiplier from HEAVY loot in a player's backpack (ItemData.carry_speed): 1.0 = not slowed.
-## cat_player.gd multiplies its walking and zoomies speed by this.
 func carry_speed(player_id: int) -> float:
 	var slowest := 1.0
 	for item_id in get_inventory(player_id).pack:
@@ -1391,8 +949,7 @@ func carry_speed(player_id: int) -> float:
 	return slowest
 
 
-## How NOISY a player's loot is (ItemData.noise): 1.0 = normal. Roombas multiply how far
-## they can spot that cat by this (roomba.gd).
+## How NOISY a player's loot is (ItemData.noise): 1.0 = normal. Roombas multiply sight range by this.
 func loot_noise(player_id: int) -> float:
 	var loudest := 1.0
 	for item_id in get_inventory(player_id).pack:
@@ -1400,28 +957,23 @@ func loot_noise(player_id: int) -> float:
 	return loudest
 
 
-## Host -> everyone: someone grabbed a big prize. Only a sound now (the HUD was simplified, so
-## no "MITTENS GRABBED THE GOLDEN KOI!" text); "text" is kept for the console.
+## Host -> everyone: someone grabbed a big prize.
 @rpc("authority", "call_local", "reliable")
 func _announce(text: String) -> void:
 	print("[Items] " + text)
-	Sound.play("koi_grab")  # sounds/sfx/koi_grab.wav
+	Sound.play("koi_grab")
 
 
-## How many pieces of LOOT are in a player's backpack (0 = nothing for a rival to rob).
 func bag_used(player_id: int) -> int:
 	return loot_in_pack(player_id).size()
 
 
-## The item script in a cat's paw (0 = right, 1 = left), or null.
 func held_item(cat: CatPlayer, hand: int) -> HeldItem:
 	return cat.cat_model.get_node_or_null("HeldR" if hand == 0 else "HeldL") as HeldItem
 
 
 func _held_ids(hands: Array) -> Array:
-	if _is_two_handed(hands):
-		return [hands[0]]
-	return hands.filter(func(item_id): return item_id != "")
+	return [hands[0]] if _is_two_handed(hands) else hands.filter(func(item_id): return item_id != "")
 
 
 func _is_two_handed(hands: Array) -> bool:
@@ -1432,10 +984,6 @@ func _cat(player_id: int) -> CatPlayer:
 	return players.get_node_or_null(str(player_id)) as CatPlayer
 
 
-## How far apart a cat and an item are, for grabbing: measured along the ground, but
-## "out of reach" (INF) if one is far above the other. Without the height check, a cat in the
-## sewers (200 m down) could grab fish lying in the city right above its head.
+## Ground distance between a cat and an item, or INF if vertically separated (> MAX_REACH_HEIGHT).
 func _reach_distance(a: Vector3, b: Vector3) -> float:
-	if absf(a.y - b.y) > MAX_REACH_HEIGHT:
-		return INF
-	return Motion.flat_distance(a, b)
+	return INF if absf(a.y - b.y) > MAX_REACH_HEIGHT else Motion.flat_distance(a, b)

@@ -204,9 +204,6 @@ var _gun_rest := Transform3D.IDENTITY  # where the model sits in the paw when no
 var _kick_tween: Tween
 var _flash_star: MeshInstance3D           # the muzzle-flash star (built in _ready)
 var _flash_material: StandardMaterial3D
-static var _casing_mesh: BoxMesh
-static var _spark_mesh: BoxMesh
-static var _smoke_mesh: BoxMesh
 var _hum: AudioStreamPlayer3D      # the laser hum while it's playing (hum_sound)
 var _hum_until: float = 0.0        # when the hum stops if no more shots come
 
@@ -395,17 +392,17 @@ func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 			var length := start.distance_to(ends[i])
 			lob(start, ends[i], minf(lob_height, length * 0.2), minf(length / lob_speed, lob_max_seconds), _shot_landed)
 		else:
-			_draw_bolt(start, ends[i], pellet_color)
+			WeaponFx.draw_bolt(self, start, ends[i], pellet_color)
 
 	if _muzzle_flash != null:
 		_muzzle_flash.light_color = color
 	_flash_time = 0.05
-	_show_flash_star(color)
+	WeaponFx.show_flash_star(self, color)
 	_kick_model()
 	if eject_casings:
-		_eject_casing()
+		WeaponFx.eject_casing(self)
 	if muzzle_smoke > 0:
-		_puff_smoke(start, -_muzzle.global_basis.z if _muzzle != null else -global_basis.z)
+		WeaponFx.puff_smoke(self, start, -_muzzle.global_basis.z if _muzzle != null else -global_basis.z)
 	if shot_sound != "" and shots_seen % maxi(shots_per_sound, 1) == 0:
 		Sound.play_at(shot_sound, start, shot_volume_db)  # every computer runs this, so play it just here
 	if hum_sound != "":
@@ -414,13 +411,13 @@ func draw_shot(ends: PackedVector3Array, shot_heat: float) -> void:
 
 ## Every computer: our holder's shot landed. Their computer does the hitting, like any shot.
 func _shot_landed(where: Vector3) -> void:
-	if holder != null and PlayerId.is_local(holder.player_id):
+	if is_instance_valid(self) and holder != null and PlayerId.is_local(holder.player_id):
 		_blast(where, -holder.global_basis.z)
 
 
 ## A blast gun's shot: arcs through the air from "from" to "to" in "seconds", hops on if this gun's
 ## shots bounce, then the blast. on_landed(where) runs after that. Every computer flies its own
-## copy. It belongs to the gun: stop holding the gun and any shot still in the air is lost.
+## copy in world space so gunner shots stay visible while the cat is hidden inside a car.
 func lob(from: Vector3, to: Vector3, height: float, seconds: float, on_landed: Callable) -> void:
 	if _lob_material == null:
 		_lob_material = LevelKit.psx_material({"albedo_color": blast_color, "emission_color": blast_color, "emission_energy": 3.0})
@@ -435,9 +432,9 @@ func lob(from: Vector3, to: Vector3, height: float, seconds: float, on_landed: C
 	ball.mesh = lob_mesh
 	ball.material_override = _lob_material
 	ball.top_level = true
-	add_child(ball)
+	WeaponFx.effects_parent(self).add_child(ball)
 	ball.global_position = from
-	_dress_lob(ball)
+	WeaponFx.dress_lob(self, ball)
 	var path := _lob_hops(from, to)
 	var tween := ball.create_tween()
 	tween.tween_method(_fly.bind(ball, from, to, height), 0.0, 1.0, seconds)
@@ -471,77 +468,24 @@ func _fly(progress: float, ball: MeshInstance3D, from: Vector3, to: Vector3, hei
 
 func _lob_landed(ball: MeshInstance3D, where: Vector3, on_landed: Callable) -> void:
 	ball.queue_free()
-	draw_blast(where)
-	on_landed.call(where)
+	if is_instance_valid(self):
+		draw_blast(where)
+		on_landed.call(where)
 
 
-## One bolt and the little spark where it landed.
-func _draw_bolt(start: Vector3, end: Vector3, color: Color) -> void:
-	var length := start.distance_to(end)
-	if length < 0.05:
+## The shot touched the floor and hops on (cucumber grenade): a "boink" and a few sparks.
+func _lob_bounced(where: Vector3) -> void:
+	if not is_instance_valid(self):
 		return
-
-	var bolt := MeshInstance3D.new()
-	bolt.mesh = _bolt_mesh
-	bolt.material_override = _bolt_material
-	bolt.set_instance_shader_parameter("instance_tint", color)
-	bolt.top_level = true
-	add_child(bolt)
-	bolt.global_transform = Transform3D(Basis.looking_at(end - start), (start + end) * 0.5)
-	bolt.scale = Vector3(1, 1, length)
-	get_tree().create_timer(bolt_time).timeout.connect(bolt.queue_free)
-
-	# Spark where it hit: a short-lived coloured light.
-	var spark := OmniLight3D.new()
-	spark.light_color = color
-	spark.light_energy = 3.0
-	spark.omni_range = 1.5
-	spark.top_level = true
-	add_child(spark)
-	spark.global_position = end - (end - start).normalized() * 0.2
-	get_tree().create_timer(bolt_time * 1.5).timeout.connect(spark.queue_free)
-	if length < max_range * 0.95:  # (a miss into the sky: no sparks in mid-air)
-		_burst_sparks(end, (start - end).normalized(), color)
+	if lob_bounce_sound != "":
+		Sound.play_at(lob_bounce_sound, where, -3.0)
+	if is_inside_tree():
+		WeaponFx.burst_sparks(self, where, Vector3.UP, blast_color)
 
 
-## The blast: a neon sphere that grows to blast_radius and fades, with a flash of light. It lives
-## in the world (not on the gun), so dropping the gun doesn't delete it mid-blast.
+## The blast: a neon sphere that grows to blast_radius and fades, with a flash of light.
 func draw_blast(centre: Vector3) -> void:
-	var mesh := SphereMesh.new()
-	mesh.radius = 1.0
-	mesh.height = 2.0
-	mesh.radial_segments = 10
-	mesh.rings = 5
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_color = Color(blast_color, 0.45)  # see-through: standing in it mustn't blind you
-	mesh.material = material
-
-	var ball := MeshInstance3D.new()
-	ball.mesh = mesh
-	ball.scale = Vector3.ONE * 0.2
-	var flash := OmniLight3D.new()
-	flash.light_color = blast_color
-	flash.light_energy = 8.0
-	flash.omni_range = blast_radius * 2.0
-	ball.add_child(flash)
-	Game.instance.add_child(ball)
-	ball.global_position = centre
-
-	var tween := ball.create_tween().set_parallel()
-	tween.tween_property(ball, "scale", Vector3.ONE * blast_radius, blast_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(material, "albedo_color:a", 0.0, blast_time)
-	tween.tween_property(flash, "light_energy", 0.0, blast_time)
-	tween.chain().tween_callback(ball.queue_free)
-	Sound.play_at(blast_sound, centre)
-	if blast_debris > 0:
-		_blast_debris(centre)
-	if blast_ring:
-		_blast_ring(centre)
-	Feedback.shake_near(centre, 0.45, blast_radius * 2.5)  # the ground shakes near the boom (scripts/feedback.gd)
+	WeaponFx.draw_blast(self, centre)
 
 
 ## Coil glow: cool colour normally, red-hot as it heats (blinks while overheated).
@@ -567,10 +511,8 @@ func wants_crosshair() -> bool:
 	return true
 
 
-# --- GUN FEEL: muzzle star, model kick, shell casings, impact sparks (every computer) ---
+# --- GUN FEEL: muzzle star, model kick, laser hum ---
 
-## The muzzle-flash STAR: two crossed glowing diamonds along the barrel plus a spiky burst facing
-## forward, at the barrel tip, shown for one flash.
 func _build_flash_star() -> void:
 	if _muzzle == null or muzzle_flash_size <= 0.0:
 		return
@@ -579,53 +521,7 @@ func _build_flash_star() -> void:
 	_flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_flash_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	_flash_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	var tools := SurfaceTool.new()
-	tools.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var w := 0.35
-	for flip in [Vector3(1, 0, 0), Vector3(0, 1, 0)]:
-		var side: Vector3 = flip * w
-		for tri in [[Vector3.ZERO, side, Vector3(0, 0, -1)], [Vector3.ZERO, -side, Vector3(0, 0, -1)],
-				[Vector3.ZERO, side, Vector3(0, 0, 0.25)], [Vector3.ZERO, -side, Vector3(0, 0, 0.25)]]:
-			for corner in tri:
-				tools.add_vertex(corner)
-	for i in 8:  # the forward-facing burst: 8 spikes, long and short
-		var angle := TAU * i / 8.0
-		var spike := 0.6 if i % 2 == 0 else 0.3
-		tools.add_vertex(Vector3(cos(angle - 0.2), sin(angle - 0.2), 0) * 0.12)
-		tools.add_vertex(Vector3(cos(angle + 0.2), sin(angle + 0.2), 0) * 0.12)
-		tools.add_vertex(Vector3(cos(angle), sin(angle), 0) * spike)
-	_flash_star = MeshInstance3D.new()
-	_flash_star.mesh = tools.commit()
-	_flash_star.material_override = _flash_material
-	_flash_star.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_flash_star.visible = false
-	_muzzle.add_child(_flash_star)
-
-
-func _show_flash_star(color: Color) -> void:
-	if _flash_star == null:
-		return
-	_flash_material.albedo_color = Color(color.lerp(Color.WHITE, 0.45), 0.95)
-	var roll := _rng.randf() * TAU
-	var star_scale := Vector3.ONE * muzzle_flash_size * _rng.randf_range(0.75, 1.3)
-	if not is_visible_in_tree() and _muzzle != null and is_inside_tree():
-		# Hidden inside a car (gunner): spawn a brief world-space flash at the muzzle.
-		var world_star := MeshInstance3D.new()
-		world_star.mesh = _flash_star.mesh
-		world_star.material_override = _flash_material
-		world_star.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		world_star.top_level = true
-		_effects_parent().add_child(world_star)
-		world_star.global_transform = _muzzle.global_transform
-		world_star.rotate_object_local(Vector3.FORWARD, roll)
-		world_star.scale = star_scale
-		get_tree().create_timer(0.05).timeout.connect(func():
-			if is_instance_valid(world_star):
-				world_star.queue_free())
-		return
-	_flash_star.rotation = Vector3(0, 0, roll)  # a new spin every shot
-	_flash_star.scale = star_scale
-	_flash_star.visible = true
+	_flash_star = WeaponFx.make_flash_star(_muzzle, _flash_material)
 
 
 ## The gun model slams back in the paw and flips its nose up, then eases back.
@@ -640,205 +536,6 @@ func _kick_model() -> void:
 	_gun_model.transform = kicked
 	_kick_tween = create_tween()
 	_kick_tween.tween_property(_gun_model, "transform", _gun_rest, gun_kick_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-
-## Where the casings and sparks go: the game world (so dropping the gun doesn't delete them).
-func _effects_parent() -> Node:
-	return Game.instance if Game.instance != null else self
-
-
-## A brass shell casing spins out of the right side of the gun, arcs and drops away.
-func _eject_casing() -> void:
-	if _gun_model == null or not is_inside_tree():
-		return
-	if _casing_mesh == null:
-		_casing_mesh = BoxMesh.new()
-		_casing_mesh.size = Vector3(0.035, 0.035, 0.09)
-	var casing := MeshInstance3D.new()
-	casing.mesh = _casing_mesh
-	casing.material_override = LevelKit.psx_material({"albedo_color": casing_color, "emission_color": casing_color, "emission_energy": 0.6})
-	casing.top_level = true
-	casing.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_effects_parent().add_child(casing)
-	var gun_basis := _gun_model.global_basis.orthonormalized()
-	var from := _gun_model.global_position + gun_basis.y * 0.08
-	casing.global_position = from
-	var out := gun_basis.x * _rng.randf_range(0.5, 0.8) + gun_basis.z * _rng.randf_range(0.0, 0.2)
-	var seconds := 0.55
-	var tween := casing.create_tween().set_parallel()
-	tween.tween_method(_fly_casing.bind(casing, from, out), 0.0, 1.0, seconds)
-	tween.tween_property(casing, "rotation", Vector3(_rng.randf_range(8, 14), _rng.randf_range(-4, 4), 0), seconds)
-	tween.chain().tween_callback(casing.queue_free)
-
-
-## One step of a casing's arc: out to the side, a little hop up, then falling.
-func _fly_casing(t: float, casing: MeshInstance3D, from: Vector3, out: Vector3) -> void:
-	casing.global_position = from + out * t + Vector3.UP * (1.6 * t - 3.2 * t * t)
-
-
-## A burst of little glowing chips flying off where a bolt hit ("back" = back towards the shooter).
-func _burst_sparks(where: Vector3, back: Vector3, color: Color) -> void:
-	if impact_sparks <= 0 or not is_inside_tree():
-		return
-	var sparks := CPUParticles3D.new()
-	sparks.mesh = _spark_box()
-	sparks.amount = impact_sparks
-	sparks.one_shot = true
-	sparks.explosiveness = 1.0
-	sparks.lifetime = 0.35
-	sparks.direction = back
-	sparks.spread = 55.0
-	sparks.initial_velocity_min = 3.0
-	sparks.initial_velocity_max = 7.0
-	sparks.gravity = Vector3(0, -14, 0)
-	sparks.scale_amount_min = 0.6
-	sparks.scale_amount_max = 1.4
-	sparks.color = color.lerp(Color.WHITE, 0.3)
-	sparks.top_level = true
-	_effects_parent().add_child(sparks)
-	sparks.global_position = where + back * 0.1
-	sparks.emitting = true
-	get_tree().create_timer(0.6).timeout.connect(sparks.queue_free)
-
-
-## The little glowing box every spark, trail bit and debris chunk is made of (made once, shared).
-static func _spark_box() -> BoxMesh:
-	if _spark_mesh == null:
-		_spark_mesh = BoxMesh.new()
-		_spark_mesh.size = Vector3.ONE * 0.05
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.vertex_color_use_as_albedo = true
-		_spark_mesh.material = material
-	return _spark_mesh
-
-
-# --- LAUNCHER JUICE: flying-shot dress-up, barrel smoke, blast debris + ground ring, laser hum ---
-# (every computer runs these, like the rest of draw_shot)
-
-## The flying shot's extras: a light it carries, a glowing trail and its whirr (all optional).
-func _dress_lob(ball: MeshInstance3D) -> void:
-	if lob_glow > 0.0:
-		var light := OmniLight3D.new()
-		light.light_color = blast_color
-		light.light_energy = lob_glow
-		light.omni_range = 3.0
-		ball.add_child(light)
-	if lob_trail > 0:
-		var trail := CPUParticles3D.new()
-		trail.mesh = _spark_box()
-		trail.amount = lob_trail
-		trail.lifetime = 0.35
-		trail.local_coords = false  # bits stay where they were dropped: a streak behind the shot
-		trail.spread = 180.0
-		trail.initial_velocity_min = 0.2
-		trail.initial_velocity_max = 0.8
-		trail.gravity = Vector3(0, -2, 0)
-		trail.scale_amount_min = 0.8
-		trail.scale_amount_max = 1.8
-		trail.color = blast_color.lerp(Color.WHITE, 0.35)
-		ball.add_child(trail)
-		trail.emitting = true
-	if lob_loop_sound != "":
-		var whirr := Sound.attach_loop(lob_loop_sound, ball, -6.0)
-		if whirr != null:
-			whirr.pitch_scale = lob_loop_pitch
-
-
-## The shot touched the floor and hops on (cucumber grenade): a "boink" and a few sparks.
-func _lob_bounced(where: Vector3) -> void:
-	if lob_bounce_sound != "":
-		Sound.play_at(lob_bounce_sound, where, -3.0)
-	if is_inside_tree():
-		_burst_sparks(where, Vector3.UP, blast_color)
-
-
-## A puff of grey smoke out of the barrel that drifts up and fades ("forward" = where the barrel points).
-func _puff_smoke(where: Vector3, forward: Vector3) -> void:
-	if not is_inside_tree():
-		return
-	if _smoke_mesh == null:
-		_smoke_mesh = BoxMesh.new()
-		_smoke_mesh.size = Vector3.ONE * 0.16
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.vertex_color_use_as_albedo = true
-		_smoke_mesh.material = material
-	var smoke := CPUParticles3D.new()
-	smoke.mesh = _smoke_mesh
-	smoke.amount = muzzle_smoke
-	smoke.one_shot = true
-	smoke.explosiveness = 0.9
-	smoke.lifetime = 0.7
-	smoke.direction = forward
-	smoke.spread = 25.0
-	smoke.initial_velocity_min = 1.5
-	smoke.initial_velocity_max = 4.0
-	smoke.damping_min = 4.0
-	smoke.damping_max = 6.0
-	smoke.gravity = Vector3(0, 0.8, 0)  # smoke rises a little
-	smoke.scale_amount_min = 0.7
-	smoke.scale_amount_max = 1.6
-	var fade := Gradient.new()
-	fade.set_color(0, Color(0.75, 0.75, 0.8, 0.8))
-	fade.set_color(1, Color(0.4, 0.4, 0.45, 0.0))
-	smoke.color_ramp = fade
-	smoke.top_level = true
-	_effects_parent().add_child(smoke)
-	smoke.global_position = where
-	smoke.emitting = true
-	smoke.finished.connect(smoke.queue_free)
-
-
-## Glowing chunks thrown up and out of the blast, raining back down.
-func _blast_debris(centre: Vector3) -> void:
-	var debris := CPUParticles3D.new()
-	debris.mesh = _spark_box()
-	debris.amount = blast_debris
-	debris.one_shot = true
-	debris.explosiveness = 1.0
-	debris.lifetime = 0.9
-	debris.direction = Vector3.UP
-	debris.spread = 75.0
-	debris.initial_velocity_min = 4.0
-	debris.initial_velocity_max = 4.0 + blast_radius * 2.0
-	debris.gravity = Vector3(0, -18, 0)
-	debris.scale_amount_min = 1.5
-	debris.scale_amount_max = 3.5
-	debris.color = blast_color.lerp(Color.WHITE, 0.25)
-	debris.top_level = true
-	_effects_parent().add_child(debris)
-	debris.global_position = centre + Vector3.UP * 0.2
-	debris.emitting = true
-	debris.finished.connect(debris.queue_free)
-
-
-## A flat neon ring racing out along the ground to a bit past the blast's edge.
-func _blast_ring(centre: Vector3) -> void:
-	var mesh := TorusMesh.new()
-	mesh.inner_radius = 0.85
-	mesh.outer_radius = 1.0
-	mesh.rings = 16
-	mesh.ring_segments = 4
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_color = Color(blast_color.lerp(Color.WHITE, 0.3), 0.9)
-	mesh.material = material
-	var ring := MeshInstance3D.new()
-	ring.mesh = mesh
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_effects_parent().add_child(ring)
-	ring.global_position = centre + Vector3.UP * 0.1
-	ring.scale = Vector3(0.3, 0.15, 0.3)  # squashed flat: a ripple, not a doughnut
-	var grow := blast_radius * 1.3
-	var tween := ring.create_tween().set_parallel()
-	tween.tween_property(ring, "scale", Vector3(grow, 0.15, grow), blast_time * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(material, "albedo_color:a", 0.0, blast_time * 1.4)
-	tween.chain().tween_callback(ring.queue_free)
 
 
 ## Every shot of a humming gun: start the hum if it isn't playing, keep it going a moment longer,

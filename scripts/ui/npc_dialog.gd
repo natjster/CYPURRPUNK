@@ -218,5 +218,4 @@ func close() -> void:
 	_typed = -1.0
 	hide()
 	_focus.clear()
-	if seat == 0:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	HudStyle.restore_game_mouse(seat)

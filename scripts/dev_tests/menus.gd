@@ -309,3 +309,107 @@ func _talk(player: CatPlayer, args: Dictionary) -> void:
 				await get_tree().process_frame
 			print("DevCapture choose %s: open=%s line=\"%s\" buttons=%d" % [n, NpcDialog.is_open_for(0),
 				NpcDialog.for_cat(player).line_label.text.left(40), NpcDialog.for_cat(player).choices_box.get_child_count()])
+
+
+## --inventory / --press_key / --menu / --unplug / --pad_press / --remove_local / --replug.
+func _open_menus_and_pads(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	if args.has("inventory"):
+		var seats: Array = [0] if args["inventory"] == "true" else Array(args["inventory"].split(",")).map(func(v): return int(v))
+		for seat in seats:
+			var screen := InventoryScreen.for_seat(seat)
+			var seat_cat := Game.instance.cat_for(PlayerId.make(multiplayer.get_unique_id(), seat)) if Game.instance != null else null
+			if screen != null:
+				screen._set_open(true, seat_cat)
+		_inventory_report.call_deferred(seats, int(args.get("frames", "90")))
+	if args.has("press_key"):
+		for i in 10:
+			await get_tree().physics_frame
+		for pressed in [true, false]:
+			var key := InputEventKey.new()
+			key.physical_keycode = OS.find_keycode_from_string(args["press_key"])
+			key.keycode = key.physical_keycode
+			key.pressed = pressed
+			Input.parse_input_event(key)
+			await get_tree().process_frame
+		for i in 20:
+			await get_tree().physics_frame
+		print("DevCapture press_key %s: inventory open=%s talk box open=%s paused=%s quick=%s speed_boost=%.1f air_jumps=%d" % [args["press_key"], InventoryScreen.for_seat(0).visible, NpcDialog.is_open_for(0), PauseMenu.is_open, ItemManager.instance.quick_slots(player.player_id), player.speed_boost, player.air_jumps])
+	if args.has("menu") and scene is Game:
+		match args["menu"]:
+			"play": scene.main_menu.show_play_screen()
+			"mode": scene.main_menu.show_mode_screen()
+			"coop": scene.main_menu.show_coop_screen()
+			"local": scene.main_menu.show_landing(false)
+			"online": scene.main_menu.show_landing(true)
+			"settings": scene.settings_menu.open()
+			"pause": scene.pause_menu.open()
+			"cat": scene.cat_creator.open(scene.pause_menu.enabled)
+			"keyboard":
+				scene.main_menu.show_play_screen()
+				DisplayServer.clipboard_set(" meow-499a-21b0 ")
+				scene.main_menu._on_paste_pressed()
+				print("DevCapture paste button: '%s' -> %s" % [scene.main_menu.address_input.text, Net.code_to_ip(scene.main_menu.address_input.text)])
+				scene.main_menu.address_input.text = ""
+				DisplayServer.clipboard_set(" meow-499a-21b0! ")
+				scene.main_menu._address_keyboard.open()
+				await get_tree().process_frame
+				for pressed in [true, false]:
+					var key := InputEventKey.new()
+					key.keycode = KEY_V
+					key.physical_keycode = KEY_V
+					key.ctrl_pressed = true
+					key.pressed = pressed
+					Input.parse_input_event(key)
+					await get_tree().process_frame
+				print("DevCapture keyboard Ctrl+V: '%s'" % scene.main_menu.address_input.text)
+		if args.has("settings_tab"):
+			scene.settings_menu._show_tab(int(args["settings_tab"]))
+		if args.has("rebind"):
+			var parts: PackedStringArray = args["rebind"].split(",")
+			scene.settings_menu._start_listening(parts[0], int(parts[1]))
+			await get_tree().process_frame
+			if parts[2].begins_with("Pad_"):
+				Input.parse_input_event(_pad_event(parts[2].trim_prefix("Pad_").replace("_", " "), true))
+			else:
+				var press := InputEventKey.new()
+				press.physical_keycode = OS.find_keycode_from_string(parts[2])
+				press.keycode = press.physical_keycode
+				press.pressed = true
+				Input.parse_input_event(press)
+			await get_tree().process_frame
+			print("DevCapture rebind %s -> %s | hint: %s" % [parts[0], Controls.bindings[parts[0]], scene.settings_menu.hint_label.text])
+			for entry in Controls.ACTIONS:
+				print("DevCapture key %s = %s" % [entry.action, Controls.bindings[entry.action]])
+	if args.has("unplug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), false)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture unplug %s: own_pause=%s big_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), PauseMenu.is_open, Seats._unplugged])
+	if args.has("pad_press"):
+		for i in int(args.get("pad_press_delay", "0")):
+			await get_tree().process_frame
+		for pad in args["pad_press"].replace("_", " ").split(","):
+			for pressed in [true, false]:
+				var event := _pad_event(pad.get_slice(":", 1) if ":" in pad else pad, pressed)
+				if ":" in pad:
+					event.device = int(pad.get_slice(":", 0))
+				Input.parse_input_event(event)
+				for i in 4:
+					await get_tree().process_frame
+			await get_tree().process_frame
+			var game_focus := GameScreen.instance.menu_viewport.gui_get_focus_owner()
+			var hud_focus := get_viewport().gui_get_focus_owner()
+			print("DevCapture pad_press %s: paused=%s settings=%s inventory=%s talk=%s using_pad=%s focus=%s hud_focus=%s own_pause=%s lobby=%s" % [
+				pad, PauseMenu.is_open, Game.instance.settings_menu.visible, InventoryScreen.for_seat(0).visible,
+				NpcDialog.is_open_for(0), Controls.using_pad, _describe_focus(game_focus), _describe_focus(hud_focus),
+				range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats.lobby_text().replace("\n", " | ")])
+	if args.has("remove_local") and Game.instance != null:
+		Game.instance.remove_local_player(int(args["remove_local"]))
+		print("DevCapture remove_local: slot %s dropped out" % args["remove_local"])
+	if args.has("replug"):
+		Seats._on_joy_connection_changed(int(args["unplug"]), true)
+		for i in 5:
+			await get_tree().process_frame
+		print("DevCapture replug %s: own_pause=%s unplugged=%s" % [args["unplug"],
+			range(PlayerId.MAX_LOCAL).map(func(s): return PlayerPause.is_open_for(s)), Seats._unplugged])

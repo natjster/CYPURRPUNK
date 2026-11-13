@@ -101,6 +101,18 @@ var _squash: float = 0.0        # + = stretched tall, - = squashed flat
 var _squash_speed: float = 0.0
 var _was_grounded := true
 var _last_vertical: float = 0.0
+var _leg_l: Node3D
+var _leg_r: Node3D
+var _tail: Node3D
+var _leg_l_home: Vector3  # where each leg sits in cat_model.tscn (we swing them from the hip)
+var _leg_r_home: Vector3
+var _tail_home_z: float
+var _tail_base: Vector3  # the tail's root on the cat's bum (set in _bind_limbs)
+var _limbs_bound := false
+const TAIL_HALF_LENGTH := 0.225  # half of Mesh_tail's height (0.45) in cat_model.tscn
+var _leg_phase: float = 0.0
+var _tail_phase: float = 0.0
+var _leg_amount: float = 0.0  # 0 = legs still, 1 = full swing (eases in and out)
 
 @onready var _cat: CatPlayer = get_parent()
 
@@ -258,10 +270,11 @@ func puff(amount: float) -> void:
 	_squash_speed = 0.0
 
 
-func animate(delta: float, vertical_speed: float, grounded: bool) -> void:
+func animate(delta: float, vertical_speed: float, grounded: bool, speed: float = 0.0) -> void:
 	var model := _cat.cat_model
 	if model == null:
 		return
+	_animate_legs_and_tail(delta, speed if speed <= 30.0 else 0.0, grounded)
 	if absf(vertical_speed) > 30.0 or not _cat.visible:
 		vertical_speed = 0.0  # a teleport, or hidden in a car
 	var flopped := _cat.knocked_out or _cat.is_downed()
@@ -283,6 +296,80 @@ func animate(delta: float, vertical_speed: float, grounded: bool) -> void:
 	_squash = clampf(_squash + _squash_speed * delta, -0.5, 0.5)
 	# Taller = thinner and shorter = wider, so the cat looks like the same amount of cat.
 	model.scale = Vector3(1.0 - _squash * 0.5, 1.0 + _squash, 1.0 - _squash * 0.5)
+
+
+func _bind_limbs() -> void:
+	if _limbs_bound or _cat.cat_model == null:
+		return
+	_limbs_bound = true
+	_leg_l = _cat.cat_model.get_node_or_null("LegL")
+	_leg_r = _cat.cat_model.get_node_or_null("LegR")
+	_tail = _cat.cat_model.get_node_or_null("Tail")
+	if _leg_l != null:
+		_leg_l_home = _leg_l.position
+	if _leg_r != null:
+		_leg_r_home = _leg_r.position
+	if _tail != null:
+		_tail_home_z = _tail.rotation.z
+		_tail_base = _tail.position + _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
+
+
+## Legs swing back and forth while running (left and right opposite, like walking), and the
+## tail sways side to side all the time - slowly when standing, faster the faster the cat runs.
+## Worked out from speed alone, so every computer animates every cat with no network messages.
+func _animate_legs_and_tail(delta: float, speed: float, grounded: bool) -> void:
+	_bind_limbs()
+	var running := grounded and speed > 0.5 and not _cat.knocked_out
+	_leg_amount = move_toward(_leg_amount, clampf(speed / _cat.walk_speed, 0.0, 1.0) if running else 0.0, delta * 6.0)
+	_leg_phase += delta * TAU * _cat.leg_swing_speed * maxf(speed / _cat.walk_speed, 0.6)
+	var swing := sin(_leg_phase) * _cat.leg_swing * _leg_amount
+	var flipping := _spin_around_middle()
+	var tuck := flipping * _cat.flip_leg_tuck  # mid-flip: both legs tucked forward, like a ball
+	_swing_leg(_leg_l, _leg_l_home, swing + tuck)
+	_swing_leg(_leg_r, _leg_r_home, -swing + tuck)
+	if _cat.melee != null:
+		# A claw SCRATCH (scripts/cat/cat_melee.gd): that front paw shoots up and rakes down.
+		for side in 2:
+			var pose := _cat.melee.paw_pose(side)
+			var leg := _leg_r if side == 0 else _leg_l
+			if leg == null:
+				continue
+			if not leg.has_meta("home_z"):
+				leg.set_meta("home_z", leg.rotation.z)
+			var home_z: float = leg.get_meta("home_z")
+			if pose.z > 0.0:
+				var walk := (-swing if side == 0 else swing) + tuck
+				_swing_leg(leg, _leg_r_home if side == 0 else _leg_l_home, lerpf(walk, pose.x, pose.z))
+				leg.rotation.z = home_z + pose.y * pose.z
+			else:
+				leg.rotation.z = home_z
+		# ...and the whole cat POUNCES forward into the swipe.
+		_cat.cat_model.position += Vector3.FORWARD.rotated(Vector3.UP, _cat.cat_model.rotation.y) * _cat.melee.body_forward()
+	# Tail: always swaying, faster with speed.
+	_tail_phase += delta * (_cat.tail_idle_speed + speed * _cat.tail_speed_per_mps)
+	if _tail != null:
+		_tail.rotation.z = _tail_home_z + sin(_tail_phase) * _cat.tail_swish
+		_tail.position = _tail_base - _tail.basis * (Vector3.DOWN * TAIL_HALF_LENGTH)
+
+
+## FRONT FLIP: slide the model so it spins around its MIDDLE instead of its feet (flip_pivot_height).
+func _spin_around_middle() -> float:
+	var pitch := wrapf(_cat.cat_model.rotation.x, -PI, PI)
+	var flipping := clampf((absf(pitch) - 0.35) / 0.4, 0.0, 1.0)
+	var middle := Vector3.UP * _cat.flip_pivot_height
+	var shift := middle - middle.rotated(Vector3.RIGHT, pitch)
+	_cat.cat_model.position = (shift * flipping).rotated(Vector3.UP, _cat.cat_model.rotation.y)
+	return flipping
+
+
+## Turn one leg by `angle`, hinging at its top (the hip) instead of its middle.
+func _swing_leg(leg: Node3D, home: Vector3, angle: float) -> void:
+	if leg == null:
+		return
+	var half := 0.1  # half the leg's height (Mesh_leg is 0.2 tall in cat_model.tscn)
+	var hip := home + Vector3.UP * half
+	leg.position = hip + Vector3.DOWN.rotated(Vector3.RIGHT, angle) * half
+	leg.rotation.x = angle
 
 
 ## The nearest wall within wall_kick_reach of the cat's middle (8 flat rays around it), as the

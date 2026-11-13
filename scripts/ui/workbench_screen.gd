@@ -284,7 +284,7 @@ func _layout() -> void:
 	var tab_x := _panel.position.x + (w - tabs_w) / 2.0
 	var tab_y := _panel.position.y + 44.0
 	for i in _tabs.size():
-		_place(_tabs[i], Rect2(tab_x + i * (tab_size + gap), tab_y, tab_size, tab_size + 16.0))
+		HudStyle.place(_tabs[i], Rect2(tab_x + i * (tab_size + gap), tab_y, tab_size, tab_size + 16.0))
 	var top := tab_y + tab_size + 16.0 + gap * 2
 	var info_h := 62.0
 	_info_rect = Rect2(x, _panel.end.y - info_h - 10.0, w - 24.0, info_h)
@@ -298,18 +298,13 @@ func _layout() -> void:
 	var y := _content.position.y
 	for card in _cards:
 		if card.visible:
-			_place(card, Rect2(cards_x, y, cards_w, h))
+			HudStyle.place(card, Rect2(cards_x, y, cards_w, h))
 			y += h + gap * 0.75
 	if ride_h > 0.0:
 		var rw := (cards_w - gap * (_rides.size() - 1)) / _rides.size()
 		for i in _rides.size():
-			_place(_rides[i], Rect2(cards_x + i * (rw + gap), y + 2.0, rw, ride_h - 4.0))
-	_place(_recruit, Rect2(cards_x, _content.position.y + _content.size.y * 0.45, cards_w, 54.0))
-
-
-func _place(button: Control, rect: Rect2) -> void:
-	button.position = rect.position
-	button.size = rect.size
+			HudStyle.place(_rides[i], Rect2(cards_x + i * (rw + gap), y + 2.0, rw, ride_h - 4.0))
+	HudStyle.place(_recruit, Rect2(cards_x, _content.position.y + _content.size.y * 0.45, cards_w, 54.0))
 
 
 func _draw() -> void:
@@ -319,12 +314,12 @@ func _draw() -> void:
 	var font := get_theme_font("font", "Label")
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0.02, 0.05, 0.45))  # dim the sewer behind
 	HudStyle.draw_panel(self, _panel)
-	_text(font, _panel.position + Vector2(14, 30), "TINKER WORKBENCH", title_font_size, AMBER)
+	HudStyle.draw_text(self, font, _panel.position + Vector2(14, 30), "TINKER WORKBENCH", title_font_size, AMBER)
 	var me := owner_cat.player_id
 	var money := "$%d    %d SCRAP" % [Wallet.instance.cash_of(me), ItemManager.instance.scrap_count_of(me)]
-	_text_right(font, Vector2(_panel.end.x - 14, _panel.position.y + 30), money, title_font_size - 2, GOOD)
+	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 14, _panel.position.y + 30), money, title_font_size - 2, GOOD)
 	var money_w := font.get_string_size(money, HORIZONTAL_ALIGNMENT_LEFT, -1, title_font_size - 2).x
-	_text_right(font, Vector2(_panel.end.x - 34 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
+	HudStyle.draw_text_right(self, font, Vector2(_panel.end.x - 34 - money_w, _panel.position.y + 28), "scrap = backpack + litterbox", detail_font_size, Color(style.text_color, 0.4))
 	# The selected cat (left of the content area)
 	var npc := npc_for_tab(tab)
 	var state := tab_state(tab)
@@ -338,27 +333,27 @@ func _draw() -> void:
 	var ty := portrait_rect.end.y + 26.0
 	var text_w := _content.size.x * 0.42 - 16.0
 	if state == "open":
-		_text(font, Vector2(tx, ty), npc.npc_name if npc != null else "?", name_font_size, Color.WHITE, text_w)
-		_text(font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION RECRUIT)"), detail_font_size, AMBER, text_w)
+		HudStyle.draw_text(self, font, Vector2(tx, ty), npc.npc_name if npc != null else "?", name_font_size, Color.WHITE, text_w)
+		HudStyle.draw_text(self, font, Vector2(tx, ty + 20), Upgrades.TAB_ROLES[tab] + ("" if tab < 2 else "   (REBELLION RECRUIT)"), detail_font_size, AMBER, text_w)
 		var quote := ""
 		if npc != null and not npc.pages.is_empty() and not npc.pages[0].lines.is_empty():
 			quote = "\"%s\"" % npc.pages[0].lines[0]
 		draw_multiline_string(font, Vector2(tx, ty + 42), quote, HORIZONTAL_ALIGNMENT_LEFT, text_w, detail_font_size, 3, Color(style.text_color, 0.75))
 		var quest := quest_title(npc)
-		_text(font, Vector2(tx, ty + 42 + detail_font_size * 3.6 + 8), ("QUEST IN SEWER: %s" % quest) if quest != "" else "NO QUEST: %s" % ("DEPLOY + LORE" if tab == 0 else "THE SHOP"),
+		HudStyle.draw_text(self, font, Vector2(tx, ty + 42 + detail_font_size * 3.6 + 8), ("QUEST IN SEWER: %s" % quest) if quest != "" else "NO QUEST: %s" % ("DEPLOY + LORE" if tab == 0 else "THE SHOP"),
 			detail_font_size + 1, GOOD if quest != "" else Color(style.text_color, 0.5), text_w)
 	else:
-		_text(font, Vector2(tx, ty), "? ? ?", name_font_size, Color(style.text_color, 0.5), text_w)
-		_text(font, Vector2(tx, ty + 20), "REBELLION RECRUIT — %s" % Upgrades.RECRUIT_TYPES[tab], detail_font_size, AMBER, text_w)
+		HudStyle.draw_text(self, font, Vector2(tx, ty), "? ? ?", name_font_size, Color(style.text_color, 0.5), text_w)
+		HudStyle.draw_text(self, font, Vector2(tx, ty + 20), "REBELLION RECRUIT — %s" % Upgrades.RECRUIT_TYPES[tab], detail_font_size, AMBER, text_w)
 		# The right side: what to do about it.
 		var cards_x := _content.position.x + _content.size.x * 0.42
 		var cards_w := _content.end.x - cards_x
 		var box := Rect2(cards_x, _content.position.y, cards_w, _content.size.y * 0.42)
 		HudStyle.draw_panel(self, box)
-		_text(font, box.position + Vector2(14, 30), "RECRUIT: %s" % Upgrades.RECRUIT_TYPES[tab], name_font_size, AMBER, cards_w - 28)
+		HudStyle.draw_text(self, font, box.position + Vector2(14, 30), "RECRUIT: %s" % Upgrades.RECRUIT_TYPES[tab], name_font_size, AMBER, cards_w - 28)
 		# You only get to know WHAT they bring, not who they are.
 		var brings := ", ".join(Array(Upgrades.WORKBENCH_TABS[tab]).map(func(u): return Upgrades.INFO[u].name))
-		_text(font, box.position + Vector2(14, 54), "BRINGS: " + brings, detail_font_size + 1, GOOD, cards_w - 28)
+		HudStyle.draw_text(self, font, box.position + Vector2(14, 54), "BRINGS: " + brings, detail_font_size + 1, GOOD, cards_w - 28)
 		var words := "A cat is hiding in the pipes. Recruit them and they move into your sewer: their quest, these upgrades, and one more gun when OVERCLEAN breaches. Recruit #%d of %d for your gang." \
 			% [Upgrades.rebellion_level(_team()) + 1, Upgrades.REBELLION_TIERS]
 		draw_multiline_string(font, box.position + Vector2(14, 78), words, HORIZONTAL_ALIGNMENT_LEFT, cards_w - 28, detail_font_size + 1, 3,
@@ -369,16 +364,6 @@ func _draw() -> void:
 	var color := (GOOD if _note_good else BAD) if _note != "" else style.text_color
 	draw_multiline_string(font, _info_rect.position + Vector2(10, 22), shown, HORIZONTAL_ALIGNMENT_LEFT, _info_rect.size.x - 20,
 		detail_font_size + 1, 3, color)
-
-
-func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
-
-
-func _text_right(font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	_text(font, at - Vector2(width, 0), text, font_size, color)
 
 
 # --- Buying ---
@@ -499,10 +484,8 @@ class CardFace extends Control:
 		var title: String = info.get("name", upgrade_id) + (" (CREW)" if info.get("crew", false) else "")
 		var buy_w := minf(190.0, size.x * 0.40)
 		var text_w := size.x - buy_w - 24.0
-		var title_fs := screen.card_title_size
-		while title_fs > 12 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_fs).x > text_w:
-			title_fs -= 1
-		_text(font, Vector2(10, 6 + title_fs), title, title_fs, Color.WHITE, text_w)
+		var title_fs := HudStyle.fit_font_size(font, title, screen.card_title_size, 12, text_w)
+		HudStyle.draw_text(self, font, Vector2(10, 6 + title_fs), title, title_fs, Color.WHITE, text_w)
 		# Tier pips: [■ ■ □] TIER 2/3
 		var pip := 9.0
 		var px := 10.0
@@ -515,7 +498,7 @@ class CardFace extends Control:
 		var tier_text := ("UNLOCKED" if top == 1 else "TIER %d/%d" % [tier, top]) if tier > 0 else ("NOT OWNED" if top == 1 else "TIER 0/%d" % top)
 		if info.has("tiers") and not maxed:
 			tier_text += "   NEXT: " + str(info.tiers[tier])
-		_text(font, Vector2(px + top * (pip + 4) + 6, py + pip), tier_text, screen.detail_font_size, WorkbenchScreen.AMBER, text_w - top * (pip + 4))
+		HudStyle.draw_text(self, font, Vector2(px + top * (pip + 4) + 6, py + pip), tier_text, screen.detail_font_size, WorkbenchScreen.AMBER, text_w - top * (pip + 4))
 		if size.y > 56:
 			draw_multiline_string(font, Vector2(10, py + pip + 6 + screen.detail_font_size), str(info.get("about", "")), HORIZONTAL_ALIGNMENT_LEFT,
 				text_w, screen.detail_font_size, 2, Color(style.text_color, 0.7))
@@ -530,12 +513,6 @@ class CardFace extends Control:
 			fill = Color(0.1, 0.45, 0.25, 0.85) if can else Color(0.35, 0.1, 0.1, 0.8)
 		draw_rect(pill, fill)
 		draw_rect(pill, Color(style.border_color, 0.6), false, Hud.line(1.0))
-		var pill_fs := screen.detail_font_size + 1
-		while pill_fs > 10 and font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pill_fs).x > buy_w - 10:
-			pill_fs -= 1
+		var pill_fs := HudStyle.fit_font_size(font, label, screen.detail_font_size + 1, 10, buy_w - 10)
 		var lw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, pill_fs).x
-		_text(font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + pill_fs * 0.35), label, pill_fs, Color.WHITE, buy_w - 8)
-
-	func _text(font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0) -> void:
-		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(4), Color(0, 0.03, 0.06, color.a * 0.9))
-		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
+		HudStyle.draw_text(self, font, Vector2(pill.get_center().x - lw / 2.0, pill.get_center().y + pill_fs * 0.35), label, pill_fs, Color.WHITE, buy_w - 8)

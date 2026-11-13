@@ -123,6 +123,26 @@ static func tint_part(root: Node, part_name: String, color: Color) -> void:
 		mesh.set_instance_shader_parameter("instance_tint", color)
 
 
+## Tints and lights up one MeshInstance3D part by name (cars, recruit homes): tinted_glow = true
+## makes the whole part emit "tint"; false makes only its bright painted pixels glow ("texture_glow").
+static func glow_part(root: Node, part_name: String, tint: Color, energy: float, tinted_glow: bool) -> void:
+	var part := root.find_child(part_name, true, false) as MeshInstance3D
+	if part == null or part.mesh == null:
+		return
+	for surface in part.mesh.get_surface_count():
+		var material := part.get_active_material(surface)
+		if not material is ShaderMaterial:
+			continue
+		var copy := material.duplicate() as ShaderMaterial
+		copy.set_shader_parameter("albedo_color", tint)
+		if tinted_glow:
+			copy.set_shader_parameter("emission_color", tint)
+			copy.set_shader_parameter("emission_energy", energy)
+		else:
+			copy.set_shader_parameter("texture_glow", energy)
+		part.set_surface_override_material(surface, copy)
+
+
 ## The meshes of one part: the node with that name (a path from root, or found anywhere below it)
 ## plus every mesh under it. Only meshes that already have the PS1 material (psx_ify first).
 static func _part_meshes(root: Node, part_name: String) -> Array[MeshInstance3D]:
@@ -195,13 +215,14 @@ static func add_box(parent: Node3D, center: Vector3, size: Vector3, material: Ma
 
 
 ## A box-shaped collision (no look) on "body", centred at "at" (relative to the body).
-static func add_collision(body: CollisionObject3D, at: Vector3, size: Vector3) -> void:
+static func add_collision(body: CollisionObject3D, at: Vector3, size: Vector3) -> CollisionShape3D:
 	var box := BoxShape3D.new()
 	box.size = size
 	var shape := CollisionShape3D.new()
 	shape.shape = box
 	shape.position = at
 	body.add_child(shape)
+	return shape
 
 
 ## A 1x1x1 box cut so that, once stretched to "size", its pieces are ~PIECE_SIZE metres.

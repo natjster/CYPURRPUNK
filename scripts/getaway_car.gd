@@ -269,9 +269,9 @@ func _set_up_model() -> void:
 		body.set_surface_override_material(0, shiny)
 	# Every part named Trim... glows in the gang colour (the bike's wheel rims are TrimRimF / TrimRimB).
 	for trim in model.find_children("Trim*", "MeshInstance3D", true, false):
-		_glow(model, trim.name, gang_colour, trim_glow, true)
+		LevelKit.glow_part(model, trim.name, gang_colour, trim_glow, true)
 	for part in ["HeadlightL", "HeadlightR", "TaillightL", "TaillightR", "Thrusters", "Sign"]:
-		_glow(model, part, Color.WHITE, light_glow, false)
+		LevelKit.glow_part(model, part, Color.WHITE, light_glow, false)
 	for wheel_name in ["WheelFL", "WheelFR", "WheelBL", "WheelBR"]:
 		var wheel := model.find_child(wheel_name, true, false) as Node3D
 		if wheel != null:
@@ -320,8 +320,6 @@ func set_vehicle(id: String) -> void:
 	print("[Car] %s is now the %s (top speed %.0f, %d passenger seats)" % [name, id, max_speed, passenger_seats])
 
 
-## Make one part of the model glow: tint = albedo colour (white = keep the painted colours);
-## tinted_glow true = it glows in the tint colour, false = its own bright pixels glow.
 ## The neon trim's colour right now (for tests: DevCapture prints it).
 func trim_color() -> Color:
 	var trim := get_node_or_null("Model/CarModel")
@@ -329,24 +327,6 @@ func trim_color() -> Color:
 	if trim == null or not trim.get_active_material(0) is ShaderMaterial:
 		return Color.BLACK
 	return (trim.get_active_material(0) as ShaderMaterial).get_shader_parameter("albedo_color")
-
-
-func _glow(model: Node, part_name: String, tint: Color, energy: float, tinted_glow: bool) -> void:
-	var part := model.find_child(part_name, true, false) as MeshInstance3D
-	if part == null or part.mesh == null:
-		return
-	for surface in part.mesh.get_surface_count():
-		var material := part.get_active_material(surface)
-		if not material is ShaderMaterial:
-			continue
-		var copy := material.duplicate() as ShaderMaterial
-		copy.set_shader_parameter("albedo_color", tint)
-		if tinted_glow:
-			copy.set_shader_parameter("emission_color", tint)
-			copy.set_shader_parameter("emission_energy", energy)
-		else:
-			copy.set_shader_parameter("texture_glow", energy)
-		part.set_surface_override_material(surface, copy)
 
 
 ## Every frame, every computer: roll the wheels with the car's speed and turn the front ones with

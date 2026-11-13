@@ -178,11 +178,13 @@ static func draw_icon(canvas: CanvasItem, texture: Texture2D, box: Rect2, color:
 	return dest
 
 
-## StyleBoxFlat for ocean-blue popup buttons (shop, workbench, mainframe). lit = hovered / pressed.
+## StyleBoxFlat for ocean-blue popup buttons (inventory, shop, workbench, mainframe). lit = hovered / pressed.
 static func button_box(lit: bool) -> StyleBoxFlat:
 	var style := current()
 	var box := StyleBoxFlat.new()
 	box.bg_color = style.panel_color.lightened(0.12) if lit else style.panel_color
+	if lit:
+		box.bg_color.a = minf(1.0, style.panel_color.a + 0.12)
 	box.border_color = style.border_color.lightened(0.45) if lit else style.faint_border_color.lerp(style.border_color, 0.45)
 	box.set_border_width_all(int(Hud.line(3.0 if lit else 1.5)))
 	box.set_content_margin_all(4)
@@ -213,8 +215,36 @@ static func attach_face(button: Button, face: Control) -> void:
 	button.add_child(face)
 
 
-## Re-captures player 1's mouse when closing a popup screen if their cat is in control.
+## Moves and sizes a Control to rect.
+static func place(control: Control, rect: Rect2) -> void:
+	control.position = rect.position
+	control.size = rect.size
+
+
+## Draws outlined HUD text (dark blue-black outline so it reads over bright streets and panels).
+static func draw_text(canvas: CanvasItem, font: Font, at: Vector2, text: String, font_size: int, color: Color, max_width: float = -1.0, outline_px: float = 4.0) -> void:
+	if text == "":
+		return
+	canvas.draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, Hud.outline(outline_px), Color(0, 0.03, 0.06, color.a * 0.9))
+	canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size, color)
+
+
+## Draws outlined HUD text whose right edge sits at "at.x".
+static func draw_text_right(canvas: CanvasItem, font: Font, at: Vector2, text: String, font_size: int, color: Color) -> void:
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	draw_text(canvas, font, at - Vector2(width, 0), text, font_size, color)
+
+
+## Shrinks a font size down to min_size until text fits inside max_width.
+static func fit_font_size(font: Font, text: String, start_size: int, min_size: int, max_width: float) -> int:
+	var fs := start_size
+	while fs > min_size and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > max_width:
+		fs -= 1
+	return fs
+
+
+## Re-captures player 1's mouse when closing a popup screen if their cat is in control or riding.
 static func restore_game_mouse(seat_number: int) -> void:
 	var first := Game.instance.my_cat() if Game.instance != null else null
-	if seat_number == 0 and first != null and first.is_controlled:
+	if seat_number == 0 and first != null and (first.is_controlled or first.riding_car != null):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

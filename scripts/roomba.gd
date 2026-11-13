@@ -278,11 +278,7 @@ func _physics_process(delta: float) -> void:
 					if _is_stuck(delta):
 						_back_to_patrol()
 					else:
-						_replan_left -= delta
-						if _replan_left <= 0.0:
-							_replan_left = 1.0 / replans_per_second
-							_route_point = _route_to(_noise_spot)
-						move = Motion.flat(_route_point - global_position)
+						move = _steer_along_route(delta, _noise_spot)
 						speed = patrol_speed * 1.6
 				else:
 					model.rotation.y += delta * 2.5  # there: spin round looking for the cat
@@ -293,12 +289,7 @@ func _physics_process(delta: float) -> void:
 				_pick_patrol_target()
 			else:
 				# Drive at the cat if nothing is in the way, otherwise around the block (streets).
-				# (Re-planned a few times a second: it casts a ray, so not every frame.)
-				_replan_left -= delta
-				if _replan_left <= 0.0:
-					_replan_left = 1.0 / replans_per_second
-					_route_point = _chase_point(cat)
-				move = Motion.flat(_route_point - global_position)
+				move = _steer_along_route(delta, cat.global_position, cat)
 				# Hotter city = faster Roombas (heat_meter.gd).
 				speed = chase_speed * (HeatMeter.instance.speed_multiplier() if heat_scaling else 1.0)
 				_attack(cat, delta)
@@ -373,6 +364,15 @@ func _find_cat_to_chase(sight: float = 1.0) -> CatPlayer:
 ## spots you from across town) drove straight into the first building and stayed there.
 func _chase_point(cat: CatPlayer) -> Vector3:
 	return _route_to(cat.global_position, cat)
+
+
+## Re-plan the route a few times a second (it casts a ray, so not every frame) and return the flat direction.
+func _steer_along_route(delta: float, goal: Vector3, cat: CatPlayer = null) -> Vector3:
+	_replan_left -= delta
+	if _replan_left <= 0.0:
+		_replan_left = 1.0 / replans_per_second
+		_route_point = _chase_point(cat) if cat != null else _route_to(goal)
+	return Motion.flat(_route_point - global_position)
 
 
 func _route_to(goal: Vector3, skip_cat: CatPlayer = null) -> Vector3:

@@ -217,12 +217,10 @@ var _security_door: StaticBody3D
 var _security_shape: CollisionShape3D
 var _plate_top: MeshInstance3D
 var _plate_light: OmniLight3D
-var _tank: HitRelay
 var _tank_glass: MeshInstance3D
 var _tank_water: MeshInstance3D
 var _tank_shape: CollisionShape3D
 var _koi: Node3D
-var _tank_light: OmniLight3D
 var _puddle: MeshInstance3D
 var _shards: Array[Node3D] = []
 var _crate: StaticBody3D
@@ -232,18 +230,7 @@ var _alarm_loop: AudioStreamPlayer3D
 var _street_alarm: Node3D
 var _street_alarm_light: OmniLight3D
 var _street_alarm_loop: AudioStreamPlayer3D
-
-# Materials
-var _floor_mat: ShaderMaterial
-var _wall_mat: ShaderMaterial
-var _metal_mat: ShaderMaterial
-var _shelf_mat: ShaderMaterial
-var _neon_mat: ShaderMaterial
-var _tube_mat: ShaderMaterial
 var _can_mat: ShaderMaterial
-var _ice_mat: ShaderMaterial
-var _glass_mat: StandardMaterial3D
-var _water_mat: StandardMaterial3D
 var _can_mesh: CylinderMesh
 
 
@@ -260,8 +247,7 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	_fx_rng.seed = 1999
-	_make_materials()
-	_build()
+	MeowMartBuilder.build(self)
 	MeowMartExterior.build(self)  # the outside: cladding, rooftop sign, cameras... (meow_mart_exterior.gd)
 	_show_all(true)
 	visible = false  # (until a city puts it on a block: place_in_city)
@@ -337,20 +323,8 @@ func debug_line() -> String:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if not enabled:
-		return
-	_animate_doors(delta)
-	_animate_security_door(delta)
-	_animate_lights(delta)
-	_animate_koi()
-	_animate_plate()
-	if _crate != null:
-		_crate.position = _crate.position.lerp(crate_pos + Vector3(0, CRATE_SIZE * 0.5, 0), 1.0 - exp(-14.0 * delta))
-	if alarm_left > 0.0:
-		alarm_left = maxf(alarm_left - delta, 0.0)
-		if alarm_left <= 0.0:
-			_alarm_sounds(false)
-	_update_street_alarm()
+	if enabled:
+		MeowMartBuilder.animate_store(self, delta)
 
 
 func _physics_process(delta: float) -> void:
@@ -925,82 +899,12 @@ func _show_all(instant: bool) -> void:
 
 ## A can stack knocked off its ledge: the cans tumble to the floor and lie there.
 func _show_swatted(stack: Node3D, direction: Vector3, instant: bool) -> void:
-	var home: Transform3D = stack.get_meta("home")
-	var id: int = stack.get_meta("id")
-	var landing := home.origin + direction * 0.8
-	landing.y = 0.06
-	var cans := stack.get_children()
-	for i in cans.size():
-		var can := cans[i] as Node3D
-		var spread := Vector3(cos(id * 2.1 + i * 2.3), 0, sin(id * 1.7 + i * 2.3)) * (0.18 + 0.12 * i)
-		var lying := Transform3D(Basis.from_euler(Vector3(PI / 2, id * 0.9 + i * 1.4, 0)), spread - Vector3(0, can.get_meta("home").origin.y, 0))
-		if instant:
-			can.transform = lying
-		else:
-			create_tween().tween_property(can, "transform", lying, 0.35 + 0.05 * i)
-	var target := Transform3D(Basis.IDENTITY, landing)
-	if instant:
-		stack.transform = target
-	else:
-		var tween := create_tween()
-		# Up a little, then down: a short arc off the shelf.
-		tween.tween_property(stack, "position", (home.origin + landing) * 0.5 + Vector3(0, 0.35, 0), 0.15)
-		tween.tween_property(stack, "position", landing, 0.25).set_ease(Tween.EASE_IN)
+	MeowMartBuilder.show_swatted(self, stack, direction, instant)
 
 
 ## An aisle going down like dominoes, one section after another from the end that was hit.
 func _show_toppled(aisle: int, side: int, from_end: int, instant: bool) -> void:
-	var segments: Array = _segments[aisle]
-	var order := range(segments.size())
-	if from_end > 0:
-		order.reverse()  # (sections are numbered from the -z end)
-	var half_base: float = TIERS[0][0] * 0.5
-	for n in order.size():
-		var seg: Dictionary = segments[order[n]]
-		var pivot := seg.pivot as Node3D
-		# Turn around the bottom edge on the side it falls to (not its middle: it'd sink into the floor).
-		pivot.position = seg.home + Vector3(side * half_base, 0, 0)
-		(seg.inner as Node3D).position = Vector3(-side * half_base, 0, 0)
-		var lying := Vector3(0, 0, -side * deg_to_rad(80.0))
-		if instant:
-			pivot.rotation = lying
-		else:
-			pivot.rotation = Vector3.ZERO
-			var tween := create_tween()
-			tween.tween_interval(domino_delay * n)
-			tween.tween_property(pivot, "rotation", lying, 0.45).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-	for shape: CollisionShape3D in _aisle_shapes[aisle]:
-		shape.disabled = true
-	var rubble := _aisle_rubble[aisle]
-	rubble.position = Vector3(AISLE_X[aisle] + side * (half_base + 0.8), 0.3, AISLE_Z)
-	rubble.disabled = false
-	# Every can stack on it comes down too (no extra mess: the topple already counted).
-	for stack in _stacks:
-		var id: int = stack.get_meta("id")
-		if stack.get_meta("aisle") == aisle and not swatted.has(id):
-			swatted[id] = true
-			_show_swatted(stack, Vector3(side, 0, 0), instant)
-	# And dozens of cans roll out across the floor.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = aisle * 977 + side * 13
-	for i in topple_cans:
-		var can := MeshInstance3D.new()
-		can.mesh = _can_mesh
-		can.material_override = _can_mat
-		can.set_instance_shader_parameter("instance_tint", PRODUCT_COLORS[i % PRODUCT_COLORS.size()])
-		add_child(can)
-		_spilled.append(can)
-		var start := Vector3(AISLE_X[aisle], rng.randf_range(0.4, 1.5), AISLE_Z + rng.randf_range(-AISLE_LENGTH * 0.5, AISLE_LENGTH * 0.5))
-		var land := Vector3(AISLE_X[aisle] + side * rng.randf_range(0.6, 3.2), 0.06, start.z + rng.randf_range(-1.2, 1.2))
-		land.z = clampf(land.z, BACK_WALL_Z + 0.4, FRONT_Z - 1.0)
-		var lying := Basis.from_euler(Vector3(PI / 2, rng.randf() * TAU, 0))
-		if instant:
-			can.transform = Transform3D(lying, land)
-		else:
-			can.position = start
-			var tween := create_tween()
-			tween.tween_interval(domino_delay * rng.randf_range(0.0, AISLE_SEGMENTS))
-			tween.tween_property(can, "transform", Transform3D(lying, land), rng.randf_range(0.35, 0.6)).set_ease(Tween.EASE_IN)
+	MeowMartBuilder.show_toppled(self, aisle, side, from_end, instant)
 
 
 func _show_tank_cracks() -> void:
@@ -1025,103 +929,11 @@ func _show_shattered(instant: bool) -> void:
 	else:
 		_puddle.scale = Vector3(0.1, 1, 0.1)
 		create_tween().tween_property(_puddle, "scale", Vector3.ONE, 1.4).set_ease(Tween.EASE_OUT)
-		_burst(Color(0.8, 0.95, 1, 1), 60, 0.04, 5.0)    # glass
-		_burst(Color(0.2, 0.55, 1, 0.8), 80, 0.06, 3.5)  # water
-
-
-## A one-off spray of little bits out of the tank (glass or water).
-func _burst(color: Color, amount: int, size: float, speed: float) -> void:
-	var particles := CPUParticles3D.new()
-	particles.position = TANK_SPOT + Vector3(0, TANK_STAND + TANK_SIZE.y * 0.5, 0)
-	particles.one_shot = true
-	particles.explosiveness = 0.95
-	particles.amount = amount
-	particles.lifetime = 1.2
-	particles.direction = Vector3(0, 0.6, 1)
-	particles.spread = 75.0
-	particles.initial_velocity_min = speed * 0.4
-	particles.initial_velocity_max = speed
-	particles.gravity = Vector3(0, -12, 0)
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3.ONE * size
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color
-	if color.a < 1.0:
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mesh.material = material
-	particles.mesh = mesh
-	add_child(particles)
-	particles.emitting = true
-	get_tree().create_timer(2.0).timeout.connect(particles.queue_free)
+		MeowMartBuilder.burst_tank(self, Color(0.8, 0.95, 1, 1), 60, 0.04, 5.0)    # glass
+		MeowMartBuilder.burst_tank(self, Color(0.2, 0.55, 1, 0.8), 80, 0.06, 3.5)  # water
 
 
 # --- Animations (every computer, every frame) ---
-
-## The sliding front doors open for any cat near them, inside or out (every computer, by itself).
-func _animate_doors(delta: float) -> void:
-	if not _placed:
-		return
-	var door := to_global(Vector3(0, 0, FRONT_Z))
-	var want := 0.0
-	for node in Game.instance.players.get_children():
-		var cat := node as Node3D
-		if cat.visible and Motion.flat_distance(cat.global_position, door) < door_open_distance and absf(cat.global_position.y - door.y) < 2.0:
-			want = 1.0
-	if want > 0.0 and _doors_open == 0.0:
-		Sound.play_at("door_slide", door + Vector3(0, 1.5, 0), -4.0)
-	_doors_open = move_toward(_doors_open, want, door_slide_speed * delta)
-	for leaf in _door_leaves:
-		leaf.position.x = lerpf(leaf.get_meta("home_x"), leaf.get_meta("open_x"), _smooth(_doors_open))
-
-
-func _animate_security_door(delta: float) -> void:
-	_security_amount = move_toward(_security_amount, 1.0 if security_open else 0.0, delta * 1.6)
-	_security_door.position.y = _smooth(_security_amount) * (SECURITY_DOOR_HEIGHT - 0.35)
-
-
-func _animate_plate() -> void:
-	_plate_top.position.y = 0.035 if plate_pressed else 0.07
-	var colour := Color(0.2, 1, 0.35) if plate_pressed else Color(1, 0.2, 0.2)
-	_plate_top.set_instance_shader_parameter("instance_tint", colour)
-	_plate_light.light_color = colour
-
-
-func _animate_koi() -> void:
-	if shattered or _koi == null:
-		return
-	var t := _clock * 0.9
-	_koi.position = Vector3(cos(t) * 0.45, TANK_STAND + 0.55 + sin(t * 2.3) * 0.08, sin(t) * 0.3)
-	_koi.rotation.y = -t + PI  # (nose along the circle)
-
-
-func _animate_lights(delta: float) -> void:
-	var alarm := alarm_left > 0.0
-	var strobe := 0.5 + 0.5 * sin(_clock * TAU * 1.6)
-	for i in _lights.size():
-		var light := _lights[i]
-		if alarm:
-			light.light_color = Color(1, 0.08, 0.06)
-			light.light_energy = light_energy * lerpf(0.25, 1.6, strobe)
-			continue
-		light.light_color = light_color
-		# Every now and then a tube flickers (looks only, so it uses its own random numbers).
-		if _fx_rng.randf() < flicker_chance * delta / maxf(_lights.size(), 1) * 4.0:
-			_flicker_left[i] = _fx_rng.randf_range(0.15, 0.5)
-		var flicker := float(_flicker_left.get(i, 0.0))
-		if flicker > 0.0:
-			_flicker_left[i] = flicker - delta
-			light.light_energy = light_energy * (0.15 if _fx_rng.randf() < 0.5 else 1.0)
-		else:
-			light.light_energy = light_energy
-	var tube_colour := Color(1, 0.1, 0.08) * lerpf(0.3, 1.0, strobe) if alarm else light_color
-	for tube in _tubes:
-		tube.set_instance_shader_parameter("instance_tint", Color(tube_colour, 1))
-	if _monitor_label != null:
-		_monitor_label.text = ("!! ALARM !!\nALL UNITS" if fmod(_clock, 1.0) < 0.6 else "") if alarm \
-			else ("CAM 01  AISLE 2\nCAM 02  KOI DISPLAY\nSTATUS: CALM" if not shattered else "CAM 02\nNO SIGNAL")
-		_monitor_label.modulate = Color(Color(1, 0.15, 0.1) * 2.5, 1) if alarm or shattered else Color(Color(0.3, 1, 0.6) * 2.0, 1)
-
 
 ## The klaxon (inside and out on the street) on or off.
 func _alarm_sounds(on: bool) -> void:
@@ -1137,390 +949,8 @@ func _alarm_sounds(on: bool) -> void:
 		_street_alarm_loop = null
 
 
-## In an alarm a red light flashes over Meow-Mart's doors in the city, and the klaxon wails out there too.
-func _update_street_alarm() -> void:
-	var door := street_door()
-	var on := alarm_left > 0.0 and door != Vector3.INF
-	_street_alarm.visible = on
-	if not on:
-		return
-	_street_alarm.global_position = door + street_outward() * 0.6 + Vector3(0, 3.4, 0)
-	_street_alarm_light.light_energy = 4.0 * (0.5 + 0.5 * sin(_clock * TAU * 1.6))
-	if _street_alarm_loop == null or not is_instance_valid(_street_alarm_loop):
-		_street_alarm_loop = Sound.attach_loop("store_alarm", _street_alarm, alarm_volume_db - 2.0)
-
-
 static func _smooth(t: float) -> float:
 	return t * t * (3.0 - 2.0 * t)
-
-
-# --- Building the store (once, in _ready; no randomness) ---
-
-func _make_materials() -> void:
-	_floor_mat = LevelKit.psx_material({"albedo_texture": preload("res://textures/mart_tiles.png"), "world_uv": true, "world_uv_scale": 0.5, "specular": 0.6, "roughness": 0.25})
-	_wall_mat = LevelKit.psx_material({"albedo_color": Color(0.82, 0.86, 0.8), "specular": 0.2})
-	_metal_mat = LevelKit.psx_material({"albedo_color": Color(0.35, 0.38, 0.42), "specular": 0.6, "roughness": 0.35})
-	_shelf_mat = LevelKit.psx_material({"albedo_color": Color(0.9, 0.92, 0.95), "specular": 0.4, "roughness": 0.4})
-	_neon_mat = LevelKit.psx_material({"emission_color": Color.WHITE, "emission_energy": 5.0})
-	_tube_mat = LevelKit.psx_material({"albedo_color": Color.WHITE, "emission_color": Color.WHITE, "emission_energy": 3.0})
-	_can_mat = LevelKit.psx_material({"albedo_color": Color.WHITE, "specular": 0.7, "roughness": 0.25})
-	_ice_mat = LevelKit.psx_material({"albedo_color": Color(0.85, 0.95, 1.0), "emission_color": Color(0.5, 0.8, 1.0), "emission_energy": 0.6, "specular": 0.9, "roughness": 0.1})
-	_glass_mat = StandardMaterial3D.new()
-	_glass_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_glass_mat.albedo_color = Color(0.55, 0.85, 1.0, 0.22)
-	_glass_mat.metallic_specular = 0.9
-	_glass_mat.roughness = 0.05
-	_glass_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_glass_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	_water_mat = StandardMaterial3D.new()
-	_water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_water_mat.albedo_color = Color(0.15, 0.5, 1.0, 0.4)
-	_water_mat.emission_enabled = true
-	_water_mat.emission = Color(0.05, 0.25, 0.6)
-	_water_mat.roughness = 0.1
-	_water_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	_can_mesh = CylinderMesh.new()
-	_can_mesh.top_radius = 0.065
-	_can_mesh.bottom_radius = 0.065
-	_can_mesh.height = 0.13
-	_can_mesh.radial_segments = 6
-	_can_mesh.rings = 0
-
-
-func _build() -> void:
-	var shell := StaticBody3D.new()
-	shell.name = "Shell"
-	add_child(shell)
-	var half := ROOM * 0.5
-	# Floor (seen) + floor (walked on), ceiling, outer walls.
-	var floor_mesh := MeshInstance3D.new()
-	floor_mesh.mesh = LevelKit.subdivided_plane(Vector2(ROOM.x, ROOM.z))
-	floor_mesh.material_override = _floor_mat
-	add_child(floor_mesh)
-	LevelKit.add_collision(shell, Vector3(0, -0.5, 0), Vector3(ROOM.x + WALL * 2.0, 1, ROOM.z + WALL * 2.0))
-	_solid_box(shell, Vector3(0, ROOM.y + WALL * 0.5, 0), Vector3(ROOM.x + WALL * 2, WALL, ROOM.z + WALL * 2), _wall_mat)
-	_solid_box(shell, Vector3(-half.x - WALL * 0.5, half.y, 0), Vector3(WALL, ROOM.y, ROOM.z), _wall_mat)
-	_solid_box(shell, Vector3(half.x + WALL * 0.5, half.y, 0), Vector3(WALL, ROOM.y, ROOM.z), _wall_mat)
-	_solid_box(shell, Vector3(0, half.y, -half.z - WALL * 0.5), Vector3(ROOM.x, ROOM.y, WALL), _wall_mat)
-	_build_front(shell)
-	_build_back_wall(shell)
-	_build_lights()
-	_build_checkouts(shell)
-	for aisle in AISLE_X.size():
-		_build_aisle(aisle)
-	_build_counter(shell)
-	_build_plate()
-	_build_crate()
-	_build_back_room(shell)
-	_build_tank()
-	_alarm_speaker = Node3D.new()
-	_alarm_speaker.name = "AlarmSpeaker"
-	_alarm_speaker.position = Vector3(0, 3.5, 0)
-	add_child(_alarm_speaker)
-	_street_alarm = Node3D.new()
-	_street_alarm.name = "StreetAlarm"
-	_street_alarm.top_level = true
-	_street_alarm.visible = false
-	add_child(_street_alarm)
-	_street_alarm_light = LevelKit.add_light(_street_alarm, Vector3.ZERO, Color(1, 0.05, 0.05), 4.0, 12.0)
-	var beacon := LevelKit.add_box(_street_alarm, Vector3.ZERO, Vector3(0.5, 0.3, 0.3), _neon_mat, false)
-	beacon.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1))
-
-
-## A box cats bump into (its collision goes on "body", the store's shell: hits come to us).
-func _solid_box(body: StaticBody3D, center: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
-	var mesh := LevelKit.add_box(self, center, size, material, false)
-	LevelKit.add_collision(body, center, size)
-	return mesh
-
-
-## The front wall: glass, the sliding doors, and the night outside them.
-## The front wall: the glass front with the sliding doors in the middle. The doorway is a real
-## gap in the wall (the glass leaves only slide for show: you walk straight in and out).
-func _build_front(shell: StaticBody3D) -> void:
-	var half_x := ROOM.x * 0.5
-	var z := FRONT_Z + WALL * 0.5
-	for side in [-1.0, 1.0]:
-		var width := half_x - GLASS_HALF
-		_solid_box(shell, Vector3(side * (GLASS_HALF + width * 0.5), ROOM.y * 0.5, z), Vector3(width, ROOM.y, WALL), _wall_mat)
-		# Fixed glass beside the doors (solid: you only get in and out through the doors).
-		LevelKit.add_box(self, Vector3(side * (ENTRY_HALF_WIDTH + (GLASS_HALF - ENTRY_HALF_WIDTH) * 0.5), GLASS_HEIGHT * 0.5, z),
-			Vector3(GLASS_HALF - ENTRY_HALF_WIDTH, GLASS_HEIGHT, 0.06), _glass_mat, false)
-		LevelKit.add_collision(shell, Vector3(side * (ENTRY_HALF_WIDTH + (GLASS_HALF - ENTRY_HALF_WIDTH) * 0.5), GLASS_HEIGHT * 0.5, z), Vector3(GLASS_HALF - ENTRY_HALF_WIDTH, GLASS_HEIGHT, WALL))
-	_solid_box(shell, Vector3(0, GLASS_HEIGHT + (ROOM.y - GLASS_HEIGHT) * 0.5, z), Vector3(GLASS_HALF * 2.0, ROOM.y - GLASS_HEIGHT, WALL), _wall_mat)
-	# The two sliding leaves, just inside the glass line (no collision).
-	for side in [-1.0, 1.0]:
-		var leaf := Node3D.new()
-		leaf.position = Vector3(side * ENTRY_HALF_WIDTH * 0.5, 0, z - 0.12)
-		leaf.set_meta("home_x", leaf.position.x)
-		leaf.set_meta("open_x", leaf.position.x + side * ENTRY_HALF_WIDTH * 0.95)
-		add_child(leaf)
-		LevelKit.add_box(leaf, Vector3(0, (GLASS_HEIGHT - 0.2) * 0.5, 0), Vector3(ENTRY_HALF_WIDTH - 0.04, GLASS_HEIGHT - 0.2, 0.05), _glass_mat, false)
-		for face in [-1.0, 1.0]:  # a pink push bar on both faces
-			var bar := LevelKit.add_box(leaf, Vector3(-side * ENTRY_HALF_WIDTH * 0.35, 1.0, face * 0.045), Vector3(0.06, 0.5, 0.04), _neon_mat, false)
-			bar.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.65))
-		_door_leaves.append(leaf)
-	# A rubber welcome mat (a box ON the floor, not a sticker 1 cm above it).
-	var mat := LevelKit.add_box(self, Vector3(0, 0.025, FRONT_Z - 0.9), Vector3(2.2, 0.05, 1.0), _metal_mat, false)
-	mat.set_instance_shader_parameter("instance_tint", Color(1.0, 0.45, 0.8))
-
-
-## The wall between the shop floor and the back room, with the EMPLOYEES ONLY roller door.
-func _build_back_wall(shell: StaticBody3D) -> void:
-	var half_x := ROOM.x * 0.5
-	var door_left := SECURITY_DOOR_X - SECURITY_DOOR_WIDTH * 0.5
-	var door_right := SECURITY_DOOR_X + SECURITY_DOOR_WIDTH * 0.5
-	_solid_box(shell, Vector3((-half_x + door_left) * 0.5, ROOM.y * 0.5, BACK_WALL_Z), Vector3(door_left + half_x, ROOM.y, WALL), _wall_mat)
-	_solid_box(shell, Vector3((door_right + half_x) * 0.5, ROOM.y * 0.5, BACK_WALL_Z), Vector3(half_x - door_right, ROOM.y, WALL), _wall_mat)
-	_solid_box(shell, Vector3(SECURITY_DOOR_X, SECURITY_DOOR_HEIGHT + (ROOM.y - SECURITY_DOOR_HEIGHT) * 0.5, BACK_WALL_Z),
-		Vector3(SECURITY_DOOR_WIDTH, ROOM.y - SECURITY_DOOR_HEIGHT, WALL), _wall_mat)
-	# The roller door: a StaticBody (its own, so it can slide up) on the shop side of the wall.
-	_security_door = StaticBody3D.new()
-	_security_door.name = "SecurityDoor"
-	add_child(_security_door)
-	var door_z := BACK_WALL_Z + WALL * 0.5 + 0.1
-	var slab := LevelKit.add_box(_security_door, Vector3(SECURITY_DOOR_X, SECURITY_DOOR_HEIGHT * 0.5, door_z), Vector3(SECURITY_DOOR_WIDTH + 0.1, SECURITY_DOOR_HEIGHT, 0.12), _metal_mat, false)
-	slab.set_instance_shader_parameter("instance_tint", Color(0.8, 0.8, 0.85))
-	for i in 5:  # ribs, so it reads as a roller shutter
-		LevelKit.add_box(_security_door, Vector3(SECURITY_DOOR_X, 0.3 + i * 0.5, door_z + 0.07), Vector3(SECURITY_DOOR_WIDTH + 0.1, 0.05, 0.03), _metal_mat, false)
-	var stripe := LevelKit.add_box(_security_door, Vector3(SECURITY_DOOR_X, 0.12, door_z + 0.07), Vector3(SECURITY_DOOR_WIDTH + 0.1, 0.18, 0.03), _neon_mat, false)
-	stripe.set_instance_shader_parameter("instance_tint", Color(1, 0.75, 0.1))
-	_security_shape = CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3(SECURITY_DOOR_WIDTH, SECURITY_DOOR_HEIGHT, WALL + 0.3)
-	_security_shape.shape = box
-	_security_shape.position = Vector3(SECURITY_DOOR_X, SECURITY_DOOR_HEIGHT * 0.5, BACK_WALL_Z)
-	_security_door.add_child(_security_shape)
-	# The push bar on the back room side (E: OPEN DOOR), with a green light.
-	var bar := LevelKit.add_box(self, EXIT_BUTTON_SPOT - Vector3(0, 0, 0.05), Vector3(0.6, 0.15, 0.1), _neon_mat, false)
-	bar.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.4))
-
-
-func _build_lights() -> void:
-	var spots: Array[Vector3] = [Vector3(-7, 0, -0.6), Vector3(-0.75, 0, -0.6), Vector3(5.5, 0, -0.6),
-		Vector3(-7, 0, 3.6), Vector3(-0.75, 0, 3.6), Vector3(5.5, 0, 3.6), Vector3(-5, 0, -3.8), Vector3(5, 0, -3.8)]
-	for spot in spots:
-		var tube := LevelKit.add_box(self, Vector3(spot.x, ROOM.y - 0.12, spot.z), Vector3(2.4, 0.08, 0.25), _tube_mat, false)
-		tube.set_instance_shader_parameter("instance_tint", light_color)
-		_tubes.append(tube)
-		_lights.append(LevelKit.add_light(self, Vector3(spot.x, ROOM.y - 0.5, spot.z), light_color, light_energy, light_range))
-	LevelKit.add_light(self, Vector3(-4.0, 3.4, BACK_WALL_Z + 1.0), Color(1, 0.15, 0.6), 1.5, 6.0)
-	LevelKit.add_light(self, Vector3(COUNTER_X - 1.2, 2.6, (COUNTER_Z.x + COUNTER_Z.y) * 0.5), Color(0.3, 0.8, 1), 1.4, 6.0)
-
-
-func _build_checkouts(shell: StaticBody3D) -> void:
-	for lane in CHECKOUT_X.size():
-		var x: float = CHECKOUT_X[lane]
-		var counter := _solid_box(shell, Vector3(x, 0.42, CHECKOUT_Z), Vector3(0.8, 0.84, CHECKOUT_LENGTH), _metal_mat)
-		counter.set_instance_shader_parameter("instance_tint", Color(0.5, 0.45, 0.6))
-		LevelKit.add_box(self, Vector3(x, 0.88, CHECKOUT_Z + 0.25), Vector3(0.55, 0.08, CHECKOUT_LENGTH - 0.7), _metal_mat, false)  # conveyor belt
-		var register := LevelKit.add_box(self, Vector3(x, 1.06, CHECKOUT_Z - 0.9), Vector3(0.45, 0.4, 0.4), _metal_mat, false)
-		register.set_instance_shader_parameter("instance_tint", Color(0.25, 0.25, 0.3))
-		var screen := LevelKit.add_box(self, Vector3(x, 1.38, CHECKOUT_Z - 0.95), Vector3(0.35, 0.22, 0.05), _neon_mat, false)
-		screen.set_instance_shader_parameter("instance_tint", Color(0.2, 1, 0.5))
-		var scanner := LevelKit.add_box(self, Vector3(x, 0.9, CHECKOUT_Z - 0.55), Vector3(0.3, 0.04, 0.2), _neon_mat, false)
-		scanner.set_instance_shader_parameter("instance_tint", Color(1, 0.1, 0.1))
-
-
-## One aisle: four sections (each falls on its own, dominoes), stepped like stairs.
-func _build_aisle(aisle: int) -> void:
-	var x: float = AISLE_X[aisle]
-	var body := StaticBody3D.new()
-	body.name = "Aisle%d" % (aisle + 1)
-	add_child(body)
-	var bottom := 0.0
-	for tier in TIERS:
-		var width: float = tier[0]
-		var top: float = tier[1]
-		var shape := CollisionShape3D.new()
-		var box := BoxShape3D.new()
-		box.size = Vector3(width, top - bottom, AISLE_LENGTH)
-		shape.shape = box
-		shape.position = Vector3(x, (top + bottom) * 0.5, AISLE_Z)
-		body.add_child(shape)
-		_aisle_shapes[aisle].append(shape)
-		bottom = top
-	var rubble := CollisionShape3D.new()
-	var rubble_box := BoxShape3D.new()
-	rubble_box.size = Vector3(1.6, 0.6, AISLE_LENGTH)
-	rubble.shape = rubble_box
-	rubble.disabled = true
-	body.add_child(rubble)
-	_aisle_rubble.append(rubble)
-
-	var seg_length := AISLE_LENGTH / AISLE_SEGMENTS
-	for seg in AISLE_SEGMENTS:
-		var seg_z := AISLE_Z - AISLE_LENGTH * 0.5 + seg_length * (seg + 0.5)
-		var pivot := Node3D.new()
-		pivot.position = Vector3(x, 0, seg_z)
-		add_child(pivot)
-		var inner := Node3D.new()
-		pivot.add_child(inner)
-		_segments[aisle].append({"pivot": pivot, "inner": inner, "home": pivot.position})
-		bottom = 0.0
-		for tier in TIERS:
-			var shelf := LevelKit.add_box(inner, Vector3(0, (float(tier[1]) + bottom) * 0.5, 0), Vector3(tier[0], float(tier[1]) - bottom, seg_length - 0.02), _shelf_mat, false)
-			shelf.set_instance_shader_parameter("instance_tint", Color(0.95, 0.95, 1.0) if (seg + aisle) % 2 == 0 else Color(0.85, 0.9, 1.0))
-			bottom = tier[1]
-		# Each side of each section has one tier with a can stack, one with a loot spot and one with
-		# boxes of stock (which tier gets what turns round from section to section).
-		for side in [-1, 1]:
-			var stack_tier := (seg + (1 if side > 0 else 0) + aisle) % 3
-			var loot_tier := (stack_tier + 1) % 3
-			var stock_tier := (stack_tier + 2) % 3
-			var z_shift := 0.25 if side > 0 else -0.25
-			_add_stack(aisle, _ledge_spot(x, side, stack_tier, seg_z + z_shift))
-			_loot_shelf.append(_ledge_spot(x, side, loot_tier, seg_z - z_shift) + Vector3(0, 0.15, 0))
-			for n in 3:
-				var at := _ledge_spot(0.0, side, stock_tier, (n - 1) * 0.28)
-				var product := LevelKit.add_box(inner, at + Vector3(0, 0.14, 0), Vector3(0.12, 0.28, 0.2), _can_mat, false)
-				product.set_instance_shader_parameter("instance_tint", PRODUCT_COLORS[(seg * 3 + n + aisle * 2 + side) % PRODUCT_COLORS.size()])
-
-
-## The middle of a ledge (where goods sit) on this side of an aisle at "x", on step "tier".
-func _ledge_spot(x: float, side: int, tier: int, z: float) -> Vector3:
-	var outer: float = TIERS[tier][0] * 0.5
-	var inner: float = TIERS[tier + 1][0] * 0.5 if tier + 1 < TIERS.size() else 0.0
-	return Vector3(x + side * (outer + inner) * 0.5, TIERS[tier][1], z)
-
-
-## A swattable stack of three cans (two at the bottom, one on top).
-func _add_stack(aisle: int, at: Vector3) -> void:
-	var stack := Node3D.new()
-	stack.position = at
-	add_child(stack)
-	var id := _stacks.size()
-	for i in 3:
-		var can := MeshInstance3D.new()
-		can.mesh = _can_mesh
-		can.material_override = _can_mat
-		can.set_instance_shader_parameter("instance_tint", PRODUCT_COLORS[(id + i) % PRODUCT_COLORS.size()])
-		can.position = Vector3(-0.07 + 0.14 * i, 0.065, 0) if i < 2 else Vector3(0, 0.195, 0)
-		can.set_meta("home", can.transform)
-		stack.add_child(can)
-	stack.set_meta("id", id)
-	stack.set_meta("aisle", aisle)
-	stack.set_meta("home", stack.transform)
-	_stacks.append(stack)
-
-
-## The FRESH CATCH counter: a long chiller along the east wall, crushed ice on top.
-func _build_counter(shell: StaticBody3D) -> void:
-	var length := COUNTER_Z.y - COUNTER_Z.x
-	var mid := (COUNTER_Z.x + COUNTER_Z.y) * 0.5
-	var body := _solid_box(shell, Vector3(COUNTER_X, 0.5, mid), Vector3(1.2, 1.0, length), _metal_mat)
-	body.set_instance_shader_parameter("instance_tint", Color(0.55, 0.7, 0.8))
-	LevelKit.add_box(self, Vector3(COUNTER_X + 0.05, 1.05, mid), Vector3(1.0, 0.1, length - 0.1), _ice_mat, false)
-	# A sloped glass sneeze guard on the shop side.
-	var guard := LevelKit.add_box(self, Vector3(COUNTER_X - 0.62, 1.35, mid), Vector3(0.05, 0.5, length - 0.2), _glass_mat, false)
-	guard.rotation.z = deg_to_rad(-15.0)
-	# Some fish just for show, lying on the ice...
-	var show_fish := preload("res://scenes/items/sardine.tscn")
-	for i in 6:
-		var fish := show_fish.instantiate() as Node3D
-		fish.position = Vector3(COUNTER_X + 0.25, 1.13, COUNTER_Z.x + 0.4 + i * (length - 0.8) / 5.0)
-		fish.rotation = Vector3(0, PI / 2 + (0.3 if i % 2 == 0 else -0.3), PI / 2)
-		add_child(fish)
-	# ...and the spots where real FRESH CATCH (loot) can lie.
-	for i in 5:
-		_loot_counter.append(Vector3(COUNTER_X - 0.2, 1.25, COUNTER_Z.x + 0.6 + i * (length - 1.2) / 4.0))
-
-
-func _build_plate() -> void:
-	var frame := LevelKit.add_box(self, Vector3(PLATE_SPOT.x, 0.02, PLATE_SPOT.z), Vector3(PLATE_HALF * 2.0 + 0.2, 0.04, PLATE_HALF * 2.0 + 0.2), _metal_mat, false)
-	frame.set_instance_shader_parameter("instance_tint", Color(0.3, 0.3, 0.32))
-	_plate_top = LevelKit.add_box(self, Vector3(PLATE_SPOT.x, 0.07, PLATE_SPOT.z), Vector3(PLATE_HALF * 2.0, 0.06, PLATE_HALF * 2.0), _neon_mat, false)
-	_plate_light = LevelKit.add_light(self, PLATE_SPOT + Vector3(0, 0.8, 0), Color(1, 0.2, 0.2), 1.2, 3.5)
-
-
-## The heavy shopping basket: shove it by walking into it, or [E] DRAG it behind you.
-func _build_crate() -> void:
-	_crate = StaticBody3D.new()
-	_crate.name = "Basket"
-	_crate.position = crate_pos + Vector3(0, CRATE_SIZE * 0.5, 0)
-	add_child(_crate)
-	LevelKit.add_collision(_crate, Vector3.ZERO, Vector3.ONE * CRATE_SIZE)
-	var model := LevelKit.instantiate_model("res://models/cardboard_box.glb", _crate, Vector3(0, -CRATE_SIZE * 0.5, 0), 0.3)
-	if model != null:
-		model.scale = Vector3.ONE * 1.15
-	else:
-		LevelKit.add_box(_crate, Vector3.ZERO, Vector3.ONE * CRATE_SIZE, _metal_mat, false)
-	var tag := LevelKit.add_sign(_crate, "HEAVY", Vector3(0, CRATE_SIZE * 0.5 + 0.25, 0), Color(1, 0.8, 0.2), 20, 0.0)
-	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-
-
-## The back room: a security desk with a monitor, racks of spare crates (the tank is its own piece).
-func _build_back_room(shell: StaticBody3D) -> void:
-	var desk := _solid_box(shell, Vector3(-8.5, 0.4, -4.6), Vector3(2.2, 0.8, 1.0), _metal_mat)
-	desk.set_instance_shader_parameter("instance_tint", Color(0.3, 0.3, 0.35))
-	var monitor := LevelKit.add_box(self, Vector3(-8.5, 1.15, -4.85), Vector3(0.9, 0.65, 0.4), _metal_mat, false)
-	monitor.set_instance_shader_parameter("instance_tint", Color(0.15, 0.15, 0.18))
-	var screen := LevelKit.add_box(self, Vector3(-8.5, 1.15, -4.64), Vector3(0.75, 0.5, 0.02), _neon_mat, false)
-	screen.set_instance_shader_parameter("instance_tint", Color(0.05, 0.3, 0.15))
-	_monitor_label = LevelKit.add_sign(self, "", Vector3(-8.5, 1.15, -4.6), Color(0.3, 1, 0.6), 12, 0.0)
-	_monitor_label.pixel_size = 0.006
-	LevelKit.add_light(self, Vector3(-8.5, 1.4, -4.0), Color(0.3, 1, 0.6), 0.8, 3.0)
-	# Racks of spare stock on the east side.
-	for level in 3:
-		_solid_box(shell, Vector3(9.3, 0.05 + level * 0.8, -3.8), Vector3(1.6, 0.06, 2.6), _metal_mat)
-		for n in 3:
-			var crate := LevelKit.add_box(self, Vector3(9.3, 0.08 + level * 0.8 + 0.25, -4.7 + n * 0.9), Vector3(0.9, 0.5, 0.7), _shelf_mat, false)
-			crate.set_instance_shader_parameter("instance_tint", Color(0.7, 0.5, 0.3))
-	for post in [Vector3(8.55, 0, -5.05), Vector3(10.05, 0, -5.05), Vector3(8.55, 0, -2.55), Vector3(10.05, 0, -2.55)]:
-		_solid_box(shell, post + Vector3(0, 1.1, 0), Vector3(0.08, 2.2, 0.08), _metal_mat)
-
-
-## THE GOLDEN KOI TANK: glass, water, the koi swimming round, a gold light over it.
-func _build_tank() -> void:
-	# (A HitRelay: bolts, bat swings and blasts that hit the tank come to _on_tank_hit.)
-	_tank = HitRelay.new()
-	_tank.name = "KoiTank"
-	_tank.position = TANK_SPOT
-	_tank.on_hit = _on_tank_hit
-	add_child(_tank)
-	var stand := LevelKit.add_box(_tank, Vector3(0, TANK_STAND * 0.5, 0), Vector3(TANK_SIZE.x + 0.2, TANK_STAND, TANK_SIZE.z + 0.2), _metal_mat, false)
-	stand.set_instance_shader_parameter("instance_tint", Color(0.2, 0.18, 0.15))
-	var plaque := LevelKit.add_sign(_tank, "GOLDEN KOI\nNOT FOR SALE", Vector3(0, TANK_STAND * 0.5, TANK_SIZE.z * 0.5 + 0.12), Color(1, 0.8, 0.2), 14, 0.0)
-	plaque.pixel_size = 0.01
-	_tank_water = LevelKit.add_box(_tank, Vector3(0, TANK_STAND + 0.48, 0), Vector3(TANK_SIZE.x - 0.08, 0.95, TANK_SIZE.z - 0.08), _water_mat, false)
-	var glass_material := _glass_mat.duplicate() as StandardMaterial3D  # (its own: it cracks)
-	_tank_glass = LevelKit.add_box(_tank, Vector3(0, TANK_STAND + TANK_SIZE.y * 0.5, 0), TANK_SIZE, glass_material, false)
-	_tank_glass.material_override = glass_material
-	_koi = preload("res://scenes/items/golden_koi.tscn").instantiate() as Node3D
-	_koi.scale = Vector3.ONE * 1.3
-	_tank.add_child(_koi)
-	_tank_light = LevelKit.add_light(_tank, Vector3(0, 2.8, 0.4), Color(1, 0.75, 0.25), 2.5, 6.0)
-	# The hit box (a StaticBody on the tank, so bolts and bats hit it and come to receive_hit).
-	var body := StaticBody3D.new()
-	body.name = "TankBody"
-	_tank.add_child(body)
-	_tank_shape = CollisionShape3D.new()
-	_tank_shape.shape = BoxShape3D.new()
-	body.add_child(_tank_shape)
-	# After it breaks: a puddle (a flat box ON the floor) and broken glass.
-	var water_floor := StandardMaterial3D.new()
-	water_floor.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	water_floor.albedo_color = Color(0.2, 0.5, 1.0, 0.45)
-	water_floor.roughness = 0.05
-	water_floor.metallic_specular = 1.0
-	var puddle_mesh := CylinderMesh.new()
-	puddle_mesh.top_radius = 1.5
-	puddle_mesh.bottom_radius = 1.5
-	puddle_mesh.height = 0.04
-	puddle_mesh.radial_segments = 10
-	puddle_mesh.rings = 0
-	_puddle = MeshInstance3D.new()
-	_puddle.mesh = puddle_mesh
-	_puddle.material_override = water_floor
-	_puddle.position = TANK_SPOT + Vector3(0, 0.02, 0.6)
-	_puddle.visible = false
-	add_child(_puddle)
-	for i in 14:
-		var shard := LevelKit.add_box(self, TANK_SPOT + Vector3(cos(i * 2.4) * (0.9 + 0.1 * (i % 4)), 0.02, sin(i * 2.4) * (0.6 + 0.1 * (i % 3)) + 0.3),
-			Vector3(0.12, 0.04, 0.07), _ice_mat, false)
-		shard.rotation.y = i * 0.7
-		shard.visible = false
-		_shards.append(shard)
 
 
 # --- Tests (DevCapture) ---

@@ -175,3 +175,79 @@ func _hold(player: CatPlayer, actions: Array, down: bool) -> void:
 func _frames(count: int) -> void:
 	for i in count:
 		await get_tree().physics_frame
+
+
+## --hold / --pad / --drop_after / --jump_test: hold actions or controller sticks/buttons, drop held
+## items, or run the double-jump + front-flip measurement.
+func _input_and_jump_actions(scene: Node, player: CatPlayer, args: Dictionary) -> void:
+	if args.has("hold"):
+		for i in int(args.get("hold_delay", "30")):
+			await get_tree().process_frame
+		var slots: Array = [player.slot]
+		if args.has("hold_all"):
+			slots = scene.local_cats().map(func(c): return c.slot)
+		for action in args["hold"].split(","):
+			for slot in slots:
+				Input.action_press(Seats.action(slot, action))
+		for i in int(args.get("hold_frames", "60")):
+			await get_tree().process_frame
+		if not args.has("keep_holding"):
+			for action in args["hold"].split(","):
+				for slot in slots:
+					Input.action_release(Seats.action(slot, action))
+	if args.has("pad"):
+		for i in int(args.get("hold_delay", "30")):
+			await get_tree().process_frame
+		var yaw_before := player.camera_pivot.rotation.y
+		var pos_before := player.global_position
+		var all_before := {}
+		for cat in scene.local_cats():
+			all_before[cat] = cat.global_position
+		var pads: PackedStringArray = args["pad"].replace("_", " ").split(",")
+		if player.slot == 0:
+			Seats.claim_for_p1(int(args.get("pad_device", "0")))
+		for pad in pads:
+			Input.parse_input_event(_pad_event(pad, true))
+		for i in int(args.get("hold_frames", "60")):
+			await get_tree().process_frame
+		var car := _car_for(player)
+		var held: Array = []
+		for entry in Controls.ACTIONS:
+			if Input.is_action_pressed(entry.action):
+				held.append(entry.action)
+		print("DevCapture pad held: %s" % [held])
+		for cat in all_before:
+			print("DevCapture pad moved: %s (slot %d) %.2f m" % [cat.name, cat.slot, cat.global_position.distance_to(all_before[cat])])
+		print("DevCapture pad %s: using_pad=%s yaw turned %.2f rad, cat moved %.2f m, car throttle %.2f steer %.2f, speed %.1f, prompt key=%s" % [
+			args["pad"], Controls.using_pad, player.camera_pivot.rotation.y - yaw_before,
+			player.global_position.distance_to(pos_before), car.throttle, car.steer,
+			car.linear_velocity.length(), Controls.key_text("interact")])
+		if not args.has("keep_holding"):
+			for pad in pads:
+				Input.parse_input_event(_pad_event(pad, false))
+	if args.has("drop_after"):
+		for i in int(args["drop_after"]):
+			await get_tree().process_frame
+		ItemManager.instance.drop_from(player)
+	if args.has("jump_test"):
+		var quick := ItemManager.instance.quick_slots(player.player_id)
+		for slot in 2:
+			if player.air_jumps == 0 and not quick[slot].is_empty() and quick[slot][0] == "catdip":
+				ItemManager.instance.request_quick_use.rpc_id(1, player.player_id, slot)
+				for f in 20:
+					await get_tree().physics_frame
+		var ground_y := player.global_position.y
+		var peak := ground_y
+		var spin := 0.0
+		for i in 100:
+			if i == 0 or i == 18:
+				Input.action_press(Seats.action(player.slot, "jump"))
+			elif i == 2 or i == 20:
+				Input.action_release(Seats.action(player.slot, "jump"))
+			await get_tree().physics_frame
+			peak = maxf(peak, player.global_position.y)
+			spin = minf(spin, player.cat_model.rotation.x)
+			if args.has("flip_snap") and i == int(args.get("flip_frame", "26")):
+				await RenderingServer.frame_post_draw
+				get_tree().root.get_texture().get_image().save_png("res://" + args["flip_snap"])
+		print("DevCapture jump: peak height %.2f m (air jumps active: %d) flip %d degrees" % [peak - ground_y, player.air_jumps, roundi(rad_to_deg(-spin))])
